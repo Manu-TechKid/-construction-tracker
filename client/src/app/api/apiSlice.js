@@ -1,5 +1,4 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import { logout } from '../../features/auth/authSlice';
 
 // Compute API base URL
 // - If REACT_APP_API_URL is provided, use it (useful for local dev)
@@ -21,19 +20,9 @@ const baseQuery = fetchBaseQuery({
 });
 
 export const apiSlice = createApi({
-  baseQuery: async (args, api, extraOptions) => {
-    const result = await baseQuery(args, api, extraOptions);
-    
-    // Handle 401 Unauthorized errors (e.g., token expired)
-    if (result.error?.status === 401) {
-      // You could add token refresh logic here if needed
-      console.log('Unauthorized - logging out...');
-      // Dispatch logout action
-      api.dispatch(logout());
-    }
-    
-    return result;
-  },
+  // Use baseQuery directly; avoid global auto-logout on any 401 to prevent
+  // redirect flashes during app boot. Individual components can handle 401s.
+  baseQuery,
   tagTypes: ['Building', 'WorkOrder', 'Worker', 'User'],
   endpoints: (builder) => ({}),
 });
