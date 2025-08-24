@@ -3,6 +3,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
@@ -76,14 +77,17 @@ app.use((req, res, next) => {
 // 3) ROUTES
 app.use('/api/v1', routes);
 
-// Serve static assets in production
+// Serve client build in production ONLY if it exists (API-only otherwise)
 if (process.env.NODE_ENV === 'production') {
-  // Set static folder
-  app.use(express.static('client/build'));
-
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, 'client', 'build', 'index.html'));
-  });
+  const clientBuildPath = path.resolve(__dirname, '../client/build');
+  if (fs.existsSync(clientBuildPath)) {
+    app.use(express.static(clientBuildPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(clientBuildPath, 'index.html'));
+    });
+  } else {
+    console.log('Client build not found; running API-only.');
+  }
 }
 
 app.all('*', (req, res, next) => {
