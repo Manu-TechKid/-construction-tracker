@@ -4,7 +4,14 @@ const { promisify } = require('util');
 const User = require('../models/User');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
-const sendEmail = require('../utils/email');
+// Make email service optional to prevent deployment failures
+let sendEmail;
+try {
+    sendEmail = require('../utils/email');
+} catch (err) {
+    console.warn('Email service not available - password reset will return token instead');
+    sendEmail = null;
+}
 
 const signToken = (id) => {
     const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
@@ -56,34 +63,43 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
 
     // TODO: send resetToken via email provider
     // For now, return token so we can test the flow
-    // Send email with reset URL
-    try {
-        const resetURL = `${req.protocol}://${req.get('host')}/reset-password/${resetToken}`;
-        
-        await sendEmail({
-            email: user.email,
-            subject: 'Your password reset token (valid for 10 min)',
-            message: `Forgot your password? Submit a PATCH request with your new password and passwordConfirm to: ${resetURL}.\nIf you didn't forget your password, please ignore this email!`,
-            html: `
-                <h2>Password Reset Request</h2>
-                <p>You requested a password reset for your Construction Tracker account.</p>
-                <p>Click the link below to reset your password:</p>
-                <a href="${resetURL}" style="background-color: #1976d2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a>
-                <p>This link will expire in 10 minutes.</p>
-                <p>If you didn't request this, please ignore this email.</p>
-            `
-        });
+    // Send email with reset URL or return token if email service unavailable
+    if (sendEmail) {
+        try {
+            const resetURL = `${req.protocol}://${req.get('host')}/reset-password/${resetToken}`;
+            
+            await sendEmail({
+                email: user.email,
+                subject: 'Your password reset token (valid for 10 min)',
+                message: `Forgot your password? Submit a PATCH request with your new password and passwordConfirm to: ${resetURL}.\nIf you didn't forget your password, please ignore this email!`,
+                html: `
+                    <h2>Password Reset Request</h2>
+                    <p>You requested a password reset for your Construction Tracker account.</p>
+                    <p>Click the link below to reset your password:</p>
+                    <a href="${resetURL}" style="background-color: #1976d2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a>
+                    <p>This link will expire in 10 minutes.</p>
+                    <p>If you didn't request this, please ignore this email.</p>
+                `
+            });
 
+            res.status(200).json({
+                status: 'success',
+                message: 'Token sent to email!'
+            });
+        } catch (err) {
+            user.passwordResetToken = undefined;
+            user.passwordResetExpires = undefined;
+            await user.save({ validateBeforeSave: false });
+
+            return next(new AppError('There was an error sending the email. Try again later.', 500));
+        }
+    } else {
+        // Email service not available - return token for testing
         res.status(200).json({
             status: 'success',
-            message: 'Token sent to email!'
+            message: 'Email service not configured. Use this token for testing:',
+            resetToken
         });
-    } catch (err) {
-        user.passwordResetToken = undefined;
-        user.passwordResetExpires = undefined;
-        await user.save({ validateBeforeSave: false });
-
-        return next(new AppError('There was an error sending the email. Try again later.', 500));
     }
 });
 
