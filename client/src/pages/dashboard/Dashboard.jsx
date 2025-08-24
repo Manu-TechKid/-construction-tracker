@@ -27,7 +27,7 @@ import WorkOrderList from '../../components/dashboard/WorkOrderList';
 import StatCard from '../../components/dashboard/StatCard';
 import BuildingStatus from '../../components/dashboard/BuildingStatus';
 import WorkerAvailability from '../../components/dashboard/WorkerAvailability';
-import { formatDate } from '../../utils/dateUtils';
+import { formatDate, timeAgo } from '../../utils/dateUtils';
 
 const Dashboard = () => {
   const theme = useTheme();
@@ -40,10 +40,19 @@ const Dashboard = () => {
     totalWorkers: 0,
   });
 
-  // Fetch data with error handling
-  const { data: workOrdersData, isLoading: isLoadingWorkOrders, error: workOrdersError } = useGetWorkOrdersQuery({}, { skip: false });
-  const { data: buildingsData, isLoading: isLoadingBuildings, error: buildingsError } = useGetBuildingsQuery({}, { skip: false });
-  const { data: workersData, isLoading: isLoadingWorkers, error: workersError } = useGetWorkersQuery({}, { skip: false });
+  // Fetch data with error handling - skip failing endpoints gracefully
+  const { data: workOrdersData, isLoading: isLoadingWorkOrders, error: workOrdersError } = useGetWorkOrdersQuery({}, { 
+    skip: false,
+    errorPolicy: 'ignore'
+  });
+  const { data: buildingsData, isLoading: isLoadingBuildings, error: buildingsError } = useGetBuildingsQuery({}, { 
+    skip: false,
+    errorPolicy: 'ignore'
+  });
+  const { data: workersData, isLoading: isLoadingWorkers, error: workersError } = useGetWorkersQuery({}, { 
+    skip: false,
+    errorPolicy: 'ignore'
+  });
 
   // Process data when loaded - handle missing endpoints gracefully
   useEffect(() => {
@@ -51,10 +60,10 @@ const Dashboard = () => {
     const buildings = buildingsData?.data?.buildings || [];
     
     // Handle work orders data (may not exist yet)
-    const workOrders = workOrdersData?.data || [];
+    const workOrders = workOrdersData?.data?.workOrders || [];
     
     // Handle workers data (may not exist yet)  
-    const workers = workersData?.data || [];
+    const workers = workersData?.data?.workers || [];
 
     // Calculate work order stats
     const completed = workOrders.filter(wo => wo.status === 'completed').length;
@@ -72,8 +81,8 @@ const Dashboard = () => {
   }, [workOrdersData, buildingsData, workersData]);
 
   // Get recent work orders
-  const recentWorkOrders = workOrdersData?.data 
-    ? [...workOrdersData.data]
+  const recentWorkOrders = workOrdersData?.data?.workOrders 
+    ? [...workOrdersData.data.workOrders]
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, 5)
     : [];
@@ -83,25 +92,32 @@ const Dashboard = () => {
     id: building._id,
     name: building.name,
     status: building.status || 'operational',
-    workOrders: workOrdersData?.data?.filter(wo => wo.building?._id === building._id).length || 0,
+    workOrders: workOrdersData?.data?.workOrders?.filter(wo => wo.building?._id === building._id).length || 0,
   })) || [];
 
   // Get worker availability
-  const workerAvailabilityData = workersData?.data?.map(worker => ({
+  const workerAvailabilityData = workersData?.data?.workers?.map(worker => ({
     id: worker._id,
     name: worker.name,
     status: worker.status || 'available',
-    assignedWorkOrders: workOrdersData?.data?.filter(wo => 
+    assignedWorkOrders: workOrdersData?.data?.workOrders?.filter(wo => 
       wo.assignedTo?.some(assignment => assignment.worker?._id === worker._id)
     ).length || 0,
   })) || [];
 
-  const isLoading = isLoadingWorkOrders || isLoadingBuildings || isLoadingWorkers;
+  // Only show loading if buildings are loading (core data)
+  const isLoading = isLoadingBuildings;
 
   if (isLoading) {
     return (
-      <Box sx={{ width: '100%' }}>
+      <Box sx={{ width: '100%', p: 3 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Dashboard
+        </Typography>
         <LinearProgress />
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+          Loading dashboard data...
+        </Typography>
       </Box>
     );
   }

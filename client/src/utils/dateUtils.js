@@ -64,7 +64,7 @@ export const formatDate = (date, format = 'medium') => {
  * @param {Date|string} date - The date to compare
  * @returns {string} Human-readable time difference (e.g., "2 days ago")
  */
-export const timeAgo = (date) => {
+export const getTimeAgo = (date) => {
   if (!date) return '';
   
   const d = typeof date === 'string' ? new Date(date) : date;
