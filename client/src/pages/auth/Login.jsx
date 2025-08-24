@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { 
@@ -11,6 +11,7 @@ import {
   CircularProgress,
   Stack,
   Divider,
+  Link,
 } from '@mui/material';
 import { useLoginMutation } from '../../features/auth/authApiSlice';
 import { useDispatch } from 'react-redux';
