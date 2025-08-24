@@ -40,32 +40,35 @@ const Dashboard = () => {
     totalWorkers: 0,
   });
 
-  // Fetch data
-  const { data: workOrdersData, isLoading: isLoadingWorkOrders } = useGetWorkOrdersQuery();
-  const { data: buildingsData, isLoading: isLoadingBuildings } = useGetBuildingsQuery();
-  const { data: workersData, isLoading: isLoadingWorkers } = useGetWorkersQuery();
+  // Fetch data with error handling
+  const { data: workOrdersData, isLoading: isLoadingWorkOrders, error: workOrdersError } = useGetWorkOrdersQuery({}, { skip: false });
+  const { data: buildingsData, isLoading: isLoadingBuildings, error: buildingsError } = useGetBuildingsQuery({}, { skip: false });
+  const { data: workersData, isLoading: isLoadingWorkers, error: workersError } = useGetWorkersQuery({}, { skip: false });
 
-  // Process data when loaded
+  // Process data when loaded - handle missing endpoints gracefully
   useEffect(() => {
-    if (workOrdersData && buildingsData && workersData) {
-      const workOrders = workOrdersData.data || [];
-      const buildings = buildingsData.data || [];
-      const workers = workersData.data || [];
+    // Handle buildings data
+    const buildings = buildingsData?.data?.buildings || [];
+    
+    // Handle work orders data (may not exist yet)
+    const workOrders = workOrdersData?.data || [];
+    
+    // Handle workers data (may not exist yet)  
+    const workers = workersData?.data || [];
 
-      // Calculate work order stats
-      const completed = workOrders.filter(wo => wo.status === 'completed').length;
-      const inProgress = workOrders.filter(wo => wo.status === 'in_progress').length;
-      const pending = workOrders.filter(wo => wo.status === 'pending').length;
+    // Calculate work order stats
+    const completed = workOrders.filter(wo => wo.status === 'completed').length;
+    const inProgress = workOrders.filter(wo => wo.status === 'in_progress').length;
+    const pending = workOrders.filter(wo => wo.status === 'pending').length;
 
-      setStats({
-        totalWorkOrders: workOrders.length,
-        completedWorkOrders: completed,
-        inProgressWorkOrders: inProgress,
-        pendingWorkOrders: pending,
-        totalBuildings: buildings.length,
-        totalWorkers: workers.length,
-      });
-    }
+    setStats({
+      totalWorkOrders: workOrders.length,
+      completedWorkOrders: completed,
+      inProgressWorkOrders: inProgress,
+      pendingWorkOrders: pending,
+      totalBuildings: buildings.length,
+      totalWorkers: workers.length,
+    });
   }, [workOrdersData, buildingsData, workersData]);
 
   // Get recent work orders
@@ -76,7 +79,7 @@ const Dashboard = () => {
     : [];
 
   // Get building status
-  const buildingStatusData = buildingsData?.data?.map(building => ({
+  const buildingStatusData = buildingsData?.data?.buildings?.map(building => ({
     id: building._id,
     name: building.name,
     status: building.status || 'operational',
