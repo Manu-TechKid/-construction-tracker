@@ -26,29 +26,27 @@ const CreateReminder = () => {
   };
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ mb: 3 }}>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate(-1)}
-          sx={{ mb: 2 }}
-        >
-          Back to Reminders
-        </Button>
-        
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-          <Typography variant="h4" component="h1">
-            Create New Reminder
-          </Typography>
-        </Box>
-        
-        <ReminderForm
-          onSubmit={handleSubmit}
-          isSubmitting={isLoading}
-          onCancel={handleCancel}
-        />
+    <Box sx={{ p: { xs: 2, sm: 3 } }}>
+      <Button
+        startIcon={<ArrowBackIcon />}
+        onClick={() => navigate(-1)}
+        sx={{ mb: 2 }}
+      >
+        Back to Reminders
+      </Button>
+      
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" component="h1">
+          Create New Reminder
+        </Typography>
       </Box>
-    </Container>
+      
+      <ReminderForm
+        onSubmit={handleSubmit}
+        isSubmitting={isLoading}
+        onCancel={handleCancel}
+      />
+    </Box>
   );
 };
 

@@ -14,7 +14,6 @@ import {
   InputLabel,
   Select,
   FormHelperText,
-  Chip,
   IconButton,
   Divider,
   CircularProgress,
@@ -36,7 +35,6 @@ import {
   Delete as DeleteIcon,
   Close as CloseIcon,
   PhotoCamera as PhotoCameraIcon,
-  AttachFile as AttachFileIcon,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -95,12 +93,11 @@ const ReminderForm = ({
   const [selectedBuilding, setSelectedBuilding] = useState(null);
   
   // Fetch buildings for the dropdown
-  const { data: buildingsData } = useGetBuildingsQuery({ limit: 1000 });
-  const buildings = buildingsData?.data?.buildings || [];
+  const { data: buildingsData } = useGetBuildingsQuery();
   
   useEffect(() => {
-    if (apartmentId && buildingsData?.data && !initialValues.apartment?._id) {
-      const building = buildingsData.data.find(b => b._id === buildingId);
+    if (apartmentId && buildingsData?.data?.buildings && !initialValues.apartment?._id) {
+      const building = buildingsData.data.buildings.find(b => b._id === buildingId);
       if (building?.apartments) {
         const apartment = building.apartments.find(a => a._id === apartmentId);
         if (apartment) {
@@ -221,8 +218,9 @@ const ReminderForm = ({
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <form onSubmit={formik.handleSubmit}>
-        <Grid container spacing={3}>
+      <Box sx={{ maxWidth: '100%', overflow: 'hidden' }}>
+        <form onSubmit={formik.handleSubmit}>
+          <Grid container spacing={{ xs: 2, sm: 3 }}>
           <Grid item xs={12} md={8}>
             <Card sx={{ mb: 3 }}>
               <CardContent>
@@ -709,32 +707,33 @@ const ReminderForm = ({
             </Card>
           </Grid>
         </Grid>
-      </form>
-      
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        aria-labelledby="delete-dialog-title"
-        aria-describedby="delete-dialog-description"
-      >
-        <DialogTitle id="delete-dialog-title">
-          Delete Reminder
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText id="delete-dialog-description">
-            Are you sure you want to delete this reminder? This action cannot be undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={handleDeleteConfirm} color="error" autoFocus>
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </form>
+        
+        {/* Delete Confirmation Dialog */}
+        <Dialog
+          open={deleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
+          aria-labelledby="delete-dialog-title"
+          aria-describedby="delete-dialog-description"
+        >
+          <DialogTitle id="delete-dialog-title">
+            Delete Reminder
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText id="delete-dialog-description">
+              Are you sure you want to delete this reminder? This action cannot be undone.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDeleteDialogOpen(false)} color="primary">
+              Cancel
+            </Button>
+            <Button onClick={handleDeleteConfirm} color="error" autoFocus>
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
     </LocalizationProvider>
   );
 };

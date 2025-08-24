@@ -7,9 +7,9 @@ export const workersApiSlice = apiSlice.injectEndpoints({
         url: '/workers',
         params,
       }),
-      providesTags: (result = [], error, arg) => [
+      providesTags: (result = {}, error, arg) => [
         'Worker',
-        ...result.map(({ _id }) => ({ type: 'Worker', id: _id })),
+        ...(result?.data?.workers || []).map(({ _id }) => ({ type: 'Worker', id: _id })),
       ],
     }),
     getWorker: builder.query({
