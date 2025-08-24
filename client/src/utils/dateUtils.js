@@ -173,9 +173,12 @@ export const isFuture = (date) => {
   return d > now;
 };
 
+export const timeAgo = getTimeAgo; // Alias for backward compatibility
+
 export default {
   formatDate,
-  timeAgo,
+  getTimeAgo,
+  timeAgo: getTimeAgo,
   formatDuration,
   isToday,
   isPast,
