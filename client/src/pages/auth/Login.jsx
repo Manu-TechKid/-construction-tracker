@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -6,14 +6,12 @@ import {
   Box, 
   Button, 
   TextField, 
-  Typography, 
-  FormHelperText,
-  InputAdornment,
-  IconButton,
+  Typography,
   Alert,
   CircularProgress,
+  Stack,
+  Divider,
 } from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useLoginMutation } from '../../features/auth/authApiSlice';
 import { useDispatch } from 'react-redux';
 
@@ -21,7 +19,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword] = useState(false);
   const [login, { isLoading, error }] = useLoginMutation();
   const [formErrors, setFormErrors] = useState(null);
 
@@ -57,23 +55,11 @@ const Login = () => {
     },
   });
 
-  const handleClickShowPassword = () => {
-    setShowPassword(!showPassword);
-  };
-
-  const handleMouseDownPassword = (event) => {
-    event.preventDefault();
-  };
+  // simplified UI to ensure everything renders clearly
 
   return (
-    <Box
-      sx={{
-        width: '100%',
-        maxWidth: 400,
-        mx: 'auto',
-      }}
-    >
-      <Typography component="h1" variant="h5" sx={{ mb: 3, textAlign: 'center' }}>
+    <Box sx={{ width: '100%', maxWidth: 420, mx: 'auto' }}>
+      <Typography component="h1" variant="h5" sx={{ mb: 2, textAlign: 'center' }}>
         Sign in to your account
       </Typography>
 
@@ -84,81 +70,47 @@ const Login = () => {
       )}
 
       <form onSubmit={formik.handleSubmit}>
-        <TextField
-          fullWidth
-          id="email"
-          name="email"
-          label="Email Address"
-          value={formik.values.email}
-          onChange={formik.handleChange}
-          onBlur={formik.handleBlur}
-          error={formik.touched.email && Boolean(formik.errors.email)}
-          helperText={formik.touched.email && formik.errors.email}
-          margin="normal"
-          autoComplete="email"
-          autoFocus
-        />
+        <Stack spacing={2}>
+          <TextField
+            fullWidth
+            id="email"
+            name="email"
+            label="Email Address"
+            value={formik.values.email}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            error={formik.touched.email && Boolean(formik.errors.email)}
+            helperText={formik.touched.email && formik.errors.email}
+            autoComplete="email"
+            autoFocus
+          />
 
-        <TextField
-          fullWidth
-          id="password"
-          name="password"
-          label="Password"
-          type={showPassword ? 'text' : 'password'}
-          value={formik.values.password}
-          onChange={formik.handleChange}
-          onBlur={formik.handleBlur}
-          error={formik.touched.password && Boolean(formik.errors.password)}
-          helperText={formik.touched.password && formik.errors.password}
-          margin="normal"
-          autoComplete="current-password"
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton
-                  aria-label="toggle password visibility"
-                  onClick={handleClickShowPassword}
-                  onMouseDown={handleMouseDownPassword}
-                  edge="end"
-                >
-                  {showPassword ? <VisibilityOff /> : <Visibility />}
-                </IconButton>
-              </InputAdornment>
-            ),
-          }}
-        />
+          <Divider flexItem />
 
-        <Button
-          type="submit"
-          fullWidth
-          variant="contained"
-          disabled={isLoading}
-          sx={{ mt: 3, mb: 2, py: 1.5 }}
-        >
-          {isLoading ? (
-            <CircularProgress size={24} color="inherit" />
-          ) : (
-            'Sign In'
-          )}
-        </Button>
+          <TextField
+            fullWidth
+            id="password"
+            name="password"
+            label="Password"
+            type="password"
+            value={formik.values.password}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            error={formik.touched.password && Boolean(formik.errors.password)}
+            helperText={formik.touched.password && formik.errors.password}
+            autoComplete="current-password"
+          />
 
-        <Box sx={{ textAlign: 'center', mt: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            Don't have an account?{' '}
-            <Link 
-              to="/register" 
-              style={{ 
-                color: 'primary.main', 
-                textDecoration: 'none',
-                '&:hover': {
-                  textDecoration: 'underline',
-                },
-              }}
-            >
-              Sign up
-            </Link>
-          </Typography>
-        </Box>
+          <Button type="submit" fullWidth variant="contained" disabled={isLoading} sx={{ py: 1.5 }}>
+            {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
+          </Button>
+
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="body2" color="text.secondary">
+              Don't have an account? <Link to="/register">Sign up</Link>
+            </Typography>
+          </Box>
+        </Stack>
       </form>
     </Box>
   );
