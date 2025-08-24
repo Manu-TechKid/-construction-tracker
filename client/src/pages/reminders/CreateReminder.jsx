@@ -1,5 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Container, Box, Button, Typography } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useCreateReminderMutation } from '../../features/reminders/remindersApiSlice';
 import ReminderForm from '../../components/reminders/ReminderForm';
 import { toast } from 'react-toastify';
@@ -10,7 +12,7 @@ const CreateReminder = () => {
 
   const handleSubmit = async (formData) => {
     try {
-      const result = await createRemister(formData).unwrap();
+      const result = await createReminder(formData).unwrap();
       toast.success('Reminder created successfully');
       navigate(`/reminders/${result.data.reminder._id}`);
     } catch (error) {
