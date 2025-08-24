@@ -111,6 +111,15 @@ app.get('/healthz', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
+// Root path helper so base URL doesn't show Not Found
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    message: 'Construction Tracker API root. See /api/v1 and /api/v1/health',
+    docs: '/api/v1'
+  });
+});
+
 // Serve client build in production ONLY if it exists (API-only otherwise)
 if (process.env.NODE_ENV === 'production') {
   const clientBuildPath = path.resolve(__dirname, '../client/build');
