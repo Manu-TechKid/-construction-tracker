@@ -98,6 +98,19 @@ app.get('/api/v1/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
+// Base API info
+app.get('/api/v1', (req, res) => {
+  res.json({ status: 'ok', message: 'Construction Tracker API v1' });
+});
+
+// Alternate health paths for easier testing
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', time: new Date().toISOString() });
+});
+app.get('/healthz', (req, res) => {
+  res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
 // Serve client build in production ONLY if it exists (API-only otherwise)
 if (process.env.NODE_ENV === 'production') {
   const clientBuildPath = path.resolve(__dirname, '../client/build');
