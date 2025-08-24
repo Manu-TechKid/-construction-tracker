@@ -46,7 +46,7 @@ import {
 import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 import { useGetWorkOrdersQuery } from '../../features/workOrders/workOrdersApiSlice';
 import { useAuth } from '../../hooks/useAuth';
-import { formatDate, getTimeAgo } from '../../utils/dateUtils';
+import { formatDate, timeAgo } from '../../utils/dateUtils';
 
 const WorkOrders = () => {
   const theme = useTheme();

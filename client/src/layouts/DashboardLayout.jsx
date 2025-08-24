@@ -210,9 +210,9 @@ const DashboardLayout = () => {
           {drawer}
         </Drawer>
       </Box>
-      <Main open={!isMobile || mobileOpen}>
+      <Main open={!isMobile}>
         <DrawerHeader />
-        <Box sx={{ mt: 2 }}>
+        <Box sx={{ mt: 2, minHeight: 'calc(100vh - 120px)' }}>
           <Outlet />
         </Box>
       </Main>
