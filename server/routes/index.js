@@ -9,10 +9,10 @@ const reminderRoutes = require('./reminderRoutes');
 const router = express.Router();
 
 // API routes
-router.use('/api/v1/auth', authRoutes);
-router.use('/api/v1/buildings', buildingRoutes);
-router.use('/api/v1/work-orders', workOrderRoutes);
-router.use('/api/v1/workers', workerRoutes);
-router.use('/api/v1/reminders', reminderRoutes);
+router.use('/auth', authRoutes);
+router.use('/buildings', buildingRoutes);
+router.use('/work-orders', workOrderRoutes);
+router.use('/workers', workerRoutes);
+router.use('/reminders', reminderRoutes);
 
 module.exports = router;

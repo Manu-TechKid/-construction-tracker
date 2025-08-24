@@ -41,6 +41,22 @@ app.use('/api', limiter);
 
 // Body parser, reading data from body into req.body
 app.use(express.json({ limit: '10kb' }));
+
+// CORS
+const allowedOrigins = [
+  process.env.CORS_ORIGIN || 'http://localhost:3000'
+];
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin like Postman or server-to-server
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(null, true); // relax for now; tighten later if needed
+    },
+    credentials: true
+  })
+);
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
 
@@ -76,6 +92,11 @@ app.use((req, res, next) => {
 
 // 3) ROUTES
 app.use('/api/v1', routes);
+
+// Simple health endpoint
+app.get('/api/v1/health', (req, res) => {
+  res.json({ status: 'ok', time: new Date().toISOString() });
+});
 
 // Serve client build in production ONLY if it exists (API-only otherwise)
 if (process.env.NODE_ENV === 'production') {
