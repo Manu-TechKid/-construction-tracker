@@ -9,6 +9,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "build:client": "cd ../client && npm ci && npm run build",
     "migrate:apartments": "node migrations/20240101_update_apartment_schema.js",
     "migrate:apartment-photos": "node migrations/20240102_add_apartment_photos.js",
     "test": "echo \"Error: no test specified\" && exit 1"
