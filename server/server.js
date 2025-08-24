@@ -103,6 +103,26 @@ app.get('/api/v1/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
+// Database health
+app.get('/api/v1/health/db', async (req, res) => {
+  try {
+    const stateMap = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+    const state = mongoose.connection.readyState;
+    let ping = null;
+    if (mongoose.connection.readyState === 1 && mongoose.connection.db) {
+      // ping admin to confirm connectivity
+      ping = await mongoose.connection.db.admin().ping();
+    }
+    res.json({
+      status: 'ok',
+      mongo: stateMap[state] || state,
+      ping
+    });
+  } catch (e) {
+    res.status(500).json({ status: 'error', message: e.message });
+  }
+});
+
 // Base API info
 app.get('/api/v1', (req, res) => {
   res.json({ status: 'ok', message: 'Construction Tracker API v1' });

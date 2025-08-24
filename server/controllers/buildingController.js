@@ -7,11 +7,53 @@ const catchAsync = require('../utils/catchAsync');
 const APIFeatures = require('../utils/apiFeatures');
 
 exports.getAllBuildings = catchAsync(async (req, res, next) => {
-    const buildings = await Building.find();
+    // Build query
+    let query = Building.find();
+    
+    // Search functionality
+    if (req.query.search) {
+        const searchRegex = new RegExp(req.query.search, 'i');
+        query = query.or([
+            { name: searchRegex },
+            { address: searchRegex },
+            { description: searchRegex }
+        ]);
+    }
+    
+    // Filter by status
+    if (req.query.status) {
+        query = query.where('status').equals(req.query.status);
+    }
+    
+    // Sorting
+    if (req.query.sort) {
+        const sortBy = req.query.sort.split(',').join(' ');
+        query = query.sort(sortBy);
+    } else {
+        query = query.sort('-createdAt');
+    }
+    
+    // Pagination
+    const page = req.query.page * 1 || 1;
+    const limit = req.query.limit * 1 || 100;
+    const skip = (page - 1) * limit;
+    
+    // Execute query with pagination
+    const buildings = await query.skip(skip).limit(limit);
+    
+    // Get total count for pagination
+    const total = await Building.countDocuments(query.getQuery());
     
     res.status(200).json({
         status: 'success',
         results: buildings.length,
+        total,
+        pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit)
+        },
         data: {
             buildings
         }

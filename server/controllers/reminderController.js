@@ -118,7 +118,8 @@ exports.getAllReminders = catchAsync(async (req, res, next) => {
   const skip = (page - 1) * limit;
   
   const reminders = await query.skip(skip).limit(limit);
-  const total = await Reminder.countDocuments(queryObj);
+  // Count total using the same filters applied to the query
+  const total = await Reminder.countDocuments(query.getQuery());
 
   res.status(200).json({
     status: 'success',

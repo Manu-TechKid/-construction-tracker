@@ -1,19 +1,6 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { apiSlice } from '../../app/api/apiSlice';
 
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
-
-export const remindersApiSlice = createApi({
-  reducerPath: 'remindersApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: BASE_URL,
-    prepareHeaders: (headers, { getState }) => {
-      const token = getState().auth.token;
-      if (token) {
-        headers.set('Authorization', `Bearer ${token}`);
-      }
-      return headers;
-    },
-  }),
+export const remindersApiSlice = apiSlice.injectEndpoints({
   tagTypes: ['Reminder'],
   endpoints: (builder) => ({
     getReminders: builder.query({

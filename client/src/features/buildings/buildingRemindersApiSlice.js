@@ -1,18 +1,6 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { apiSlice } from '../../app/api/apiSlice';
 
-export const buildingRemindersApiSlice = createApi({
-  reducerPath: 'buildingRemindersApi',
-  baseQuery: fetchBaseQuery({ 
-    baseUrl: '/api/v1/buildings',
-    credentials: 'include',
-    prepareHeaders: (headers, { getState }) => {
-      const token = getState().auth.token;
-      if (token) {
-        headers.set('authorization', `Bearer ${token}`); 
-      }
-      return headers;
-    },
-  }),
+export const buildingRemindersApiSlice = apiSlice.injectEndpoints({
   tagTypes: ['BuildingReminder'],
   endpoints: (builder) => ({
     getBuildingReminders: builder.query({
@@ -22,7 +10,7 @@ export const buildingRemindersApiSlice = createApi({
           params.append('apartmentId', apartmentId);
         }
         return {
-          url: `/${buildingId}/reminders?${params.toString()}`,
+          url: `/buildings/${buildingId}/reminders?${params.toString()}`,
           method: 'GET'
         };
       },

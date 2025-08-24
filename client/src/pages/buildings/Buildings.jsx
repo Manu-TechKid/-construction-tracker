@@ -317,14 +317,15 @@ const Buildings = () => {
 
               <Box sx={{ height: 600, width: '100%' }}>
                 <DataGrid
-                  rows={buildingsData?.data || []}
+                  rows={buildingsData?.data?.buildings || []}
                   columns={columns}
                   loading={isLoading}
+                  getRowId={(row) => row._id}
                   pageSizeOptions={[10, 25, 50]}
                   paginationModel={paginationModel}
                   onPaginationModelChange={setPaginationModel}
                   paginationMode="server"
-                  rowCount={buildingsData?.pagination?.total || 0}
+                  rowCount={buildingsData?.total || 0}
                   disableRowSelectionOnClick
                   disableColumnMenu
                   disableDensitySelector

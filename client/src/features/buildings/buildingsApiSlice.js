@@ -3,7 +3,17 @@ import { apiSlice } from '../../app/api/apiSlice';
 export const buildingsApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getBuildings: builder.query({
-      query: () => '/buildings',
+      query: ({ page, limit, search, status } = {}) => {
+        const params = new URLSearchParams();
+        if (page) params.append('page', page);
+        if (limit) params.append('limit', limit);
+        if (search) params.append('search', search);
+        if (status) params.append('status', status);
+        return {
+          url: '/buildings',
+          params: Object.fromEntries(params),
+        };
+      },
       providesTags: ['Building'],
     }),
     getBuilding: builder.query({
