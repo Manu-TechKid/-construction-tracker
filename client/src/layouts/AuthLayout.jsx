@@ -3,7 +3,7 @@ import { styled } from '@mui/material/styles';
 import { Outlet } from 'react-router-dom';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 
-const AuthLayout = () => {
+const AuthLayout = ({ children }) => {
   const theme = useTheme();
 
   return (
@@ -58,7 +58,7 @@ const AuthLayout = () => {
           }}
         >
           <ErrorBoundary>
-            <Outlet />
+            {children ? children : <Outlet />}
           </ErrorBoundary>
         </Paper>
 
