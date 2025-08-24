@@ -23,6 +23,9 @@ const app = express();
 
 // 1) GLOBAL MIDDLEWARES
 
+// Trust the first proxy (Render, Heroku, etc.) so that req.ip and rate limiting work correctly
+app.set('trust proxy', 1);
+
 // Set security HTTP headers
 app.use(helmet());
 
@@ -35,7 +38,9 @@ if (process.env.NODE_ENV === 'development') {
 const limiter = rateLimit({
   max: 100,
   windowMs: 60 * 60 * 1000,
-  message: 'Too many requests from this IP, please try again in an hour!'
+  message: 'Too many requests from this IP, please try again in an hour!',
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 app.use('/api', limiter);
 
