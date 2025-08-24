@@ -6,8 +6,18 @@ const handleCastErrorDB = err => {
 };
 
 const handleDuplicateFieldsDB = err => {
-  const value = err.errmsg.match(/(["'])(\\?.)*?\1/)[0];
-  const message = `Duplicate field value: ${value}. Please use another value!`;
+  // Mongoose 6+ provides keyValue with offending fields
+  let value = '';
+  if (err && err.keyValue) {
+    const key = Object.keys(err.keyValue)[0];
+    value = `${key}: ${err.keyValue[key]}`;
+  } else if (err && err.message) {
+    const match = err.message.match(/dup key.*\{(.*)\}/i);
+    value = match ? match[1] : 'duplicate value';
+  } else {
+    value = 'duplicate value';
+  }
+  const message = `Duplicate field value (${value}). Please use another value!`;
   return new AppError(message, 400);
 };
 

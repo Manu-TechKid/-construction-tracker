@@ -55,6 +55,9 @@ const AuthLayout = ({ children }) => {
             p: { xs: 3, sm: 4 },
             borderRadius: 2,
             bgcolor: 'background.paper',
+            width: '100%',
+            maxWidth: 480,
+            mx: 'auto',
           }}
         >
           <ErrorBoundary>

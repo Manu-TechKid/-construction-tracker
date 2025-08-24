@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const userSchema = new mongoose.Schema({
     name: {
@@ -50,6 +51,13 @@ userSchema.pre('save', async function(next) {
     next();
 });
 
+// Update passwordChangedAt if password modified
+userSchema.pre('save', function(next) {
+    if (!this.isModified('password') || this.isNew) return next();
+    this.passwordChangedAt = Date.now() - 1000; // ensure token issued after this
+    next();
+});
+
 // Method to check password
 userSchema.methods.correctPassword = async function(candidatePassword, userPassword) {
     return await bcrypt.compare(candidatePassword, userPassword);
@@ -65,6 +73,17 @@ userSchema.methods.changedPasswordAfter = function(JWTTimestamp) {
         return JWTTimestamp < changedTimestamp;
     }
     return false;
+};
+
+// Create password reset token
+userSchema.methods.createPasswordResetToken = function() {
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    this.passwordResetToken = crypto
+        .createHash('sha256')
+        .update(resetToken)
+        .digest('hex');
+    this.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    return resetToken;
 };
 
 module.exports = mongoose.model('User', userSchema);
