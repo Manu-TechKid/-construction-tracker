@@ -1,6 +1,7 @@
 import { Box, Container, Paper, Typography, useTheme } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { Outlet } from 'react-router-dom';
+import ErrorBoundary from '../components/common/ErrorBoundary';
 
 const AuthLayout = () => {
   const theme = useTheme();
@@ -56,7 +57,9 @@ const AuthLayout = () => {
             bgcolor: 'background.paper',
           }}
         >
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </Paper>
 
         <Box
