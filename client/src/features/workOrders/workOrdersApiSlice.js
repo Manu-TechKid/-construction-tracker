@@ -47,7 +47,8 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ['WorkOrder'],
     }),
-    addNoteToWorkOrder: builder.mutation({
+    // Deprecated: use the addNoteToWorkOrder below which sends full note payload
+    addNoteToWorkOrderLegacy: builder.mutation({
       query: ({ id, content }) => ({
         url: `/work-orders/${id}/notes`,
         method: 'POST',
@@ -56,6 +57,29 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
       invalidatesTags: (result, error, { id }) => [
         { type: 'WorkOrder', id },
       ],
+    }),
+    addNoteToWorkOrder: builder.mutation({
+      query: ({ id, note }) => ({
+        url: `/work-orders/${id}/notes`,
+        method: 'POST',
+        body: note,
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'WorkOrder', id }],
+    }),
+    updateNoteInWorkOrder: builder.mutation({
+      query: ({ id, noteId, note }) => ({
+        url: `/work-orders/${id}/notes/${noteId}`,
+        method: 'PATCH',
+        body: note,
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'WorkOrder', id }],
+    }),
+    deleteNoteFromWorkOrder: builder.mutation({
+      query: ({ id, noteId }) => ({
+        url: `/work-orders/${id}/notes/${noteId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'WorkOrder', id }],
     }),
     reportIssue: builder.mutation({
       query: ({ id, description }) => ({
@@ -82,29 +106,6 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
         url: `/work-orders/${id}/status`,
         method: 'PATCH',
         body: { status },
-      }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'WorkOrder', id }],
-    }),
-    addNoteToWorkOrder: builder.mutation({
-      query: ({ id, note }) => ({
-        url: `/work-orders/${id}/notes`,
-        method: 'POST',
-        body: note,
-      }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'WorkOrder', id }],
-    }),
-    updateNoteInWorkOrder: builder.mutation({
-      query: ({ id, noteId, note }) => ({
-        url: `/work-orders/${id}/notes/${noteId}`,
-        method: 'PATCH',
-        body: note,
-      }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'WorkOrder', id }],
-    }),
-    deleteNoteFromWorkOrder: builder.mutation({
-      query: ({ id, noteId }) => ({
-        url: `/work-orders/${id}/notes/${noteId}`,
-        method: 'DELETE',
       }),
       invalidatesTags: (result, error, { id }) => [{ type: 'WorkOrder', id }],
     }),
