@@ -278,22 +278,20 @@ const Buildings = () => {
                 </Box>
               }
               action={
-                hasPermission('create:buildings') && (
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<AddIcon />}
-                    onClick={() => navigate('/buildings/new')}
-                  >
-                    Add Building
-                  </Button>
-                )
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={() => navigate('/buildings/new')}
+                >
+                  Add Building
+                </Button>
               }
             />
             <CardContent>
-              <Box sx={{ display: 'flex', mb: 3, gap: 2 }}>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', mb: 3, gap: 2 }}>
                 <TextField
-                  fullWidth
+                  sx={{ flex: 1, minWidth: 250 }}
                   variant="outlined"
                   placeholder="Search buildings..."
                   value={searchTerm}

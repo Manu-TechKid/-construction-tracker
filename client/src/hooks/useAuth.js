@@ -9,10 +9,10 @@ export const useAuth = () => {
     
     // Define role-based permissions
     const permissions = {
-      admin: ['create:work-orders', 'update:work-orders', 'delete:work-orders', 'read:buildings', 'write:buildings', 'read:work_orders', 'write:work_orders', 'manage:users'],
-      manager: ['create:work-orders', 'update:work-orders', 'delete:work-orders', 'read:buildings', 'write:buildings', 'read:work_orders', 'write:work_orders'],
-      worker: ['read:buildings', 'read:work_orders', 'update:work_orders'],
-      client: ['read:buildings', 'read:work_orders']
+      admin: ['create:work-orders', 'update:work-orders', 'delete:work-orders', 'read:buildings', 'write:buildings', 'create:buildings', 'read:work_orders', 'write:work_orders', 'manage:users'],
+      manager: ['create:work-orders', 'update:work-orders', 'delete:work-orders', 'read:buildings', 'write:buildings', 'create:buildings', 'read:work_orders', 'write:work_orders'],
+      worker: ['read:buildings', 'read:work_orders', 'update:work_orders', 'create:buildings'],
+      client: ['read:buildings', 'read:work_orders', 'create:buildings']
     };
 
     // Check if user's role has the required permission

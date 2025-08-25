@@ -374,16 +374,14 @@ const WorkOrders = () => {
                 </Box>
               }
               action={
-                hasPermission('create:work-orders') && (
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<AddIcon />}
-                    onClick={() => navigate('/work-orders/new')}
-                  >
-                    New Work Order
-                  </Button>
-                )
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={() => navigate('/work-orders/new')}
+                >
+                  New Work Order
+                </Button>
               }
             />
             <CardContent>

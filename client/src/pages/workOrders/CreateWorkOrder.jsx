@@ -14,10 +14,11 @@ const CreateWorkOrder = () => {
     try {
       const result = await createWorkOrder(formData).unwrap();
       toast.success('Work order created successfully');
-      navigate(`/work-orders/${result.data.workOrder._id}`);
+      navigate('/work-orders');
     } catch (error) {
       console.error('Failed to create work order:', error);
-      toast.error(error?.data?.message || 'Failed to create work order');
+      const errorMessage = error?.data?.message || error?.message || 'Failed to create work order';
+      toast.error(errorMessage);
     }
   };
 

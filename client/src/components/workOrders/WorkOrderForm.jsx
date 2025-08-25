@@ -58,10 +58,11 @@ const WorkOrderForm = ({
     enableReinitialize: true,
     onSubmit: async (values, { setSubmitting }) => {
       try {
+        setSubmitting(true);
         await onSubmit(values);
-        setSubmitting(false);
       } catch (error) {
         console.error('Form submission error:', error);
+      } finally {
         setSubmitting(false);
       }
     },
@@ -88,7 +89,7 @@ const WorkOrderForm = ({
       <Box sx={{ maxWidth: '100%' }}>
         <form onSubmit={formik.handleSubmit}>
           <Grid container spacing={3}>
-            <Grid item xs={12} md={8}>
+            <Grid item xs={12} lg={8}>
               <Card>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
@@ -107,6 +108,9 @@ const WorkOrderForm = ({
                           onBlur={formik.handleBlur}
                           label="Building *"
                         >
+                          <MenuItem value="">
+                            <em>Select a building</em>
+                          </MenuItem>
                           {buildingsData?.data?.buildings?.map((building) => (
                             <MenuItem key={building._id} value={building._id}>
                               {building.name}
@@ -238,7 +242,7 @@ const WorkOrderForm = ({
               </Card>
             </Grid>
             
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} lg={4}>
               <Card>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>

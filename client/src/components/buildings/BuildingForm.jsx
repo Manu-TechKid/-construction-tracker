@@ -37,10 +37,11 @@ const BuildingForm = ({
     enableReinitialize: true,
     onSubmit: async (values, { setSubmitting }) => {
       try {
+        setSubmitting(true);
         await onSubmit(values);
-        setSubmitting(false);
       } catch (error) {
         console.error('Form submission error:', error);
+      } finally {
         setSubmitting(false);
       }
     },
@@ -50,7 +51,7 @@ const BuildingForm = ({
     <Box sx={{ maxWidth: '100%' }}>
       <form onSubmit={formik.handleSubmit}>
         <Grid container spacing={3}>
-          <Grid item xs={12} md={8}>
+          <Grid item xs={12} lg={8}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -95,7 +96,7 @@ const BuildingForm = ({
             </Card>
           </Grid>
           
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} lg={4}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>

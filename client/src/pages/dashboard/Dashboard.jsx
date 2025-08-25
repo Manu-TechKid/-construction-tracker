@@ -71,6 +71,19 @@ const Dashboard = () => {
     });
   }, [workOrdersData, buildingsData, workersData]);
 
+  // Auto-refresh data every 30 seconds for real-time updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Refetch all data for real-time updates
+      if (workOrdersData) {
+        // Trigger refetch by invalidating cache
+        window.location.reload();
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [workOrdersData]);
+
   // Get recent work orders
   const recentWorkOrders = workOrdersData?.data?.workOrders 
     ? [...workOrdersData.data.workOrders]
