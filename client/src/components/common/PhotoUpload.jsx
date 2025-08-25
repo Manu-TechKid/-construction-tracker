@@ -1,0 +1,281 @@
+import React, { useState, useCallback } from 'react';
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Typography,
+  IconButton,
+  Grid,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip,
+} from '@mui/material';
+import {
+  CloudUpload as UploadIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  PhotoCamera as PhotoIcon,
+} from '@mui/icons-material';
+import { useDropzone } from 'react-dropzone';
+
+const PhotoUpload = ({ photos = [], onPhotosChange, maxPhotos = 10 }) => {
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingPhoto, setEditingPhoto] = useState(null);
+  const [caption, setCaption] = useState('');
+  const [photoType, setPhotoType] = useState('other');
+
+  const onDrop = useCallback((acceptedFiles) => {
+    const newPhotos = acceptedFiles.map(file => ({
+      id: Date.now() + Math.random(),
+      file,
+      url: URL.createObjectURL(file),
+      caption: '',
+      type: 'other',
+      uploadedAt: new Date().toISOString(),
+    }));
+
+    const updatedPhotos = [...photos, ...newPhotos].slice(0, maxPhotos);
+    onPhotosChange(updatedPhotos);
+  }, [photos, onPhotosChange, maxPhotos]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp']
+    },
+    maxFiles: maxPhotos - photos.length,
+    disabled: photos.length >= maxPhotos
+  });
+
+  const handleDeletePhoto = (photoId) => {
+    const updatedPhotos = photos.filter(photo => photo.id !== photoId);
+    onPhotosChange(updatedPhotos);
+  };
+
+  const handleEditPhoto = (photo) => {
+    setEditingPhoto(photo);
+    setCaption(photo.caption || '');
+    setPhotoType(photo.type || 'other');
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    const updatedPhotos = photos.map(photo =>
+      photo.id === editingPhoto.id
+        ? { ...photo, caption, type: photoType }
+        : photo
+    );
+    onPhotosChange(updatedPhotos);
+    setEditDialogOpen(false);
+    setEditingPhoto(null);
+  };
+
+  const getPhotoTypeColor = (type) => {
+    switch (type) {
+      case 'before':
+        return 'primary';
+      case 'during':
+        return 'warning';
+      case 'after':
+        return 'success';
+      case 'issue':
+        return 'error';
+      default:
+        return 'default';
+    }
+  };
+
+  const getPhotoTypeLabel = (type) => {
+    switch (type) {
+      case 'before':
+        return 'Before';
+      case 'during':
+        return 'During';
+      case 'after':
+        return 'After';
+      case 'issue':
+        return 'Issue';
+      default:
+        return 'Other';
+    }
+  };
+
+  return (
+    <Box>
+      <Typography variant="h6" gutterBottom>
+        Photo Documentation
+      </Typography>
+
+      {/* Upload Area */}
+      {photos.length < maxPhotos && (
+        <Card 
+          sx={{ 
+            mb: 2, 
+            border: '2px dashed',
+            borderColor: isDragActive ? 'primary.main' : 'grey.300',
+            backgroundColor: isDragActive ? 'action.hover' : 'transparent',
+            cursor: 'pointer'
+          }}
+        >
+          <CardContent>
+            <Box
+              {...getRootProps()}
+              sx={{
+                textAlign: 'center',
+                py: 3,
+              }}
+            >
+              <input {...getInputProps()} />
+              <UploadIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                {isDragActive ? 'Drop photos here' : 'Upload Photos'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Drag & drop photos here, or click to select files
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block" mt={1}>
+                Supports: JPEG, PNG, GIF, WebP (Max {maxPhotos} photos)
+              </Typography>
+            </Box>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Photos Grid */}
+      {photos.length > 0 && (
+        <Grid container spacing={2}>
+          {photos.map((photo) => (
+            <Grid item xs={12} sm={6} md={4} key={photo.id}>
+              <Card>
+                <Box sx={{ position: 'relative' }}>
+                  <img
+                    src={photo.url}
+                    alt={photo.caption || 'Work order photo'}
+                    style={{
+                      width: '100%',
+                      height: 200,
+                      objectFit: 'cover',
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 8,
+                      display: 'flex',
+                      gap: 1,
+                    }}
+                  >
+                    <IconButton
+                      size="small"
+                      onClick={() => handleEditPhoto(photo)}
+                      sx={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' }
+                      }}
+                    >
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDeletePhoto(photo.id)}
+                      sx={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' }
+                      }}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 8,
+                      left: 8,
+                    }}
+                  >
+                    <Chip
+                      label={getPhotoTypeLabel(photo.type)}
+                      color={getPhotoTypeColor(photo.type)}
+                      size="small"
+                    />
+                  </Box>
+                </Box>
+                <CardContent sx={{ pt: 1 }}>
+                  <Typography variant="body2" color="text.secondary" noWrap>
+                    {photo.caption || 'No caption'}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
+
+      {photos.length === 0 && (
+        <Box
+          sx={{
+            textAlign: 'center',
+            py: 4,
+            color: 'text.secondary',
+          }}
+        >
+          <PhotoIcon sx={{ fontSize: 64, mb: 2 }} />
+          <Typography variant="h6" gutterBottom>
+            No photos uploaded yet
+          </Typography>
+          <Typography variant="body2">
+            Upload photos to document the work progress
+          </Typography>
+        </Box>
+      )}
+
+      {/* Edit Photo Dialog */}
+      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit Photo Details</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 1 }}>
+            <TextField
+              fullWidth
+              label="Caption"
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              margin="normal"
+              multiline
+              rows={2}
+              placeholder="Add a description for this photo..."
+            />
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Photo Type</InputLabel>
+              <Select
+                value={photoType}
+                onChange={(e) => setPhotoType(e.target.value)}
+                label="Photo Type"
+              >
+                <MenuItem value="before">Before Work</MenuItem>
+                <MenuItem value="during">During Work</MenuItem>
+                <MenuItem value="after">After Work</MenuItem>
+                <MenuItem value="issue">Issue/Problem</MenuItem>
+                <MenuItem value="other">Other</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleSaveEdit} variant="contained">Save</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+};
+
+export default PhotoUpload;

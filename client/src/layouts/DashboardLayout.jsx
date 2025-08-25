@@ -25,6 +25,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import NotificationsIcon from '@mui/icons-material/Notifications';
+import ReceiptIcon from '@mui/icons-material/Receipt';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { logout } from '../features/auth/authSlice';
@@ -96,6 +97,7 @@ const DashboardLayout = () => {
     { text: 'Buildings', icon: <ApartmentIcon />, path: '/buildings' },
     { text: 'Work Orders', icon: <AssignmentIcon />, path: '/work-orders' },
     { text: 'Workers', icon: <PeopleIcon />, path: '/workers' },
+    { text: 'Invoices', icon: <ReceiptIcon />, path: '/invoices' },
     { text: 'Reminders', icon: <NotificationsIcon />, path: '/reminders' },
     { text: 'Profile', icon: <PersonIcon />, path: '/profile' },
     { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },

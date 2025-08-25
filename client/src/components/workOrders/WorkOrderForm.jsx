@@ -9,16 +9,16 @@ import {
   Grid,
   TextField,
   Typography,
-  MenuItem,
   FormControl,
   InputLabel,
   Select,
+  MenuItem,
   FormHelperText,
-  CircularProgress,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import PhotoUpload from '../common/PhotoUpload';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 
 const validationSchema = Yup.object().shape({
@@ -35,21 +35,25 @@ const WorkOrderForm = ({
   initialValues: initialValuesProp,
   onSubmit,
   isSubmitting,
-  isEdit = false,
   onCancel,
 }) => {
   const { data: buildingsData } = useGetBuildingsQuery();
+  const buildings = buildingsData?.data?.buildings || [];
+  const [photos, setPhotos] = useState([]);
 
   const initialValues = {
     building: '',
     apartmentNumber: '',
     block: '',
-    workType: 'repair',
+    workType: '',
+    workSubType: '',
+    roomsAffected: 1,
     description: '',
     priority: 'medium',
     startDate: new Date(),
-    status: 'pending',
-    ...initialValuesProp
+    laborCost: 0,
+    materialsCost: 0,
+    ...initialValuesProp,
   };
 
   const formik = useFormik({
@@ -59,7 +63,12 @@ const WorkOrderForm = ({
     onSubmit: async (values, { setSubmitting }) => {
       try {
         setSubmitting(true);
-        await onSubmit(values);
+        const formData = {
+          ...values,
+          photos: photos,
+          totalCost: (values.laborCost || 0) + (values.materialsCost || 0)
+        };
+        await onSubmit(formData);
       } catch (error) {
         console.error('Form submission error:', error);
       } finally {
@@ -333,24 +342,6 @@ const WorkOrderForm = ({
                             helperText={formik.touched.startDate && formik.errors.startDate}
                           />
                         )}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        id="description"
-                        name="description"
-                        label="Description"
-                        value={formik.values.description}
-                        onChange={formik.handleChange}
-                        onBlur={formik.handleBlur}
-                        error={formik.touched.description && Boolean(formik.errors.description)}
-                        helperText={formik.touched.description && formik.errors.description}
-                        variant="outlined"
-                        margin="normal"
-                        multiline
-                        rows={4}
                       />
                     </Grid>
                   </Grid>

@@ -123,17 +123,57 @@ const workOrderSchema = new mongoose.Schema({
         enum: ['pending', 'invoiced', 'paid'],
         default: 'pending'
     },
-    totalCost: {
+    laborCost: {
         type: Number,
-        default: 0
+        default: 0,
+        min: 0
     },
     materialsCost: {
         type: Number,
-        default: 0
+        default: 0,
+        min: 0
     },
-    laborCost: {
+    totalCost: {
         type: Number,
-        default: 0
+        default: 0,
+        min: 0
+    },
+    notes: [{
+        type: {
+            type: String,
+            enum: ['progress', 'incident', 'info'],
+            default: 'progress'
+        },
+        title: {
+            type: String,
+            required: true
+        },
+        description: {
+            type: String,
+            required: true
+        },
+        priority: {
+            type: String,
+            enum: ['low', 'medium', 'high'],
+            default: 'medium'
+        },
+        author: {
+            type: String,
+            required: true
+        },
+        timestamp: {
+            type: Date,
+            default: Date.now
+        }
+    }],
+    createdAt: {
+        type: Date,
+        default: Date.now
+    },
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: false
     }
 });
 

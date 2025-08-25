@@ -125,27 +125,93 @@ exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
     });
 });
 
-// Add a note to a work order
-exports.addNote = catchAsync(async (req, res, next) => {
-    const workOrder = await WorkOrder.findById(req.params.id);
-    
-    if (!workOrder) {
-        return next(new AppError('No work order found with that ID', 404));
-    }
-    
-    workOrder.notes.push({
-        content: req.body.content,
-        createdBy: req.user.id
-    });
-    
-    await workOrder.save();
-    
-    res.status(200).json({
-        status: 'success',
-        data: {
-            workOrder
+// Add a note to work order
+exports.addNoteToWorkOrder = catchAsync(async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { type, title, description, priority } = req.body;
+
+        const workOrder = await WorkOrder.findById(id);
+        if (!workOrder) {
+            return next(new AppError('Work order not found', 404));
         }
-    });
+
+        const note = {
+            type,
+            title,
+            description,
+            priority,
+            author: req.user.name || req.user.email,
+            timestamp: new Date()
+        };
+
+        workOrder.notes.push(note);
+        await workOrder.save();
+
+        res.status(201).json({
+            status: 'success',
+            data: workOrder
+        });
+    } catch (error) {
+        console.error('Error adding note to work order:', error);
+        next(new AppError('Server error', 500));
+    }
+});
+
+// Update a note in work order
+exports.updateNoteInWorkOrder = catchAsync(async (req, res, next) => {
+    try {
+        const { id, noteId } = req.params;
+        const { type, title, description, priority } = req.body;
+
+        const workOrder = await WorkOrder.findById(id);
+        if (!workOrder) {
+            return next(new AppError('Work order not found', 404));
+        }
+
+        const note = workOrder.notes.id(noteId);
+        if (!note) {
+            return next(new AppError('Note not found', 404));
+        }
+
+        note.type = type;
+        note.title = title;
+        note.description = description;
+        note.priority = priority;
+
+        await workOrder.save();
+
+        res.json({
+            status: 'success',
+            data: workOrder
+        });
+    } catch (error) {
+        console.error('Error updating note in work order:', error);
+        next(new AppError('Server error', 500));
+    }
+});
+
+// Delete a note from work order
+exports.deleteNoteFromWorkOrder = catchAsync(async (req, res, next) => {
+    try {
+        const { id, noteId } = req.params;
+
+        const workOrder = await WorkOrder.findById(id);
+        if (!workOrder) {
+            return next(new AppError('Work order not found', 404));
+        }
+
+        workOrder.notes.pull(noteId);
+        await workOrder.save();
+
+        res.json({
+            status: 'success',
+            data: workOrder
+        });
+    } catch (error) {
+        console.error('Error deleting note from work order:', error);
+        next(new AppError('Server error', 500));
+    }
 });
 
 // Report an issue with a work order

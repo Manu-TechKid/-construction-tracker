@@ -28,6 +28,8 @@ import WorkerDetails from './pages/workers/WorkerDetails';
 import CreateWorker from './pages/workers/CreateWorker';
 import Profile from './pages/profile/Profile';
 import Settings from './pages/settings/Settings';
+import Invoices from './pages/invoices/Invoices';
+import CreateInvoice from './pages/invoices/CreateInvoice';
 
 // Reminder Pages
 import Reminders from './pages/reminders/Reminders';
@@ -159,11 +161,17 @@ function App() {
               <Route path=":id" element={<WorkerDetails />} />
             </Route>
             
+            {/* Invoices Routes */}
+            <Route path="invoices">
+              <Route index element={<Invoices />} />
+              <Route path="new" element={<CreateInvoice />} />
+            </Route>
+            
             {/* Reminders Routes */}
             <Route path="reminders">
               <Route index element={<Reminders />} />
-              <Route path="new" element={<CreateReminder />} />
               <Route path=":id" element={<ReminderDetail />} />
+              <Route path="new" element={<CreateReminder />} />
               <Route path=":id/edit" element={<EditReminder />} />
             </Route>
             

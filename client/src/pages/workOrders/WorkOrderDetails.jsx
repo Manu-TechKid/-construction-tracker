@@ -56,11 +56,12 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { format, parseISO, isBefore } from 'date-fns';
-import { useGetWorkOrderQuery, useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
+import { useGetWorkOrderQuery, useUpdateWorkOrderMutation, useAddNoteToWorkOrderMutation, useUpdateNoteInWorkOrderMutation, useDeleteNoteFromWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { useGetWorkersQuery } from '../../features/workers/workersApiSlice';
 import { useAuth } from '../../hooks/useAuth';
 import { formatDate, timeAgo } from '../../utils/dateUtils';
+import ProgressTracker from '../../components/workOrders/ProgressTracker';
 
 // Tab components
 const WorkOrderInfoTab = ({ workOrder, buildings, workers, onUpdateWorkOrder }) => {
@@ -568,6 +569,9 @@ const WorkOrderDetails = () => {
   
   // Update work order mutation
   const [updateWorkOrder] = useUpdateWorkOrderMutation();
+  const [addNote] = useAddNoteToWorkOrderMutation();
+  const [updateNote] = useUpdateNoteInWorkOrderMutation();
+  const [deleteNote] = useDeleteNoteFromWorkOrderMutation();
   
   // Handle tab change
   const handleTabChange = (event, newValue) => {
@@ -590,17 +594,28 @@ const WorkOrderDetails = () => {
     }
   };
   
-  // Handle add note
+  // Handle progress tracker actions
   const handleAddNote = async (noteData) => {
     try {
-      const updatedWorkOrder = await updateWorkOrder({
-        id,
-        notes: [...(workOrder.notes || []), noteData]
-      }).unwrap();
-      
-      setWorkOrder(updatedWorkOrder.data);
+      await addNote({ id, note: noteData }).unwrap();
     } catch (error) {
       console.error('Error adding note:', error);
+    }
+  };
+
+  const handleUpdateNote = async (noteId, noteData) => {
+    try {
+      await updateNote({ id, noteId, note: noteData }).unwrap();
+    } catch (error) {
+      console.error('Error updating note:', error);
+    }
+  };
+
+  const handleDeleteNote = async (noteId) => {
+    try {
+      await deleteNote({ id, noteId }).unwrap();
+    } catch (error) {
+      console.error('Error deleting note:', error);
     }
   };
   
@@ -633,6 +648,15 @@ const WorkOrderDetails = () => {
         onUpdateWorkOrder={handleUpdateWorkOrder}
       />
     ) },
+    { label: 'Progress & Incidents', component: (
+      <ProgressTracker
+        workOrderId={id}
+        notes={workOrder?.notes || []}
+        onAddNote={handleAddNote}
+        onUpdateNote={handleUpdateNote}
+        onDeleteNote={handleDeleteNote}
+      />
+    ) },
     { label: 'Notes', component: (
       <WorkOrderNotesTab 
         workOrder={workOrder} 
@@ -640,7 +664,6 @@ const WorkOrderDetails = () => {
       />
     ) },
     { label: 'Attachments', component: <div>Attachments will be displayed here</div> },
-    { label: 'History', component: <div>History will be displayed here</div> },
   ];
   
   // Loading state

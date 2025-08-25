@@ -52,6 +52,7 @@ const Buildings = () => {
   
   // State for search, filters, and pagination
   const [searchTerm, setSearchTerm] = useState('');
+  const [apartmentFilter, setApartmentFilter] = useState('');
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedBuilding, setSelectedBuilding] = useState(null);
   const [paginationModel, setPaginationModel] = useState({
@@ -278,41 +279,58 @@ const Buildings = () => {
                 </Box>
               }
               action={
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<AddIcon />}
-                  onClick={() => navigate('/buildings/new')}
-                >
-                  Add Building
-                </Button>
+                <Box display="flex" gap={2} flexWrap="wrap">
+                  <TextField
+                    fullWidth
+                    placeholder="Search buildings..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{ 
+                      maxWidth: { xs: '100%', sm: 300 },
+                      '& .MuiOutlinedInput-root': {
+                        backgroundColor: 'background.paper',
+                      }
+                    }}
+                  />
+                  
+                  <TextField
+                    select
+                    label="Filter by Apartment"
+                    value={apartmentFilter}
+                    onChange={(e) => setApartmentFilter(e.target.value)}
+                    sx={{ 
+                      minWidth: 150,
+                      '& .MuiOutlinedInput-root': {
+                        backgroundColor: 'background.paper',
+                      }
+                    }}
+                  >
+                    <MenuItem value="">All Apartments</MenuItem>
+                    <MenuItem value="vacant">Vacant</MenuItem>
+                    <MenuItem value="occupied">Occupied</MenuItem>
+                    <MenuItem value="under_renovation">Under Renovation</MenuItem>
+                    <MenuItem value="reserved">Reserved</MenuItem>
+                  </TextField>
+                  
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<AddIcon />}
+                    onClick={() => navigate('/buildings/new')}
+                  >
+                    Add Building
+                  </Button>
+                </Box>
               }
             />
             <CardContent>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', mb: 3, gap: 2 }}>
-                <TextField
-                  sx={{ flex: 1, minWidth: 250 }}
-                  variant="outlined"
-                  placeholder="Search buildings..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon color="action" />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-                <Button
-                  variant="outlined"
-                  startIcon={<FilterListIcon />}
-                  onClick={() => {}}
-                >
-                  Filters
-                </Button>
-              </Box>
-
               <Box sx={{ height: 600, width: '100%' }}>
                 <DataGrid
                   rows={buildingsData?.data?.buildings || []}

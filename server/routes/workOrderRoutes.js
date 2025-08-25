@@ -26,15 +26,12 @@ router
     workOrderController.deleteWorkOrder
   );
 
-// Add note to work order
-router
-  .route('/:id/notes')
-  .post(workOrderController.addNote);
-
-// Report issue with work order
-router
-  .route('/:id/issues')
-  .post(workOrderController.reportIssue);
+router.patch('/:id/assign', authController.protect, workOrderController.assignWorkOrder);
+router.patch('/:id/status', authController.protect, workOrderController.updateStatus);
+router.post('/:id/issues', authController.protect, workOrderController.reportIssue);
+router.post('/:id/notes', authController.protect, workOrderController.addNoteToWorkOrder);
+router.patch('/:id/notes/:noteId', authController.protect, workOrderController.updateNoteInWorkOrder);
+router.delete('/:id/notes/:noteId', authController.protect, workOrderController.deleteNoteFromWorkOrder);
 
 // Assign workers to work order
 router

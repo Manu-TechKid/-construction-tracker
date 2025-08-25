@@ -83,9 +83,30 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
         method: 'PATCH',
         body: { status },
       }),
-      invalidatesTags: (result, error, { id }) => [
-        { type: 'WorkOrder', id },
-      ],
+      invalidatesTags: (result, error, { id }) => [{ type: 'WorkOrder', id }],
+    }),
+    addNoteToWorkOrder: builder.mutation({
+      query: ({ id, note }) => ({
+        url: `/work-orders/${id}/notes`,
+        method: 'POST',
+        body: note,
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'WorkOrder', id }],
+    }),
+    updateNoteInWorkOrder: builder.mutation({
+      query: ({ id, noteId, note }) => ({
+        url: `/work-orders/${id}/notes/${noteId}`,
+        method: 'PATCH',
+        body: note,
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'WorkOrder', id }],
+    }),
+    deleteNoteFromWorkOrder: builder.mutation({
+      query: ({ id, noteId }) => ({
+        url: `/work-orders/${id}/notes/${noteId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'WorkOrder', id }],
     }),
   }),
 });
@@ -97,6 +118,8 @@ export const {
   useUpdateWorkOrderMutation,
   useDeleteWorkOrderMutation,
   useAddNoteToWorkOrderMutation,
+  useUpdateNoteInWorkOrderMutation,
+  useDeleteNoteFromWorkOrderMutation,
   useReportIssueMutation,
   useAssignWorkersMutation,
   useUpdateWorkOrderStatusMutation,
