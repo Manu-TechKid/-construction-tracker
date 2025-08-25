@@ -69,14 +69,73 @@ const WorkOrderForm = ({
   });
 
   const workTypes = [
-    { value: 'painting', label: 'Painting' },
-    { value: 'repair', label: 'Repair' },
-    { value: 'cleaning', label: 'Cleaning' },
-    { value: 'carpentry', label: 'Carpentry' },
-    { value: 'electrical', label: 'Electrical' },
-    { value: 'plumbing', label: 'Plumbing' },
-    { value: 'other', label: 'Other' },
+    { value: 'painting', label: 'Painting Services' },
+    { value: 'cleaning', label: 'Cleaning Services' },
+    { value: 'repair', label: 'Repair Services' },
+    { value: 'maintenance', label: 'Maintenance Services' },
+    { value: 'inspection', label: 'Inspection Services' },
+    { value: 'other', label: 'Other Services' },
   ];
+
+  const workSubTypes = {
+    painting: [
+      { value: 'apartment_1_room', label: '1 Room Apartment Painting' },
+      { value: 'apartment_2_room', label: '2 Room Apartment Painting' },
+      { value: 'apartment_3_room', label: '3 Room Apartment Painting' },
+      { value: 'doors', label: 'Door Painting' },
+      { value: 'ceilings', label: 'Ceiling Painting' },
+      { value: 'cabinets', label: 'Cabinet Painting' },
+      { value: 'hallways', label: 'Hallway Painting' },
+      { value: 'touch_up', label: 'Paint Touch-ups' },
+      { value: 'exterior', label: 'Exterior Painting' },
+      { value: 'trim_molding', label: 'Trim & Molding Painting' }
+    ],
+    cleaning: [
+      { value: 'apartment_1_bedroom', label: '1 Bedroom Apartment Cleaning' },
+      { value: 'apartment_2_bedroom', label: '2 Bedroom Apartment Cleaning' },
+      { value: 'apartment_3_bedroom', label: '3 Bedroom Apartment Cleaning' },
+      { value: 'touch_up_cleaning', label: 'Touch-up Cleaning' },
+      { value: 'heavy_cleaning', label: 'Heavy Cleaning' },
+      { value: 'carpet_cleaning', label: 'Carpet Cleaning' },
+      { value: 'gutter_cleaning', label: 'Gutter Cleaning' },
+      { value: 'window_cleaning', label: 'Window Cleaning' },
+      { value: 'deep_cleaning', label: 'Deep Cleaning' },
+      { value: 'move_out_cleaning', label: 'Move-out Cleaning' }
+    ],
+    repair: [
+      { value: 'air_conditioning', label: 'Air Conditioning Repair' },
+      { value: 'door_repair', label: 'Door Repair' },
+      { value: 'ceiling_repair', label: 'Ceiling Repair' },
+      { value: 'floor_repair', label: 'Floor Repair' },
+      { value: 'plumbing', label: 'Plumbing Repair' },
+      { value: 'electrical', label: 'Electrical Repair' },
+      { value: 'drywall', label: 'Drywall Repair' },
+      { value: 'tile_repair', label: 'Tile Repair' },
+      { value: 'appliance_repair', label: 'Appliance Repair' },
+      { value: 'general_maintenance', label: 'General Maintenance' }
+    ],
+    maintenance: [
+      { value: 'preventive', label: 'Preventive Maintenance' },
+      { value: 'hvac_maintenance', label: 'HVAC Maintenance' },
+      { value: 'plumbing_maintenance', label: 'Plumbing Maintenance' },
+      { value: 'electrical_maintenance', label: 'Electrical Maintenance' },
+      { value: 'landscaping', label: 'Landscaping Maintenance' },
+      { value: 'safety_inspection', label: 'Safety Inspection' }
+    ],
+    inspection: [
+      { value: 'move_in', label: 'Move-in Inspection' },
+      { value: 'move_out', label: 'Move-out Inspection' },
+      { value: 'routine', label: 'Routine Inspection' },
+      { value: 'damage_assessment', label: 'Damage Assessment' },
+      { value: 'safety_check', label: 'Safety Check' }
+    ],
+    other: [
+      { value: 'emergency', label: 'Emergency Service' },
+      { value: 'consultation', label: 'Consultation' },
+      { value: 'estimate', label: 'Estimate/Quote' },
+      { value: 'custom', label: 'Custom Service' }
+    ]
+  };
 
   const priorities = [
     { value: 'low', label: 'Low' },
@@ -157,14 +216,17 @@ const WorkOrderForm = ({
 
                     <Grid item xs={12} md={6}>
                       <FormControl fullWidth error={formik.touched.workType && Boolean(formik.errors.workType)}>
-                        <InputLabel id="workType-label">Work Type *</InputLabel>
+                        <InputLabel id="work-type-label">Work Type *</InputLabel>
                         <Select
-                          labelId="workType-label"
+                          labelId="work-type-label"
                           id="workType"
                           name="workType"
                           value={formik.values.workType}
-                          onChange={formik.handleChange}
-                          onBlur={formik.handleBlur}
+                          onChange={(e) => {
+                            formik.handleChange(e);
+                            // Reset workSubType when workType changes
+                            formik.setFieldValue('workSubType', '');
+                          }}
                           label="Work Type *"
                         >
                           {workTypes.map((type) => (
@@ -173,10 +235,64 @@ const WorkOrderForm = ({
                             </MenuItem>
                           ))}
                         </Select>
-                        <FormHelperText>
-                          {formik.touched.workType && formik.errors.workType}
-                        </FormHelperText>
+                        {formik.touched.workType && formik.errors.workType && (
+                          <FormHelperText>{formik.errors.workType}</FormHelperText>
+                        )}
                       </FormControl>
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                      <FormControl fullWidth error={formik.touched.workSubType && Boolean(formik.errors.workSubType)}>
+                        <InputLabel id="work-subtype-label">Service Type *</InputLabel>
+                        <Select
+                          labelId="work-subtype-label"
+                          id="workSubType"
+                          name="workSubType"
+                          value={formik.values.workSubType}
+                          onChange={formik.handleChange}
+                          label="Service Type *"
+                          disabled={!formik.values.workType}
+                        >
+                          {formik.values.workType && workSubTypes[formik.values.workType]?.map((subType) => (
+                            <MenuItem key={subType.value} value={subType.value}>
+                              {subType.label}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                        {formik.touched.workSubType && formik.errors.workSubType && (
+                          <FormHelperText>{formik.errors.workSubType}</FormHelperText>
+                        )}
+                      </FormControl>
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        id="apartmentNumber"
+                        name="apartmentNumber"
+                        label="Apartment Number"
+                        value={formik.values.apartmentNumber}
+                        onChange={formik.handleChange}
+                        error={formik.touched.apartmentNumber && Boolean(formik.errors.apartmentNumber)}
+                        helperText={formik.touched.apartmentNumber && formik.errors.apartmentNumber}
+                        margin="normal"
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        id="roomsAffected"
+                        name="roomsAffected"
+                        label="Rooms Affected"
+                        type="number"
+                        value={formik.values.roomsAffected}
+                        onChange={formik.handleChange}
+                        error={formik.touched.roomsAffected && Boolean(formik.errors.roomsAffected)}
+                        helperText={formik.touched.roomsAffected && formik.errors.roomsAffected}
+                        margin="normal"
+                        inputProps={{ min: 1 }}
+                      />
                     </Grid>
 
                     <Grid item xs={12} md={3}>

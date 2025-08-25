@@ -12,6 +12,11 @@ const xss = require('xss-clean');
 const hpp = require('hpp');
 const cookieParser = require('cookie-parser');
 const compression = require('compression');
+const buildingRoutes = require('./routes/buildingRoutes');
+const workOrderRoutes = require('./routes/workOrderRoutes');
+const workerRoutes = require('./routes/workerRoutes');
+const authRoutes = require('./routes/authRoutes');
+const invoiceRoutes = require('./routes/invoiceRoutes');
 
 // Import routes
 const AppError = require('./utils/appError');

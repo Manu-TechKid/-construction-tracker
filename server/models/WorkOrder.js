@@ -16,8 +16,17 @@ const workOrderSchema = new mongoose.Schema({
     },
     workType: {
         type: String,
-        required: true,
-        enum: ['painting', 'repair', 'cleaning', 'carpentry', 'electrical', 'plumbing', 'other']
+        required: [true, 'Work type is required'],
+        enum: ['painting', 'cleaning', 'repair', 'maintenance', 'inspection', 'other']
+    },
+    workSubType: {
+        type: String,
+        required: [true, 'Work sub-type is required']
+    },
+    roomsAffected: {
+        type: Number,
+        min: 0,
+        default: 1
     },
     description: {
         type: String,
@@ -84,7 +93,47 @@ const workOrderSchema = new mongoose.Schema({
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true
+        required: false
+    },
+    photos: [{
+        url: {
+            type: String,
+            required: true
+        },
+        caption: {
+            type: String,
+            trim: true
+        },
+        uploadedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        uploadedAt: {
+            type: Date,
+            default: Date.now
+        },
+        type: {
+            type: String,
+            enum: ['before', 'during', 'after', 'issue', 'other'],
+            default: 'other'
+        }
+    }],
+    billingStatus: {
+        type: String,
+        enum: ['pending', 'invoiced', 'paid'],
+        default: 'pending'
+    },
+    totalCost: {
+        type: Number,
+        default: 0
+    },
+    materialsCost: {
+        type: Number,
+        default: 0
+    },
+    laborCost: {
+        type: Number,
+        default: 0
     }
 });
 
