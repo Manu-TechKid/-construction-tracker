@@ -108,14 +108,15 @@ const BuildingForm = ({
                     variant="contained"
                     color="primary"
                     fullWidth
-                    disabled={isSubmitting}
-                    startIcon={
-                      isSubmitting ? (
-                        <CircularProgress size={20} color="inherit" />
-                      ) : null
-                    }
+                    disabled={formik.isSubmitting}
+                    size="large"
+                    sx={{
+                      minHeight: { xs: 48, sm: 52 },
+                      fontSize: { xs: '0.875rem', sm: '1rem' },
+                      px: { xs: 2, sm: 3 }
+                    }}
                   >
-                    {isSubmitting ? 'Saving...' : isEdit ? 'Update Building' : 'Create Building'}
+                    {formik.isSubmitting ? 'Creating...' : 'Create Building'}
                   </Button>
                   
                   <Button
@@ -124,6 +125,11 @@ const BuildingForm = ({
                     fullWidth
                     onClick={onCancel}
                     disabled={isSubmitting}
+                    sx={{
+                      minHeight: { xs: 48, sm: 52 },
+                      fontSize: { xs: '0.875rem', sm: '1rem' },
+                      px: { xs: 2, sm: 3 }
+                    }}
                   >
                     Cancel
                   </Button>

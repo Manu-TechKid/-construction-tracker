@@ -9,10 +9,22 @@ const AuthLayout = ({ children }) => {
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: 'background.default',
-        p: 2,
+        p: { xs: 2, sm: 3, md: 4 },
+        position: 'relative',
       }}
     >
-      <Box sx={{ width: '100%', maxWidth: 400 }}>
+      <Container 
+        maxWidth="sm" 
+        sx={{ 
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100vh',
+          py: 4
+        }}
+      >
+        <Box sx={{ width: '100%', maxWidth: { xs: 350, sm: 400, md: 450 } }}>
         <Box sx={{ textAlign: 'center', mb: 3 }}>
           <Typography variant="h4" component="h1" color="primary" gutterBottom>
             Construction Tracker
@@ -31,7 +43,8 @@ const AuthLayout = ({ children }) => {
         >
           {children}
         </Paper>
-      </Box>
+        </Box>
+      </Container>
     </Box>
   );
 };

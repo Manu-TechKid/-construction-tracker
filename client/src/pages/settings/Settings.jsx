@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -27,6 +27,19 @@ const Settings = () => {
   });
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // Load settings from localStorage on component mount
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('constructionTrackerSettings');
+    if (savedSettings) {
+      try {
+        const parsedSettings = JSON.parse(savedSettings);
+        setSettings(parsedSettings);
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      }
+    }
+  }, []);
+
   const handleSettingChange = (setting) => (event) => {
     setSettings(prev => ({
       ...prev,
@@ -34,10 +47,28 @@ const Settings = () => {
     }));
   };
 
-  const handleSave = () => {
-    // TODO: Implement settings save API call
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+  const handleSave = async () => {
+    try {
+      // Save settings to localStorage for persistence
+      localStorage.setItem('constructionTrackerSettings', JSON.stringify(settings));
+      
+      // Apply language change immediately
+      if (settings.language) {
+        document.documentElement.lang = settings.language;
+      }
+      
+      // Apply dark mode if needed
+      if (settings.darkMode) {
+        document.body.classList.add('dark-mode');
+      } else {
+        document.body.classList.remove('dark-mode');
+      }
+      
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (error) {
+      console.error('Error saving settings:', error);
+    }
   };
 
   return (

@@ -119,14 +119,34 @@ exports.getBuildingReminders = catchAsync(async (req, res, next) => {
 });
 
 exports.createBuilding = catchAsync(async (req, res, next) => {
-    const newBuilding = await Building.create(req.body);
-    
-    res.status(201).json({
-        status: 'success',
-        data: {
-            building: newBuilding
+    try {
+        console.log('Creating building with data:', req.body);
+        
+        // Validate required fields
+        if (!req.body.name || !req.body.address) {
+            return next(new AppError('Name and address are required', 400));
         }
-    });
+        
+        const newBuilding = await Building.create({
+            name: req.body.name,
+            address: req.body.address,
+            description: req.body.description || '',
+            status: req.body.status || 'active',
+            createdBy: req.user ? req.user._id : null
+        });
+        
+        console.log('Building created successfully:', newBuilding);
+        
+        res.status(201).json({
+            status: 'success',
+            data: {
+                building: newBuilding
+            }
+        });
+    } catch (error) {
+        console.error('Error creating building:', error);
+        return next(new AppError('Failed to create building: ' + error.message, 500));
+    }
 });
 
 exports.updateBuilding = catchAsync(async (req, res, next) => {
