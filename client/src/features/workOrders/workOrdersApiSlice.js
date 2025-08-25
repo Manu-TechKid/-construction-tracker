@@ -7,10 +7,15 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
         url: '/work-orders',
         params,
       }),
-      providesTags: (result = {}, error, arg) => [
-        'WorkOrder',
-        ...(result?.data?.workOrders || []).map(({ _id }) => ({ type: 'WorkOrder', id: _id })),
-      ],
+      providesTags: (result = {}, error, arg) => {
+        if (result?.data?.workOrders) {
+          return [
+            'WorkOrder',
+            ...result.data.workOrders.map(({ _id }) => ({ type: 'WorkOrder', id: _id })),
+          ];
+        }
+        return ['WorkOrder'];
+      },
     }),
     getWorkOrder: builder.query({
       query: (id) => `/work-orders/${id}`,

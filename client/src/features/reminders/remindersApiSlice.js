@@ -19,9 +19,9 @@ export const remindersApiSlice = apiSlice.injectEndpoints({
           params: Object.fromEntries(params),
         };
       },
-      providesTags: (result = [], error, arg) => [
+      providesTags: (result = {}, error, arg) => [
         'Reminder',
-        ...result.data.reminders.map(({ _id }) => ({ type: 'Reminder', id: _id })),
+        ...(result?.data?.reminders || []).map(({ _id }) => ({ type: 'Reminder', id: _id })),
       ],
     }),
     

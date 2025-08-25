@@ -14,7 +14,10 @@ export const buildingsApiSlice = apiSlice.injectEndpoints({
           params: Object.fromEntries(params),
         };
       },
-      providesTags: ['Building'],
+      providesTags: (result = {}, error, arg) => [
+        'Building',
+        ...(result?.data?.buildings || []).map(({ _id }) => ({ type: 'Building', id: _id })),
+      ],
     }),
     getBuilding: builder.query({
       query: (id) => `/buildings/${id}`,

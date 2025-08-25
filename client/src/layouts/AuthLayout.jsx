@@ -1,43 +1,45 @@
-import { Box, Paper, Typography, useTheme } from '@mui/material';
-import { styled } from '@mui/material/styles';
-import { Outlet } from 'react-router-dom';
-import ErrorBoundary from '../components/common/ErrorBoundary';
+import { Box, Container, Paper, Typography } from '@mui/material';
 
 const AuthLayout = ({ children }) => {
-  const theme = useTheme();
-
   return (
     <Box
       sx={{
         minHeight: '100vh',
-        display: 'grid',
-        placeItems: 'center',
-        bgcolor: theme.palette.grey[100],
-        p: 2,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'background.default',
+        py: 3,
+        px: 2,
       }}
     >
-      <Box sx={{ width: '100%', maxWidth: 520 }}>
-        <Box sx={{ textAlign: 'center', mb: 3 }}>
-          <Typography component="h1" variant="h4" sx={{ fontWeight: 700, color: theme.palette.primary.main, mb: 1 }}>
+      <Container maxWidth="sm">
+        <Box sx={{ textAlign: 'center', mb: 4 }}>
+          <Typography variant="h3" component="h1" color="primary" gutterBottom>
             Construction Tracker
           </Typography>
-          <Typography variant="subtitle1" sx={{ color: theme.palette.text.secondary }}>
+          <Typography variant="subtitle1" color="text.secondary">
             Manage your construction projects efficiently
           </Typography>
         </Box>
-
-        <Paper elevation={3} sx={{ p: { xs: 3, sm: 4 }, borderRadius: 2 }}>
-          <ErrorBoundary>
-            {children ? children : <Outlet />}
-          </ErrorBoundary>
+        <Paper
+          elevation={3}
+          sx={{
+            p: 4,
+            borderRadius: 2,
+            width: '100%',
+            maxWidth: 450,
+            mx: 'auto',
+          }}
+        >
+          {children}
         </Paper>
-
         <Box sx={{ mt: 3, textAlign: 'center' }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+          <Typography variant="body2" color="text.secondary">
             © {new Date().getFullYear()} Construction Tracker. All rights reserved.
           </Typography>
         </Box>
-      </Box>
+      </Container>
     </Box>
   );
 };

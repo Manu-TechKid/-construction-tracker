@@ -85,6 +85,8 @@ const ReminderForm = ({
     dueDate: null,
     priority: 'medium',
     category: 'maintenance',
+    status: 'pending',
+    notes: [],
     ...initialValuesProp
   };
   
@@ -126,33 +128,27 @@ const ReminderForm = ({
     validationSchema,
     enableReinitialize: true,
     onSubmit: async (values, { setSubmitting, setFieldError }) => {
-      const formData = new FormData();
-      
-      // Append all form fields
-      Object.keys(values).forEach(key => {
-        if (key !== 'photos' && key !== 'notes') {
-          formData.append(key, values[key]);
-        }
-      });
-      
-      // Append files
-      files.forEach(file => {
-        formData.append('photos', file);
-      });
-      
-      // Append notes
-      values.notes.forEach((note, index) => {
-        if (note._id) {
-          formData.append(`notes[${index}][_id]`, note._id);
-        }
-        formData.append(`notes[${index}][text]`, note.text);
-        if (note.createdBy) {
-          formData.append(`notes[${index}][createdBy]`, note.createdBy);
-        }
-      });
-      
-      await onSubmit(formData);
-      setSubmitting(false);
+      try {
+        // Create a proper JSON payload instead of FormData for now
+        const payload = {
+          title: values.title,
+          description: values.description,
+          building: values.building,
+          type: values.type,
+          apartment: values.apartment,
+          dueDate: values.dueDate,
+          priority: values.priority,
+          category: values.category,
+          status: values.status || 'pending',
+          notes: values.notes || []
+        };
+        
+        await onSubmit(payload);
+        setSubmitting(false);
+      } catch (error) {
+        console.error('Form submission error:', error);
+        setSubmitting(false);
+      }
     },
   });
 
@@ -332,7 +328,7 @@ const ReminderForm = ({
                         value={formik.values.building}
                         onChange={(e) => {
                           formik.handleChange(e);
-                          const selected = buildingsData?.data?.find(b => b._id === e.target.value);
+                          const selected = buildingsData?.data?.buildings?.find(b => b._id === e.target.value);
                           setSelectedBuilding(selected);
                           // Reset apartment when building changes
                           if (formik.values.type === 'apartment') {
@@ -343,7 +339,7 @@ const ReminderForm = ({
                         label="Building *"
                         disabled={!!buildingId} // Disable if building is set from URL
                       >
-                        {buildingsData?.data?.map((building) => (
+                        {buildingsData?.data?.buildings?.map((building) => (
                           <MenuItem key={building._id} value={building._id}>
                             {building.name}
                           </MenuItem>

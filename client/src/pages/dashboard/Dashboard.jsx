@@ -41,18 +41,9 @@ const Dashboard = () => {
   });
 
   // Fetch data with error handling - skip failing endpoints gracefully
-  const { data: workOrdersData, isLoading: isLoadingWorkOrders, error: workOrdersError } = useGetWorkOrdersQuery({}, { 
-    skip: false,
-    errorPolicy: 'ignore'
-  });
-  const { data: buildingsData, isLoading: isLoadingBuildings, error: buildingsError } = useGetBuildingsQuery({}, { 
-    skip: false,
-    errorPolicy: 'ignore'
-  });
-  const { data: workersData, isLoading: isLoadingWorkers, error: workersError } = useGetWorkersQuery({}, { 
-    skip: false,
-    errorPolicy: 'ignore'
-  });
+  const { data: workOrdersData, isLoading: isLoadingWorkOrders, error: workOrdersError } = useGetWorkOrdersQuery({});
+  const { data: buildingsData, isLoading: isLoadingBuildings, error: buildingsError } = useGetBuildingsQuery({});
+  const { data: workersData, isLoading: isLoadingWorkers, error: workersError } = useGetWorkersQuery({});
 
   // Process data when loaded - handle missing endpoints gracefully
   useEffect(() => {

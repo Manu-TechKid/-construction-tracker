@@ -19,10 +19,13 @@ import ResetPassword from './pages/auth/ResetPassword';
 import Dashboard from './pages/dashboard/Dashboard';
 import Buildings from './pages/buildings/Buildings';
 import BuildingDetails from './pages/buildings/BuildingDetails';
+import CreateBuilding from './pages/buildings/CreateBuilding';
 import WorkOrders from './pages/workOrders/WorkOrders';
 import WorkOrderDetails from './pages/workOrders/WorkOrderDetails';
+import CreateWorkOrder from './pages/workOrders/CreateWorkOrder';
 import Workers from './pages/workers/Workers';
 import WorkerDetails from './pages/workers/WorkerDetails';
+import CreateWorker from './pages/workers/CreateWorker';
 import Profile from './pages/profile/Profile';
 import Settings from './pages/settings/Settings';
 
@@ -138,18 +141,21 @@ function App() {
             {/* Buildings Routes */}
             <Route path="buildings">
               <Route index element={<Buildings />} />
+              <Route path="new" element={<CreateBuilding />} />
               <Route path=":id" element={<BuildingDetails />} />
             </Route>
             
             {/* Work Orders Routes */}
             <Route path="work-orders">
               <Route index element={<WorkOrders />} />
+              <Route path="new" element={<CreateWorkOrder />} />
               <Route path=":id" element={<WorkOrderDetails />} />
             </Route>
             
             {/* Workers Routes */}
             <Route path="workers">
               <Route index element={<Workers />} />
+              <Route path="new" element={<CreateWorker />} />
               <Route path=":id" element={<WorkerDetails />} />
             </Route>
             

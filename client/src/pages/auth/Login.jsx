@@ -59,7 +59,16 @@ const Login = () => {
   // simplified UI to ensure everything renders clearly
 
   return (
-    <Box sx={{ width: '100%', maxWidth: 420, mx: 'auto' }}>
+    <Box sx={{ 
+      width: '100%', 
+      maxWidth: 420, 
+      mx: 'auto',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      minHeight: '100vh',
+      px: 2
+    }}>
       <Typography component="h1" variant="h5" sx={{ mb: 2, textAlign: 'center' }}>
         Sign in to your account
       </Typography>
