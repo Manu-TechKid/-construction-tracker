@@ -26,7 +26,7 @@ router
     workOrderController.deleteWorkOrder
   );
 
-router.patch('/:id/assign', authController.protect, workOrderController.assignWorkOrder);
+router.patch('/:id/assign', authController.protect, workOrderController.assignWorkers);
 router.patch('/:id/status', authController.protect, workOrderController.updateStatus);
 router.post('/:id/issues', authController.protect, workOrderController.reportIssue);
 router.post('/:id/notes', authController.protect, workOrderController.addNoteToWorkOrder);
