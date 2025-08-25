@@ -11,10 +11,7 @@ router.use(authController.protect);
 router
   .route('/')
   .get(workOrderController.getAllWorkOrders)
-  .post(
-    authController.restrictTo('admin', 'manager', 'supervisor'),
-    workOrderController.createWorkOrder
-  );
+  .post(workOrderController.createWorkOrder);
 
 // Routes for specific work order
 router

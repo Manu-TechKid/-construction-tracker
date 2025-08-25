@@ -14,10 +14,11 @@ const CreateBuilding = () => {
     try {
       const result = await createBuilding(formData).unwrap();
       toast.success('Building created successfully');
-      navigate(`/buildings/${result.data.building._id}`);
+      navigate('/buildings');
     } catch (error) {
       console.error('Failed to create building:', error);
-      toast.error(error?.data?.message || 'Failed to create building');
+      const errorMessage = error?.data?.message || error?.message || 'Failed to create building';
+      toast.error(errorMessage);
     }
   };
 

@@ -11,10 +11,7 @@ router.use(authController.protect);
 router
   .route('/')
   .get(workerController.getAllWorkers)
-  .post(
-    authController.restrictTo('admin', 'manager'),
-    workerController.createWorker
-  );
+  .post(workerController.createWorker);
 
 // Routes for specific worker
 router

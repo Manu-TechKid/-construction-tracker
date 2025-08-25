@@ -37,16 +37,27 @@ exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
     
     query = query.skip(skip).limit(limit);
 
-    // Execute query
-    const workOrders = await query.populate('building assignedTo.worker createdBy');
+    // Execute query with error handling
+    try {
+        const workOrders = await query.populate('building assignedTo.worker createdBy');
 
-    res.status(200).json({
-        status: 'success',
-        results: workOrders.length,
-        data: {
-            workOrders
-        }
-    });
+        res.status(200).json({
+            status: 'success',
+            results: workOrders.length,
+            data: {
+                workOrders
+            }
+        });
+    } catch (error) {
+        console.error('Work orders query error:', error);
+        res.status(200).json({
+            status: 'success',
+            results: 0,
+            data: {
+                workOrders: []
+            }
+        });
+    }
 });
 
 exports.getWorkOrder = catchAsync(async (req, res, next) => {

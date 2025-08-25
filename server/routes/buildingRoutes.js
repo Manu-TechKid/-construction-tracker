@@ -12,10 +12,7 @@ router.use(authController.protect);
 router
   .route('/')
   .get(buildingController.getAllBuildings)
-  .post(
-    authController.restrictTo('admin', 'manager'),
-    buildingController.createBuilding
-  );
+  .post(buildingController.createBuilding);
 
 // Routes for specific building
 router

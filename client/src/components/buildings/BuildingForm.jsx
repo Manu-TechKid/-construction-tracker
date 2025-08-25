@@ -13,7 +13,7 @@ import {
   Divider,
 } from '@mui/material';
 
-const validationSchema = Yup.object({
+const validationSchema = Yup.object().shape({
   name: Yup.string().required('Building name is required'),
   address: Yup.string().required('Address is required'),
 });

@@ -28,7 +28,7 @@ const Login = () => {
   const from = location.state?.from?.pathname || '/dashboard';
 
   // Form validation schema
-  const validationSchema = Yup.object({
+  const validationSchema = Yup.object().shape({
     email: Yup.string()
       .email('Enter a valid email')
       .required('Email is required'),
@@ -59,16 +59,7 @@ const Login = () => {
   // simplified UI to ensure everything renders clearly
 
   return (
-    <Box sx={{ 
-      width: '100%', 
-      maxWidth: 420, 
-      mx: 'auto',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      minHeight: '100vh',
-      px: 2
-    }}>
+    <Box>
       <Typography component="h1" variant="h5" sx={{ mb: 2, textAlign: 'center' }}>
         Sign in to your account
       </Typography>

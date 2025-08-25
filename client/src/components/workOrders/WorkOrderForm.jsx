@@ -21,7 +21,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 
-const validationSchema = Yup.object({
+const validationSchema = Yup.object().shape({
   building: Yup.string().required('Building is required'),
   apartmentNumber: Yup.string().required('Apartment number is required'),
   block: Yup.string().required('Block is required'),
