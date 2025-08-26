@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { changeLanguage as i18nChangeLanguage } from '../i18n
+import { changeLanguage as i18nChangeLanguage } from '../i18n';
 
 // Keys for localStorage
 const STORAGE_KEY = 'ct_settings_v1';
