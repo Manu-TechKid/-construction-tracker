@@ -66,7 +66,9 @@ const DrawerHeader = styled('div')(({ theme }) => ({
   padding: theme.spacing(0, 1),
   // necessary for content to be below app bar
   ...theme.mixins.toolbar,
-  justifyContent: 'flex-end',
+  justifyContent: 'flex-start',
+  gap: theme.spacing(1.5),
+  paddingLeft: theme.spacing(2),
 }));
 
 const DashboardLayout = () => {
@@ -77,6 +79,7 @@ const DashboardLayout = () => {
   const location = useLocation();
   const dispatch = useDispatch();
   const [logoutApi] = useLogoutMutation();
+  const logoUrl = process.env.REACT_APP_DSJ_LOGO_URL;
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -106,9 +109,15 @@ const DashboardLayout = () => {
   const drawer = (
     <div style={{ width: isMobile ? mobileDrawerWidth : drawerWidth }}>
       <DrawerHeader>
+        {logoUrl ? (
+          <img
+            src={logoUrl}
+            alt="Company Logo"
+            style={{ height: 32, width: 'auto', objectFit: 'contain' }}
+          />
+        ) : null}
         <Typography variant="h6" noWrap component="div" sx={{ 
-          flexGrow: 1, 
-          ml: 2,
+          flexGrow: 1,
           fontSize: isMobile ? '1rem' : '1.25rem',
           whiteSpace: 'nowrap',
           overflow: 'hidden',
