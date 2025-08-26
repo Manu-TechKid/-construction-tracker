@@ -1,6 +1,7 @@
 import { Box, Container, Paper, Typography } from '@mui/material';
 
 const AuthLayout = ({ children }) => {
+  const logoUrl = process.env.REACT_APP_DSJ_LOGO_URL;
   return (
     <Box
       sx={{
@@ -26,6 +27,13 @@ const AuthLayout = ({ children }) => {
       >
         <Box sx={{ width: '100%', maxWidth: { xs: 350, sm: 400, md: 450 } }}>
         <Box sx={{ textAlign: 'center', mb: 3 }}>
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt="Company Logo"
+              style={{ maxHeight: 56, objectFit: 'contain', marginBottom: 8 }}
+            />
+          ) : null}
           <Typography variant="h4" component="h1" color="primary" gutterBottom>
             Construction Tracker
           </Typography>
