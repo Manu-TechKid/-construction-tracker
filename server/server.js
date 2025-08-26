@@ -32,7 +32,26 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Set security HTTP headers
-app.use(helmet());
+app.use(
+  helmet({
+    // Allow Cloudinary images and typical assets via CSP
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        defaultSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com'],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        fontSrc: ["'self'", 'data:'],
+        connectSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'self'"],
+      },
+    },
+    // Allow cross-origin images to render
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
 
 // Development logging
 if (process.env.NODE_ENV === 'development') {
@@ -199,7 +218,7 @@ const startServer = async () => {
 
   // Handle unhandled promise rejections
   process.on('unhandledRejection', err => {
-    console.log('UNHANDLED REJECTION! 💥 Shutting down...');
+    console.log('UNHANDLED REJECTION! Shutting down...');
     console.log(err.name, err.message);
     server.close(() => {
       process.exit(1);
@@ -212,7 +231,7 @@ startServer();
 
 // Handle uncaught exceptions
 process.on('uncaughtException', err => {
-  console.log('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+  console.log('UNCAUGHT EXCEPTION! Shutting down...');
   console.log(err.name, err.message);
   process.exit(1);
 });
