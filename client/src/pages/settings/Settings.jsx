@@ -15,10 +15,10 @@ import {
   FormControl,
   InputLabel,
 } from '@mui/material';
-import { SettingsContext } from '../../contexts/SettingsContext';
+import { useSettings } from '../../contexts/SettingsContext';
 
 const Settings = () => {
-  const { settings, toggleTheme, setLanguage } = useContext(SettingsContext);
+  const { settings, toggleTheme, setLanguage } = useSettings();
   const [localSettings, setLocalSettings] = useState({
     notifications: true,
     emailAlerts: true,
