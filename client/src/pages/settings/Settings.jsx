@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -8,7 +9,6 @@ import {
   Switch,
   FormControlLabel,
   Button,
-  Divider,
   Alert,
   Select,
   MenuItem,
@@ -17,13 +17,21 @@ import {
 } from '@mui/material';
 import { useSettings } from '../../contexts/SettingsContext';
 
+const timezones = [
+  { value: 'UTC', label: 'UTC' },
+  { value: 'America/New_York', label: 'Eastern Time (ET)' },
+  { value: 'America/Chicago', label: 'Central Time (CT)' },
+  { value: 'America/Denver', label: 'Mountain Time (MT)' },
+  { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
+];
+
 const Settings = () => {
+  const { t } = useTranslation();
   const { settings, toggleTheme, setLanguage } = useSettings();
   const [localSettings, setLocalSettings] = useState({
     notifications: true,
     emailAlerts: true,
     timezone: 'UTC',
-    autoSave: true,
   });
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -33,7 +41,14 @@ const Settings = () => {
     if (savedSettings) {
       try {
         const parsedSettings = JSON.parse(savedSettings);
-        setLocalSettings(parsedSettings);
+        setLocalSettings(prev => ({
+          ...prev,
+          ...parsedSettings,
+          // Ensure timezone is set to a valid value
+          timezone: timezones.some(tz => tz.value === parsedSettings.timezone) 
+            ? parsedSettings.timezone 
+            : 'UTC'
+        }));
       } catch (error) {
         console.error('Error loading settings:', error);
       }
@@ -41,32 +56,34 @@ const Settings = () => {
   }, []);
 
   const handleLocalSettingChange = (setting) => (event) => {
-    setLocalSettings(prev => ({
-      ...prev,
+    const newSettings = {
+      ...localSettings,
       [setting]: event.target.checked !== undefined ? event.target.checked : event.target.value
-    }));
-  };
-
-  const handleSave = async () => {
+    };
+    setLocalSettings(newSettings);
+    
+    // Auto-save non-global settings
     try {
-      // Save only local settings to localStorage
-      localStorage.setItem('constructionTrackerSettings', JSON.stringify(localSettings));
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      localStorage.setItem('constructionTrackerSettings', JSON.stringify(newSettings));
     } catch (error) {
       console.error('Error saving settings:', error);
     }
   };
 
+  const handleSave = () => {
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3000);
+  };
+
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        Settings
+        {t('settings.title')}
       </Typography>
       
       {saveSuccess && (
         <Alert severity="success" sx={{ mb: 2 }}>
-          Settings saved successfully!
+          {t('settings.settingsSaved')}
         </Alert>
       )}
 
@@ -75,7 +92,7 @@ const Settings = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Appearance
+                {t('settings.appearance')}
               </Typography>
               
               <FormControlLabel
@@ -86,17 +103,17 @@ const Settings = () => {
                     color="primary"
                   />
                 }
-                label="Dark Mode"
+                label={t('settings.darkMode')}
                 sx={{ mb: 2, display: 'block' }}
               />
 
               <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel id="language-label">Language</InputLabel>
+                <InputLabel id="language-label">{t('settings.language')}</InputLabel>
                 <Select
                   labelId="language-label"
                   value={settings.language || 'en'}
                   onChange={(e) => setLanguage(e.target.value)}
-                  label="Language"
+                  label={t('settings.language')}
                 >
                   <MenuItem value="en">English</MenuItem>
                   <MenuItem value="es">Español</MenuItem>
@@ -110,7 +127,7 @@ const Settings = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Notifications
+                {t('settings.notifications')}
               </Typography>
               
               <FormControlLabel
@@ -121,7 +138,7 @@ const Settings = () => {
                     color="primary"
                   />
                 }
-                label="Enable Notifications"
+                label={t('settings.enableNotifications')}
                 sx={{ mb: 2, display: 'block' }}
               />
 
@@ -131,25 +148,26 @@ const Settings = () => {
                     checked={localSettings.emailAlerts}
                     onChange={handleLocalSettingChange('emailAlerts')}
                     color="primary"
+                    disabled={!localSettings.notifications}
                   />
                 }
-                label="Email Alerts"
+                label={t('settings.emailAlerts')}
                 sx={{ mb: 2, display: 'block' }}
               />
 
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel id="timezone-label">Timezone</InputLabel>
+              <FormControl fullWidth>
+                <InputLabel id="timezone-label">{t('settings.timezone')}</InputLabel>
                 <Select
                   labelId="timezone-label"
                   value={localSettings.timezone}
                   onChange={handleLocalSettingChange('timezone')}
-                  label="Timezone"
+                  label={t('settings.timezone')}
                 >
-                  <MenuItem value="UTC">UTC</MenuItem>
-                  <MenuItem value="America/New_York">Eastern Time (ET)</MenuItem>
-                  <MenuItem value="America/Chicago">Central Time (CT)</MenuItem>
-                  <MenuItem value="America/Denver">Mountain Time (MT)</MenuItem>
-                  <MenuItem value="America/Los_Angeles">Pacific Time (PT)</MenuItem>
+                  {timezones.map((tz) => (
+                    <MenuItem key={tz.value} value={tz.value}>
+                      {tz.label}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </CardContent>
@@ -163,7 +181,7 @@ const Settings = () => {
           color="primary"
           onClick={handleSave}
         >
-          Save Settings
+          {t('settings.saveSettings')}
         </Button>
       </Box>
     </Box>

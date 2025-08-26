@@ -3,7 +3,6 @@ import { changeLanguage as i18nChangeLanguage } from '../i18n';
 
 // Keys for localStorage
 const STORAGE_KEY = 'ct_settings_v1';
-
 const defaultSettings = {
   theme: 'light', // 'light' | 'dark'
   language: 'en', // 'en', 'es', etc.
@@ -21,8 +20,16 @@ export const SettingsProvider = ({ children }) => {
   const [settings, setSettings] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
+      if (saved) {
+        return { ...defaultSettings, ...JSON.parse(saved) };
+      }
+      // If no saved settings, check system preference
+      if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return { ...defaultSettings, theme: 'dark' };
+      }
+      return defaultSettings;
     } catch (e) {
+      console.error('Error loading settings:', e);
       return defaultSettings;
     }
   });
@@ -31,32 +38,85 @@ export const SettingsProvider = ({ children }) => {
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-    } catch {}
+    } catch (error) {
+      console.error('Error saving settings:', error);
+    }
   }, [settings]);
 
-  // Keep <html lang> in sync and update i18n
+  // Apply theme and language to document
   useEffect(() => {
     if (typeof document !== 'undefined') {
+      // Apply theme class to document
+      document.documentElement.setAttribute('data-theme', settings.theme);
+      
+      // Apply language to document
       document.documentElement.lang = settings.language || 'en';
+      
+      // Update i18n language
       i18nChangeLanguage(settings.language);
     }
-  }, [settings.language]);
+  }, [settings.theme, settings.language]);
 
-  const toggleTheme = () =>
-    setSettings((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }));
-
-  const setLanguage = (lng) => {
-    setSettings((prev) => ({ ...prev, language: lng || 'en' }));
+  // Toggle between light and dark theme
+  const toggleTheme = () => {
+    setSettings(prev => ({
+      ...prev,
+      theme: prev.theme === 'dark' ? 'light' : 'dark',
+    }));
   };
 
-  const value = useMemo(
-    () => ({ settings, setSettings, toggleTheme, setLanguage }),
+  // Set language
+  const setLanguage = (lng) => {
+    setSettings(prev => ({
+      ...prev,
+      language: lng || 'en',
+    }));
+  };
+
+  // Watch for system theme changes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    
+    const handleChange = () => {
+      setSettings(prev => ({
+        ...prev,
+        theme: mediaQuery.matches ? 'dark' : 'light',
+      }));
+    };
+    
+    // Add listener for system theme changes
+    mediaQuery.addEventListener('change', handleChange);
+    
+    // Cleanup
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo(
+    () => ({
+      settings,
+      setSettings,
+      toggleTheme,
+      setLanguage,
+    }),
     [settings]
   );
 
-  return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
+  return (
+    <SettingsContext.Provider value={contextValue}>
+      {children}
+    </SettingsContext.Provider>
+  );
 };
 
-export const useSettings = () => useContext(SettingsContext);
+export const useSettings = () => {
+  const context = useContext(SettingsContext);
+  if (!context) {
+    throw new Error('useSettings must be used within a SettingsProvider');
+  }
+  return context;
+};
 
 export default SettingsContext;

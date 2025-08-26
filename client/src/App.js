@@ -46,32 +46,38 @@ import EditReminder from './pages/reminders/EditReminder';
 function ThemedApp({ children }) {
   const { settings } = useSettings();
   const theme = React.useMemo(
-    () => createTheme({
-      palette: {
-        mode: settings.theme || 'light',
-        primary: {
-          main: '#1976d2',
+    () => {
+      const baseTheme = settings.theme === 'dark' ? darkTheme : lightTheme;
+      return createTheme({
+        ...baseTheme,
+        palette: {
+          ...baseTheme.palette,
+          mode: settings.theme || 'light',
         },
-        secondary: {
-          main: '#dc004e',
-        },
-      },
-    }),
-    [settings.theme]
+        direction: settings.language === 'ar' ? 'rtl' : 'ltr',
+      });
+    },
+    [settings.theme, settings.language]
   );
 
-  // Apply language to document
+  // Apply language to document and handle RTL
   React.useEffect(() => {
-    document.documentElement.lang = settings.language || 'en';
+    const lang = settings.language || 'en';
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
   }, [settings.language]);
 
   return (
     <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <CssBaseline enableColorScheme />
+      <LocalizationProvider 
+        dateAdapter={AdapterDateFns}
+        adapterLocale={settings.language === 'es' ? 'es' : 'enUS'}
+      >
         <SnackbarProvider 
           maxSnack={3}
           anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+          autoHideDuration={5000}
         >
           {children}
         </SnackbarProvider>
