@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -54,103 +54,105 @@ function ThemedApp({ children }) {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      {children}
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <SnackbarProvider maxSnack={3}>
+          {children}
+        </SnackbarProvider>
+      </LocalizationProvider>
     </ThemeProvider>
   );
 }
 
 function AppContent() {
   return (
-    <Router>
-      <Routes>
-        {/* Public Routes */}
-        <Route
-          path="/login"
-          element={
-            <AuthLayout>
-              <Login />
-            </AuthLayout>
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            <AuthLayout>
-              <Register />
-            </AuthLayout>
-          }
-        />
-        <Route
-          path="/forgot-password"
-          element={
-            <AuthLayout>
-              <ForgotPassword />
-            </AuthLayout>
-          }
-        />
-        <Route
-          path="/reset-password/:token"
-          element={
-            <AuthLayout>
-              <ResetPassword />
-            </AuthLayout>
-          }
-        />
+    <Routes>
+      {/* Public Routes */}
+      <Route
+        path="/login"
+        element={
+          <AuthLayout>
+            <Login />
+          </AuthLayout>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <AuthLayout>
+            <Register />
+          </AuthLayout>
+        }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          <AuthLayout>
+            <ForgotPassword />
+          </AuthLayout>
+        }
+      />
+      <Route
+        path="/reset-password/:token"
+        element={
+          <AuthLayout>
+            <ResetPassword />
+          </AuthLayout>
+        }
+      />
 
-        {/* Protected Routes */}
-        <Route
-          path="/"
-          element={
-            <DashboardLayout />
-          }
-        >
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          
-          {/* Buildings Routes */}
-          <Route path="buildings">
-            <Route index element={<Buildings />} />
-            <Route path="new" element={<CreateBuilding />} />
-            <Route path=":id" element={<BuildingDetails />} />
-          </Route>
-          
-          {/* Work Orders Routes */}
-          <Route path="work-orders">
-            <Route index element={<WorkOrders />} />
-            <Route path="new" element={<CreateWorkOrder />} />
-            <Route path=":id" element={<WorkOrderDetails />} />
-          </Route>
-          
-          {/* Workers Routes */}
-          <Route path="workers">
-            <Route index element={<Workers />} />
-            <Route path="new" element={<CreateWorker />} />
-            <Route path=":id" element={<WorkerDetails />} />
-          </Route>
-          
-          {/* Invoices Routes */}
-          <Route path="invoices">
-            <Route index element={<Invoices />} />
-            <Route path="new" element={<CreateInvoice />} />
-          </Route>
-          
-          {/* Reminders Routes */}
-          <Route path="reminders">
-            <Route index element={<Reminders />} />
-            <Route path=":id" element={<ReminderDetail />} />
-            <Route path="new" element={<CreateReminder />} />
-            <Route path=":id/edit" element={<EditReminder />} />
-          </Route>
-          
-          {/* User Routes */}
-          <Route path="profile" element={<Profile />} />
-          <Route path="settings" element={<Settings />} />
-
-          {/* 404 Route */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+      {/* Protected Routes */}
+      <Route
+        path="/"
+        element={
+          <DashboardLayout />
+        }
+      >
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="dashboard" element={<Dashboard />} />
+        
+        {/* Buildings Routes */}
+        <Route path="buildings">
+          <Route index element={<Buildings />} />
+          <Route path="new" element={<CreateBuilding />} />
+          <Route path=":id" element={<BuildingDetails />} />
         </Route>
-      </Routes>
-    </Router>
+        
+        {/* Work Orders Routes */}
+        <Route path="work-orders">
+          <Route index element={<WorkOrders />} />
+          <Route path="new" element={<CreateWorkOrder />} />
+          <Route path=":id" element={<WorkOrderDetails />} />
+        </Route>
+        
+        {/* Workers Routes */}
+        <Route path="workers">
+          <Route index element={<Workers />} />
+          <Route path="new" element={<CreateWorker />} />
+          <Route path=":id" element={<WorkerDetails />} />
+        </Route>
+        
+        {/* Invoices Routes */}
+        <Route path="invoices">
+          <Route index element={<Invoices />} />
+          <Route path="new" element={<CreateInvoice />} />
+        </Route>
+        
+        {/* Reminders Routes */}
+        <Route path="reminders">
+          <Route index element={<Reminders />} />
+          <Route path=":id" element={<ReminderDetail />} />
+          <Route path="new" element={<CreateReminder />} />
+          <Route path=":id/edit" element={<EditReminder />} />
+        </Route>
+        
+        {/* User Routes */}
+        <Route path="profile" element={<Profile />} />
+        <Route path="settings" element={<Settings />} />
+
+        {/* 404 Route */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
   );
 }
 
@@ -159,15 +161,7 @@ function App() {
     <Provider store={store}>
       <SettingsProvider>
         <ThemedApp>
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <SnackbarProvider
-              maxSnack={3}
-              anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-              autoHideDuration={3000}
-            >
-              <AppContent />
-            </SnackbarProvider>
-          </LocalizationProvider>
+          <AppContent />
         </ThemedApp>
       </SettingsProvider>
     </Provider>
