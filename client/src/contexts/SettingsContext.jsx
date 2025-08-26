@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { changeLanguage as i18nChangeLanguage } from '../i18n';
 
 // Keys for localStorage
 const STORAGE_KEY = 'ct_settings_v1';
@@ -33,18 +34,20 @@ export const SettingsProvider = ({ children }) => {
     } catch {}
   }, [settings]);
 
-  // Keep <html lang> in sync
+  // Keep <html lang> in sync and update i18n
   useEffect(() => {
     if (typeof document !== 'undefined') {
       document.documentElement.lang = settings.language || 'en';
+      i18nChangeLanguage(settings.language);
     }
   }, [settings.language]);
 
   const toggleTheme = () =>
     setSettings((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }));
 
-  const setLanguage = (lng) =>
+  const setLanguage = (lng) => {
     setSettings((prev) => ({ ...prev, language: lng || 'en' }));
+  };
 
   const value = useMemo(
     () => ({ settings, setSettings, toggleTheme, setLanguage }),
