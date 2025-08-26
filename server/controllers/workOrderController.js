@@ -290,3 +290,40 @@ exports.updateStatus = catchAsync(async (req, res, next) => {
         }
     });
 });
+
+// Add photo metadata to a work order after uploading to Cloudinary
+exports.addPhotoToWorkOrder = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { url, thumbnailUrl, publicId, caption, type } = req.body;
+
+  const workOrder = await WorkOrder.findById(id);
+  if (!workOrder) return next(new AppError('Work order not found', 404));
+
+  const photo = {
+    url,
+    caption,
+    uploadedBy: req.user && req.user.id,
+    uploadedAt: new Date(),
+    type: type || 'other',
+  };
+
+  // Ensure duplicates aren't added accidentally
+  const exists = workOrder.photos.some((p) => p.url === url);
+  if (!exists) workOrder.photos.push(photo);
+  await workOrder.save();
+
+  res.status(201).json({ status: 'success', data: workOrder });
+});
+
+// Remove photo metadata from a work order (optionally also delete in Cloudinary by publicId)
+exports.deletePhotoFromWorkOrder = catchAsync(async (req, res, next) => {
+  const { id, photoId } = req.params;
+  const workOrder = await WorkOrder.findById(id);
+  if (!workOrder) return next(new AppError('Work order not found', 404));
+
+  // If we stored publicId in the future, we can also call Cloudinary destroy here
+  workOrder.photos.id(photoId)?.remove();
+  await workOrder.save();
+
+  res.json({ status: 'success', data: workOrder });
+});

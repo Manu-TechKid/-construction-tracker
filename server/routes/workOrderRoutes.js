@@ -33,6 +33,18 @@ router.post('/:id/notes', authController.protect, workOrderController.addNoteToW
 router.patch('/:id/notes/:noteId', authController.protect, workOrderController.updateNoteInWorkOrder);
 router.delete('/:id/notes/:noteId', authController.protect, workOrderController.deleteNoteFromWorkOrder);
 
+// Photos endpoints
+router.post(
+  '/:id/photos',
+  authController.restrictTo('admin', 'manager', 'supervisor'),
+  workOrderController.addPhotoToWorkOrder
+);
+router.delete(
+  '/:id/photos/:photoId',
+  authController.restrictTo('admin', 'manager'),
+  workOrderController.deletePhotoFromWorkOrder
+);
+
 // Assign workers to work order
 router
   .route('/:id/assign')
