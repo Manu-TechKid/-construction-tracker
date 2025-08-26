@@ -63,14 +63,13 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })(
 const DrawerHeader = styled('div')(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
-  padding: theme.spacing(0, 1),
-  // necessary for content to be below app bar
+  padding: theme.spacing(0, 2),
   ...theme.mixins.toolbar,
   justifyContent: 'flex-start',
-  gap: theme.spacing(1.25),
-  paddingLeft: theme.spacing(2),
+  gap: theme.spacing(1.5),
   minHeight: theme.mixins.toolbar.minHeight,
   borderBottom: `1px solid ${theme.palette.divider}`,
+  overflow: 'hidden',
 }));
 
 const DashboardLayout = () => {
@@ -113,29 +112,36 @@ const DashboardLayout = () => {
     <div style={{ width: isMobile ? mobileDrawerWidth : drawerWidth }}>
       <DrawerHeader>
         {logoUrl ? (
-          <img
-            src={logoUrl}
-            alt="Company Logo"
-            style={{ height: 32, width: 'auto', objectFit: 'contain', display: 'block' }}
-          />
-        ) : null}
-        <Typography
-          variant="h6"
-          noWrap
-          component="div"
-          sx={{
-            ml: 1,
-            flexGrow: 1,
-            fontSize: isMobile ? '0.95rem' : '1.1rem',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            maxWidth: `calc(100% - ${logoUrl ? 48 : 0}px)`,
-            fontWeight: 600,
-          }}
-        >
-          Construction Tracker
-        </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
+            <img
+              src={logoUrl}
+              alt="Company Logo"
+              style={{ 
+                height: 32, 
+                width: 'auto', 
+                objectFit: 'contain',
+                flexShrink: 0
+              }}
+            />
+            <Typography 
+              variant="subtitle1" 
+              noWrap 
+              sx={{ 
+                fontWeight: 600,
+                flexShrink: 1,
+                minWidth: 0,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}
+            >
+              Construction Tracker
+            </Typography>
+          </Box>
+        ) : (
+          <Typography variant="h6" noWrap>
+            Construction Tracker
+          </Typography>
+        )}
       </DrawerHeader>
       <Divider />
       <List>
