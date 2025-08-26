@@ -67,8 +67,10 @@ const DrawerHeader = styled('div')(({ theme }) => ({
   // necessary for content to be below app bar
   ...theme.mixins.toolbar,
   justifyContent: 'flex-start',
-  gap: theme.spacing(1.5),
+  gap: theme.spacing(1.25),
   paddingLeft: theme.spacing(2),
+  minHeight: theme.mixins.toolbar.minHeight,
+  borderBottom: `1px solid ${theme.palette.divider}`,
 }));
 
 const DashboardLayout = () => {
@@ -114,16 +116,24 @@ const DashboardLayout = () => {
           <img
             src={logoUrl}
             alt="Company Logo"
-            style={{ height: 28, width: 'auto', objectFit: 'contain' }}
+            style={{ height: 32, width: 'auto', objectFit: 'contain', display: 'block' }}
           />
         ) : null}
-        <Typography variant="h6" noWrap component="div" sx={{ 
-          flexGrow: 1,
-          fontSize: isMobile ? '1rem' : '1.25rem',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis'
-        }}>
+        <Typography
+          variant="h6"
+          noWrap
+          component="div"
+          sx={{
+            ml: 1,
+            flexGrow: 1,
+            fontSize: isMobile ? '0.95rem' : '1.1rem',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: `calc(100% - ${logoUrl ? 48 : 0}px)`,
+            fontWeight: 600,
+          }}
+        >
           Construction Tracker
         </Typography>
       </DrawerHeader>
@@ -216,6 +226,7 @@ const DashboardLayout = () => {
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
               width: drawerWidth,
+              pt: 0,
             },
           }}
         >
