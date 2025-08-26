@@ -1,6 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, CssBaseline } from '@mui/material';
+import { ThemeProvider, CssBaseline, createTheme } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { SnackbarProvider } from 'notistack';
@@ -44,7 +44,20 @@ import EditReminder from './pages/reminders/EditReminder';
 // Theme wrapper component
 function ThemedApp({ children }) {
   const { settings } = useSettings();
-  const theme = settings.theme === 'dark' ? darkTheme : lightTheme;
+  const theme = React.useMemo(
+    () => createTheme({
+      palette: {
+        mode: settings.theme || 'light',
+        primary: {
+          main: '#1976d2',
+        },
+        secondary: {
+          main: '#dc004e',
+        },
+      },
+    }),
+    [settings.theme]
+  );
 
   // Apply language to document
   React.useEffect(() => {
@@ -55,7 +68,10 @@ function ThemedApp({ children }) {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <SnackbarProvider maxSnack={3}>
+        <SnackbarProvider 
+          maxSnack={3}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
           {children}
         </SnackbarProvider>
       </LocalizationProvider>
