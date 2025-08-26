@@ -79,7 +79,8 @@ const DashboardLayout = () => {
   const location = useLocation();
   const dispatch = useDispatch();
   const [logoutApi] = useLogoutMutation();
-  const logoUrl = process.env.REACT_APP_DSJ_LOGO_URL;
+  const rawLogoUrl = process.env.REACT_APP_DSJ_LOGO_URL;
+  const logoUrl = rawLogoUrl ? rawLogoUrl.replace('/upload/', '/upload/f_auto,q_auto,w_160/') : undefined;
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -113,7 +114,7 @@ const DashboardLayout = () => {
           <img
             src={logoUrl}
             alt="Company Logo"
-            style={{ height: 32, width: 'auto', objectFit: 'contain' }}
+            style={{ height: 28, width: 'auto', objectFit: 'contain' }}
           />
         ) : null}
         <Typography variant="h6" noWrap component="div" sx={{ 
