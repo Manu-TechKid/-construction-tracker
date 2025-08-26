@@ -1,13 +1,17 @@
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import Box from '@mui/material/Box';
-import { selectIsAuthenticated } from './features/auth/authSlice';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider, CssBaseline } from '@mui/material';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { SnackbarProvider } from 'notistack';
+import { Provider } from 'react-redux';
+import { store } from './app/store';
+import { lightTheme, darkTheme } from './theme/theme';
+import { SettingsProvider, useSettings } from './contexts/SettingsContext';
 
 // Layouts
-import DashboardLayout from './layouts/DashboardLayout';
 import AuthLayout from './layouts/AuthLayout';
+import DashboardLayout from './layouts/DashboardLayout';
 
 // Auth Pages
 import Login from './pages/auth/Login';
@@ -37,154 +41,136 @@ import ReminderDetail from './pages/reminders/ReminderDetail';
 import CreateReminder from './pages/reminders/CreateReminder';
 import EditReminder from './pages/reminders/EditReminder';
 
-// Create a theme instance
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-    background: {
-      default: '#f5f5f5',
-    },
-  },
-  typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-  },
-});
+// Theme wrapper component
+function ThemedApp({ children }) {
+  const { settings } = useSettings();
+  const theme = settings.theme === 'dark' ? darkTheme : lightTheme;
 
-// Protected Route Component
-const ProtectedRoute = ({ children }) => {
-  const isAuthenticated = useSelector(selectIsAuthenticated);
-  const location = useLocation();
+  // Apply language to document
+  React.useEffect(() => {
+    document.documentElement.lang = settings.language || 'en';
+  }, [settings.language]);
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  return children;
-};
-
-// Public Route Component
-const PublicRoute = ({ children }) => {
-  const isAuthenticated = useSelector(selectIsAuthenticated);
-  const location = useLocation();
-
-  if (isAuthenticated) {
-    const from = location.state?.from?.pathname || '/dashboard';
-    return <Navigate to={from} replace />;
-  }
-
-  return children;
-};
-
-function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-        <Routes>
-          {/* Public Routes */}
-          <Route
-            path="/login"
-            element={
-              <PublicRoute>
-                <AuthLayout>
-                  <Login />
-                </AuthLayout>
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/register"
-            element={
-              <PublicRoute>
-                <AuthLayout>
-                  <Register />
-                </AuthLayout>
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/forgot-password"
-            element={
-              <PublicRoute>
-                <AuthLayout>
-                  <ForgotPassword />
-                </AuthLayout>
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/reset-password/:token"
-            element={
-              <PublicRoute>
-                <AuthLayout>
-                  <ResetPassword />
-                </AuthLayout>
-              </PublicRoute>
-            }
-          />
-
-          {/* Protected Routes */}
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            
-            {/* Buildings Routes */}
-            <Route path="buildings">
-              <Route index element={<Buildings />} />
-              <Route path="new" element={<CreateBuilding />} />
-              <Route path=":id" element={<BuildingDetails />} />
-            </Route>
-            
-            {/* Work Orders Routes */}
-            <Route path="work-orders">
-              <Route index element={<WorkOrders />} />
-              <Route path="new" element={<CreateWorkOrder />} />
-              <Route path=":id" element={<WorkOrderDetails />} />
-            </Route>
-            
-            {/* Workers Routes */}
-            <Route path="workers">
-              <Route index element={<Workers />} />
-              <Route path="new" element={<CreateWorker />} />
-              <Route path=":id" element={<WorkerDetails />} />
-            </Route>
-            
-            {/* Invoices Routes */}
-            <Route path="invoices">
-              <Route index element={<Invoices />} />
-              <Route path="new" element={<CreateInvoice />} />
-            </Route>
-            
-            {/* Reminders Routes */}
-            <Route path="reminders">
-              <Route index element={<Reminders />} />
-              <Route path=":id" element={<ReminderDetail />} />
-              <Route path="new" element={<CreateReminder />} />
-              <Route path=":id/edit" element={<EditReminder />} />
-            </Route>
-            
-            {/* User Routes */}
-            <Route path="profile" element={<Profile />} />
-            <Route path="settings" element={<Settings />} />
-
-              {/* 404 Route */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
-      </Box>
+      {children}
     </ThemeProvider>
+  );
+}
+
+function AppContent() {
+  return (
+    <Router>
+      <Routes>
+        {/* Public Routes */}
+        <Route
+          path="/login"
+          element={
+            <AuthLayout>
+              <Login />
+            </AuthLayout>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <AuthLayout>
+              <Register />
+            </AuthLayout>
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            <AuthLayout>
+              <ForgotPassword />
+            </AuthLayout>
+          }
+        />
+        <Route
+          path="/reset-password/:token"
+          element={
+            <AuthLayout>
+              <ResetPassword />
+            </AuthLayout>
+          }
+        />
+
+        {/* Protected Routes */}
+        <Route
+          path="/"
+          element={
+            <DashboardLayout />
+          }
+        >
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          
+          {/* Buildings Routes */}
+          <Route path="buildings">
+            <Route index element={<Buildings />} />
+            <Route path="new" element={<CreateBuilding />} />
+            <Route path=":id" element={<BuildingDetails />} />
+          </Route>
+          
+          {/* Work Orders Routes */}
+          <Route path="work-orders">
+            <Route index element={<WorkOrders />} />
+            <Route path="new" element={<CreateWorkOrder />} />
+            <Route path=":id" element={<WorkOrderDetails />} />
+          </Route>
+          
+          {/* Workers Routes */}
+          <Route path="workers">
+            <Route index element={<Workers />} />
+            <Route path="new" element={<CreateWorker />} />
+            <Route path=":id" element={<WorkerDetails />} />
+          </Route>
+          
+          {/* Invoices Routes */}
+          <Route path="invoices">
+            <Route index element={<Invoices />} />
+            <Route path="new" element={<CreateInvoice />} />
+          </Route>
+          
+          {/* Reminders Routes */}
+          <Route path="reminders">
+            <Route index element={<Reminders />} />
+            <Route path=":id" element={<ReminderDetail />} />
+            <Route path="new" element={<CreateReminder />} />
+            <Route path=":id/edit" element={<EditReminder />} />
+          </Route>
+          
+          {/* User Routes */}
+          <Route path="profile" element={<Profile />} />
+          <Route path="settings" element={<Settings />} />
+
+          {/* 404 Route */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </Router>
+  );
+}
+
+function App() {
+  return (
+    <Provider store={store}>
+      <SettingsProvider>
+        <ThemedApp>
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <SnackbarProvider
+              maxSnack={3}
+              anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+              autoHideDuration={3000}
+            >
+              <AppContent />
+            </SnackbarProvider>
+          </LocalizationProvider>
+        </ThemedApp>
+      </SettingsProvider>
+    </Provider>
   );
 }
 
