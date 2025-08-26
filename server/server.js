@@ -31,25 +31,12 @@ const app = express();
 // Trust the first proxy (Render, Heroku, etc.) so that req.ip and rate limiting work correctly
 app.set('trust proxy', 1);
 
-// Set security HTTP headers
+// Set security HTTP headers with minimal CSP for Cloudinary
 app.use(
   helmet({
-    // Allow Cloudinary images and typical assets via CSP
-    contentSecurityPolicy: {
-      useDefaults: true,
-      directives: {
-        defaultSrc: ["'self'"],
-        imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com'],
-        scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        fontSrc: ["'self'", 'data:'],
-        connectSrc: ["'self'"],
-        objectSrc: ["'none'"],
-        frameAncestors: ["'self'"],
-      },
-    },
-    // Allow cross-origin images to render
-    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    contentSecurityPolicy: false, // Disable default CSP
+    crossOriginEmbedderPolicy: false, // Disable COEP
+    crossOriginResourcePolicy: { policy: 'cross-origin' } // Allow cross-origin images
   })
 );
 

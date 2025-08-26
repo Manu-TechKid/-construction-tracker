@@ -147,6 +147,15 @@ exports.login = catchAsync(async (req, res, next) => {
     createSendToken(user, 200, res);
 });
 
+// Simple logout endpoint (stateless JWT). Client should discard token.
+exports.logout = (req, res) => {
+  // For stateless JWT, client-side token removal is sufficient
+  res.status(200).json({
+    status: 'success',
+    message: 'Successfully logged out'
+  });
+};
+
 // Protect routes middleware
 exports.protect = catchAsync(async (req, res, next) => {
     // 1) Getting token and check if it's there
