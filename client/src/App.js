@@ -7,7 +7,8 @@ import { SnackbarProvider } from 'notistack';
 import { Provider } from 'react-redux';
 import { store } from './app/store';
 import { lightTheme, darkTheme } from './theme/theme';
-import { SettingsProvider, useSettings } from './contexts/SettingsContext';
+import { SettingsProvider } from './contexts/SettingsContext';
+import { useSettings } from './contexts/SettingsContext';
 
 // Layouts
 import AuthLayout from './layouts/AuthLayout';
