@@ -50,7 +50,7 @@ export const buildingsApiSlice = apiSlice.injectEndpoints({
       invalidatesTags: ['Building'],
     }),
     addApartment: builder.mutation({
-      query: ({ buildingId, ...apartmentData }) => ({
+      query: ({ buildingId, apartmentData }) => ({
         url: `/buildings/${buildingId}/apartments`,
         method: 'POST',
         body: apartmentData,
@@ -60,10 +60,10 @@ export const buildingsApiSlice = apiSlice.injectEndpoints({
       ],
     }),
     updateApartment: builder.mutation({
-      query: ({ buildingId, apartmentId, ...updates }) => ({
+      query: ({ buildingId, apartmentId, apartmentData }) => ({
         url: `/buildings/${buildingId}/apartments/${apartmentId}`,
         method: 'PATCH',
-        body: updates,
+        body: apartmentData,
       }),
       invalidatesTags: (result, error, { buildingId }) => [
         { type: 'Building', id: buildingId },
