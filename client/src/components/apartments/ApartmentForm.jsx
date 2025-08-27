@@ -61,7 +61,11 @@ const ApartmentForm = ({ open, onClose, buildingId, apartment = null }) => {
         setError('');
         setSubmitting(true);
         
+        console.log('ApartmentForm onSubmit - buildingId:', buildingId);
+        console.log('ApartmentForm onSubmit - values:', values);
+        
         if (!buildingId) {
+          console.error('Building ID is missing in ApartmentForm');
           throw new Error('Building ID is required');
         }
         

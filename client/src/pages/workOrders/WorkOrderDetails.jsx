@@ -713,7 +713,7 @@ const WorkOrderDetails = () => {
             Work Orders
           </Link>
           <Typography color="text.primary">
-            {workOrder.workOrderNumber || `#${workOrder._id.slice(-6).toUpperCase()}`}
+            {workOrder.workOrderNumber || (workOrder._id ? `#${workOrder._id.slice(-6).toUpperCase()}` : 'Loading...')}
           </Typography>
         </Breadcrumbs>
         

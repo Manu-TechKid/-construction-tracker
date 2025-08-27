@@ -61,14 +61,31 @@ const workOrderSchema = new mongoose.Schema({
         default: 'medium'
     },
     notes: [{
-        content: String,
-        createdAt: {
+        type: {
+            type: String,
+            enum: ['progress', 'incident', 'info'],
+            default: 'progress'
+        },
+        title: {
+            type: String,
+            required: true
+        },
+        description: {
+            type: String,
+            required: true
+        },
+        priority: {
+            type: String,
+            enum: ['low', 'medium', 'high'],
+            default: 'medium'
+        },
+        author: {
+            type: String,
+            required: true
+        },
+        timestamp: {
             type: Date,
             default: Date.now
-        },
-        createdBy: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User'
         }
     }],
     issues: [{
@@ -86,15 +103,6 @@ const workOrderSchema = new mongoose.Schema({
             default: false
         }
     }],
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    createdBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: false
-    },
     photos: [{
         url: {
             type: String,
@@ -138,34 +146,6 @@ const workOrderSchema = new mongoose.Schema({
         default: 0,
         min: 0
     },
-    notes: [{
-        type: {
-            type: String,
-            enum: ['progress', 'incident', 'info'],
-            default: 'progress'
-        },
-        title: {
-            type: String,
-            required: true
-        },
-        description: {
-            type: String,
-            required: true
-        },
-        priority: {
-            type: String,
-            enum: ['low', 'medium', 'high'],
-            default: 'medium'
-        },
-        author: {
-            type: String,
-            required: true
-        },
-        timestamp: {
-            type: Date,
-            default: Date.now
-        }
-    }],
     createdAt: {
         type: Date,
         default: Date.now
