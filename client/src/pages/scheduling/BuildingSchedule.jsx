@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -29,7 +29,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfDay, parseISO } from 'date-fns';
 import { useBuildingContext } from '../../contexts/BuildingContext';
 import { useAuth } from '../../hooks/useAuth';
 import { toast } from 'react-toastify';
@@ -96,9 +96,10 @@ const BuildingSchedule = () => {
 
   const getSchedulesForDay = (day) => {
     return filteredSchedules.filter(schedule => {
-      const startDate = new Date(schedule.startDate);
-      const endDate = new Date(schedule.endDate);
-      return day >= startDate && day <= endDate;
+      const startDate = startOfDay(typeof schedule.startDate === 'string' ? parseISO(schedule.startDate) : new Date(schedule.startDate));
+      const endDate = startOfDay(typeof schedule.endDate === 'string' ? parseISO(schedule.endDate) : new Date(schedule.endDate));
+      const normalizedDay = startOfDay(day);
+      return normalizedDay >= startDate && normalizedDay <= endDate;
     });
   };
 

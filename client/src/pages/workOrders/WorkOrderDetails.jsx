@@ -367,7 +367,7 @@ const WorkOrderInfoTab = ({ workOrder, buildings, workers, onUpdateWorkOrder }) 
               </ListItemAvatar>
               <ListItemText 
                 primary="Work Order #" 
-                secondary={workOrder.workOrderNumber || workOrder._id.slice(-8).toUpperCase()} 
+                secondary={workOrder?.workOrderNumber || (workOrder?._id ? workOrder._id.slice(-8).toUpperCase() : 'Loading...')} 
               />
             </ListItem>
             
@@ -713,7 +713,7 @@ const WorkOrderDetails = () => {
             Work Orders
           </Link>
           <Typography color="text.primary">
-            {workOrder.workOrderNumber || (workOrder._id ? `#${workOrder._id.slice(-6).toUpperCase()}` : 'Loading...')}
+            {workOrder?.workOrderNumber || (workOrder?._id ? `#${workOrder._id.slice(-6).toUpperCase()}` : 'Loading...')}
           </Typography>
         </Breadcrumbs>
         

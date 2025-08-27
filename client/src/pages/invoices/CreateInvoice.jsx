@@ -78,33 +78,31 @@ const CreateInvoice = () => {
   };
 
   const handleSubmit = async () => {
-    setError('');
-    
-    if (!selectedBuilding) {
-      setError('Please select a building');
-      return;
-    }
-    
-    if (selectedWorkOrders.length === 0) {
-      setError('Please select at least one work order');
+    if (!selectedBuilding || selectedWorkOrders.length === 0) {
+      toast.error('Please select a building and at least one work order');
       return;
     }
 
     try {
+      const { subtotal, tax, total } = calculateTotals();
+      
       const invoiceData = {
-        buildingId: selectedBuilding,
-        workOrderIds: selectedWorkOrders,
-        dueDate: dueDate.toISOString(),
-        notes,
+        building: selectedBuilding,
+        workOrders: selectedWorkOrders,
+        subtotal,
+        tax,
+        total,
+        issueDate: new Date(),
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+        status: 'pending'
       };
 
       await createInvoice(invoiceData).unwrap();
-      toast.success('Invoice created successfully');
+      toast.success('Invoice created successfully!');
       navigate('/invoices');
     } catch (error) {
       console.error('Failed to create invoice:', error);
       const errorMessage = error?.data?.message || error?.message || 'Failed to create invoice';
-      setError(errorMessage);
       toast.error(errorMessage);
     }
   };

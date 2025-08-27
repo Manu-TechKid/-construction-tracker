@@ -36,7 +36,8 @@ const WorkOrderForm = ({
   const { data: buildingsData, isLoading: buildingsLoading, error: buildingsError } = useGetBuildingsQuery();
   const buildings = buildingsData?.data?.buildings || [];
   const [photos, setPhotos] = useState([]);
-  const [submitError, setSubmitError] = useState('');
+  const [submitError, setSubmitError] = useState([]);
+  const [availableBlocks, setAvailableBlocks] = useState([]);
 
   const validationSchema = Yup.object().shape({
     building: Yup.string().required(t('validation.required')),
@@ -47,6 +48,8 @@ const WorkOrderForm = ({
     description: Yup.string().required(t('validation.required')),
     priority: Yup.string().required(t('validation.required')),
     startDate: Yup.date().required(t('validation.required')),
+    estimatedCost: Yup.number(),
+    notes: Yup.string(),
   });
 
   const initialValues = {
@@ -63,25 +66,14 @@ const WorkOrderForm = ({
     ...initialValuesProp,
   };
 
-  const workTypes = [
-    { value: 'plumbing', label: t('workOrders.types.plumbing') },
-    { value: 'electrical', label: t('workOrders.types.electrical') },
-    { value: 'hvac', label: t('workOrders.types.hvac') },
-    { value: 'painting', label: t('workOrders.types.painting') },
-    { value: 'flooring', label: t('workOrders.types.flooring') },
-    { value: 'appliances', label: t('workOrders.types.appliances') },
-    { value: 'general', label: t('workOrders.types.general') },
-  ];
-
-  const workSubTypes = {
-    plumbing: ['Leak Repair', 'Pipe Installation', 'Drain Cleaning', 'Faucet Repair'],
-    electrical: ['Wiring', 'Outlet Installation', 'Light Fixture', 'Circuit Breaker'],
-    hvac: ['AC Repair', 'Heating Repair', 'Vent Cleaning', 'Thermostat'],
-    painting: ['Interior Painting', 'Exterior Painting', 'Touch-up', 'Primer'],
-    flooring: ['Tile Repair', 'Carpet Installation', 'Hardwood Repair', 'Vinyl Installation'],
-    appliances: ['Refrigerator', 'Washer/Dryer', 'Dishwasher', 'Oven/Stove'],
-    general: ['Door Repair', 'Window Repair', 'Drywall', 'General Maintenance'],
+  // Work type options based on DSJ Company services
+  const workTypes = {
+    'Painting': ['1 Room Painting', '2 Room Painting', '3 Room Painting', 'Door Painting', 'Ceiling Painting', 'Cabinet Painting', 'Hallway Painting', 'Paint Touch-ups'],
+    'Cleaning': ['1 Bedroom Cleaning', '2 Bedroom Cleaning', '3 Bedroom Cleaning', 'Touch-up Cleaning', 'Heavy Cleaning', 'Carpet Cleaning', 'Gutter Cleaning'],
+    'Repairs': ['Air Conditioning Repair', 'Door Repair', 'Ceiling Repair', 'Floor Repair', 'General Maintenance', 'Plumbing Repair', 'Electrical Repair']
   };
+
+  const workSubTypes = workTypes;
 
   const priorities = [
     { value: 'low', label: t('workOrders.priorities.low') },
@@ -211,9 +203,9 @@ const WorkOrderForm = ({
                     onBlur={formik.handleBlur}
                     label={t('workOrders.type')}
                   >
-                    {workTypes.map((type) => (
-                      <MenuItem key={type.value} value={type.value}>
-                        {type.label}
+                    {Object.keys(workTypes).map((type) => (
+                      <MenuItem key={type} value={type}>
+                        {type}
                       </MenuItem>
                     ))}
                   </Select>
@@ -237,7 +229,7 @@ const WorkOrderForm = ({
                     onBlur={formik.handleBlur}
                     label={t('workOrders.service')}
                   >
-                    {(workSubTypes[formik.values.workType] || []).map((subType) => (
+                    {(workTypes[formik.values.workType] || []).map((subType) => (
                       <MenuItem key={subType} value={subType}>
                         {subType}
                       </MenuItem>
@@ -294,14 +286,16 @@ const WorkOrderForm = ({
                   label={t('workOrders.dueDate')}
                   value={formik.values.startDate}
                   onChange={(date) => formik.setFieldValue('startDate', date)}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      fullWidth
-                      error={formik.touched.startDate && Boolean(formik.errors.startDate)}
-                      helperText={formik.touched.startDate && formik.errors.startDate}
-                    />
-                  )}
+                  slots={{
+                    textField: TextField
+                  }}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      error: formik.touched.startDate && Boolean(formik.errors.startDate),
+                      helperText: formik.touched.startDate && formik.errors.startDate
+                    }
+                  }}
                 />
               </Grid>
 
@@ -314,6 +308,8 @@ const WorkOrderForm = ({
                   value={formik.values.estimatedCost}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
+                  error={formik.touched.estimatedCost && Boolean(formik.errors.estimatedCost)}
+                  helperText={formik.touched.estimatedCost && formik.errors.estimatedCost}
                   InputProps={{
                     startAdornment: <InputAdornment position="start">$</InputAdornment>,
                   }}
@@ -324,12 +320,14 @@ const WorkOrderForm = ({
                 <TextField
                   fullWidth
                   multiline
-                  rows={2}
+                  rows={3}
                   name="notes"
-                  label={t('common.notes')}
+                  label={t('workOrders.notes')}
                   value={formik.values.notes}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
+                  error={formik.touched.notes && Boolean(formik.errors.notes)}
+                  helperText={formik.touched.notes && formik.errors.notes}
                 />
               </Grid>
             </Grid>
@@ -337,8 +335,8 @@ const WorkOrderForm = ({
         </Card>
 
         <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
+          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+            <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1.1rem', md: '1.25rem' } }}>
               Photos
             </Typography>
             <PhotoUpload
@@ -349,21 +347,23 @@ const WorkOrderForm = ({
           </CardContent>
         </Card>
 
-        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+        <Box display="flex" justifyContent="flex-end" gap={2} sx={{ mt: 3 }}>
           <Button
             variant="outlined"
             onClick={onCancel}
             disabled={isSubmitting}
+            size="large"
           >
             {t('common.cancel')}
           </Button>
           <Button
             type="submit"
             variant="contained"
-            disabled={isSubmitting || !formik.isValid}
-            startIcon={isSubmitting ? <CircularProgress size={16} /> : null}
+            disabled={isSubmitting}
+            startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
+            size="large"
           >
-            {isSubmitting ? t('common.loading') : t('workOrders.create')}
+            {isSubmitting ? t('common.saving') : t('common.save')}
           </Button>
         </Box>
       </Box>

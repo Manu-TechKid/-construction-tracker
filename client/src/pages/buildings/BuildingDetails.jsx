@@ -29,6 +29,7 @@ import {
   CircularProgress,
   Tooltip,
   Badge,
+  Alert,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import {
@@ -610,6 +611,28 @@ const BuildingDetails = () => {
   console.log('BuildingDetails - buildingData:', buildingData);
   console.log('BuildingDetails - building:', building);
   console.log('BuildingDetails - building._id:', building?._id);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+  }
+
+  // Error state
+  if (isError || !building) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Alert severity="error">
+          {error?.message || 'Building not found'}
+        </Alert>
+      </Container>
+    );
+  }
   
   // Handle tab change
   const handleTabChange = (event, newValue) => {
@@ -626,37 +649,6 @@ const BuildingDetails = () => {
   const handleEditBuilding = () => {
     navigate(`/buildings/${id}/edit`);
   };
-  
-  // Render loading state
-  if (isLoading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-  
-  // Render error state
-  if (isError) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Paper sx={{ p: 3, textAlign: 'center' }}>
-          <Typography color="error" gutterBottom>
-            Error loading building: {error?.data?.message || 'Building not found'}
-          </Typography>
-          <Button 
-            variant="outlined" 
-            color="primary" 
-            onClick={() => navigate(-1)}
-            startIcon={<ArrowBackIcon />}
-            sx={{ mt: 2 }}
-          >
-            Back to Buildings
-          </Button>
-        </Paper>
-      </Container>
-    );
-  }
   
   // Render tabs
   const tabs = [
