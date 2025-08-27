@@ -14,6 +14,7 @@ import {
   Select,
   MenuItem,
   FormHelperText,
+  InputAdornment,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -67,7 +68,7 @@ const WorkOrderForm = ({
         const formData = {
           ...values,
           photos: photos,
-          totalCost: (values.laborCost || 0) + (values.materialsCost || 0)
+          totalCost: (parseFloat(values.laborCost) || 0) + (parseFloat(values.materialsCost) || 0)
         };
         await onSubmit(formData);
       } catch (error) {
@@ -205,10 +206,6 @@ const WorkOrderForm = ({
                         helperText={formik.touched.apartmentNumber && formik.errors.apartmentNumber}
                         variant="outlined"
                         placeholder="Enter apartment number"
-                        inputProps={{
-                          autoComplete: 'off',
-                          maxLength: 10
-                        }}
                       />
                     </Grid>
 
@@ -225,10 +222,6 @@ const WorkOrderForm = ({
                         helperText={formik.touched.block && formik.errors.block}
                         variant="outlined"
                         placeholder="Enter block"
-                        inputProps={{
-                          autoComplete: 'off',
-                          maxLength: 5
-                        }}
                       />
                     </Grid>
 
@@ -242,18 +235,10 @@ const WorkOrderForm = ({
                           value={formik.values.workType}
                           onChange={(e) => {
                             formik.handleChange(e);
-                            // Reset workSubType when workType changes
                             formik.setFieldValue('workSubType', '');
                           }}
                           onBlur={formik.handleBlur}
                           label="Work Type *"
-                          MenuProps={{
-                            PaperProps: {
-                              style: {
-                                maxHeight: 300,
-                              },
-                            },
-                          }}
                         >
                           <MenuItem value="">
                             <em>Select work type</em>
@@ -285,13 +270,6 @@ const WorkOrderForm = ({
                           onChange={formik.handleChange}
                           onBlur={formik.handleBlur}
                           label="Service Type *"
-                          MenuProps={{
-                            PaperProps: {
-                              style: {
-                                maxHeight: 300,
-                              },
-                            },
-                          }}
                         >
                           <MenuItem value="">
                             <em>{formik.values.workType ? 'Select service type' : 'Select work type first'}</em>
@@ -402,7 +380,7 @@ const WorkOrderForm = ({
                         variant="outlined"
                         inputProps={{ min: 0, step: 0.01 }}
                         InputProps={{
-                          startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>,
+                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
                         }}
                       />
                     </Grid>
@@ -422,7 +400,7 @@ const WorkOrderForm = ({
                         variant="outlined"
                         inputProps={{ min: 0, step: 0.01 }}
                         InputProps={{
-                          startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>,
+                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
                         }}
                       />
                     </Grid>
@@ -446,6 +424,7 @@ const WorkOrderForm = ({
               variant="outlined"
               onClick={onCancel}
               disabled={isSubmitting}
+              size="large"
             >
               Cancel
             </Button>
@@ -453,6 +432,7 @@ const WorkOrderForm = ({
               type="submit"
               variant="contained"
               disabled={isSubmitting || !formik.isValid}
+              size="large"
             >
               {isSubmitting ? 'Creating...' : 'Create Work Order'}
             </Button>

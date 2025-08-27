@@ -273,7 +273,7 @@ const ApartmentsTab = ({ building }) => {
             </IconButton>
           </Tooltip>
           
-          {hasPermission(['admin', 'manager']) && (
+          {hasPermission(['update:apartments']) && (
             <>
               <Tooltip title="Edit Apartment">
                 <IconButton 
@@ -321,7 +321,7 @@ const ApartmentsTab = ({ building }) => {
           />
         </Box>
         
-        {hasPermission(['admin', 'manager']) && (
+        {hasPermission(['create:apartments']) && (
           <Button
             variant="contained"
             size="small"
@@ -375,7 +375,7 @@ const ApartmentsTab = ({ building }) => {
                 <Typography variant="body1" color="text.secondary" gutterBottom>
                   No apartments found for this building
                 </Typography>
-                {hasPermission(['admin', 'manager']) && (
+                {hasPermission(['create:apartments']) && (
                   <Button
                     variant="outlined"
                     startIcon={<AddIcon />}

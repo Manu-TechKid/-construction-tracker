@@ -21,6 +21,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useAddApartmentMutation, useUpdateApartmentMutation } from '../../features/buildings/buildingsApiSlice';
+import { toast } from 'react-toastify';
 
 // Validation schema
 const validationSchema = Yup.object({
@@ -54,34 +55,52 @@ const ApartmentForm = ({ open, onClose, buildingId, apartment = null }) => {
       notes: apartment?.notes || '',
     },
     validationSchema,
-    onSubmit: async (values) => {
+    enableReinitialize: true,
+    onSubmit: async (values, { setSubmitting, resetForm }) => {
       try {
         setError('');
+        setSubmitting(true);
+        
         const apartmentData = {
           ...values,
-          area: Number(values.area),
-          bedrooms: Number(values.bedrooms),
-          bathrooms: Number(values.bathrooms),
+          area: parseFloat(values.area),
+          bedrooms: parseInt(values.bedrooms),
+          bathrooms: parseInt(values.bathrooms),
         };
 
         if (isEdit) {
           await updateApartment({
             buildingId,
             apartmentId: apartment._id,
-            ...apartmentData,
+            apartmentData
           }).unwrap();
+          toast.success('Apartment updated successfully');
         } else {
           await addApartment({
             buildingId,
-            ...apartmentData,
+            apartmentData
           }).unwrap();
+          toast.success('Apartment added successfully');
         }
-        onClose(true);
+        
+        resetForm();
+        onClose(true); // Pass true to indicate successful submission
       } catch (err) {
-        setError(err.data?.message || 'An error occurred while saving the apartment');
+        console.error('Failed to save apartment:', err);
+        const errorMessage = err?.data?.message || err?.message || 'Failed to save apartment';
+        setError(errorMessage);
+        toast.error(errorMessage);
+      } finally {
+        setSubmitting(false);
       }
     },
   });
+
+  const handleClose = () => {
+    formik.resetForm();
+    setError('');
+    onClose(false);
+  };
 
   const statusOptions = [
     { value: 'vacant', label: 'Vacant' },
@@ -93,23 +112,23 @@ const ApartmentForm = ({ open, onClose, buildingId, apartment = null }) => {
   const typeOptions = [
     { value: 'standard', label: 'Standard' },
     { value: 'studio', label: 'Studio' },
-    { value: 'loft', label: 'Loft' },
-    { value: 'duplex', label: 'Duplex' },
     { value: 'penthouse', label: 'Penthouse' },
+    { value: 'duplex', label: 'Duplex' },
   ];
 
   return (
-    <Dialog open={open} onClose={() => onClose(false)} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <Box display="flex" justifyContent="space-between" alignItems="center">
           <Typography variant="h6">
             {isEdit ? 'Edit Apartment' : 'Add New Apartment'}
           </Typography>
-          <IconButton onClick={() => onClose(false)} size="small">
+          <IconButton onClick={handleClose} size="small">
             <CloseIcon />
           </IconButton>
         </Box>
       </DialogTitle>
+
       <form onSubmit={formik.handleSubmit}>
         <DialogContent dividers>
           {error && (
@@ -117,65 +136,67 @@ const ApartmentForm = ({ open, onClose, buildingId, apartment = null }) => {
               {error}
             </Alert>
           )}
+
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 id="number"
                 name="number"
-                label="Apartment Number"
+                label="Apartment Number *"
                 value={formik.values.number}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
                 error={formik.touched.number && Boolean(formik.errors.number)}
                 helperText={formik.touched.number && formik.errors.number}
-                margin="normal"
-                size="small"
+                variant="outlined"
+                placeholder="e.g., 101, A1, etc."
               />
             </Grid>
+
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 id="block"
                 name="block"
-                label="Block"
+                label="Block *"
                 value={formik.values.block}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
                 error={formik.touched.block && Boolean(formik.errors.block)}
                 helperText={formik.touched.block && formik.errors.block}
-                margin="normal"
-                size="small"
+                variant="outlined"
+                placeholder="e.g., A, B, 1, 2, etc."
               />
             </Grid>
+
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 id="floor"
                 name="floor"
-                label="Floor"
-                type="number"
+                label="Floor *"
                 value={formik.values.floor}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
                 error={formik.touched.floor && Boolean(formik.errors.floor)}
                 helperText={formik.touched.floor && formik.errors.floor}
-                margin="normal"
-                size="small"
+                variant="outlined"
+                placeholder="e.g., 1, 2, Ground, etc."
               />
             </Grid>
+
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth margin="normal" size="small">
-                <InputLabel id="status-label">Status</InputLabel>
+              <FormControl fullWidth error={formik.touched.status && Boolean(formik.errors.status)}>
+                <InputLabel id="status-label">Status *</InputLabel>
                 <Select
                   labelId="status-label"
                   id="status"
                   name="status"
                   value={formik.values.status}
-                  label="Status"
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  error={formik.touched.status && Boolean(formik.errors.status)}
+                  label="Status *"
                 >
                   {statusOptions.map((option) => (
                     <MenuItem key={option.value} value={option.value}>
@@ -183,20 +204,25 @@ const ApartmentForm = ({ open, onClose, buildingId, apartment = null }) => {
                     </MenuItem>
                   ))}
                 </Select>
+                {formik.touched.status && formik.errors.status && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 2 }}>
+                    {formik.errors.status}
+                  </Typography>
+                )}
               </FormControl>
             </Grid>
+
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth margin="normal" size="small">
-                <InputLabel id="type-label">Type</InputLabel>
+              <FormControl fullWidth error={formik.touched.type && Boolean(formik.errors.type)}>
+                <InputLabel id="type-label">Type *</InputLabel>
                 <Select
                   labelId="type-label"
                   id="type"
                   name="type"
                   value={formik.values.type}
-                  label="Type"
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  error={formik.touched.type && Boolean(formik.errors.type)}
+                  label="Type *"
                 >
                   {typeOptions.map((option) => (
                     <MenuItem key={option.value} value={option.value}>
@@ -204,59 +230,65 @@ const ApartmentForm = ({ open, onClose, buildingId, apartment = null }) => {
                     </MenuItem>
                   ))}
                 </Select>
+                {formik.touched.type && formik.errors.type && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 2 }}>
+                    {formik.errors.type}
+                  </Typography>
+                )}
               </FormControl>
             </Grid>
+
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 id="area"
                 name="area"
-                label="Area (sqm)"
+                label="Area (m²) *"
                 type="number"
                 value={formik.values.area}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
                 error={formik.touched.area && Boolean(formik.errors.area)}
                 helperText={formik.touched.area && formik.errors.area}
-                margin="normal"
-                size="small"
-                InputProps={{
-                  endAdornment: 'm²',
-                }}
+                variant="outlined"
+                inputProps={{ min: 1, step: 0.1 }}
               />
             </Grid>
+
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 id="bedrooms"
                 name="bedrooms"
-                label="Bedrooms"
+                label="Bedrooms *"
                 type="number"
                 value={formik.values.bedrooms}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
                 error={formik.touched.bedrooms && Boolean(formik.errors.bedrooms)}
                 helperText={formik.touched.bedrooms && formik.errors.bedrooms}
-                margin="normal"
-                size="small"
+                variant="outlined"
+                inputProps={{ min: 0, max: 10 }}
               />
             </Grid>
+
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 id="bathrooms"
                 name="bathrooms"
-                label="Bathrooms"
+                label="Bathrooms *"
                 type="number"
                 value={formik.values.bathrooms}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
                 error={formik.touched.bathrooms && Boolean(formik.errors.bathrooms)}
                 helperText={formik.touched.bathrooms && formik.errors.bathrooms}
-                margin="normal"
-                size="small"
+                variant="outlined"
+                inputProps={{ min: 1, max: 10 }}
               />
             </Grid>
+
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -270,24 +302,31 @@ const ApartmentForm = ({ open, onClose, buildingId, apartment = null }) => {
                 onBlur={formik.handleBlur}
                 error={formik.touched.notes && Boolean(formik.errors.notes)}
                 helperText={formik.touched.notes && formik.errors.notes}
-                margin="normal"
-                size="small"
+                variant="outlined"
+                placeholder="Additional notes about the apartment..."
               />
             </Grid>
           </Grid>
         </DialogContent>
+
         <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => onClose(false)} disabled={isAdding || isUpdating}>
+          <Button 
+            onClick={handleClose} 
+            disabled={formik.isSubmitting}
+            variant="outlined"
+          >
             Cancel
           </Button>
           <Button
             type="submit"
             variant="contained"
-            color="primary"
-            disabled={isAdding || isUpdating || !formik.isValid}
-            startIcon={isAdding || isUpdating ? <CircularProgress size={20} /> : null}
+            disabled={formik.isSubmitting || !formik.isValid}
+            startIcon={formik.isSubmitting ? <CircularProgress size={16} /> : null}
           >
-            {isEdit ? 'Update' : 'Add'} Apartment
+            {formik.isSubmitting 
+              ? (isEdit ? 'Updating...' : 'Adding...') 
+              : (isEdit ? 'Update Apartment' : 'Add Apartment')
+            }
           </Button>
         </DialogActions>
       </form>
