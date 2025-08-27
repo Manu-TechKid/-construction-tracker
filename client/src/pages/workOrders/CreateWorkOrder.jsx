@@ -1,5 +1,5 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Container, Box, Button, Typography, Paper } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useCreateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
@@ -8,7 +8,20 @@ import { toast } from 'react-toastify';
 
 const CreateWorkOrder = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [createWorkOrder, { isLoading }] = useCreateWorkOrderMutation();
+  const [initialValues, setInitialValues] = useState({});
+
+  useEffect(() => {
+    // Get building ID from URL parameters
+    const buildingId = searchParams.get('building');
+    if (buildingId) {
+      setInitialValues(prev => ({
+        ...prev,
+        building: buildingId
+      }));
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (formData) => {
     try {
@@ -42,6 +55,7 @@ const CreateWorkOrder = () => {
         </Typography>
         
         <WorkOrderForm
+          initialValues={initialValues}
           onSubmit={handleSubmit}
           isSubmitting={isLoading}
           onCancel={handleCancel}

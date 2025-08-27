@@ -196,8 +196,18 @@ const CreateInvoice = () => {
                       fullWidth
                       onClick={handleSubmit}
                       disabled={creating}
+                      size="large"
                     >
-                      {creating ? 'Creating...' : 'Create Invoice'}
+                      {creating ? 'Creating Invoice...' : 'Save Invoice'}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      fullWidth
+                      onClick={() => navigate('/invoices')}
+                      disabled={creating}
+                      sx={{ mt: 1 }}
+                    >
+                      Cancel
                     </Button>
                   </Box>
                 )}

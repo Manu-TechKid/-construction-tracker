@@ -111,8 +111,7 @@ const ReminderForm = ({
       }
     }
   }, [apartmentId, buildingsData, buildingId]);
-  const [files, setFiles] = useState([]);
-  const [previewUrls, setPreviewUrls] = useState([]);
+  const [photos, setPhotos] = useState([]);
   const [noteText, setNoteText] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -152,29 +151,20 @@ const ReminderForm = ({
     },
   });
 
-  // Handle file selection
-  const handleFileChange = (event) => {
-    const newFiles = Array.from(event.target.files);
-    setFiles([...files, ...newFiles]);
-    
-    // Create preview URLs
-    const urls = newFiles.map(file => URL.createObjectURL(file));
-    setPreviewUrls([...previewUrls, ...urls]);
+  // Handle photo upload
+  const handlePhotoUpload = (event) => {
+    const newPhotos = Array.from(event.target.files).map((file) => ({
+      file,
+      preview: URL.createObjectURL(file),
+    }));
+    setPhotos([...photos, ...newPhotos]);
   };
 
-  // Handle file removal
-  const handleRemoveFile = (index) => {
-    const newFiles = [...files];
-    const newPreviewUrls = [...previewUrls];
-    
-    // Revoke the object URL to avoid memory leaks
-    URL.revokeObjectURL(newPreviewUrls[index]);
-    
-    newFiles.splice(index, 1);
-    newPreviewUrls.splice(index, 1);
-    
-    setFiles(newFiles);
-    setPreviewUrls(newPreviewUrls);
+  // Handle photo deletion
+  const handlePhotoDelete = (index) => {
+    const newPhotos = [...photos];
+    newPhotos.splice(index, 1);
+    setPhotos(newPhotos);
   };
 
   // Add a new note
@@ -208,9 +198,9 @@ const ReminderForm = ({
   // Clean up object URLs on unmount
   useEffect(() => {
     return () => {
-      previewUrls.forEach(url => URL.revokeObjectURL(url));
+      photos.forEach((photo) => URL.revokeObjectURL(photo.preview));
     };
-  }, [previewUrls]);
+  }, [photos]);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -286,6 +276,79 @@ const ReminderForm = ({
                     </Grid>
                   )}
 
+                  <Grid item xs={12}>
+                    <Typography variant="h6" gutterBottom>
+                      Photos
+                    </Typography>
+                    <Box sx={{ mb: 2 }}>
+                      <input
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        id="photo-upload"
+                        multiple
+                        type="file"
+                        onChange={handlePhotoUpload}
+                      />
+                      <label htmlFor="photo-upload">
+                        <Button
+                          variant="outlined"
+                          component="span"
+                          startIcon={<PhotoCameraIcon />}
+                          fullWidth
+                          sx={{ mb: 2 }}
+                        >
+                          Upload Photos
+                        </Button>
+                      </label>
+                    </Box>
+                    
+                    {photos.length > 0 && (
+                      <Grid container spacing={2}>
+                        {photos.map((photo, index) => (
+                          <Grid item xs={6} sm={4} md={3} key={index}>
+                            <Paper
+                              sx={{
+                                position: 'relative',
+                                paddingTop: '100%',
+                                overflow: 'hidden',
+                                borderRadius: 1,
+                              }}
+                            >
+                              <Box
+                                component="img"
+                                src={photo.preview}
+                                alt={`Photo ${index + 1}`}
+                                sx={{
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: 'cover',
+                                }}
+                              />
+                              <IconButton
+                                size="small"
+                                sx={{
+                                  position: 'absolute',
+                                  top: 4,
+                                  right: 4,
+                                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                                  },
+                                }}
+                                onClick={() => handlePhotoDelete(index)}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Paper>
+                          </Grid>
+                        ))}
+                      </Grid>
+                    )}
+                  </Grid>
+                  
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
@@ -452,116 +515,6 @@ const ReminderForm = ({
                       </Select>
                     </FormControl>
                   </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
-            
-            {/* Photos Section */}
-            <Card sx={{ mb: 3 }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Photos
-                </Typography>
-                <input
-                  accept="image/*"
-                  style={{ display: 'none' }}
-                  id="photo-upload"
-                  type="file"
-                  multiple
-                  onChange={handleFileChange}
-                />
-                <label htmlFor="photo-upload">
-                  <Button
-                    variant="outlined"
-                    component="span"
-                    startIcon={<PhotoCameraIcon />}
-                    sx={{ mb: 2 }}
-                  >
-                    Upload Photos
-                  </Button>
-                </label>
-                
-                <Grid container spacing={2}>
-                  {previewUrls.map((url, index) => (
-                    <Grid item key={index} xs={6} sm={4} md={3}>
-                      <Paper
-                        elevation={2}
-                        sx={{
-                          position: 'relative',
-                          paddingTop: '100%',
-                          borderRadius: 1,
-                          overflow: 'hidden',
-                        }}
-                      >
-                        <Box
-                          component="img"
-                          src={url}
-                          alt={`Preview ${index + 1}`}
-                          sx={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                          }}
-                        />
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemoveFile(index);
-                          }}
-                          sx={{
-                            position: 'absolute',
-                            top: 4,
-                            right: 4,
-                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                            color: 'white',
-                            '&:hover': {
-                              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                            },
-                          }}
-                        >
-                          <CloseIcon fontSize="small" />
-                        </IconButton>
-                      </Paper>
-                    </Grid>
-                  ))}
-                  
-                  {/* Show existing photos */}
-                  {formik.values.photos?.map((photo, index) => (
-                    <Grid item key={`existing-${index}`} xs={6} sm={4} md={3}>
-                      <Paper
-                        elevation={2}
-                        sx={{
-                          position: 'relative',
-                          paddingTop: '100%',
-                          borderRadius: 1,
-                          overflow: 'hidden',
-                        }}
-                      >
-                        <Box
-                          component="img"
-                          src={`${process.env.REACT_APP_API_URL}/img/reminders/${photo}`}
-                          alt={`Existing ${index + 1}`}
-                          sx={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                          }}
-                        />
-                        <input
-                          type="hidden"
-                          name={`photos[${index}]`}
-                          value={photo}
-                        />
-                      </Paper>
-                    </Grid>
-                  ))}
                 </Grid>
               </CardContent>
             </Card>

@@ -430,6 +430,7 @@ const ApartmentsTab = ({ building }) => {
 
 const WorkOrdersTab = ({ buildingId }) => {
   const theme = useTheme();
+  const navigate = useNavigate();
   const { data: workOrdersData, isLoading } = useGetWorkOrdersQuery({
     building: buildingId,
     limit: 5,
@@ -437,6 +438,10 @@ const WorkOrdersTab = ({ buildingId }) => {
   });
   
   const workOrders = workOrdersData?.data || [];
+  
+  const handleCreateWorkOrder = () => {
+    navigate(`/work-orders/new?building=${buildingId}`);
+  };
   
   const columns = [
     { 
@@ -513,7 +518,7 @@ const WorkOrdersTab = ({ buildingId }) => {
           variant="contained"
           size="small"
           startIcon={<AddIcon />}
-          onClick={() => {}}
+          onClick={handleCreateWorkOrder}
         >
           Create Work Order
         </Button>
@@ -553,7 +558,7 @@ const WorkOrdersTab = ({ buildingId }) => {
           <Button
             variant="outlined"
             startIcon={<AddIcon />}
-            onClick={() => {}}
+            onClick={handleCreateWorkOrder}
             sx={{ mt: 1 }}
           >
             Create First Work Order
@@ -736,7 +741,6 @@ const BuildingDetails = () => {
                 <Tab 
                   key={index}
                   icon={tab.icon}
-                  sx={{ display: tab.hidden ? 'none' : 'flex' }}
                   label={
                     <Box display="flex" alignItems="center">
                       <Box>{tab.label}</Box>
@@ -758,6 +762,7 @@ const BuildingDetails = () => {
                     </Box>
                   }
                   sx={{
+                    display: tab.hidden ? 'none' : 'flex',
                     minHeight: 48,
                     '&.Mui-selected': {
                       color: 'primary.main',

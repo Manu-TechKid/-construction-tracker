@@ -204,6 +204,11 @@ const WorkOrderForm = ({
                         error={formik.touched.apartmentNumber && Boolean(formik.errors.apartmentNumber)}
                         helperText={formik.touched.apartmentNumber && formik.errors.apartmentNumber}
                         variant="outlined"
+                        placeholder="Enter apartment number"
+                        inputProps={{
+                          autoComplete: 'off',
+                          maxLength: 10
+                        }}
                       />
                     </Grid>
 
@@ -219,6 +224,11 @@ const WorkOrderForm = ({
                         error={formik.touched.block && Boolean(formik.errors.block)}
                         helperText={formik.touched.block && formik.errors.block}
                         variant="outlined"
+                        placeholder="Enter block"
+                        inputProps={{
+                          autoComplete: 'off',
+                          maxLength: 5
+                        }}
                       />
                     </Grid>
 
@@ -235,8 +245,19 @@ const WorkOrderForm = ({
                             // Reset workSubType when workType changes
                             formik.setFieldValue('workSubType', '');
                           }}
+                          onBlur={formik.handleBlur}
                           label="Work Type *"
+                          MenuProps={{
+                            PaperProps: {
+                              style: {
+                                maxHeight: 300,
+                              },
+                            },
+                          }}
                         >
+                          <MenuItem value="">
+                            <em>Select work type</em>
+                          </MenuItem>
                           {workTypes.map((type) => (
                             <MenuItem key={type.value} value={type.value}>
                               {type.label}
@@ -250,22 +271,38 @@ const WorkOrderForm = ({
                     </Grid>
 
                     <Grid item xs={12} md={6}>
-                      <FormControl fullWidth error={formik.touched.workSubType && Boolean(formik.errors.workSubType)}>
-                        <InputLabel id="work-subtype-label">Service Type *</InputLabel>
+                      <FormControl 
+                        fullWidth 
+                        error={formik.touched.workSubType && Boolean(formik.errors.workSubType)}
+                        disabled={!formik.values.workType}
+                      >
+                        <InputLabel id="work-sub-type-label">Service Type *</InputLabel>
                         <Select
-                          labelId="work-subtype-label"
+                          labelId="work-sub-type-label"
                           id="workSubType"
                           name="workSubType"
                           value={formik.values.workSubType}
                           onChange={formik.handleChange}
+                          onBlur={formik.handleBlur}
                           label="Service Type *"
-                          disabled={!formik.values.workType}
+                          MenuProps={{
+                            PaperProps: {
+                              style: {
+                                maxHeight: 300,
+                              },
+                            },
+                          }}
                         >
-                          {formik.values.workType && workSubTypes[formik.values.workType]?.map((subType) => (
-                            <MenuItem key={subType.value} value={subType.value}>
-                              {subType.label}
-                            </MenuItem>
-                          ))}
+                          <MenuItem value="">
+                            <em>{formik.values.workType ? 'Select service type' : 'Select work type first'}</em>
+                          </MenuItem>
+                          {formik.values.workType && workSubTypes[formik.values.workType] && 
+                            workSubTypes[formik.values.workType].map((subType) => (
+                              <MenuItem key={subType.value} value={subType.value}>
+                                {subType.label}
+                              </MenuItem>
+                            ))
+                          }
                         </Select>
                         {formik.touched.workSubType && formik.errors.workSubType && (
                           <FormHelperText>{formik.errors.workSubType}</FormHelperText>
@@ -273,7 +310,7 @@ const WorkOrderForm = ({
                       </FormControl>
                     </Grid>
 
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12} md={4}>
                       <TextField
                         fullWidth
                         id="roomsAffected"
@@ -282,13 +319,15 @@ const WorkOrderForm = ({
                         type="number"
                         value={formik.values.roomsAffected}
                         onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
                         error={formik.touched.roomsAffected && Boolean(formik.errors.roomsAffected)}
                         helperText={formik.touched.roomsAffected && formik.errors.roomsAffected}
-                        inputProps={{ min: 1 }}
+                        variant="outlined"
+                        inputProps={{ min: 1, max: 20 }}
                       />
                     </Grid>
 
-                    <Grid item xs={12} md={3}>
+                    <Grid item xs={12} md={4}>
                       <FormControl fullWidth error={formik.touched.priority && Boolean(formik.errors.priority)}>
                         <InputLabel id="priority-label">Priority *</InputLabel>
                         <Select
@@ -306,17 +345,19 @@ const WorkOrderForm = ({
                             </MenuItem>
                           ))}
                         </Select>
-                        <FormHelperText>
-                          {formik.touched.priority && formik.errors.priority}
-                        </FormHelperText>
+                        {formik.touched.priority && formik.errors.priority && (
+                          <FormHelperText>{formik.errors.priority}</FormHelperText>
+                        )}
                       </FormControl>
                     </Grid>
 
-                    <Grid item xs={12} md={3}>
+                    <Grid item xs={12} md={4}>
                       <DatePicker
                         label="Start Date *"
                         value={formik.values.startDate}
-                        onChange={(date) => formik.setFieldValue('startDate', date)}
+                        onChange={(newValue) => {
+                          formik.setFieldValue('startDate', newValue);
+                        }}
                         renderInput={(params) => (
                           <TextField
                             {...params}
@@ -342,6 +383,7 @@ const WorkOrderForm = ({
                         error={formik.touched.description && Boolean(formik.errors.description)}
                         helperText={formik.touched.description && formik.errors.description}
                         variant="outlined"
+                        placeholder="Describe the work to be done..."
                       />
                     </Grid>
 
@@ -354,9 +396,14 @@ const WorkOrderForm = ({
                         type="number"
                         value={formik.values.laborCost}
                         onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
                         error={formik.touched.laborCost && Boolean(formik.errors.laborCost)}
                         helperText={formik.touched.laborCost && formik.errors.laborCost}
+                        variant="outlined"
                         inputProps={{ min: 0, step: 0.01 }}
+                        InputProps={{
+                          startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>,
+                        }}
                       />
                     </Grid>
 
@@ -369,58 +416,47 @@ const WorkOrderForm = ({
                         type="number"
                         value={formik.values.materialsCost}
                         onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
                         error={formik.touched.materialsCost && Boolean(formik.errors.materialsCost)}
                         helperText={formik.touched.materialsCost && formik.errors.materialsCost}
+                        variant="outlined"
                         inputProps={{ min: 0, step: 0.01 }}
+                        InputProps={{
+                          startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>,
+                        }}
                       />
                     </Grid>
                   </Grid>
                 </CardContent>
               </Card>
             </Grid>
-            
+
             <Grid item xs={12} lg={4}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Actions
-                  </Typography>
-                  <Box display="flex" flexDirection="column" gap={2}>
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      color="primary"
-                      fullWidth
-                      disabled={formik.isSubmitting || isSubmitting}
-                      size="large"
-                      sx={{
-                        minHeight: { xs: 48, sm: 52 },
-                        fontSize: { xs: '0.875rem', sm: '1rem' },
-                        px: { xs: 2, sm: 3 }
-                      }}
-                    >
-                      {formik.isSubmitting || isSubmitting ? 'Creating...' : 'Create Work Order'}
-                    </Button>
-                    
-                    <Button
-                      variant="outlined"
-                      color="primary"
-                      fullWidth
-                      onClick={onCancel}
-                      disabled={formik.isSubmitting || isSubmitting}
-                      sx={{
-                        minHeight: { xs: 48, sm: 52 },
-                        fontSize: { xs: '0.875rem', sm: '1rem' },
-                        px: { xs: 2, sm: 3 }
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </Box>
-                </CardContent>
-              </Card>
+              <PhotoUpload
+                photos={photos}
+                onPhotosChange={setPhotos}
+                maxPhotos={5}
+              />
             </Grid>
           </Grid>
+
+          <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+            <Button
+              type="button"
+              variant="outlined"
+              onClick={onCancel}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={isSubmitting || !formik.isValid}
+            >
+              {isSubmitting ? 'Creating...' : 'Create Work Order'}
+            </Button>
+          </Box>
         </form>
       </Box>
     </LocalizationProvider>

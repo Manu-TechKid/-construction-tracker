@@ -31,7 +31,7 @@ import {
   Apartment as ApartmentIcon,
 } from '@mui/icons-material';
 import { formatDistanceToNow, parseISO } from 'date-fns';
-import { useGetBuildingRemindersQuery } from '../../features/buildings/buildingRemindersApiSlice';
+import { useGetRemindersQuery } from '../../features/reminders/remindersApiSlice';
 import { useAuth } from '../../hooks/useAuth';
 
 const RemindersTab = ({ buildingId, apartmentId }) => {
@@ -45,12 +45,13 @@ const RemindersTab = ({ buildingId, apartmentId }) => {
     isLoading, 
     isError, 
     error 
-  } = useGetBuildingRemindersQuery({ 
-    buildingId,
-    apartmentId: apartmentId || undefined 
+  } = useGetRemindersQuery({ 
+    building: buildingId,
+    apartment: apartmentId || undefined,
+    limit: 50
   });
   
-  const reminders = remindersData?.data || [];
+  const reminders = remindersData?.data?.reminders || [];
   
   // Determine the context for creating new reminders
   const reminderContext = apartmentId ? 'apartment' : 'building';
