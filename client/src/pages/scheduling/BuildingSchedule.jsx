@@ -50,6 +50,7 @@ const BuildingSchedule = () => {
     endDate: new Date(),
     status: 'planned',
   });
+  const [calendarKey, setCalendarKey] = useState(0);
 
   const scheduleTypes = [
     { value: 'painting', label: 'Painting', color: 'primary' },
@@ -159,6 +160,7 @@ const BuildingSchedule = () => {
     }
 
     saveSchedules(updatedSchedules);
+    setCalendarKey(prev => prev + 1);
     handleCloseDialog();
   };
 
@@ -244,7 +246,7 @@ const BuildingSchedule = () => {
         )}
 
         {selectedBuilding && (
-          <Card>
+          <Card key={calendarKey}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 {format(currentDate, 'MMMM yyyy')} - {selectedBuilding.name}

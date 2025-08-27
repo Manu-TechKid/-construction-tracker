@@ -21,6 +21,7 @@ import {
   Checkbox,
   Alert,
   Divider,
+  CircularProgress,
 } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -29,6 +30,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { useGetUnbilledWorkOrdersQuery, useCreateInvoiceMutation } from '../../features/invoices/invoicesApiSlice';
+import { toast } from 'react-toastify';
 
 const CreateInvoice = () => {
   const navigate = useNavigate();
@@ -38,7 +40,7 @@ const CreateInvoice = () => {
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
 
-  const { data: buildingsData } = useGetBuildingsQuery();
+  const { data: buildingsData, isLoading: buildingsLoading } = useGetBuildingsQuery();
   const { data: workOrdersData, isLoading: workOrdersLoading } = useGetUnbilledWorkOrdersQuery(
     selectedBuilding,
     { skip: !selectedBuilding }
@@ -76,6 +78,8 @@ const CreateInvoice = () => {
   };
 
   const handleSubmit = async () => {
+    setError('');
+    
     if (!selectedBuilding) {
       setError('Please select a building');
       return;
@@ -95,10 +99,18 @@ const CreateInvoice = () => {
       };
 
       await createInvoice(invoiceData).unwrap();
+      toast.success('Invoice created successfully');
       navigate('/invoices');
     } catch (error) {
-      setError('Failed to create invoice: ' + (error.data?.message || error.message));
+      console.error('Failed to create invoice:', error);
+      const errorMessage = error?.data?.message || error?.message || 'Failed to create invoice';
+      setError(errorMessage);
+      toast.error(errorMessage);
     }
+  };
+
+  const handleCancel = () => {
+    navigate('/invoices');
   };
 
   const { subtotal, tax, total } = calculateTotals();
@@ -134,7 +146,7 @@ const CreateInvoice = () => {
                   Invoice Details
                 </Typography>
                 
-                <FormControl fullWidth margin="normal">
+                <FormControl fullWidth margin="normal" disabled={buildingsLoading}>
                   <InputLabel>Building *</InputLabel>
                   <Select
                     value={selectedBuilding}
@@ -191,26 +203,30 @@ const CreateInvoice = () => {
                       <Typography variant="h6">Total:</Typography>
                       <Typography variant="h6">${total.toFixed(2)}</Typography>
                     </Box>
-                    <Button
-                      variant="contained"
-                      fullWidth
-                      onClick={handleSubmit}
-                      disabled={creating}
-                      size="large"
-                    >
-                      {creating ? 'Creating Invoice...' : 'Save Invoice'}
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      fullWidth
-                      onClick={() => navigate('/invoices')}
-                      disabled={creating}
-                      sx={{ mt: 1 }}
-                    >
-                      Cancel
-                    </Button>
                   </Box>
                 )}
+
+                {/* Action Buttons - Always visible */}
+                <Box mt={3} display="flex" flexDirection="column" gap={1}>
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    onClick={handleSubmit}
+                    disabled={creating || !selectedBuilding || selectedWorkOrders.length === 0}
+                    size="large"
+                    startIcon={creating ? <CircularProgress size={16} /> : null}
+                  >
+                    {creating ? 'Creating Invoice...' : 'Save Invoice'}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    onClick={handleCancel}
+                    disabled={creating}
+                  >
+                    Cancel
+                  </Button>
+                </Box>
               </CardContent>
             </Card>
           </Grid>
@@ -235,9 +251,9 @@ const CreateInvoice = () => {
                     Please select a building to view unbilled work orders
                   </Typography>
                 ) : workOrdersLoading ? (
-                  <Typography align="center" py={4}>
-                    Loading work orders...
-                  </Typography>
+                  <Box display="flex" justifyContent="center" py={4}>
+                    <CircularProgress />
+                  </Box>
                 ) : workOrders.length === 0 ? (
                   <Typography color="text.secondary" align="center" py={4}>
                     No unbilled work orders found for this building

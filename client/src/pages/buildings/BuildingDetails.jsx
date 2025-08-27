@@ -395,7 +395,7 @@ const ApartmentsTab = ({ building }) => {
       <ApartmentForm
         open={isFormOpen}
         onClose={handleFormClose}
-        buildingId={building._id}
+        buildingId={building?._id}
         apartment={selectedApartment}
       />
       

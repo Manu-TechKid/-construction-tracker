@@ -61,6 +61,10 @@ const ApartmentForm = ({ open, onClose, buildingId, apartment = null }) => {
         setError('');
         setSubmitting(true);
         
+        if (!buildingId) {
+          throw new Error('Building ID is required');
+        }
+        
         const apartmentData = {
           ...values,
           area: parseFloat(values.area),

@@ -25,6 +25,10 @@ const CreateWorkOrder = () => {
 
   const handleSubmit = async (formData) => {
     try {
+      if (!formData.building) {
+        throw new Error('Building is required');
+      }
+      
       const result = await createWorkOrder(formData).unwrap();
       toast.success('Work order created successfully');
       navigate('/work-orders');
