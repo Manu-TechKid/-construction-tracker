@@ -1,6 +1,8 @@
 const WorkOrder = require('../models/WorkOrder');
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
+const Building = require('../models/Building');
+const User = require('../models/User');
 
 exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
     // Filtering
@@ -122,6 +124,33 @@ exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
     res.status(204).json({
         status: 'success',
         data: null
+    });
+});
+
+// Get form data for creating work orders
+exports.getWorkOrderFormData = catchAsync(async (req, res, next) => {
+    const buildings = await Building.find({ status: 'active' }).select('name address');
+    const workers = await User.find({ role: { $in: ['worker', 'supervisor'] } }).select('name email role');
+    
+    res.status(200).json({
+        status: 'success',
+        data: {
+            buildings,
+            workers,
+            workTypes: [
+                'Plumbing',
+                'Electrical',
+                'HVAC',
+                'Painting',
+                'Flooring',
+                'Roofing',
+                'Carpentry',
+                'Maintenance',
+                'Cleaning',
+                'Other'
+            ],
+            priorities: ['low', 'medium', 'high', 'urgent']
+        }
     });
 });
 

@@ -392,12 +392,14 @@ const ApartmentsTab = ({ building }) => {
       </Box>
       
       {/* Apartment Form Dialog */}
-      <ApartmentForm
-        open={isFormOpen}
-        onClose={handleFormClose}
-        buildingId={building?._id}
-        apartment={selectedApartment}
-      />
+      {building && (
+        <ApartmentForm
+          open={isFormOpen}
+          onClose={handleFormClose}
+          buildingId={building._id}
+          apartment={selectedApartment}
+        />
+      )}
       
       {/* Delete Confirmation Dialog */}
       <Dialog

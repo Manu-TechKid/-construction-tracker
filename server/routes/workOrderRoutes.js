@@ -7,6 +7,9 @@ const router = express.Router();
 // Protect all routes after this middleware
 router.use(authController.protect);
 
+// Route for getting form data (buildings, workers, etc.)
+router.get('/new', workOrderController.getWorkOrderFormData);
+
 // Routes for work orders
 router
   .route('/')
