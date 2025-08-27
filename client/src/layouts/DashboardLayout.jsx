@@ -26,10 +26,13 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import ReceiptIcon from '@mui/icons-material/Receipt';
+import NoteIcon from '@mui/icons-material/Note';
+import EventIcon from '@mui/icons-material/Event';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { logout } from '../features/auth/authSlice';
 import { useLogoutMutation } from '../features/auth/authApiSlice';
+import BuildingSelector from '../components/common/BuildingSelector';
 
 const drawerWidth = 240;
 const mobileDrawerWidth = 200;
@@ -104,6 +107,8 @@ const DashboardLayout = () => {
     { text: 'Workers', icon: <PeopleIcon />, path: '/workers' },
     { text: 'Invoices', icon: <ReceiptIcon />, path: '/invoices' },
     { text: 'Reminders', icon: <NotificationsIcon />, path: '/reminders' },
+    { text: 'Notes', icon: <NoteIcon />, path: '/notes', permission: 'read:notes' },
+    { text: 'Schedule', icon: <EventIcon />, path: '/schedule', permission: 'read:schedules' },
     { text: 'Profile', icon: <PersonIcon />, path: '/profile' },
     { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
   ];
@@ -195,25 +200,43 @@ const DashboardLayout = () => {
           zIndex: (theme) => theme.zIndex.drawer + 1,
         }}
       >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ 
-            flexGrow: 1,
-            fontSize: { xs: '1rem', sm: '1.25rem' },
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
-          }}>
-            {menuItems.find((item) => location.pathname.startsWith(item.path))?.text || 'Dashboard'}
-          </Typography>
+        <Toolbar sx={{ justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              onClick={handleDrawerToggle}
+              edge="start"
+              sx={{ mr: 2, display: { md: 'none' } }}
+            >
+              <MenuIcon />
+            </IconButton>
+            
+            <Typography variant="h6" noWrap component="div" sx={{ display: { xs: 'none', sm: 'block' } }}>
+              Construction Tracker
+            </Typography>
+          </Box>
+
+          {/* Building Selector */}
+          <Box sx={{ minWidth: 300, mx: 2 }}>
+            <BuildingSelector 
+              size="small" 
+              showLabel={false}
+              sx={{ '& .MuiFormControl-root': { minWidth: 200 } }}
+            />
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="h6" noWrap component="div" sx={{ 
+              flexGrow: 1,
+              fontSize: { xs: '1rem', sm: '1.25rem' },
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}>
+              {menuItems.find((item) => location.pathname.startsWith(item.path))?.text || 'Dashboard'}
+            </Typography>
+          </Box>
         </Toolbar>
       </AppBar>
       <Box

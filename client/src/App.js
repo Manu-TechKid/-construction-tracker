@@ -1,207 +1,153 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, CssBaseline, createTheme } from '@mui/material';
-import { LocalizationProvider } from '@mui/x-date-pickers';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { SnackbarProvider } from 'notistack';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Provider } from 'react-redux';
+import { ThemeProvider } from '@mui/material/styles';
+import { CssBaseline } from '@mui/material';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { Provider } from 'react-redux';
+
 import { store } from './app/store';
-import { lightTheme, darkTheme } from './theme/theme';
 import { SettingsProvider } from './contexts/SettingsContext';
+import { BuildingProvider } from './contexts/BuildingContext';
 import { useSettings } from './contexts/SettingsContext';
+import { createAppTheme } from './theme/theme';
 
-// Layouts
-import AuthLayout from './layouts/AuthLayout';
+// Layout Components
 import DashboardLayout from './layouts/DashboardLayout';
+import AuthLayout from './layouts/AuthLayout';
 
-// Auth Pages
+// Auth Components
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import ForgotPassword from './pages/auth/ForgotPassword';
-import ResetPassword from './pages/auth/ResetPassword';
 
-// Dashboard Pages
+// Main Pages
 import Dashboard from './pages/dashboard/Dashboard';
 import Buildings from './pages/buildings/Buildings';
 import BuildingDetails from './pages/buildings/BuildingDetails';
-import BuildingEdit from './pages/buildings/BuildingEdit';
 import CreateBuilding from './pages/buildings/CreateBuilding';
+import BuildingEdit from './pages/buildings/BuildingEdit';
 import WorkOrders from './pages/workOrders/WorkOrders';
-import WorkOrderDetails from './pages/workOrders/WorkOrderDetails';
 import CreateWorkOrder from './pages/workOrders/CreateWorkOrder';
+import WorkOrderDetails from './pages/workOrders/WorkOrderDetails';
 import Workers from './pages/workers/Workers';
-import WorkerDetails from './pages/workers/WorkerDetails';
 import CreateWorker from './pages/workers/CreateWorker';
-import Profile from './pages/profile/Profile';
-import Settings from './pages/settings/Settings';
+import Reminders from './pages/reminders/Reminders';
+import CreateReminder from './pages/reminders/CreateReminder';
 import Invoices from './pages/invoices/Invoices';
 import CreateInvoice from './pages/invoices/CreateInvoice';
+import Profile from './pages/profile/Profile';
+import Settings from './pages/settings/Settings';
 
-// Reminder Pages
-import Reminders from './pages/reminders/Reminders';
-import ReminderDetail from './pages/reminders/ReminderDetail';
-import CreateReminder from './pages/reminders/CreateReminder';
-import EditReminder from './pages/reminders/EditReminder';
+// New Components
+import NotesSheet from './components/notes/NotesSheet';
+import BuildingSchedule from './pages/scheduling/BuildingSchedule';
 
-// Theme wrapper component
-function ThemedApp({ children }) {
+// Route Protection
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import PublicRoute from './components/auth/PublicRoute';
+
+const AppContent = () => {
   const { settings } = useSettings();
-  const theme = React.useMemo(
-    () => {
-      const baseTheme = settings.theme === 'dark' ? darkTheme : lightTheme;
-      return createTheme({
-        ...baseTheme,
-        palette: {
-          ...baseTheme.palette,
-          mode: settings.theme || 'light',
-        },
-        direction: settings.language === 'ar' ? 'rtl' : 'ltr',
-      });
-    },
-    [settings.theme, settings.language]
-  );
-
-  // Apply language to document and handle RTL
-  React.useEffect(() => {
-    const lang = settings.language || 'en';
-    document.documentElement.lang = lang;
-    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-  }, [settings.language]);
+  const theme = createAppTheme(settings.theme);
 
   return (
     <ThemeProvider theme={theme}>
-      <CssBaseline enableColorScheme />
-      <LocalizationProvider 
-        dateAdapter={AdapterDateFns}
-        adapterLocale={settings.language === 'es' ? 'es' : 'enUS'}
-      >
-        <SnackbarProvider 
-          maxSnack={3}
-          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-          autoHideDuration={5000}
-        >
-          {children}
-        </SnackbarProvider>
-      </LocalizationProvider>
+      <CssBaseline />
+      <BuildingProvider>
+        <Router>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={
+              <PublicRoute>
+                <AuthLayout>
+                  <Login />
+                </AuthLayout>
+              </PublicRoute>
+            } />
+            <Route path="/register" element={
+              <PublicRoute>
+                <AuthLayout>
+                  <Register />
+                </AuthLayout>
+              </PublicRoute>
+            } />
+            <Route path="/forgot-password" element={
+              <PublicRoute>
+                <AuthLayout>
+                  <ForgotPassword />
+                </AuthLayout>
+              </PublicRoute>
+            } />
+
+            {/* Protected Routes */}
+            <Route path="/" element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            }>
+              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              
+              {/* Buildings */}
+              <Route path="buildings" element={<Buildings />} />
+              <Route path="buildings/create" element={<CreateBuilding />} />
+              <Route path="buildings/:id" element={<BuildingDetails />} />
+              <Route path="buildings/:id/edit" element={<BuildingEdit />} />
+              
+              {/* Work Orders */}
+              <Route path="work-orders" element={<WorkOrders />} />
+              <Route path="work-orders/create" element={<CreateWorkOrder />} />
+              <Route path="work-orders/:id" element={<WorkOrderDetails />} />
+              
+              {/* Workers */}
+              <Route path="workers" element={<Workers />} />
+              <Route path="workers/create" element={<CreateWorker />} />
+              
+              {/* Reminders */}
+              <Route path="reminders" element={<Reminders />} />
+              <Route path="reminders/create" element={<CreateReminder />} />
+              
+              {/* Invoices */}
+              <Route path="invoices" element={<Invoices />} />
+              <Route path="invoices/create" element={<CreateInvoice />} />
+              
+              {/* New Routes */}
+              <Route path="notes" element={<NotesSheet />} />
+              <Route path="schedule" element={<BuildingSchedule />} />
+              
+              {/* User */}
+              <Route path="profile" element={<Profile />} />
+              <Route path="settings" element={<Settings />} />
+            </Route>
+
+            {/* Catch all route */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </Router>
+      </BuildingProvider>
+      
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme={settings.theme}
+      />
     </ThemeProvider>
   );
-}
-
-function AppContent() {
-  return (
-    <Routes>
-      {/* Public Routes */}
-      <Route
-        path="/login"
-        element={
-          <AuthLayout>
-            <Login />
-          </AuthLayout>
-        }
-      />
-      <Route
-        path="/register"
-        element={
-          <AuthLayout>
-            <Register />
-          </AuthLayout>
-        }
-      />
-      <Route
-        path="/forgot-password"
-        element={
-          <AuthLayout>
-            <ForgotPassword />
-          </AuthLayout>
-        }
-      />
-      <Route
-        path="/reset-password/:token"
-        element={
-          <AuthLayout>
-            <ResetPassword />
-          </AuthLayout>
-        }
-      />
-
-      {/* Protected Routes */}
-      <Route
-        path="/"
-        element={
-          <DashboardLayout />
-        }
-      >
-        <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        
-        {/* Buildings Routes */}
-        <Route path="buildings">
-          <Route index element={<Buildings />} />
-          <Route path="new" element={<CreateBuilding />} />
-          <Route path=":id" element={<BuildingDetails />} />
-          <Route path=":id/edit" element={<BuildingEdit />} />
-        </Route>
-        
-        {/* Work Orders Routes */}
-        <Route path="work-orders">
-          <Route index element={<WorkOrders />} />
-          <Route path="new" element={<CreateWorkOrder />} />
-          <Route path=":id" element={<WorkOrderDetails />} />
-        </Route>
-        
-        {/* Workers Routes */}
-        <Route path="workers">
-          <Route index element={<Workers />} />
-          <Route path="new" element={<CreateWorker />} />
-          <Route path=":id" element={<WorkerDetails />} />
-        </Route>
-        
-        {/* Invoices Routes */}
-        <Route path="invoices">
-          <Route index element={<Invoices />} />
-          <Route path="new" element={<CreateInvoice />} />
-        </Route>
-        
-        {/* Reminders Routes */}
-        <Route path="reminders">
-          <Route index element={<Reminders />} />
-          <Route path=":id" element={<ReminderDetail />} />
-          <Route path="new" element={<CreateReminder />} />
-          <Route path=":id/edit" element={<EditReminder />} />
-        </Route>
-        
-        {/* User Routes */}
-        <Route path="profile" element={<Profile />} />
-        <Route path="settings" element={<Settings />} />
-
-        {/* 404 Route */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
-  );
-}
+};
 
 function App() {
   return (
     <Provider store={store}>
       <SettingsProvider>
-        <ThemedApp>
-          <AppContent />
-          <ToastContainer
-            position="top-right"
-            autoClose={5000}
-            hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-            theme="colored"
-          />
-        </ThemedApp>
+        <AppContent />
       </SettingsProvider>
     </Provider>
   );
