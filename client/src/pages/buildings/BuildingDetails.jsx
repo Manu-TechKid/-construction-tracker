@@ -605,7 +605,11 @@ const BuildingDetails = () => {
     error 
   } = useGetBuildingQuery(id);
   
-  const building = buildingData?.data || {};
+  const building = buildingData?.data || null;
+  
+  console.log('BuildingDetails - buildingData:', buildingData);
+  console.log('BuildingDetails - building:', building);
+  console.log('BuildingDetails - building._id:', building?._id);
   
   // Handle tab change
   const handleTabChange = (event, newValue) => {

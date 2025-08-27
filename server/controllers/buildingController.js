@@ -78,9 +78,7 @@ exports.getBuilding = catchAsync(async (req, res, next) => {
     
     res.status(200).json({
         status: 'success',
-        data: {
-            building
-        }
+        data: building
     });
 });
 
