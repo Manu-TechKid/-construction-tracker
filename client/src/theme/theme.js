@@ -170,4 +170,9 @@ const darkTheme = createTheme({
   },
 });
 
+// Function to create app theme based on mode
+export const createAppTheme = (mode = 'light') => {
+  return mode === 'dark' ? darkTheme : lightTheme;
+};
+
 export { lightTheme, darkTheme };
