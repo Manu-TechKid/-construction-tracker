@@ -22,6 +22,7 @@ import {
   Alert,
   Divider,
   CircularProgress,
+  Container,
 } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -29,7 +30,8 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
-import { useGetUnbilledWorkOrdersQuery, useCreateInvoiceMutation } from '../../features/invoices/invoicesApiSlice';
+import { useGetWorkOrdersQuery } from '../../features/workOrders/workOrdersApiSlice';
+import { useCreateInvoiceMutation } from '../../features/invoices/invoicesApiSlice';
 import { toast } from 'react-toastify';
 
 const CreateInvoice = () => {
@@ -39,13 +41,27 @@ const CreateInvoice = () => {
   const [dueDate, setDueDate] = useState(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const { data: buildingsData, isLoading: buildingsLoading } = useGetBuildingsQuery();
-  const { data: workOrdersData, isLoading: workOrdersLoading } = useGetUnbilledWorkOrdersQuery(
-    selectedBuilding,
-    { skip: !selectedBuilding }
-  );
+  const { 
+    data: buildingsData, 
+    isLoading: buildingsLoading, 
+    error: buildingsError 
+  } = useGetBuildingsQuery();
+  
+  const { 
+    data: workOrdersData, 
+    isLoading: workOrdersLoading, 
+    error: workOrdersError 
+  } = useGetWorkOrdersQuery({ building: selectedBuilding }, { 
+    skip: !selectedBuilding 
+  });
+  
   const [createInvoice, { isLoading: creating }] = useCreateInvoiceMutation();
+
+  useEffect(() => {
+    setIsInitialized(true);
+  }, []);
 
   const buildings = buildingsData?.data?.buildings || [];
   const workOrders = workOrdersData?.data?.workOrders || [];
@@ -112,6 +128,24 @@ const CreateInvoice = () => {
   };
 
   const { subtotal, tax, total } = calculateTotals();
+
+  if (!isInitialized) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 10 }}>
+        <CircularProgress />
+      </Container>
+    );
+  }
+
+  if (buildingsError || workOrdersError) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 10 }}>
+        <Alert severity="error">
+          An error occurred while loading data. Please try again later.
+        </Alert>
+      </Container>
+    );
+  }
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>

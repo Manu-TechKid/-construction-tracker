@@ -286,6 +286,7 @@ const WorkOrderForm = ({
                   label={t('workOrders.dueDate')}
                   value={formik.values.startDate}
                   onChange={(date) => formik.setFieldValue('startDate', date)}
+                  enableAccessibleFieldDOMStructure={false}
                   slots={{
                     textField: TextField
                   }}
