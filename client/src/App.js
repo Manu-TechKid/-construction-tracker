@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
@@ -55,76 +55,74 @@ const AppContent = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <BuildingProvider>
-        <Router>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/login" element={
-              <PublicRoute>
-                <AuthLayout>
-                  <Login />
-                </AuthLayout>
-              </PublicRoute>
-            } />
-            <Route path="/register" element={
-              <PublicRoute>
-                <AuthLayout>
-                  <Register />
-                </AuthLayout>
-              </PublicRoute>
-            } />
-            <Route path="/forgot-password" element={
-              <PublicRoute>
-                <AuthLayout>
-                  <ForgotPassword />
-                </AuthLayout>
-              </PublicRoute>
-            } />
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/login" element={
+            <PublicRoute>
+              <AuthLayout>
+                <Login />
+              </AuthLayout>
+            </PublicRoute>
+          } />
+          <Route path="/register" element={
+            <PublicRoute>
+              <AuthLayout>
+                <Register />
+              </AuthLayout>
+            </PublicRoute>
+          } />
+          <Route path="/forgot-password" element={
+            <PublicRoute>
+              <AuthLayout>
+                <ForgotPassword />
+              </AuthLayout>
+            </PublicRoute>
+          } />
 
-            {/* Protected Routes */}
-            <Route path="/" element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<Navigate to="/dashboard" replace />} />
-              <Route path="dashboard" element={<Dashboard />} />
-              
-              {/* Buildings */}
-              <Route path="buildings" element={<Buildings />} />
-              <Route path="buildings/create" element={<CreateBuilding />} />
-              <Route path="buildings/:id" element={<BuildingDetails />} />
-              <Route path="buildings/:id/edit" element={<BuildingEdit />} />
-              
-              {/* Work Orders */}
-              <Route path="work-orders" element={<WorkOrders />} />
-              <Route path="work-orders/create" element={<CreateWorkOrder />} />
-              <Route path="work-orders/:id" element={<WorkOrderDetails />} />
-              
-              {/* Workers */}
-              <Route path="workers" element={<Workers />} />
-              <Route path="workers/create" element={<CreateWorker />} />
-              
-              {/* Reminders */}
-              <Route path="reminders" element={<Reminders />} />
-              <Route path="reminders/create" element={<CreateReminder />} />
-              
-              {/* Invoices */}
-              <Route path="invoices" element={<Invoices />} />
-              <Route path="invoices/create" element={<CreateInvoice />} />
-              
-              {/* New Routes */}
-              <Route path="notes" element={<NotesSheet />} />
-              <Route path="schedule" element={<BuildingSchedule />} />
-              
-              {/* User */}
-              <Route path="profile" element={<Profile />} />
-              <Route path="settings" element={<Settings />} />
-            </Route>
+          {/* Protected Routes */}
+          <Route path="/" element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            
+            {/* Buildings */}
+            <Route path="buildings" element={<Buildings />} />
+            <Route path="buildings/create" element={<CreateBuilding />} />
+            <Route path="buildings/:id" element={<BuildingDetails />} />
+            <Route path="buildings/:id/edit" element={<BuildingEdit />} />
+            
+            {/* Work Orders */}
+            <Route path="work-orders" element={<WorkOrders />} />
+            <Route path="work-orders/create" element={<CreateWorkOrder />} />
+            <Route path="work-orders/:id" element={<WorkOrderDetails />} />
+            
+            {/* Workers */}
+            <Route path="workers" element={<Workers />} />
+            <Route path="workers/create" element={<CreateWorker />} />
+            
+            {/* Reminders */}
+            <Route path="reminders" element={<Reminders />} />
+            <Route path="reminders/create" element={<CreateReminder />} />
+            
+            {/* Invoices */}
+            <Route path="invoices" element={<Invoices />} />
+            <Route path="invoices/create" element={<CreateInvoice />} />
+            
+            {/* New Routes */}
+            <Route path="notes" element={<NotesSheet />} />
+            <Route path="schedule" element={<BuildingSchedule />} />
+            
+            {/* User */}
+            <Route path="profile" element={<Profile />} />
+            <Route path="settings" element={<Settings />} />
+          </Route>
 
-            {/* Catch all route */}
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </Router>
+          {/* Catch all route */}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
       </BuildingProvider>
       
       <ToastContainer
