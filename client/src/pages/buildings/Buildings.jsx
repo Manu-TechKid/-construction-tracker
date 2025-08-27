@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Button,
@@ -29,6 +30,10 @@ import {
   ListItemText,
   Divider,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -41,11 +46,13 @@ import {
   FilterList as FilterListIcon,
 } from '@mui/icons-material';
 import { DataGrid, GridToolbar } from '@mui/x-data-grid';
-import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
+import { useGetBuildingsQuery, useDeleteBuildingMutation } from '../../features/buildings/buildingsApiSlice';
 import { useAuth } from '../../hooks/useAuth';
 import { formatDate } from '../../utils/dateUtils';
+import { toast } from 'react-toastify';
 
 const Buildings = () => {
+  const { t } = useTranslation();
   const theme = useTheme();
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
@@ -55,6 +62,8 @@ const Buildings = () => {
   const [apartmentFilter, setApartmentFilter] = useState('');
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedBuilding, setSelectedBuilding] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [buildingToDelete, setBuildingToDelete] = useState(null);
   const [paginationModel, setPaginationModel] = useState({
     page: 0,
     pageSize: 10,
@@ -72,6 +81,8 @@ const Buildings = () => {
     limit: paginationModel.pageSize,
     search: searchTerm,
   });
+
+  const [deleteBuilding, { isLoading: isDeleting }] = useDeleteBuildingMutation();
 
   // Handle menu open
   const handleMenuOpen = (event, building) => {
@@ -99,9 +110,31 @@ const Buildings = () => {
 
   // Handle delete building
   const handleDeleteBuilding = () => {
-    // TODO: Implement delete functionality
-    console.log('Delete building:', selectedBuilding?._id);
+    setBuildingToDelete(selectedBuilding);
+    setDeleteDialogOpen(true);
     handleMenuClose();
+  };
+
+  // Confirm delete building
+  const handleConfirmDelete = async () => {
+    if (!buildingToDelete) return;
+    
+    try {
+      await deleteBuilding(buildingToDelete._id).unwrap();
+      toast.success('Building deleted successfully');
+      setDeleteDialogOpen(false);
+      setBuildingToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete building:', error);
+      const errorMessage = error?.data?.message || error?.message || 'Failed to delete building';
+      toast.error(errorMessage);
+    }
+  };
+
+  // Cancel delete
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false);
+    setBuildingToDelete(null);
   };
 
   // Handle search input change
@@ -115,7 +148,7 @@ const Buildings = () => {
   const columns = [
     {
       field: 'name',
-      headerName: 'Building Name',
+      headerName: t('buildings.columns.name'),
       flex: 1,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -126,7 +159,7 @@ const Buildings = () => {
     },
     {
       field: 'address',
-      headerName: 'Address',
+      headerName: t('buildings.columns.address'),
       flex: 1.5,
       renderCell: (params) => (
         <Typography variant="body2" noWrap>
@@ -136,7 +169,7 @@ const Buildings = () => {
     },
     {
       field: 'apartments',
-      headerName: 'Apartments',
+      headerName: t('buildings.columns.apartments'),
       width: 120,
       renderCell: (params) => (
         <Chip
@@ -148,14 +181,14 @@ const Buildings = () => {
     },
     {
       field: 'status',
-      headerName: 'Status',
+      headerName: t('buildings.columns.status'),
       width: 130,
       renderCell: (params) => {
         const status = params.value || 'active';
         const statusMap = {
-          active: { label: 'Active', color: 'success' },
-          maintenance: { label: 'Maintenance', color: 'warning' },
-          inactive: { label: 'Inactive', color: 'error' },
+          active: { label: t('buildings.status.active'), color: 'success' },
+          maintenance: { label: t('buildings.status.maintenance'), color: 'warning' },
+          inactive: { label: t('buildings.status.inactive'), color: 'error' },
         };
         
         const statusConfig = statusMap[status] || { label: status, color: 'default' };
@@ -173,7 +206,7 @@ const Buildings = () => {
     },
     {
       field: 'createdAt',
-      headerName: 'Created',
+      headerName: t('buildings.columns.created'),
       width: 150,
       renderCell: (params) => (
         <Typography variant="body2" color="text.secondary">
@@ -183,7 +216,7 @@ const Buildings = () => {
     },
     {
       field: 'actions',
-      headerName: 'Actions',
+      headerName: t('buildings.columns.actions'),
       width: 100,
       sortable: false,
       filterable: false,
@@ -220,7 +253,7 @@ const Buildings = () => {
         <ListItemIcon>
           <VisibilityIcon fontSize="small" />
         </ListItemIcon>
-        <ListItemText>View Details</ListItemText>
+        <ListItemText>{t('common.viewDetails')}</ListItemText>
       </MenuItem>
       
       {hasPermission('update:buildings') && (
@@ -228,7 +261,7 @@ const Buildings = () => {
           <ListItemIcon>
             <EditIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Edit</ListItemText>
+          <ListItemText>{t('common.edit')}</ListItemText>
         </MenuItem>
       )}
       
@@ -240,12 +273,43 @@ const Buildings = () => {
               <DeleteIcon fontSize="small" color="error" />
             </ListItemIcon>
             <ListItemText primaryTypographyProps={{ color: 'error' }}>
-              Delete
+              {t('common.delete')}
             </ListItemText>
           </MenuItem>
         </>
       )}
     </Menu>
+  );
+
+  // Delete confirmation dialog
+  const renderDeleteDialog = (
+    <Dialog
+      open={deleteDialogOpen}
+      onClose={handleCancelDelete}
+      maxWidth="sm"
+      fullWidth
+    >
+      <DialogTitle>Delete Building</DialogTitle>
+      <DialogContent>
+        <Typography>
+          Are you sure you want to delete "{buildingToDelete?.name}"? This action cannot be undone and will also delete all associated apartments and work orders.
+        </Typography>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleCancelDelete} disabled={isDeleting}>
+          Cancel
+        </Button>
+        <Button 
+          onClick={handleConfirmDelete} 
+          color="error"
+          variant="contained"
+          disabled={isDeleting}
+          startIcon={isDeleting ? <CircularProgress size={16} /> : null}
+        >
+          {isDeleting ? 'Deleting...' : 'Delete'}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 
   // Error state
@@ -254,10 +318,10 @@ const Buildings = () => {
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
         <Paper sx={{ p: 3, textAlign: 'center' }}>
           <Typography color="error" gutterBottom>
-            Error loading buildings: {error?.data?.message || 'Unknown error'}
+            {t('buildings.errorLoading', { message: error?.data?.message || t('common.unknownError') })}
           </Typography>
           <Button variant="contained" color="primary" onClick={refetch}>
-            Retry
+            {t('common.retry')}
           </Button>
         </Paper>
       </Container>
@@ -274,7 +338,7 @@ const Buildings = () => {
                 <Box display="flex" alignItems="center">
                   <BuildingIcon sx={{ mr: 1 }} />
                   <Typography variant="h5" component="h1">
-                    Buildings
+                    {t('buildings.title')}
                   </Typography>
                 </Box>
               }
@@ -282,7 +346,7 @@ const Buildings = () => {
                 <Box display="flex" gap={2} flexWrap="wrap">
                   <TextField
                     fullWidth
-                    placeholder="Search buildings..."
+                    placeholder={t('buildings.searchPlaceholder')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     InputProps={{
@@ -302,7 +366,7 @@ const Buildings = () => {
                   
                   <TextField
                     select
-                    label="Filter by Apartment"
+                    label={t('buildings.filterByApartment')}
                     value={apartmentFilter}
                     onChange={(e) => setApartmentFilter(e.target.value)}
                     sx={{ 
@@ -312,21 +376,23 @@ const Buildings = () => {
                       }
                     }}
                   >
-                    <MenuItem value="">All Apartments</MenuItem>
-                    <MenuItem value="vacant">Vacant</MenuItem>
-                    <MenuItem value="occupied">Occupied</MenuItem>
-                    <MenuItem value="under_renovation">Under Renovation</MenuItem>
-                    <MenuItem value="reserved">Reserved</MenuItem>
+                    <MenuItem value="">{t('buildings.filters.allApartments')}</MenuItem>
+                    <MenuItem value="vacant">{t('buildings.filters.vacant')}</MenuItem>
+                    <MenuItem value="occupied">{t('buildings.filters.occupied')}</MenuItem>
+                    <MenuItem value="under_renovation">{t('buildings.filters.underRenovation')}</MenuItem>
+                    <MenuItem value="reserved">{t('buildings.filters.reserved')}</MenuItem>
                   </TextField>
                   
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<AddIcon />}
-                    onClick={() => navigate('/buildings/new')}
-                  >
-                    Add Building
-                  </Button>
+                  {hasPermission('create:buildings') && (
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      startIcon={<AddIcon />}
+                      onClick={() => navigate('/buildings/new')}
+                    >
+                      {t('buildings.addBuilding')}
+                    </Button>
+                  )}
                 </Box>
               }
             />
@@ -360,7 +426,7 @@ const Buildings = () => {
                       >
                         <BuildingIcon sx={{ fontSize: 60, mb: 2, opacity: 0.5 }} />
                         <Typography variant="h6" color="textSecondary" gutterBottom>
-                          No buildings found
+                          {t('buildings.noBuildingsFound')}
                         </Typography>
                         {hasPermission('create:buildings') && (
                           <Button
@@ -370,7 +436,7 @@ const Buildings = () => {
                             onClick={() => navigate('/buildings/new')}
                             sx={{ mt: 2 }}
                           >
-                            Add Your First Building
+                            {t('buildings.addFirstBuilding')}
                           </Button>
                         )}
                       </Box>
@@ -407,6 +473,7 @@ const Buildings = () => {
       </Grid>
       
       {renderMenu}
+      {renderDeleteDialog}
     </Container>
   );
 };

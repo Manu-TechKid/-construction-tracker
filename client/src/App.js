@@ -4,6 +4,8 @@ import { ThemeProvider, CssBaseline, createTheme } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { SnackbarProvider } from 'notistack';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { Provider } from 'react-redux';
 import { store } from './app/store';
 import { lightTheme, darkTheme } from './theme/theme';
@@ -24,6 +26,7 @@ import ResetPassword from './pages/auth/ResetPassword';
 import Dashboard from './pages/dashboard/Dashboard';
 import Buildings from './pages/buildings/Buildings';
 import BuildingDetails from './pages/buildings/BuildingDetails';
+import BuildingEdit from './pages/buildings/BuildingEdit';
 import CreateBuilding from './pages/buildings/CreateBuilding';
 import WorkOrders from './pages/workOrders/WorkOrders';
 import WorkOrderDetails from './pages/workOrders/WorkOrderDetails';
@@ -138,6 +141,7 @@ function AppContent() {
           <Route index element={<Buildings />} />
           <Route path="new" element={<CreateBuilding />} />
           <Route path=":id" element={<BuildingDetails />} />
+          <Route path=":id/edit" element={<BuildingEdit />} />
         </Route>
         
         {/* Work Orders Routes */}
@@ -185,6 +189,18 @@ function App() {
       <SettingsProvider>
         <ThemedApp>
           <AppContent />
+          <ToastContainer
+            position="top-right"
+            autoClose={5000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="colored"
+          />
         </ThemedApp>
       </SettingsProvider>
     </Provider>

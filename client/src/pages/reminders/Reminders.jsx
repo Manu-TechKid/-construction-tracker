@@ -24,7 +24,11 @@ import {
   TableRow,
   TablePagination,
   Avatar,
-  Badge
+  Badge,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -34,8 +38,9 @@ import {
   Delete as DeleteIcon,
   Notifications as NotificationsIcon
 } from '@mui/icons-material';
-import { useGetRemindersQuery } from '../../features/reminders/remindersApiSlice';
+import { useGetRemindersQuery, useDeleteReminderMutation } from '../../features/reminders/remindersApiSlice';
 import { selectCurrentUser } from '../../features/auth/authSlice';
+import { toast } from 'react-toastify';
 
 const statusColors = {
   pending: 'warning',
@@ -64,6 +69,8 @@ const Reminders = () => {
     building: '',
     search: ''
   });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [reminderToDelete, setReminderToDelete] = useState(null);
 
   // Fetch reminders with filters
   const { 
@@ -76,6 +83,8 @@ const Reminders = () => {
     limit: rowsPerPage,
     ...filters
   });
+
+  const [deleteReminder, { isLoading: isDeleting }] = useDeleteReminderMutation();
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -114,6 +123,31 @@ const Reminders = () => {
     setPage(0);
   };
 
+  const handleDeleteClick = (reminder) => {
+    setReminderToDelete(reminder);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!reminderToDelete) return;
+    
+    try {
+      await deleteReminder(reminderToDelete._id).unwrap();
+      toast.success('Reminder deleted successfully');
+      setDeleteDialogOpen(false);
+      setReminderToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete reminder:', error);
+      const errorMessage = error?.data?.message || error?.message || 'Failed to delete reminder';
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false);
+    setReminderToDelete(null);
+  };
+
   if (isLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
@@ -124,11 +158,18 @@ const Reminders = () => {
 
   if (isError) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <Typography color="error">
-          Error loading reminders: {error?.data?.message || 'Unknown error'}
-        </Typography>
-      </Box>
+      <Container maxWidth="xl">
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+          <Paper sx={{ p: 3, textAlign: 'center' }}>
+            <Typography color="error" gutterBottom>
+              Error loading reminders: {error?.data?.message || 'Unknown error'}
+            </Typography>
+            <Button variant="contained" color="primary" onClick={() => window.location.reload()}>
+              Retry
+            </Button>
+          </Paper>
+        </Box>
+      </Container>
     );
   }
 
@@ -292,15 +333,38 @@ const Reminders = () => {
                             <EditIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
+                        <Tooltip title="Delete">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(reminder);
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
                     <TableCell colSpan={7} align="center">
-                      <Typography variant="body2" color="textSecondary">
-                        No reminders found
-                      </Typography>
+                      <Box py={4}>
+                        <NotificationsIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                        <Typography variant="h6" color="textSecondary" gutterBottom>
+                          No reminders found
+                        </Typography>
+                        <Button
+                          variant="contained"
+                          startIcon={<AddIcon />}
+                          onClick={() => navigate('/reminders/new')}
+                          sx={{ mt: 2 }}
+                        >
+                          Create Your First Reminder
+                        </Button>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 )}
@@ -318,6 +382,35 @@ const Reminders = () => {
           />
         </Card>
       </Box>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleCancelDelete}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Delete Reminder</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete the reminder "{reminderToDelete?.title}"? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelDelete} disabled={isDeleting}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleConfirmDelete} 
+            color="error"
+            variant="contained"
+            disabled={isDeleting}
+            startIcon={isDeleting ? <CircularProgress size={16} /> : null}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

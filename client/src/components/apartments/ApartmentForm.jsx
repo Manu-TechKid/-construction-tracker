@@ -68,12 +68,12 @@ const ApartmentForm = ({ open, onClose, buildingId, apartment = null }) => {
           await updateApartment({
             buildingId,
             apartmentId: apartment._id,
-            updates: apartmentData,
+            ...apartmentData,
           }).unwrap();
         } else {
           await addApartment({
             buildingId,
-            apartment: apartmentData,
+            ...apartmentData,
           }).unwrap();
         }
         onClose(true);

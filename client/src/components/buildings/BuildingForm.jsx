@@ -116,7 +116,7 @@ const BuildingForm = ({
                       px: { xs: 2, sm: 3 }
                     }}
                   >
-                    {formik.isSubmitting ? 'Creating...' : 'Create Building'}
+                    {formik.isSubmitting ? (isEdit ? 'Updating...' : 'Creating...') : (isEdit ? 'Update Building' : 'Create Building')}
                   </Button>
                   
                   <Button

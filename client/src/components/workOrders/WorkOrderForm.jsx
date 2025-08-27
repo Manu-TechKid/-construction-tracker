@@ -26,6 +26,7 @@ const validationSchema = Yup.object().shape({
   apartmentNumber: Yup.string().required('Apartment number is required'),
   block: Yup.string().required('Block is required'),
   workType: Yup.string().required('Work type is required'),
+  workSubType: Yup.string().required('Service type is required'),
   description: Yup.string().required('Description is required'),
   priority: Yup.string().required('Priority is required'),
   startDate: Yup.date().required('Start date is required'),
@@ -179,7 +180,7 @@ const WorkOrderForm = ({
                           <MenuItem value="">
                             <em>Select a building</em>
                           </MenuItem>
-                          {buildingsData?.data?.buildings?.map((building) => (
+                          {buildings.map((building) => (
                             <MenuItem key={building._id} value={building._id}>
                               {building.name}
                             </MenuItem>
@@ -196,14 +197,13 @@ const WorkOrderForm = ({
                         fullWidth
                         id="apartmentNumber"
                         name="apartmentNumber"
-                        label="Apartment Number"
+                        label="Apartment Number *"
                         value={formik.values.apartmentNumber}
                         onChange={formik.handleChange}
                         onBlur={formik.handleBlur}
                         error={formik.touched.apartmentNumber && Boolean(formik.errors.apartmentNumber)}
                         helperText={formik.touched.apartmentNumber && formik.errors.apartmentNumber}
                         variant="outlined"
-                        margin="normal"
                       />
                     </Grid>
 
@@ -212,14 +212,13 @@ const WorkOrderForm = ({
                         fullWidth
                         id="block"
                         name="block"
-                        label="Block"
+                        label="Block *"
                         value={formik.values.block}
                         onChange={formik.handleChange}
                         onBlur={formik.handleBlur}
                         error={formik.touched.block && Boolean(formik.errors.block)}
                         helperText={formik.touched.block && formik.errors.block}
                         variant="outlined"
-                        margin="normal"
                       />
                     </Grid>
 
@@ -277,20 +276,6 @@ const WorkOrderForm = ({
                     <Grid item xs={12} md={6}>
                       <TextField
                         fullWidth
-                        id="apartmentNumber"
-                        name="apartmentNumber"
-                        label="Apartment Number"
-                        value={formik.values.apartmentNumber}
-                        onChange={formik.handleChange}
-                        error={formik.touched.apartmentNumber && Boolean(formik.errors.apartmentNumber)}
-                        helperText={formik.touched.apartmentNumber && formik.errors.apartmentNumber}
-                        margin="normal"
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
                         id="roomsAffected"
                         name="roomsAffected"
                         label="Rooms Affected"
@@ -299,7 +284,6 @@ const WorkOrderForm = ({
                         onChange={formik.handleChange}
                         error={formik.touched.roomsAffected && Boolean(formik.errors.roomsAffected)}
                         helperText={formik.touched.roomsAffected && formik.errors.roomsAffected}
-                        margin="normal"
                         inputProps={{ min: 1 }}
                       />
                     </Grid>
@@ -330,18 +314,64 @@ const WorkOrderForm = ({
 
                     <Grid item xs={12} md={3}>
                       <DatePicker
-                        label="Start Date"
+                        label="Start Date *"
                         value={formik.values.startDate}
                         onChange={(date) => formik.setFieldValue('startDate', date)}
                         renderInput={(params) => (
                           <TextField
                             {...params}
                             fullWidth
-                            margin="normal"
                             error={formik.touched.startDate && Boolean(formik.errors.startDate)}
                             helperText={formik.touched.startDate && formik.errors.startDate}
                           />
                         )}
+                      />
+                    </Grid>
+
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        id="description"
+                        name="description"
+                        label="Description *"
+                        multiline
+                        rows={4}
+                        value={formik.values.description}
+                        onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
+                        error={formik.touched.description && Boolean(formik.errors.description)}
+                        helperText={formik.touched.description && formik.errors.description}
+                        variant="outlined"
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        id="laborCost"
+                        name="laborCost"
+                        label="Labor Cost"
+                        type="number"
+                        value={formik.values.laborCost}
+                        onChange={formik.handleChange}
+                        error={formik.touched.laborCost && Boolean(formik.errors.laborCost)}
+                        helperText={formik.touched.laborCost && formik.errors.laborCost}
+                        inputProps={{ min: 0, step: 0.01 }}
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        id="materialsCost"
+                        name="materialsCost"
+                        label="Materials Cost"
+                        type="number"
+                        value={formik.values.materialsCost}
+                        onChange={formik.handleChange}
+                        error={formik.touched.materialsCost && Boolean(formik.errors.materialsCost)}
+                        helperText={formik.touched.materialsCost && formik.errors.materialsCost}
+                        inputProps={{ min: 0, step: 0.01 }}
                       />
                     </Grid>
                   </Grid>
@@ -361,7 +391,7 @@ const WorkOrderForm = ({
                       variant="contained"
                       color="primary"
                       fullWidth
-                      disabled={formik.isSubmitting}
+                      disabled={formik.isSubmitting || isSubmitting}
                       size="large"
                       sx={{
                         minHeight: { xs: 48, sm: 52 },
@@ -369,7 +399,7 @@ const WorkOrderForm = ({
                         px: { xs: 2, sm: 3 }
                       }}
                     >
-                      {formik.isSubmitting ? 'Creating...' : 'Create Work Order'}
+                      {formik.isSubmitting || isSubmitting ? 'Creating...' : 'Create Work Order'}
                     </Button>
                     
                     <Button
@@ -377,7 +407,7 @@ const WorkOrderForm = ({
                       color="primary"
                       fullWidth
                       onClick={onCancel}
-                      disabled={isSubmitting}
+                      disabled={formik.isSubmitting || isSubmitting}
                       sx={{
                         minHeight: { xs: 48, sm: 52 },
                         fontSize: { xs: '0.875rem', sm: '1rem' },

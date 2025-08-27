@@ -26,6 +26,7 @@ import {
   Select,
   Grid,
   Alert,
+  CircularProgress,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -39,6 +40,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useGetInvoicesQuery, useMarkInvoiceAsPaidMutation, useDeleteInvoiceMutation } from '../../features/invoices/invoicesApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
+import { toast } from 'react-toastify';
 
 const Invoices = () => {
   const navigate = useNavigate();
@@ -50,8 +52,8 @@ const Invoices = () => {
 
   const { data: invoicesData, isLoading, error } = useGetInvoicesQuery();
   const { data: buildingsData } = useGetBuildingsQuery();
-  const [markAsPaid] = useMarkInvoiceAsPaidMutation();
-  const [deleteInvoice] = useDeleteInvoiceMutation();
+  const [markAsPaid, { isLoading: isMarkingPaid }] = useMarkInvoiceAsPaidMutation();
+  const [deleteInvoice, { isLoading: isDeleting }] = useDeleteInvoiceMutation();
 
   const invoices = invoicesData?.data?.invoices || [];
   const buildings = buildingsData?.data?.buildings || [];
@@ -70,9 +72,12 @@ const Invoices = () => {
     if (selectedInvoice) {
       try {
         await markAsPaid(selectedInvoice._id).unwrap();
+        toast.success('Invoice marked as paid successfully');
         handleMenuClose();
       } catch (error) {
         console.error('Error marking invoice as paid:', error);
+        const errorMessage = error?.data?.message || error?.message || 'Failed to mark invoice as paid';
+        toast.error(errorMessage);
       }
     }
   };
@@ -81,10 +86,13 @@ const Invoices = () => {
     if (selectedInvoice) {
       try {
         await deleteInvoice(selectedInvoice._id).unwrap();
+        toast.success('Invoice deleted successfully');
         setDeleteDialogOpen(false);
         handleMenuClose();
       } catch (error) {
         console.error('Error deleting invoice:', error);
+        const errorMessage = error?.data?.message || error?.message || 'Failed to delete invoice';
+        toast.error(errorMessage);
       }
     }
   };
@@ -106,12 +114,21 @@ const Invoices = () => {
 
   const filteredInvoices = invoices.filter(invoice => {
     const statusMatch = !filterStatus || invoice.status === filterStatus;
-    const buildingMatch = !filterBuilding || invoice.building._id === filterBuilding;
+    const buildingMatch = !filterBuilding || invoice.building?._id === filterBuilding;
     return statusMatch && buildingMatch;
   });
 
-  if (isLoading) return <Typography>Loading invoices...</Typography>;
-  if (error) return <Typography color="error">Error loading invoices</Typography>;
+  if (isLoading) return (
+    <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <CircularProgress />
+    </Box>
+  );
+  
+  if (error) return (
+    <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <Typography color="error">Error loading invoices: {error?.data?.message || 'Unknown error'}</Typography>
+    </Box>
+  );
 
   return (
     <Box>
@@ -214,10 +231,10 @@ const Invoices = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {invoice.building.name}
+                        {invoice.building?.name || 'N/A'}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {invoice.building.address}
+                        {invoice.building?.address || ''}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -228,12 +245,12 @@ const Invoices = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight="medium">
-                        ${invoice.total.toFixed(2)}
+                        ${invoice.total?.toFixed(2) || '0.00'}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                        label={invoice.status?.charAt(0).toUpperCase() + invoice.status?.slice(1) || 'Draft'}
                         color={getStatusColor(invoice.status)}
                         size="small"
                       />
@@ -269,9 +286,9 @@ const Invoices = () => {
           Edit
         </MenuItem>
         {selectedInvoice?.status !== 'paid' && (
-          <MenuItem onClick={handleMarkAsPaid}>
+          <MenuItem onClick={handleMarkAsPaid} disabled={isMarkingPaid}>
             <PaymentIcon sx={{ mr: 1 }} />
-            Mark as Paid
+            {isMarkingPaid ? 'Marking as Paid...' : 'Mark as Paid'}
           </MenuItem>
         )}
         <MenuItem 
@@ -296,9 +313,17 @@ const Invoices = () => {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleDeleteInvoice} color="error" variant="contained">
-            Delete
+          <Button onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteInvoice} 
+            color="error" 
+            variant="contained"
+            disabled={isDeleting}
+            startIcon={isDeleting ? <CircularProgress size={16} /> : null}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>
