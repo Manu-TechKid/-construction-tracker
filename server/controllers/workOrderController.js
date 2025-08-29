@@ -356,3 +356,120 @@ exports.deletePhotoFromWorkOrder = catchAsync(async (req, res, next) => {
 
   res.json({ status: 'success', data: workOrder });
 });
+
+// Update work order task checklist
+exports.updateTaskChecklist = catchAsync(async (req, res, next) => {
+  const { taskId, completed, notes } = req.body;
+  
+  const workOrder = await WorkOrder.findById(req.params.id);
+  
+  if (!workOrder) {
+    return next(new AppError('No work order found with that ID', 404));
+  }
+  
+  const task = workOrder.taskChecklist.id(taskId);
+  if (!task) {
+    return next(new AppError('Task not found', 404));
+  }
+  
+  task.completed = completed;
+  task.notes = notes || task.notes;
+  
+  if (completed) {
+    task.completedBy = req.user.id;
+    task.completedAt = new Date();
+  } else {
+    task.completedBy = undefined;
+    task.completedAt = undefined;
+  }
+  
+  await workOrder.save();
+  
+  res.status(200).json({
+    status: 'success',
+    data: {
+      workOrder
+    }
+  });
+});
+
+// Add task to checklist
+exports.addTaskToChecklist = catchAsync(async (req, res, next) => {
+  const { name, description } = req.body;
+  
+  const workOrder = await WorkOrder.findById(req.params.id);
+  
+  if (!workOrder) {
+    return next(new AppError('No work order found with that ID', 404));
+  }
+  
+  workOrder.taskChecklist.push({
+    name,
+    description,
+    completed: false
+  });
+  
+  await workOrder.save();
+  
+  res.status(200).json({
+    status: 'success',
+    data: {
+      workOrder
+    }
+  });
+});
+
+// Get worker assignments for a work order
+exports.getWorkerAssignments = catchAsync(async (req, res, next) => {
+  const workOrder = await WorkOrder.findById(req.params.id)
+    .populate('assignedTo.worker', 'name email phone');
+  
+  if (!workOrder) {
+    return next(new AppError('No work order found with that ID', 404));
+  }
+  
+  res.status(200).json({
+    status: 'success',
+    data: {
+      assignments: workOrder.assignedTo
+    }
+  });
+});
+
+// Assign workers to work order
+exports.assignWorkers = catchAsync(async (req, res, next) => {
+  const { workers } = req.body; // Array of { worker, scheduledDate, scheduledTime, hourlyRate, contractAmount }
+  
+  const workOrder = await WorkOrder.findById(req.params.id);
+  
+  if (!workOrder) {
+    return next(new AppError('No work order found with that ID', 404));
+  }
+  
+  // Clear existing assignments
+  workOrder.assignedTo = [];
+  
+  // Add new assignments
+  workers.forEach(assignment => {
+    workOrder.assignedTo.push({
+      worker: assignment.worker,
+      scheduledDate: assignment.scheduledDate,
+      scheduledTime: assignment.scheduledTime,
+      hourlyRate: assignment.hourlyRate,
+      contractAmount: assignment.contractAmount,
+      paymentType: assignment.paymentType || 'hourly',
+      assignedDate: new Date()
+    });
+  });
+  
+  await workOrder.save();
+  
+  await workOrder.populate('assignedTo.worker', 'name email phone');
+  
+  res.status(200).json({
+    status: 'success',
+    data: {
+      workOrder
+    }
+  });
+});

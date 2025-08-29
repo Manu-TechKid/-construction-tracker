@@ -146,15 +146,11 @@ const WorkOrderForm = ({
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
                     label={t('workOrders.building')}
-                    startAdornment={buildingsLoading ? (
-                      <InputAdornment position="start">
-                        <CircularProgress size={20} />
-                      </InputAdornment>
-                    ) : null}
+                    disabled={buildingsLoading}
                   >
                     {buildings.map((building) => (
                       <MenuItem key={building._id} value={building._id}>
-                        {building.name} - {building.address}
+                        {building.name} {building.address ? `- ${building.address}` : ''}
                       </MenuItem>
                     ))}
                   </Select>

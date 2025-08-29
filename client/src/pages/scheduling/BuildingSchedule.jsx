@@ -17,7 +17,9 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Calendar,
+  Container,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -32,13 +34,18 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfDay, parseISO } from 'date-fns';
 import { useBuildingContext } from '../../contexts/BuildingContext';
 import { useAuth } from '../../hooks/useAuth';
+import { 
+  useGetBuildingSchedulesQuery,
+  useCreateScheduleMutation,
+  useUpdateScheduleMutation,
+  useDeleteScheduleMutation
+} from '../../features/schedules/schedulesApiSlice';
 import { toast } from 'react-toastify';
 
 const BuildingSchedule = () => {
   const { selectedBuilding, buildings } = useBuildingContext();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [schedules, setSchedules] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [formData, setFormData] = useState({
@@ -46,11 +53,33 @@ const BuildingSchedule = () => {
     description: '',
     type: 'painting',
     building: '',
+    apartment: '',
     startDate: new Date(),
     endDate: new Date(),
     status: 'planned',
+    estimatedCost: '',
+    notes: ''
   });
-  const [calendarKey, setCalendarKey] = useState(0);
+
+  // API hooks
+  const { 
+    data: schedulesData, 
+    isLoading, 
+    error 
+  } = useGetBuildingSchedulesQuery(
+    { 
+      buildingId: selectedBuilding?._id,
+      month: currentDate.getMonth() + 1,
+      year: currentDate.getFullYear()
+    },
+    { skip: !selectedBuilding }
+  );
+
+  const [createSchedule, { isLoading: creating }] = useCreateScheduleMutation();
+  const [updateSchedule, { isLoading: updating }] = useUpdateScheduleMutation();
+  const [deleteSchedule, { isLoading: deleting }] = useDeleteScheduleMutation();
+
+  const schedules = schedulesData?.data?.schedules || [];
 
   const scheduleTypes = [
     { value: 'painting', label: 'Painting', color: 'primary' },
@@ -67,27 +96,6 @@ const BuildingSchedule = () => {
     { value: 'cancelled', label: 'Cancelled', color: 'error' },
   ];
 
-  // Load schedules from localStorage
-  React.useEffect(() => {
-    const savedSchedules = localStorage.getItem('buildingSchedules');
-    if (savedSchedules) {
-      try {
-        setSchedules(JSON.parse(savedSchedules));
-      } catch (error) {
-        console.error('Error loading schedules:', error);
-      }
-    }
-  }, []);
-
-  const saveSchedules = (updatedSchedules) => {
-    localStorage.setItem('buildingSchedules', JSON.stringify(updatedSchedules));
-    setSchedules(updatedSchedules);
-  };
-
-  const filteredSchedules = selectedBuilding 
-    ? schedules.filter(schedule => schedule.building === selectedBuilding._id)
-    : schedules;
-
   const getMonthDays = () => {
     const start = startOfMonth(currentDate);
     const end = endOfMonth(currentDate);
@@ -95,7 +103,7 @@ const BuildingSchedule = () => {
   };
 
   const getSchedulesForDay = (day) => {
-    return filteredSchedules.filter(schedule => {
+    return schedules.filter(schedule => {
       const startDate = startOfDay(typeof schedule.startDate === 'string' ? parseISO(schedule.startDate) : new Date(schedule.startDate));
       const endDate = startOfDay(typeof schedule.endDate === 'string' ? parseISO(schedule.endDate) : new Date(schedule.endDate));
       const normalizedDay = startOfDay(day);
@@ -118,9 +126,12 @@ const BuildingSchedule = () => {
         description: '',
         type: 'painting',
         building: selectedBuilding?._id || '',
+        apartment: '',
         startDate: new Date(),
         endDate: new Date(),
         status: 'planned',
+        estimatedCost: '',
+        notes: ''
       });
     }
     setOpenDialog(true);
@@ -131,7 +142,7 @@ const BuildingSchedule = () => {
     setEditingSchedule(null);
   };
 
-  const handleSaveSchedule = () => {
+  const handleSaveSchedule = async () => {
     if (!formData.title.trim()) {
       toast.error('Title is required');
       return;
@@ -149,27 +160,31 @@ const BuildingSchedule = () => {
       updatedAt: new Date().toISOString(),
     };
 
-    let updatedSchedules;
-    if (editingSchedule) {
-      updatedSchedules = schedules.map(schedule => 
-        schedule.id === editingSchedule.id ? scheduleData : schedule
-      );
-      toast.success('Schedule updated successfully');
-    } else {
-      updatedSchedules = [...schedules, scheduleData];
-      toast.success('Schedule created successfully');
+    try {
+      if (editingSchedule) {
+        await updateSchedule(scheduleData);
+        toast.success('Schedule updated successfully');
+      } else {
+        await createSchedule(scheduleData);
+        toast.success('Schedule created successfully');
+      }
+    } catch (error) {
+      console.error('Error saving schedule:', error);
+      toast.error('Error saving schedule');
     }
 
-    saveSchedules(updatedSchedules);
-    setCalendarKey(prev => prev + 1);
     handleCloseDialog();
   };
 
-  const handleDeleteSchedule = (scheduleId) => {
+  const handleDeleteSchedule = async (scheduleId) => {
     if (window.confirm('Are you sure you want to delete this schedule?')) {
-      const updatedSchedules = schedules.filter(schedule => schedule.id !== scheduleId);
-      saveSchedules(updatedSchedules);
-      toast.success('Schedule deleted successfully');
+      try {
+        await deleteSchedule(scheduleId);
+        toast.success('Schedule deleted successfully');
+      } catch (error) {
+        console.error('Error deleting schedule:', error);
+        toast.error('Error deleting schedule');
+      }
     }
   };
 
@@ -187,6 +202,24 @@ const BuildingSchedule = () => {
         <Typography variant="h6" color="text.secondary">
           You don't have permission to access schedules
         </Typography>
+      </Box>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Alert severity="error">
+          {error.message}
+        </Alert>
       </Box>
     );
   }
@@ -247,7 +280,7 @@ const BuildingSchedule = () => {
         )}
 
         {selectedBuilding && (
-          <Card key={calendarKey}>
+          <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 {format(currentDate, 'MMMM yyyy')} - {selectedBuilding.name}

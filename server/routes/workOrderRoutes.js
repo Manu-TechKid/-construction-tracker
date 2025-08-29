@@ -1,11 +1,13 @@
 const express = require('express');
 const workOrderController = require('../controllers/workOrderController');
 const authController = require('../controllers/authController');
+const { hidePricesFromWorkers } = require('../middleware/roleMiddleware');
 
 const router = express.Router();
 
 // Protect all routes after this middleware
 router.use(authController.protect);
+router.use(hidePricesFromWorkers); // Hide prices from workers
 
 // Route for getting form data (buildings, workers, etc.)
 router.get('/new', workOrderController.getWorkOrderFormData);

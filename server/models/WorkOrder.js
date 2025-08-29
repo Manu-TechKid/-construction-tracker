@@ -1,5 +1,24 @@
 const mongoose = require('mongoose');
 
+const taskItemSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  description: String,
+  completed: {
+    type: Boolean,
+    default: false
+  },
+  completedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Worker'
+  },
+  completedAt: Date,
+  notes: String
+});
+
 const workOrderSchema = new mongoose.Schema({
     building: {
         type: mongoose.Schema.Types.ObjectId,
@@ -34,7 +53,7 @@ const workOrderSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'in_progress', 'completed', 'on_hold'],
+        enum: ['pending', 'completed'],
         default: 'pending'
     },
     assignedTo: [{
@@ -42,76 +61,71 @@ const workOrderSchema = new mongoose.Schema({
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Worker'
         },
+        assignedDate: {
+            type: Date,
+            default: Date.now
+        },
+        scheduledDate: Date,
+        scheduledTime: String,
         hoursWorked: Number,
         paymentType: {
             type: String,
             enum: ['hourly', 'contract'],
             default: 'hourly'
         },
-        rate: Number
+        hourlyRate: Number,
+        contractAmount: Number
     }],
-    startDate: {
-        type: Date,
-        default: Date.now
-    },
-    completionDate: Date,
+    taskChecklist: [taskItemSchema],
     priority: {
         type: String,
-        enum: ['low', 'medium', 'high'],
+        enum: ['low', 'medium', 'high', 'urgent'],
         default: 'medium'
     },
+    startDate: Date,
+    completedDate: Date,
+    estimatedCost: {
+        type: Number,
+        min: 0
+    },
+    actualCost: {
+        type: Number,
+        min: 0
+    },
+    laborCost: {
+        type: Number,
+        min: 0
+    },
+    materialsCost: {
+        type: Number,
+        min: 0
+    },
+    totalCost: {
+        type: Number,
+        min: 0
+    },
     notes: [{
-        type: {
-            type: String,
-            enum: ['progress', 'incident', 'info'],
-            default: 'progress'
-        },
-        title: {
+        content: {
             type: String,
             required: true
         },
-        description: {
-            type: String,
-            required: true
-        },
-        priority: {
-            type: String,
-            enum: ['low', 'medium', 'high'],
-            default: 'medium'
-        },
-        author: {
-            type: String,
-            required: true
-        },
-        timestamp: {
-            type: Date,
-            default: Date.now
-        }
-    }],
-    issues: [{
-        description: String,
-        reportedBy: {
+        createdBy: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User'
+            ref: 'User',
+            required: true
         },
-        reportedAt: {
+        createdAt: {
             type: Date,
             default: Date.now
         },
-        resolved: {
+        isPrivate: {
             type: Boolean,
             default: false
         }
     }],
     photos: [{
-        url: {
-            type: String,
-            required: true
-        },
-        caption: {
-            type: String,
-            trim: true
-        },
+        url: String,
+        description: String,
         uploadedBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User'
@@ -119,42 +133,32 @@ const workOrderSchema = new mongoose.Schema({
         uploadedAt: {
             type: Date,
             default: Date.now
-        },
-        type: {
-            type: String,
-            enum: ['before', 'during', 'after', 'issue', 'other'],
-            default: 'other'
         }
     }],
-    billingStatus: {
-        type: String,
-        enum: ['pending', 'invoiced', 'paid'],
-        default: 'pending'
-    },
-    laborCost: {
-        type: Number,
-        default: 0,
-        min: 0
-    },
-    materialsCost: {
-        type: Number,
-        default: 0,
-        min: 0
-    },
-    totalCost: {
-        type: Number,
-        default: 0,
-        min: 0
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: false
+        required: true
+    },
+    updatedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
     }
+}, {
+    timestamps: true
 });
+
+// Pre-save middleware to calculate total cost
+workOrderSchema.pre('save', function(next) {
+    if (this.laborCost || this.materialsCost) {
+        this.totalCost = (this.laborCost || 0) + (this.materialsCost || 0);
+    }
+    next();
+});
+
+// Indexes
+workOrderSchema.index({ building: 1, status: 1 });
+workOrderSchema.index({ assignedTo: 1 });
+workOrderSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model('WorkOrder', workOrderSchema);
