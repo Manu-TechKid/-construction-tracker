@@ -316,8 +316,16 @@ const NotesSheet = () => {
                 <Grid item xs={12} md={6} lg={4} key={note.id}>
                   <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                     <CardContent sx={{ flexGrow: 1 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      <Typography variant="h6" gutterBottom noWrap>
+                        {note.title}
+                      </Typography>
+                      
+                      <Typography variant="body2" sx={{ mb: 2 }}>
+                        {note.content}
+                      </Typography>
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
                           <Chip
                             label={typeConfig.label}
                             color={typeConfig.color}
@@ -327,7 +335,6 @@ const NotesSheet = () => {
                             label={priorityConfig.label}
                             color={priorityConfig.color}
                             size="small"
-                            variant="outlined"
                           />
                         </Box>
                         
@@ -336,13 +343,15 @@ const NotesSheet = () => {
                             <IconButton
                               size="small"
                               onClick={() => handleOpenDialog(note)}
+                              disabled={isUpdating}
                             >
                               <EditIcon fontSize="small" />
                             </IconButton>
                             <IconButton
                               size="small"
+                              onClick={() => handleDeleteNote(note._id)}
+                              disabled={isDeleting}
                               color="error"
-                              onClick={() => handleDeleteNote(note.id)}
                             >
                               <DeleteIcon fontSize="small" />
                             </IconButton>
@@ -350,23 +359,25 @@ const NotesSheet = () => {
                         )}
                       </Box>
                       
-                      <Typography variant="h6" gutterBottom noWrap>
-                        {note.title}
-                      </Typography>
-                      
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {format(new Date(note.visitDate), 'MMM dd, yyyy - h:mm a')}
-                      </Typography>
-                      
-                      <Typography variant="body2" sx={{ mb: 2 }}>
-                        {note.content.length > 150 
-                          ? `${note.content.substring(0, 150)}...` 
-                          : note.content
-                        }
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 2 }}>
+                        {(() => {
+                          try {
+                            const date = note.createdAt || note.visitDate;
+                            if (!date) return 'No date';
+                            
+                            const parsedDate = new Date(date);
+                            if (isNaN(parsedDate.getTime())) return 'Invalid date';
+                            
+                            return format(parsedDate, 'MMM dd, yyyy HH:mm');
+                          } catch (error) {
+                            console.error('Date formatting error:', error, 'Date value:', note.createdAt || note.visitDate);
+                            return 'Invalid date';
+                          }
+                        })()}
                       </Typography>
                       
                       {note.estimateAmount && (
-                        <Typography variant="body2" color="success.main" fontWeight="bold">
+                        <Typography variant="body2" color="success.main" fontWeight="bold" sx={{ mt: 1 }}>
                           Estimate: ${parseFloat(note.estimateAmount).toLocaleString()}
                         </Typography>
                       )}

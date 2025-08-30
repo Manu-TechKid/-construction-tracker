@@ -66,7 +66,7 @@ const WorkOrders = () => {
   });
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
-  const [paginationModel, setPaginationModel] = useState({
+  const [pagination, setPagination] = useState({
     page: 0,
     pageSize: 10,
   });
@@ -79,8 +79,8 @@ const WorkOrders = () => {
     error,
     refetch 
   } = useGetWorkOrdersQuery({
-    page: paginationModel.page + 1,
-    limit: paginationModel.pageSize,
+    page: pagination.page + 1,
+    limit: pagination.pageSize,
     search: searchTerm,
     ...filters,
     // Only apply building filter if a building is selected
@@ -138,7 +138,7 @@ const WorkOrders = () => {
   const handleSearchChange = (event) => {
     setSearchTerm(event.target.value);
     // Reset to first page when searching
-    setPaginationModel(prev => ({ ...prev, page: 0 }));
+    setPagination(prev => ({ ...prev, page: 0 }));
   };
 
   // Handle filter change
@@ -148,7 +148,7 @@ const WorkOrders = () => {
       [filterName]: value,
     }));
     // Reset to first page when filtering
-    setPaginationModel(prev => ({ ...prev, page: 0 }));
+    setPagination(prev => ({ ...prev, page: 0 }));
   };
 
   // Status options
@@ -504,67 +504,21 @@ const WorkOrders = () => {
                 <DataGrid
                   rows={workOrders}
                   columns={columns}
-                  loading={isLoading}
-                  pageSizeOptions={[10, 25, 50]}
-                  paginationModel={paginationModel}
-                  onPaginationModelChange={setPaginationModel}
-                  paginationMode="server"
-                  rowCount={totalCount}
+                  getRowId={(row) => row._id}
+                  paginationModel={pagination}
+                  onPaginationModelChange={setPagination}
+                  pageSizeOptions={[5, 10, 25, 50]}
+                  checkboxSelection
                   disableRowSelectionOnClick
-                  disableColumnMenu
-                  disableDensitySelector
-                  slots={{
-                    toolbar: GridToolbar,
-                    noRowsOverlay: () => (
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          height: '100%',
-                          p: 4,
-                        }}
-                      >
-                        <WorkOrderIcon sx={{ fontSize: 60, mb: 2, opacity: 0.5 }} />
-                        <Typography variant="h6" color="textSecondary" gutterBottom>
-                          No work orders found
-                        </Typography>
-                        {hasPermission('create:work-orders') && (
-                          <Button
-                            variant="contained"
-                            color="primary"
-                            startIcon={<AddIcon />}
-                            onClick={() => navigate('/work-orders/create')}
-                            sx={{ mt: 2 }}
-                          >
-                            Create Your First Work Order
-                          </Button>
-                        )}
-                      </Box>
-                    ),
-                    loadingOverlay: LinearProgress,
-                  }}
-                  slotProps={{
-                    toolbar: {
-                      showQuickFilter: true,
-                      quickFilterProps: { debounceMs: 500 },
-                    },
-                  }}
+                  loading={isLoading}
+                  rowCount={totalCount}
+                  paginationMode="server"
+                  sortingMode="server"
+                  filterMode="server"
                   sx={{
-                    '& .MuiDataGrid-columnHeaders': {
-                      backgroundColor: theme.palette.background.default,
-                      borderBottom: `1px solid ${theme.palette.divider}`,
-                    },
-                    '& .MuiDataGrid-cell': {
-                      borderBottom: `1px solid ${theme.palette.divider}`,
-                    },
+                    height: 600,
                     '& .MuiDataGrid-row:hover': {
-                      backgroundColor: theme.palette.action.hover,
-                    },
-                    '& .MuiDataGrid-toolbarContainer': {
-                      borderBottom: `1px solid ${theme.palette.divider}`,
-                      padding: theme.spacing(1, 2),
+                      backgroundColor: 'action.hover',
                     },
                   }}
                 />
