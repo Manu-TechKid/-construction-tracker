@@ -549,27 +549,3 @@ const WorkOrders = () => {
 };
 
 export default WorkOrders;
-              backgroundColor: 'action.hover',
-            },
-          }}
-        />
-      </Paper>
-
-      {renderMenu}
-    </Container>
-  );
-};
-
-export default WorkOrders;
-              backgroundColor: 'action.hover',
-            },
-          }}
-        />
-      </Paper>
-
-      {renderMenu}
-    </Container>
-  );
-};
-
-export default WorkOrders;
