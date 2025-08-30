@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -6,21 +6,7 @@ import {
   Card,
   CardContent,
   Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   TextField,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Checkbox,
-  Alert,
-  Divider,
   CircularProgress,
   Container,
 } from '@mui/material';
@@ -29,87 +15,26 @@ import { useNavigate } from 'react-router-dom';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
-import { useGetWorkOrdersQuery } from '../../features/workOrders/workOrdersApiSlice';
 import { useCreateInvoiceMutation } from '../../features/invoices/invoicesApiSlice';
 import { toast } from 'react-toastify';
 
 const CreateInvoice = () => {
   const navigate = useNavigate();
-  const [selectedBuilding, setSelectedBuilding] = useState('');
-  const [selectedWorkOrders, setSelectedWorkOrders] = useState([]);
   const [dueDate, setDueDate] = useState(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
   const [notes, setNotes] = useState('');
-  const [error, setError] = useState('');
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  const { 
-    data: buildingsData, 
-    isLoading: buildingsLoading, 
-    error: buildingsError 
-  } = useGetBuildingsQuery();
-  
-  const { 
-    data: workOrdersData, 
-    isLoading: workOrdersLoading, 
-    error: workOrdersError 
-  } = useGetWorkOrdersQuery({ building: selectedBuilding }, { 
-    skip: !selectedBuilding 
-  });
   
   const [createInvoice, { isLoading: creating }] = useCreateInvoiceMutation();
 
-  useEffect(() => {
-    setIsInitialized(true);
-  }, []);
-
-  const buildings = buildingsData?.data?.buildings || [];
-  const workOrders = workOrdersData?.data?.workOrders || [];
-
-  const handleWorkOrderToggle = (workOrderId) => {
-    setSelectedWorkOrders(prev => 
-      prev.includes(workOrderId)
-        ? prev.filter(id => id !== workOrderId)
-        : [...prev, workOrderId]
-    );
-  };
-
-  const handleSelectAll = () => {
-    if (selectedWorkOrders.length === workOrders.length) {
-      setSelectedWorkOrders([]);
-    } else {
-      setSelectedWorkOrders(workOrders.map(wo => wo._id));
-    }
-  };
-
-  const calculateTotals = () => {
-    const selectedWOs = workOrders.filter(wo => selectedWorkOrders.includes(wo._id));
-    const subtotal = selectedWOs.reduce((sum, wo) => {
-      return sum + (wo.totalCost || wo.laborCost + wo.materialsCost || 0);
-    }, 0);
-    const tax = subtotal * 0.1; // 10% tax
-    const total = subtotal + tax;
-    
-    return { subtotal, tax, total };
-  };
-
   const handleSubmit = async () => {
-    if (!selectedBuilding || selectedWorkOrders.length === 0) {
-      toast.error('Please select a building and at least one work order');
-      return;
-    }
-
     try {
       const invoiceData = {
-        buildingId: selectedBuilding,
-        workOrderIds: selectedWorkOrders,
         dueDate,
         notes
       };
 
-      const result = await createInvoice(invoiceData).unwrap();
+      await createInvoice(invoiceData).unwrap();
       toast.success('Invoice created successfully!');
-      navigate(`/invoices/${result.data.invoice._id}`);
+      navigate('/invoices');
     } catch (error) {
       console.error('Failed to create invoice:', error);
       const errorMessage = error?.data?.message || error?.message || 'Failed to create invoice';
@@ -120,30 +45,6 @@ const CreateInvoice = () => {
   const handleCancel = () => {
     navigate('/invoices');
   };
-
-  const { subtotal, tax, total } = calculateTotals();
-
-  // Loading state
-  if (buildingsLoading || workOrdersLoading) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-          <CircularProgress />
-        </Box>
-      </Container>
-    );
-  }
-
-  // Error state
-  if (buildingsError || workOrdersError || error) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error || buildingsError?.message || workOrdersError?.message || 'An error occurred'}
-        </Alert>
-      </Container>
-    );
-  }
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -161,38 +62,13 @@ const CreateInvoice = () => {
           </Typography>
         </Box>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        )}
-
         <Grid container spacing={3}>
-          {/* Invoice Details */}
           <Grid item xs={12} md={4}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
                   Invoice Details
                 </Typography>
-                
-                <FormControl fullWidth margin="normal" disabled={buildingsLoading}>
-                  <InputLabel>Building *</InputLabel>
-                  <Select
-                    value={selectedBuilding}
-                    onChange={(e) => {
-                      setSelectedBuilding(e.target.value);
-                      setSelectedWorkOrders([]);
-                    }}
-                    label="Building *"
-                  >
-                    {buildings.map((building) => (
-                      <MenuItem key={building._id} value={building._id}>
-                        {building.name} - {building.address}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
 
                 <DatePicker
                   label="Due Date"
@@ -213,36 +89,12 @@ const CreateInvoice = () => {
                   margin="normal"
                 />
 
-                {/* Invoice Summary */}
-                {selectedWorkOrders.length > 0 && (
-                  <Box mt={3}>
-                    <Divider sx={{ mb: 2 }} />
-                    <Typography variant="h6" gutterBottom>
-                      Invoice Summary
-                    </Typography>
-                    <Box display="flex" justifyContent="space-between" mb={1}>
-                      <Typography>Subtotal:</Typography>
-                      <Typography>${subtotal.toFixed(2)}</Typography>
-                    </Box>
-                    <Box display="flex" justifyContent="space-between" mb={1}>
-                      <Typography>Tax (10%):</Typography>
-                      <Typography>${tax.toFixed(2)}</Typography>
-                    </Box>
-                    <Divider sx={{ my: 1 }} />
-                    <Box display="flex" justifyContent="space-between" mb={2}>
-                      <Typography variant="h6">Total:</Typography>
-                      <Typography variant="h6">${total.toFixed(2)}</Typography>
-                    </Box>
-                  </Box>
-                )}
-
-                {/* Action Buttons - Always visible */}
                 <Box mt={3} display="flex" flexDirection="column" gap={1}>
                   <Button
                     variant="contained"
                     fullWidth
                     onClick={handleSubmit}
-                    disabled={creating || !selectedBuilding || selectedWorkOrders.length === 0}
+                    disabled={creating}
                     size="large"
                     startIcon={creating ? <CircularProgress size={16} /> : null}
                   >
@@ -261,99 +113,15 @@ const CreateInvoice = () => {
             </Card>
           </Grid>
 
-          {/* Work Orders Selection */}
           <Grid item xs={12} md={8}>
             <Card>
               <CardContent>
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                  <Typography variant="h6">
-                    Unbilled Work Orders
-                  </Typography>
-                  {workOrders.length > 0 && (
-                    <Button onClick={handleSelectAll} size="small">
-                      {selectedWorkOrders.length === workOrders.length ? 'Deselect All' : 'Select All'}
-                    </Button>
-                  )}
-                </Box>
-
-                {!selectedBuilding ? (
-                  <Typography color="text.secondary" align="center" py={4}>
-                    Please select a building to view unbilled work orders
-                  </Typography>
-                ) : workOrdersLoading ? (
-                  <Box display="flex" justifyContent="center" py={4}>
-                    <CircularProgress />
-                  </Box>
-                ) : workOrders.length === 0 ? (
-                  <Typography color="text.secondary" align="center" py={4}>
-                    No unbilled work orders found for this building
-                  </Typography>
-                ) : (
-                  <TableContainer component={Paper} variant="outlined">
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell padding="checkbox">
-                            <Checkbox
-                              checked={selectedWorkOrders.length === workOrders.length}
-                              indeterminate={
-                                selectedWorkOrders.length > 0 && 
-                                selectedWorkOrders.length < workOrders.length
-                              }
-                              onChange={handleSelectAll}
-                            />
-                          </TableCell>
-                          <TableCell>Work Order</TableCell>
-                          <TableCell>Apartment</TableCell>
-                          <TableCell>Service</TableCell>
-                          <TableCell>Status</TableCell>
-                          <TableCell align="right">Cost</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {workOrders.map((workOrder) => (
-                          <TableRow key={workOrder._id} hover>
-                            <TableCell padding="checkbox">
-                              <Checkbox
-                                checked={selectedWorkOrders.includes(workOrder._id)}
-                                onChange={() => handleWorkOrderToggle(workOrder._id)}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">
-                                {workOrder.workType} - {workOrder.workSubType}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {new Date(workOrder.createdAt).toLocaleDateString()}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              {workOrder.apartmentNumber || 'N/A'}
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">
-                                {workOrder.workType}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {workOrder.workSubType}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2" color="success.main">
-                                {workOrder.status}
-                              </Typography>
-                            </TableCell>
-                            <TableCell align="right">
-                              <Typography variant="body2" fontWeight="medium">
-                                ${(workOrder.totalCost || workOrder.laborCost + workOrder.materialsCost || 0).toFixed(2)}
-                              </Typography>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                )}
+                <Typography variant="h6">
+                  Invoice Preview
+                </Typography>
+                <Typography color="text.secondary" align="center" py={4}>
+                  Invoice functionality will be implemented based on requirements
+                </Typography>
               </CardContent>
             </Card>
           </Grid>

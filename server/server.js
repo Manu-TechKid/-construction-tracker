@@ -176,8 +176,12 @@ if (process.env.NODE_ENV === 'production') {
     // Serve static files from the React app
     app.use(express.static(clientBuildPath));
     
-    // Handle React routing, return all requests to React app
-    app.get('*', (req, res) => {
+    // Handle React routing, return all requests to React app (but only for non-API routes)
+    app.get('*', (req, res, next) => {
+      // Skip API routes
+      if (req.path.startsWith('/api/')) {
+        return next();
+      }
       res.sendFile(path.join(clientBuildPath, 'index.html'));
     });
   } else {
@@ -185,8 +189,8 @@ if (process.env.NODE_ENV === 'production') {
   }
 }
 
-// Handle 404 - must be after all other routes
-app.all('*', (req, res, next) => {
+// Handle 404 for API routes only
+app.all('/api/*', (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
 
@@ -258,6 +262,9 @@ const startServer = async () => {
     });
   });
 };
+
+// Start the application
+startServer();
 
 // Start the application
 startServer();

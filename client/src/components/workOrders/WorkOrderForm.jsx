@@ -1,24 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { useTranslation } from 'react-i18next';
 import {
   Box,
   Button,
+  TextField,
+  MenuItem,
+  Grid,
+  Typography,
   Card,
   CardContent,
-  Grid,
-  TextField,
-  Typography,
   FormControl,
   InputLabel,
   Select,
-  MenuItem,
   FormHelperText,
-  InputAdornment,
-  CircularProgress,
-  Alert,
+  Autocomplete,
   Chip,
+  CircularProgress,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -27,6 +25,7 @@ import PhotoUpload from '../common/PhotoUpload';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { useGetWorkersQuery } from '../../features/workers/workersApiSlice';
 import { toast } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
 
 const WorkOrderForm = ({
   initialValues: initialValuesProp,

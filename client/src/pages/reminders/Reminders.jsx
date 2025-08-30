@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -15,7 +15,6 @@ import {
   IconButton,
   Tooltip,
   CircularProgress,
-  Paper,
   Table,
   TableBody,
   TableCell,
@@ -23,13 +22,11 @@ import {
   TableHead,
   TableRow,
   TablePagination,
-  Avatar,
   Badge,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Alert,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -57,19 +54,15 @@ const priorityColors = {
 };
 
 const Reminders = () => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
   const user = useSelector(selectCurrentUser);
+  const navigate = useNavigate();
   
   // State for filters and pagination
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [filters, setFilters] = useState({
-    status: '',
-    priority: '',
-    building: '',
-    search: ''
-  });
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [reminderToDelete, setReminderToDelete] = useState(null);
 
@@ -82,7 +75,9 @@ const Reminders = () => {
   } = useGetRemindersQuery({
     page: page + 1,
     limit: rowsPerPage,
-    ...filters
+    status: statusFilter === 'all' ? '' : statusFilter,
+    priority: priorityFilter === 'all' ? '' : priorityFilter,
+    search: searchTerm
   });
 
   const [deleteReminder, { isLoading: isDeleting }] = useDeleteReminderMutation();
@@ -98,29 +93,24 @@ const Reminders = () => {
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    if (name === 'status') {
+      setStatusFilter(value);
+    } else if (name === 'priority') {
+      setPriorityFilter(value);
+    }
     setPage(0);
   };
 
   const handleSearch = (e) => {
     e.preventDefault();
     const searchValue = e.target.search.value;
-    setFilters(prev => ({
-      ...prev,
-      search: searchValue
-    }));
+    setSearchTerm(searchValue);
   };
 
   const handleClearFilters = () => {
-    setFilters({
-      status: '',
-      priority: '',
-      building: '',
-      search: ''
-    });
+    setStatusFilter('all');
+    setPriorityFilter('all');
+    setSearchTerm('');
     setPage(0);
   };
 
@@ -221,11 +211,11 @@ const Reminders = () => {
                     fullWidth
                     name="status"
                     label="Status"
-                    value={filters.status}
+                    value={statusFilter}
                     onChange={handleFilterChange}
                     size="small"
                   >
-                    <MenuItem value="">All Status</MenuItem>
+                    <MenuItem value="all">All Status</MenuItem>
                     <MenuItem value="pending">Pending</MenuItem>
                     <MenuItem value="in-progress">In Progress</MenuItem>
                     <MenuItem value="completed">Completed</MenuItem>
@@ -238,11 +228,11 @@ const Reminders = () => {
                     fullWidth
                     name="priority"
                     label="Priority"
-                    value={filters.priority}
+                    value={priorityFilter}
                     onChange={handleFilterChange}
                     size="small"
                   >
-                    <MenuItem value="">All Priorities</MenuItem>
+                    <MenuItem value="all">All Priorities</MenuItem>
                     <MenuItem value="low">Low</MenuItem>
                     <MenuItem value="medium">Medium</MenuItem>
                     <MenuItem value="high">High</MenuItem>
