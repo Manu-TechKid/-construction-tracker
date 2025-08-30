@@ -4,6 +4,16 @@ const catchAsync = require('../utils/catchAsync');
 const Building = require('../models/Building');
 const User = require('../models/User');
 
+// Helper function to validate work type
+const isValidWorkType = (type) => {
+  const validTypes = [
+    'painting', 'cleaning', 'repair', 'maintenance', 
+    'inspection', 'other', 'plumbing', 'electrical', 
+    'hvac', 'flooring', 'roofing', 'carpentry'
+  ];
+  return validTypes.includes(type);
+};
+
 exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
     // Filtering
     const queryObj = { ...req.query };
@@ -79,95 +89,102 @@ exports.getWorkOrder = catchAsync(async (req, res, next) => {
 });
 
 exports.createWorkOrder = catchAsync(async (req, res, next) => {
-    try {
-        // Add the user who created the work order
-        if (!req.body.createdBy) req.body.createdBy = req.user.id;
-        
-        // Validate photos array if present
-        if (req.body.photos && Array.isArray(req.body.photos)) {
-            req.body.photos = req.body.photos.filter(photo => photo && photo.trim() !== '');
-        }
-        
-        // Handle notes field - convert string to proper notes array format
-        if (req.body.notes && typeof req.body.notes === 'string') {
-            req.body.notes = [{
-                content: req.body.notes,
-                createdBy: req.user.id,
-                createdAt: new Date(),
-                isPrivate: false
-            }];
-        }
-        
-        // Ensure required fields are present
-        if (!req.body.building) {
-            return next(new AppError('Building is required', 400));
-        }
-        
-        if (!req.body.title) {
-            return next(new AppError('Title is required', 400));
-        }
-        
-        // Normalize workType to lowercase
-        if (req.body.workType) {
-            req.body.workType = req.body.workType.toLowerCase();
-        }
-        
-        // Apply apartment status-based pricing adjustments
-        if (req.body.apartmentStatus && req.body.estimatedCost) {
-            const baseCost = parseFloat(req.body.estimatedCost);
-            let adjustedCost = baseCost;
-            
-            switch (req.body.apartmentStatus.toLowerCase()) {
-                case 'occupied':
-                    // Occupied apartments cost 20% more due to additional precautions
-                    adjustedCost = baseCost * 1.2;
-                    break;
-                case 'under_renovation':
-                    // Under renovation may cost 15% more due to coordination complexity
-                    adjustedCost = baseCost * 1.15;
-                    break;
-                case 'reserved':
-                    // Reserved apartments cost 10% more due to scheduling constraints
-                    adjustedCost = baseCost * 1.1;
-                    break;
-                case 'vacant':
-                default:
-                    // Vacant apartments use base cost (no adjustment)
-                    adjustedCost = baseCost;
-                    break;
-            }
-            
-            req.body.estimatedCost = Math.round(adjustedCost * 100) / 100; // Round to 2 decimal places
-        }
-        
-        const newWorkOrder = await WorkOrder.create(req.body);
-        
-        // Populate the created work order for response
-        const populatedWorkOrder = await WorkOrder.findById(newWorkOrder._id)
-            .populate('building assignedTo.worker createdBy');
-        
-        res.status(201).json({
-            status: 'success',
-            data: {
-                workOrder: populatedWorkOrder
-            }
-        });
-    } catch (error) {
-        console.error('Work order creation error:', error);
-        
-        // Handle validation errors
-        if (error.name === 'ValidationError') {
-            const errors = Object.values(error.errors).map(err => err.message);
-            return next(new AppError(`Validation Error: ${errors.join(', ')}`, 400));
-        }
-        
-        // Handle duplicate key errors
-        if (error.code === 11000) {
-            return next(new AppError('Work order with this data already exists', 400));
-        }
-        
-        return next(new AppError('Failed to create work order', 500));
+  try {
+    // 1) Basic validation
+    if (!req.body.building) {
+      return next(new AppError('Building ID is required', 400));
     }
+
+    // 2) Check if building exists
+    const building = await Building.findById(req.body.building);
+    if (!building) {
+      return next(new AppError('No building found with that ID', 404));
+    }
+
+    // 3) Set createdBy if not provided
+    if (!req.body.createdBy) {
+      req.body.createdBy = req.user.id;
+    }
+
+    // 4) Process photos
+    if (!req.body.photos) {
+      req.body.photos = [];
+    } else if (Array.isArray(req.body.photos)) {
+      req.body.photos = req.body.photos
+        .filter(photo => photo && typeof photo === 'string' && photo.trim() !== '')
+        .map(photo => photo.trim());
+    } else {
+      req.body.photos = [];
+    }
+
+    // 5) Process notes
+    if (!Array.isArray(req.body.notes)) {
+      req.body.notes = [];
+    }
+    
+    req.body.notes = req.body.notes
+      .map(note => ({
+        content: typeof note === 'string' ? note.trim() : (note.content || '').trim(),
+        createdBy: req.user.id,
+        createdAt: new Date(),
+        isPrivate: !!note.isPrivate
+      }))
+      .filter(note => note.content);
+
+    // 6) Normalize and validate workType
+    if (req.body.workType) {
+      req.body.workType = req.body.workType.toLowerCase();
+      if (!isValidWorkType(req.body.workType)) {
+        return next(new AppError('Invalid work type', 400));
+      }
+    }
+
+    // 7) Apply pricing based on apartment status
+    if (req.body.apartmentStatus && req.body.estimatedCost) {
+      const baseCost = parseFloat(req.body.estimatedCost);
+      if (!isNaN(baseCost)) {
+        const multipliers = {
+          occupied: 1.2,
+          under_renovation: 1.15,
+          reserved: 1.1,
+          vacant: 1.0
+        };
+        
+        const multiplier = multipliers[req.body.apartmentStatus] || 1.0;
+        req.body.estimatedCost = Math.round(baseCost * multiplier * 100) / 100;
+      }
+    }
+
+    // 8) Create work order
+    const workOrder = await WorkOrder.create(req.body);
+
+    // 9) Populate response data
+    const populatedWorkOrder = await WorkOrder.findById(workOrder._id)
+      .populate('building', 'name address')
+      .populate('assignedTo.worker', 'name email')
+      .populate('createdBy', 'name email');
+
+    res.status(201).json({
+      status: 'success',
+      data: {
+        workOrder: populatedWorkOrder
+      }
+    });
+
+  } catch (error) {
+    console.error('Work order creation error:', error);
+    
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(err => err.message);
+      return next(new AppError(`Validation Error: ${errors.join(', ')}`, 400));
+    }
+    
+    if (error.code === 11000) {
+      return next(new AppError('Duplicate work order detected', 400));
+    }
+    
+    next(error);
+  }
 });
 
 exports.updateWorkOrder = catchAsync(async (req, res, next) => {

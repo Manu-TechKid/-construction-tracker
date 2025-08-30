@@ -109,106 +109,148 @@ app.use((req, res, next) => {
 });
 
 // 3) ROUTES
-app.use('/api/v1', routes);
+// API routes
+app.use('/api/v1/buildings', buildingRoutes);
+app.use('/api/v1/work-orders', workOrderRoutes);
+app.use('/api/v1/workers', workerRoutes);
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/invoices', invoiceRoutes);
+app.use('/api/v1/schedules', scheduleRoutes);
+app.use('/api/v1/notes', noteRoutes);
 
-// Simple health endpoint
+// Health check endpoints
 app.get('/api/v1/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
+  res.json({ 
+    status: 'ok', 
+    time: new Date().toISOString(),
+    node: process.version,
+    env: process.env.NODE_ENV || 'development'
+  });
 });
 
-// Database health
+// Database health check
 app.get('/api/v1/health/db', async (req, res) => {
   try {
     const stateMap = ['disconnected', 'connected', 'connecting', 'disconnecting'];
     const state = mongoose.connection.readyState;
     let ping = null;
+    
     if (mongoose.connection.readyState === 1 && mongoose.connection.db) {
-      // ping admin to confirm connectivity
       ping = await mongoose.connection.db.admin().ping();
     }
+    
     res.json({
       status: 'ok',
       mongo: stateMap[state] || state,
-      ping
+      ping: ping ? 'ok' : 'failed',
+      timestamp: new Date().toISOString()
     });
   } catch (e) {
-    res.status(500).json({ status: 'error', message: e.message });
+    res.status(500).json({ 
+      status: 'error', 
+      message: e.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
-// Base API info
+// API info endpoint
 app.get('/api/v1', (req, res) => {
-  res.json({ status: 'ok', message: 'Construction Tracker API v1' });
+  res.json({ 
+    status: 'ok', 
+    message: 'Construction Tracker API v1',
+    timestamp: new Date().toISOString(),
+    docs: process.env.NODE_ENV === 'development' 
+      ? 'http://localhost:5000/api-docs' 
+      : 'https://api.yourdomain.com/api-docs'
+  });
 });
 
-// Alternate health paths for easier testing
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
-});
-app.get('/healthz', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
-});
-
-// Note: Do not set a root '/' handler here so that when a client build
-// exists, Express static can serve index.html at '/'.
-
-// Serve client build in production ONLY if it exists (API-only otherwise)
+// Serve client build in production
 if (process.env.NODE_ENV === 'production') {
   const clientBuildPath = path.resolve(__dirname, '../client/build');
+  
   if (fs.existsSync(clientBuildPath)) {
+    // Serve static files from the React app
     app.use(express.static(clientBuildPath));
+    
+    // Handle React routing, return all requests to React app
     app.get('*', (req, res) => {
       res.sendFile(path.join(clientBuildPath, 'index.html'));
     });
   } else {
-    console.log('Client build not found; running API-only.');
+    console.log('Client build not found; running in API-only mode');
   }
 }
 
+// Handle 404 - must be after all other routes
 app.all('*', (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
 
+// Global error handler - must be after all other middleware
 app.use(globalErrorHandler);
 
 // 4) START SERVER
 const PORT = process.env.PORT || 5000;
 
-// Database connection
+// Database connection with retry logic
 const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 30000, // 30 seconds timeout for server selection
-      socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
-      connectTimeoutMS: 30000, // 30 seconds timeout for initial connection
-      retryWrites: true,
-      w: 'majority'
-    });
-    console.log('MongoDB connected successfully');
-    return true;
-  } catch (err) {
-    console.error('MongoDB connection error:', err);
-    return false;
+  const maxRetries = 3;
+  let retryCount = 0;
+  
+  while (retryCount < maxRetries) {
+    try {
+      await mongoose.connect(process.env.MONGODB_URI, {
+        serverSelectionTimeoutMS: 30000,
+        socketTimeoutMS: 45000,
+        connectTimeoutMS: 30000,
+        retryWrites: true,
+        w: 'majority'
+      });
+      console.log('MongoDB connected successfully');
+      return true;
+    } catch (err) {
+      retryCount++;
+      console.error(`MongoDB connection error (attempt ${retryCount}/${maxRetries}):`, err.message);
+      
+      if (retryCount === maxRetries) {
+        console.error('Max retries reached. Could not connect to MongoDB.');
+        return false;
+      }
+      
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, 2000 * retryCount));
+    }
   }
 };
 
-// Start the server
+// Start server after DB connection
 const startServer = async () => {
-  const isConnected = await connectDB();
-  if (!isConnected) {
-    console.log('Retrying MongoDB connection in 5 seconds...');
-    setTimeout(startServer, 5000);
-    return;
+  const dbConnected = await connectDB();
+  
+  if (!dbConnected) {
+    console.error('Failed to connect to database. Exiting...');
+    process.exit(1);
   }
   
   const server = app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+    console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
   });
-
+  
   // Handle unhandled promise rejections
-  process.on('unhandledRejection', err => {
-    console.log('UNHANDLED REJECTION! Shutting down...');
-    console.log(err.name, err.message);
+  process.on('unhandledRejection', (err) => {
+    console.error('UNHANDLED REJECTION! Shutting down...');
+    console.error(err.name, err.message);
+    server.close(() => {
+      process.exit(1);
+    });
+  });
+  
+  // Handle uncaught exceptions
+  process.on('uncaughtException', (err) => {
+    console.error('UNCAUGHT EXCEPTION! Shutting down...');
+    console.error(err.name, err.message);
     server.close(() => {
       process.exit(1);
     });
@@ -217,10 +259,3 @@ const startServer = async () => {
 
 // Start the application
 startServer();
-
-// Handle uncaught exceptions
-process.on('uncaughtException', err => {
-  console.log('UNCAUGHT EXCEPTION! Shutting down...');
-  console.log(err.name, err.message);
-  process.exit(1);
-});
