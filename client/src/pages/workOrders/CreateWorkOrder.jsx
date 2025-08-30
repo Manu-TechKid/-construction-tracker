@@ -14,7 +14,7 @@ const CreateWorkOrder = () => {
     building: '',
     apartmentNumber: '',
     block: '',
-    apartmentStatus: 'vacant',
+    apartmentStatus: '',
     workType: '',
     workSubType: '',
     description: '',

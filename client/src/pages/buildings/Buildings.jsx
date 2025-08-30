@@ -152,7 +152,7 @@ const Buildings = () => {
 
   const columns = [
     {
-      field: 'name',
+      field: 'displayName',
       headerName: t('buildings.columns.name'),
       flex: 1,
       minWidth: 200,
@@ -160,7 +160,7 @@ const Buildings = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <BuildingIcon color="primary" />
           <Typography variant="body2" fontWeight="medium">
-            {params.value}
+            {params.value || params.row.name}
           </Typography>
         </Box>
       ),

@@ -57,7 +57,7 @@ const WorkOrderForm = ({
     building: initialValuesProp?.building || '',
     apartmentNumber: '',
     block: '',
-    apartmentStatus: 'vacant',
+    apartmentStatus: '',
     workType: '',
     workSubType: '',
     description: '',
@@ -152,7 +152,7 @@ const WorkOrderForm = ({
                   >
                     {buildings.map((building) => (
                       <MenuItem key={building._id} value={building._id}>
-                        {building.name} {building.address ? `- ${building.address}` : ''}
+                        {building.name} - [{building.administratorName || 'No Administrator'}]
                       </MenuItem>
                     ))}
                   </Select>
@@ -192,15 +192,19 @@ const WorkOrderForm = ({
                 <FormControl 
                   fullWidth 
                   error={formik.touched.apartmentStatus && Boolean(formik.errors.apartmentStatus)}
+                  required
                 >
-                  <InputLabel>Apartment Status</InputLabel>
+                  <InputLabel>Apartment Status *</InputLabel>
                   <Select
                     name="apartmentStatus"
                     value={formik.values.apartmentStatus}
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
-                    label="Apartment Status"
+                    label="Apartment Status *"
                   >
+                    <MenuItem value="">
+                      <em>Choose Status</em>
+                    </MenuItem>
                     <MenuItem value="occupied">Occupied</MenuItem>
                     <MenuItem value="vacant">Vacant</MenuItem>
                     <MenuItem value="under_renovation">Under Renovation</MenuItem>
