@@ -102,14 +102,27 @@ const WorkOrders = () => {
   const workOrders = useMemo(() => {
     if (!workOrdersData) return [];
     
+    console.log('WorkOrders Debug: Processing data:', workOrdersData);
+    
     // Handle different response structures
     let orders = [];
-    if (workOrdersData.data?.workOrders) {
+    if (workOrdersData.data?.workOrders && Array.isArray(workOrdersData.data.workOrders)) {
       orders = workOrdersData.data.workOrders;
-    } else if (Array.isArray(workOrdersData.data)) {
+    } else if (workOrdersData.data && Array.isArray(workOrdersData.data)) {
       orders = workOrdersData.data;
     } else if (Array.isArray(workOrdersData)) {
       orders = workOrdersData;
+    } else {
+      console.warn('WorkOrders Debug: Unexpected data structure:', workOrdersData);
+      return [];
+    }
+    
+    console.log('WorkOrders Debug: Extracted orders array:', orders);
+    
+    // Ensure orders is an array before mapping
+    if (!Array.isArray(orders)) {
+      console.error('WorkOrders Debug: Orders is not an array:', orders);
+      return [];
     }
     
     // Ensure each order has required fields with fallbacks
@@ -524,6 +537,30 @@ const WorkOrders = () => {
               outline: 'none',
             },
             '& .MuiDataGrid-row:hover': {
+              backgroundColor: 'action.hover',
+            },
+          }}
+        />
+      </Paper>
+
+      {renderMenu}
+    </Container>
+  );
+};
+
+export default WorkOrders;
+              backgroundColor: 'action.hover',
+            },
+          }}
+        />
+      </Paper>
+
+      {renderMenu}
+    </Container>
+  );
+};
+
+export default WorkOrders;
               backgroundColor: 'action.hover',
             },
           }}
