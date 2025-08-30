@@ -12,6 +12,11 @@ const buildingSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Address is required']
     },
+    city: {
+        type: String,
+        required: [true, 'City is required'],
+        trim: true
+    },
     apartments: [{
         number: {
             type: String,
@@ -129,7 +134,7 @@ buildingSchema.virtual('reminders', {
 });
 
 // Indexes for better query performance
-buildingSchema.index({ name: 'text', address: 'text' });
+buildingSchema.index({ name: 'text', address: 'text', city: 'text' });
 
 // Compound index for unique apartment numbers within a building and block
 buildingSchema.index(

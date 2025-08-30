@@ -103,10 +103,14 @@ const BuildingSchedule = () => {
   };
 
   const getSchedulesForDay = (day) => {
+    if (!schedules.length) return [];
+    
+    const normalizedDay = startOfDay(day);
+    
     return schedules.filter(schedule => {
       const startDate = startOfDay(typeof schedule.startDate === 'string' ? parseISO(schedule.startDate) : new Date(schedule.startDate));
       const endDate = startOfDay(typeof schedule.endDate === 'string' ? parseISO(schedule.endDate) : new Date(schedule.endDate));
-      const normalizedDay = startOfDay(day);
+      
       return normalizedDay >= startDate && normalizedDay <= endDate;
     });
   };
@@ -224,6 +228,26 @@ const BuildingSchedule = () => {
     );
   }
 
+  if (!selectedBuilding) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography variant="h6" color="text.secondary">
+          Please select a building to view its schedule
+        </Typography>
+      </Box>
+    );
+  }
+
+  if (!schedules.length) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography variant="h6" color="text.secondary">
+          No schedules found for this building
+        </Typography>
+      </Box>
+    );
+  }
+
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box sx={{ p: 3 }}>
@@ -265,86 +289,70 @@ const BuildingSchedule = () => {
           />
         </Box>
 
-        {!selectedBuilding && (
-          <Card sx={{ mb: 3 }}>
-            <CardContent sx={{ textAlign: 'center', py: 4 }}>
-              <BuildingIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-              <Typography variant="h6" color="text.secondary" gutterBottom>
-                Select a Building
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Choose a building to view and manage its monthly schedule.
-              </Typography>
-            </CardContent>
-          </Card>
-        )}
-
-        {selectedBuilding && (
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                {format(currentDate, 'MMMM yyyy')} - {selectedBuilding.name}
-              </Typography>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              {format(currentDate, 'MMMM yyyy')} - {selectedBuilding.name}
+            </Typography>
+            
+            <Grid container spacing={1}>
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                <Grid item xs key={day}>
+                  <Box sx={{ p: 1, textAlign: 'center', fontWeight: 'bold' }}>
+                    {day}
+                  </Box>
+                </Grid>
+              ))}
               
-              <Grid container spacing={1}>
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                  <Grid item xs key={day}>
-                    <Box sx={{ p: 1, textAlign: 'center', fontWeight: 'bold' }}>
-                      {day}
-                    </Box>
-                  </Grid>
-                ))}
-                
-                {getMonthDays().map(day => {
-                  const daySchedules = getSchedulesForDay(day);
-                  return (
-                    <Grid item xs key={day.toISOString()}>
-                      <Card 
-                        variant="outlined" 
-                        sx={{ 
-                          minHeight: 120, 
-                          p: 1,
-                          backgroundColor: daySchedules.length > 0 ? 'action.hover' : 'background.paper'
-                        }}
-                      >
-                        <Typography variant="body2" sx={{ mb: 1 }}>
-                          {format(day, 'd')}
-                        </Typography>
+              {getMonthDays().map(day => {
+                const daySchedules = getSchedulesForDay(day);
+                return (
+                  <Grid item xs key={day.toISOString()}>
+                    <Card 
+                      variant="outlined" 
+                      sx={{ 
+                        minHeight: 120, 
+                        p: 1,
+                        backgroundColor: daySchedules.length > 0 ? 'action.hover' : 'background.paper'
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        {format(day, 'd')}
+                      </Typography>
+                      
+                      {daySchedules.map(schedule => {
+                        const typeConfig = getTypeConfig(schedule.type);
+                        const statusConfig = getStatusConfig(schedule.status);
                         
-                        {daySchedules.map(schedule => {
-                          const typeConfig = getTypeConfig(schedule.type);
-                          const statusConfig = getStatusConfig(schedule.status);
-                          
-                          return (
-                            <Chip
-                              key={schedule.id}
-                              label={schedule.title}
-                              size="small"
-                              color={typeConfig.color}
-                              variant={schedule.status === 'completed' ? 'filled' : 'outlined'}
-                              sx={{ 
-                                mb: 0.5, 
-                                fontSize: '0.7rem',
-                                height: 20,
-                                display: 'block',
-                                '& .MuiChip-label': {
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                }
-                              }}
-                              onClick={() => handleOpenDialog(schedule)}
-                            />
-                          );
-                        })}
-                      </Card>
-                    </Grid>
-                  );
-                })}
-              </Grid>
-            </CardContent>
-          </Card>
-        )}
+                        return (
+                          <Chip
+                            key={schedule.id}
+                            label={schedule.title}
+                            size="small"
+                            color={typeConfig.color}
+                            variant={schedule.status === 'completed' ? 'filled' : 'outlined'}
+                            sx={{ 
+                              mb: 0.5, 
+                              fontSize: '0.7rem',
+                              height: 20,
+                              display: 'block',
+                              '& .MuiChip-label': {
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }
+                            }}
+                            onClick={() => handleOpenDialog(schedule)}
+                          />
+                        );
+                      })}
+                    </Card>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          </CardContent>
+        </Card>
 
         {/* Schedule Dialog */}
         <Dialog

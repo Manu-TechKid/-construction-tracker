@@ -79,39 +79,91 @@ exports.getWorkOrder = catchAsync(async (req, res, next) => {
 });
 
 exports.createWorkOrder = catchAsync(async (req, res, next) => {
-    // Add the user who created the work order
-    if (!req.body.createdBy) req.body.createdBy = req.user.id;
-    
-    const newWorkOrder = await WorkOrder.create(req.body);
-    
-    res.status(201).json({
-        status: 'success',
-        data: {
-            workOrder: newWorkOrder
+    try {
+        // Add the user who created the work order
+        if (!req.body.createdBy) req.body.createdBy = req.user.id;
+        
+        // Validate photos array if present
+        if (req.body.photos && Array.isArray(req.body.photos)) {
+            req.body.photos = req.body.photos.filter(photo => photo && photo.trim() !== '');
         }
-    });
+        
+        // Ensure required fields are present
+        if (!req.body.building) {
+            return next(new AppError('Building is required', 400));
+        }
+        
+        if (!req.body.title) {
+            return next(new AppError('Title is required', 400));
+        }
+        
+        const newWorkOrder = await WorkOrder.create(req.body);
+        
+        // Populate the created work order for response
+        const populatedWorkOrder = await WorkOrder.findById(newWorkOrder._id)
+            .populate('building assignedTo.worker createdBy');
+        
+        res.status(201).json({
+            status: 'success',
+            data: {
+                workOrder: populatedWorkOrder
+            }
+        });
+    } catch (error) {
+        console.error('Work order creation error:', error);
+        
+        // Handle validation errors
+        if (error.name === 'ValidationError') {
+            const errors = Object.values(error.errors).map(err => err.message);
+            return next(new AppError(`Validation Error: ${errors.join(', ')}`, 400));
+        }
+        
+        // Handle duplicate key errors
+        if (error.code === 11000) {
+            return next(new AppError('Work order with this data already exists', 400));
+        }
+        
+        return next(new AppError('Failed to create work order', 500));
+    }
 });
 
 exports.updateWorkOrder = catchAsync(async (req, res, next) => {
-    const workOrder = await WorkOrder.findByIdAndUpdate(
-        req.params.id,
-        req.body,
-        {
-            new: true,
-            runValidators: true
+    try {
+        // Validate photos array if present
+        if (req.body.photos && Array.isArray(req.body.photos)) {
+            req.body.photos = req.body.photos.filter(photo => photo && photo.trim() !== '');
         }
-    );
-    
-    if (!workOrder) {
-        return next(new AppError('No work order found with that ID', 404));
+        
+        const workOrder = await WorkOrder.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            {
+                new: true,
+                runValidators: true
+            }
+        ).populate('building assignedTo.worker createdBy');
+        
+        if (!workOrder) {
+            return next(new AppError('No work order found with that ID', 404));
+        }
+        
+        res.status(200).json({
+            status: 'success',
+            data: {
+                workOrder
+            }
+        });
+    } catch (error) {
+        console.error('Work order update error:', error);
+        
+        // Handle validation errors
+        if (error.name === 'ValidationError') {
+            const errors = Object.values(error.errors).map(err => err.message);
+            return next(new AppError(`Validation Error: ${errors.join(', ')}`, 400));
+        }
+        
+        return next(new AppError('Failed to update work order', 500));
     }
-    
-    res.status(200).json({
-        status: 'success',
-        data: {
-            workOrder
-        }
-    });
 });
 
 exports.deleteWorkOrder = catchAsync(async (req, res, next) => {

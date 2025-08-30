@@ -77,6 +77,20 @@ const Buildings = () => {
 
   const buildings = buildingsData?.data?.buildings || [];
 
+  // Filter buildings on frontend if backend filtering isn't working
+  const filteredBuildings = buildings.filter(building => {
+    const matchesSearch = !searchTerm || 
+      building.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      building.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (building.city && building.city.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesStatus = statusFilter === 'all' || 
+      (building.status && building.status.toLowerCase() === statusFilter.toLowerCase()) ||
+      (!building.status && statusFilter === 'active'); // Default to active if no status
+    
+    return matchesSearch && matchesStatus;
+  });
+
   const handleMenuOpen = (event, building) => {
     setAnchorEl(event.currentTarget);
     setSelectedBuilding(building);
@@ -291,7 +305,7 @@ const Buildings = () => {
       {/* Data Grid */}
       <Paper sx={{ height: 600, width: '100%' }}>
         <DataGrid
-          rows={buildings}
+          rows={filteredBuildings}
           columns={columns}
           getRowId={(row) => row._id}
           loading={isLoading}

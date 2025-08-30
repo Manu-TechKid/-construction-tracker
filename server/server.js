@@ -17,6 +17,8 @@ const workOrderRoutes = require('./routes/workOrderRoutes');
 const workerRoutes = require('./routes/workerRoutes');
 const authRoutes = require('./routes/authRoutes');
 const invoiceRoutes = require('./routes/invoiceRoutes');
+const scheduleRoutes = require('./routes/scheduleRoutes');
+const noteRoutes = require('./routes/noteRoutes');
 
 // Import routes
 const AppError = require('./utils/appError');
