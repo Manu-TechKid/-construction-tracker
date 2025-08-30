@@ -8,7 +8,7 @@ const APIFeatures = require('../utils/apiFeatures');
 
 exports.getAllBuildings = catchAsync(async (req, res, next) => {
     // Build query
-    let query = Building.find();
+    let query = Building.find().populate('administrator', 'name email');
     
     // Search functionality
     if (req.query.search) {
@@ -16,7 +16,8 @@ exports.getAllBuildings = catchAsync(async (req, res, next) => {
         query = query.or([
             { name: searchRegex },
             { address: searchRegex },
-            { description: searchRegex }
+            { description: searchRegex },
+            { administratorName: searchRegex }
         ]);
     }
     
@@ -41,12 +42,20 @@ exports.getAllBuildings = catchAsync(async (req, res, next) => {
     // Execute query with pagination
     const buildings = await query.skip(skip).limit(limit);
     
+    // Format buildings with display name
+    const formattedBuildings = buildings.map(building => {
+        const buildingObj = building.toObject();
+        const adminName = building.administrator?.name || building.administratorName || 'No Administrator';
+        buildingObj.displayName = `${building.name} - [${adminName}]`;
+        return buildingObj;
+    });
+    
     // Get total count for pagination
     const total = await Building.countDocuments(query.getQuery());
     
     res.status(200).json({
         status: 'success',
-        results: buildings.length,
+        results: formattedBuildings.length,
         total,
         pagination: {
             page,
@@ -55,7 +64,7 @@ exports.getAllBuildings = catchAsync(async (req, res, next) => {
             pages: Math.ceil(total / limit)
         },
         data: {
-            buildings
+            buildings: formattedBuildings
         }
     });
 });

@@ -43,6 +43,7 @@ const WorkOrderForm = ({
     building: Yup.string().required(t('validation.required')),
     apartmentNumber: Yup.string().required(t('validation.required')),
     block: Yup.string().required(t('validation.required')),
+    apartmentStatus: Yup.string().required('Apartment status is required'),
     workType: Yup.string().required(t('validation.required')),
     workSubType: Yup.string().required(t('validation.required')),
     description: Yup.string().required(t('validation.required')),
@@ -56,6 +57,7 @@ const WorkOrderForm = ({
     building: initialValuesProp?.building || '',
     apartmentNumber: '',
     block: '',
+    apartmentStatus: '',
     workType: '',
     workSubType: '',
     description: '',
@@ -184,6 +186,28 @@ const WorkOrderForm = ({
                   error={formik.touched.block && Boolean(formik.errors.block)}
                   helperText={formik.touched.block && formik.errors.block}
                 />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <FormControl 
+                  fullWidth 
+                  error={formik.touched.apartmentStatus && Boolean(formik.errors.apartmentStatus)}
+                >
+                  <InputLabel>Apartment Status</InputLabel>
+                  <Select
+                    name="apartmentStatus"
+                    value={formik.values.apartmentStatus}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    label="Apartment Status"
+                  >
+                    <MenuItem value="Occupied">Occupied</MenuItem>
+                    <MenuItem value="Vacant">Vacant</MenuItem>
+                  </Select>
+                  {formik.touched.apartmentStatus && formik.errors.apartmentStatus && (
+                    <FormHelperText>{formik.errors.apartmentStatus}</FormHelperText>
+                  )}
+                </FormControl>
               </Grid>
 
               <Grid item xs={12} md={6}>

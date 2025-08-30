@@ -17,6 +17,15 @@ const buildingSchema = new mongoose.Schema({
         required: [true, 'City is required'],
         trim: true
     },
+    administrator: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: [true, 'Administrator is required']
+    },
+    administratorName: {
+        type: String,
+        trim: true
+    },
     apartments: [{
         number: {
             type: String,

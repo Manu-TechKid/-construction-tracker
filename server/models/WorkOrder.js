@@ -33,6 +33,12 @@ const workOrderSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    apartmentStatus: {
+        type: String,
+        required: [true, 'Apartment status is required'],
+        enum: ['vacant', 'occupied', 'under_renovation', 'reserved'],
+        default: 'vacant'
+    },
     workType: {
         type: String,
         required: [true, 'Work type is required'],

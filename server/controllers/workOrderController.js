@@ -112,6 +112,34 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
             req.body.workType = req.body.workType.toLowerCase();
         }
         
+        // Apply apartment status-based pricing adjustments
+        if (req.body.apartmentStatus && req.body.estimatedCost) {
+            const baseCost = parseFloat(req.body.estimatedCost);
+            let adjustedCost = baseCost;
+            
+            switch (req.body.apartmentStatus.toLowerCase()) {
+                case 'occupied':
+                    // Occupied apartments cost 20% more due to additional precautions
+                    adjustedCost = baseCost * 1.2;
+                    break;
+                case 'under_renovation':
+                    // Under renovation may cost 15% more due to coordination complexity
+                    adjustedCost = baseCost * 1.15;
+                    break;
+                case 'reserved':
+                    // Reserved apartments cost 10% more due to scheduling constraints
+                    adjustedCost = baseCost * 1.1;
+                    break;
+                case 'vacant':
+                default:
+                    // Vacant apartments use base cost (no adjustment)
+                    adjustedCost = baseCost;
+                    break;
+            }
+            
+            req.body.estimatedCost = Math.round(adjustedCost * 100) / 100; // Round to 2 decimal places
+        }
+        
         const newWorkOrder = await WorkOrder.create(req.body);
         
         // Populate the created work order for response
