@@ -335,7 +335,7 @@ const WorkOrderInfoTab = ({ workOrder, buildings, workers, onUpdateWorkOrder }) 
           </Box>
         </Box>
         
-        {hasPermission('update:work-orders') && (
+        {hasPermission && hasPermission('update:work-orders') && (
           <Button
             variant="outlined"
             startIcon={<EditIcon />}
@@ -554,6 +554,7 @@ const WorkOrderNotesTab = ({ workOrder, onAddNote }) => {
 const WorkOrderDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
   const [activeTab, setActiveTab] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [workOrder, setWorkOrder] = useState(null);
@@ -757,7 +758,7 @@ const WorkOrderDetails = () => {
             </Box>
           </CardContent>
         </Card>
-        {hasPermission('update:work-orders') && (
+        {hasPermission && hasPermission('update:work-orders') && (
           <Button
             variant="outlined"
             startIcon={<EditIcon />}
