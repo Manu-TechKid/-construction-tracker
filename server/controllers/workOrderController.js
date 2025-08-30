@@ -51,7 +51,10 @@ exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
 
     // Execute query with error handling
     try {
-        const workOrders = await query.populate('building assignedTo createdBy');
+        const workOrders = await query
+            .populate({ path: 'building', select: 'name address' })
+            .populate({ path: 'createdBy', select: 'name email' })
+            .populate({ path: 'assignedTo.worker', select: 'name email' });
 
         // Get total count for pagination
         const total = await WorkOrder.countDocuments(JSON.parse(queryStr));
@@ -77,7 +80,9 @@ exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
 
 exports.getWorkOrder = catchAsync(async (req, res, next) => {
     const workOrder = await WorkOrder.findById(req.params.id)
-        .populate('building assignedTo.worker createdBy');
+        .populate({ path: 'building', select: 'name address' })
+        .populate({ path: 'createdBy', select: 'name email' })
+        .populate({ path: 'assignedTo.worker', select: 'name email' });
     
     if (!workOrder) {
         return next(new AppError('No work order found with that ID', 404));
@@ -163,9 +168,9 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
 
     // 9) Populate response data
     const populatedWorkOrder = await WorkOrder.findById(workOrder._id)
-      .populate('building', 'name address')
-      .populate('assignedTo.worker', 'name email')
-      .populate('createdBy', 'name email');
+      .populate({ path: 'building', select: 'name address' })
+      .populate({ path: 'assignedTo.worker', select: 'name email' })
+      .populate({ path: 'createdBy', select: 'name email' });
 
     res.status(201).json({
       status: 'success',
@@ -204,7 +209,9 @@ exports.updateWorkOrder = catchAsync(async (req, res, next) => {
                 new: true,
                 runValidators: true
             }
-        ).populate('building assignedTo.worker createdBy');
+        ).populate({ path: 'building', select: 'name address' })
+        .populate({ path: 'assignedTo.worker', select: 'name email' })
+        .populate({ path: 'createdBy', select: 'name email' });
         
         if (!workOrder) {
             return next(new AppError('No work order found with that ID', 404));
@@ -537,7 +544,7 @@ exports.addTaskToChecklist = catchAsync(async (req, res, next) => {
 // Get worker assignments for a work order
 exports.getWorkerAssignments = catchAsync(async (req, res, next) => {
   const workOrder = await WorkOrder.findById(req.params.id)
-    .populate('assignedTo.worker', 'name email phone');
+    .populate({ path: 'assignedTo.worker', select: 'name email phone' });
   
   if (!workOrder) {
     return next(new AppError('No work order found with that ID', 404));
@@ -579,7 +586,7 @@ exports.assignWorkers = catchAsync(async (req, res, next) => {
   
   await workOrder.save();
   
-  await workOrder.populate('assignedTo.worker', 'name email phone');
+  await workOrder.populate({ path: 'assignedTo.worker', select: 'name email phone' });
   
   res.status(200).json({
     status: 'success',

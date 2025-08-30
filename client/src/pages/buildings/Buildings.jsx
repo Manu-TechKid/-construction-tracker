@@ -70,7 +70,7 @@ const Buildings = () => {
     refetch
   } = useGetBuildingsQuery({
     search: searchTerm,
-    status: statusFilter !== 'all' ? statusFilter : undefined,
+    // Remove status filter from API call - handle it in frontend
   });
 
   const [deleteBuilding, { isLoading: isDeleting }] = useDeleteBuildingMutation();

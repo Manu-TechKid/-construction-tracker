@@ -323,7 +323,14 @@ const BuildingSchedule = () => {
             <Grid container spacing={1}>
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
                 <Grid item xs={12/7} key={day}>
-                  <Box sx={{ p: 1, textAlign: 'center', fontWeight: 'bold' }}>
+                  <Box sx={{ 
+                    p: 1, 
+                    textAlign: 'center', 
+                    fontWeight: 'bold',
+                    backgroundColor: 'primary.main',
+                    color: 'white',
+                    borderRadius: 1
+                  }}>
                     {day}
                   </Box>
                 </Grid>
@@ -331,6 +338,7 @@ const BuildingSchedule = () => {
               
               {getMonthDays().map(day => {
                 const daySchedules = getSchedulesForDay(day);
+                const isToday = isSameDay(day, new Date());
                 return (
                   <Grid item xs={12/7} key={day.toISOString()}>
                     <Card 
@@ -338,21 +346,50 @@ const BuildingSchedule = () => {
                       sx={{ 
                         minHeight: 120, 
                         p: 1,
-                        backgroundColor: daySchedules.length > 0 ? 'action.hover' : 'background.paper',
+                        backgroundColor: isToday 
+                          ? 'primary.light' 
+                          : daySchedules.length > 0 
+                            ? 'action.hover' 
+                            : 'background.paper',
                         cursor: 'pointer',
+                        border: isToday ? '2px solid' : '1px solid',
+                        borderColor: isToday ? 'primary.main' : 'divider',
                         '&:hover': {
-                          backgroundColor: 'action.selected'
+                          backgroundColor: 'action.selected',
+                          transform: 'scale(1.02)',
+                          transition: 'all 0.2s'
                         }
                       }}
                       onClick={() => handleOpenDialog(null, day)}
                     >
-                      <Typography variant="body2" sx={{ mb: 1 }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          mb: 1, 
+                          fontWeight: isToday ? 'bold' : 'normal',
+                          color: isToday ? 'primary.main' : 'text.primary'
+                        }}
+                      >
                         {format(day, 'd')}
                       </Typography>
                       
+                      {daySchedules.length === 0 && (
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            color: 'text.secondary',
+                            fontStyle: 'italic',
+                            display: 'block',
+                            textAlign: 'center',
+                            mt: 2
+                          }}
+                        >
+                          Click to add schedule
+                        </Typography>
+                      )}
+                      
                       {daySchedules.map(schedule => {
                         const typeConfig = getTypeConfig(schedule.type);
-                        const statusConfig = getStatusConfig(schedule.status);
                         
                         return (
                           <Chip

@@ -79,7 +79,7 @@ const NotesSheet = () => {
     { value: 'high', label: 'High', color: 'error' },
   ];
 
-  const { data: notesData, isLoading, isError } = useGetNotesQuery();
+  const { data: notesData, isLoading, isError, refetch } = useGetNotesQuery();
   const [createNote, { isLoading: isCreating }] = useCreateNoteMutation();
   const [updateNote, { isLoading: isUpdating }] = useUpdateNoteMutation();
   const [deleteNote, { isLoading: isDeleting }] = useDeleteNoteMutation();
@@ -163,10 +163,16 @@ const NotesSheet = () => {
         await updateNote({ id: editingNote._id || editingNote.id, ...noteData }).unwrap();
         toast.success('Note updated successfully');
       } else {
-        await createNote(noteData).unwrap();
+        const result = await createNote(noteData).unwrap();
         toast.success('Note created successfully');
+        // Add the new note to the local state immediately
+        if (result?.data?.note) {
+          setNotes(prevNotes => [result.data.note, ...prevNotes]);
+        }
       }
       handleCloseDialog();
+      // Force refetch to ensure UI is updated
+      refetch();
     } catch (error) {
       console.error('Error saving note:', error);
       const errorMessage = error?.data?.message || error?.message || 'Failed to save note';

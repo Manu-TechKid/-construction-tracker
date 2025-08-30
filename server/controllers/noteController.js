@@ -70,7 +70,7 @@ exports.createNote = catchAsync(async (req, res, next) => {
   const note = await Note.create({
     ...noteData,
     building,
-    createdBy: req.user.id
+    createdBy: req.user ? req.user.id : null
   });
   
   await note.populate([
