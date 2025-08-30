@@ -15,69 +15,88 @@ const isValidWorkType = (type) => {
 };
 
 exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
-    // Set timeout for the query
-    const queryTimeout = 10000; // 10 seconds
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  // Build filter object
+  let filter = {};
+  
+  if (req.query.building) filter.building = req.query.building;
+  if (req.query.status) filter.status = req.query.status;
+  if (req.query.priority) filter.priority = req.query.priority;
+  if (req.query.workType) filter.workType = req.query.workType;
+
+  // Search functionality
+  if (req.query.search) {
+    const searchRegex = new RegExp(req.query.search, 'i');
+    filter.$or = [
+      { description: searchRegex },
+      { workSubType: searchRegex },
+      { apartmentNumber: searchRegex },
+      { block: searchRegex }
+    ];
+  }
+
+  try {
+    // Get total count for pagination
+    const total = await WorkOrder.countDocuments(filter);
+
+    // Get work orders with proper population and date handling
+    const workOrders = await WorkOrder.find(filter)
+      .populate('building', 'name address')
+      .populate('assignedTo.worker', 'name email phone')
+      .populate('createdBy', 'name email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .maxTimeMS(30000)
+      .lean(); // Use lean for better performance
+
+    // Clean and validate dates in the response
+    const cleanedWorkOrders = workOrders.map(wo => ({
+      ...wo,
+      // Ensure all dates are properly formatted or null
+      scheduledDate: wo.scheduledDate ? new Date(wo.scheduledDate).toISOString() : null,
+      estimatedCompletionDate: wo.estimatedCompletionDate ? new Date(wo.estimatedCompletionDate).toISOString() : null,
+      actualCompletionDate: wo.actualCompletionDate ? new Date(wo.actualCompletionDate).toISOString() : null,
+      createdAt: wo.createdAt ? new Date(wo.createdAt).toISOString() : new Date().toISOString(),
+      updatedAt: wo.updatedAt ? new Date(wo.updatedAt).toISOString() : new Date().toISOString(),
+      // Ensure assignedTo is always an array
+      assignedTo: Array.isArray(wo.assignedTo) ? wo.assignedTo : []
+    }));
+
+    res.status(200).json({
+      status: 'success',
+      results: cleanedWorkOrders.length,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      },
+      data: {
+        workOrders: cleanedWorkOrders
+      }
+    });
+  } catch (error) {
+    console.error('Error in getAllWorkOrders:', error);
     
-    // Build filter object
-    const queryObj = { ...req.query };
-    const excludedFields = ['page', 'sort', 'limit', 'fields'];
-    excludedFields.forEach(el => delete queryObj[el]);
-
-    // Advanced filtering
-    let queryStr = JSON.stringify(queryObj);
-    queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, match => `$${match}`);
-
-    // Parse query parameters
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 10;
-    const skip = (page - 1) * limit;
-
-    // Create query with timeout
-    let query = WorkOrder.find(JSON.parse(queryStr))
-        .skip(skip)
-        .limit(limit)
-        .sort({ createdAt: -1 })
-        .maxTimeMS(queryTimeout);
-
-    // Execute query with minimal population to avoid timeouts
-    try {
-        const workOrders = await query
-            .populate('building', 'name address')
-            .populate('createdBy', 'name email');
-
-        // Get total count with timeout
-        const total = await WorkOrder.countDocuments(JSON.parse(queryStr)).maxTimeMS(queryTimeout);
-
-        res.status(200).json({
-            status: 'success',
-            results: workOrders.length,
-            pagination: {
-                page,
-                limit,
-                total,
-                pages: Math.ceil(total / limit)
-            },
-            data: {
-                workOrders
-            }
-        });
-    } catch (error) {
-        console.error('Work orders query error:', error);
-        // Return empty results instead of error to prevent UI crash
-        res.status(200).json({
-            status: 'success',
-            results: 0,
-            pagination: {
-                page: 1,
-                limit: 10,
-                total: 0,
-                pages: 0
-            },
-            data: {
-                workOrders: []
-            }
-        });
-    }
+    // Return empty result instead of error to prevent UI crashes
+    res.status(200).json({
+      status: 'success',
+      results: 0,
+      pagination: {
+        page,
+        limit,
+        total: 0,
+        pages: 0
+      },
+      data: {
+        workOrders: []
+      }
+    });
+  }
 });
 
 exports.getWorkOrder = catchAsync(async (req, res, next) => {

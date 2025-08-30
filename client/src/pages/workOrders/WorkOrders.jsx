@@ -236,26 +236,40 @@ const WorkOrders = () => {
       headerName: 'Due Date',
       width: 150,
       renderCell: (params) => {
-        const dueDate = new Date(params.value);
-        const now = new Date();
-        const isOverdue = dueDate < now && params.row.status !== 'completed';
+        if (!params.value) {
+          return <Typography variant="body2" color="text.secondary">No date</Typography>;
+        }
         
-        return (
-          <Box>
-            <Typography 
-              variant="body2" 
-              color={isOverdue ? 'error' : 'text.primary'}
-              sx={{ fontWeight: isOverdue ? 500 : 'normal' }}
-            >
-              {formatDate(dueDate, 'short')}
-            </Typography>
-            {isOverdue && (
-              <Typography variant="caption" color="error">
-                Overdue
+        try {
+          const dueDate = new Date(params.value);
+          // Check if date is valid
+          if (isNaN(dueDate.getTime())) {
+            return <Typography variant="body2" color="text.secondary">Invalid date</Typography>;
+          }
+          
+          const now = new Date();
+          const isOverdue = dueDate < now && params.row.status !== 'completed';
+          
+          return (
+            <Box>
+              <Typography 
+                variant="body2" 
+                color={isOverdue ? 'error' : 'text.primary'}
+                sx={{ fontWeight: isOverdue ? 500 : 'normal' }}
+              >
+                {formatDate(dueDate, 'short')}
               </Typography>
-            )}
-          </Box>
-        );
+              {isOverdue && (
+                <Typography variant="caption" color="error">
+                  Overdue
+                </Typography>
+              )}
+            </Box>
+          );
+        } catch (error) {
+          console.error('Date parsing error:', error, 'Value:', params.value);
+          return <Typography variant="body2" color="text.secondary">Invalid date</Typography>;
+        }
       },
     },
     {

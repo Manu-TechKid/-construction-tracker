@@ -79,25 +79,35 @@ const NotesSheet = () => {
     { value: 'high', label: 'High', color: 'error' },
   ];
 
-  const { data: notesData, isLoading, isError, refetch } = useGetNotesQuery();
+  const { data: notesData, isLoading, isError, refetch } = useGetNotesQuery({
+    building: selectedBuilding?._id
+  });
   const [createNote, { isLoading: isCreating }] = useCreateNoteMutation();
   const [updateNote, { isLoading: isUpdating }] = useUpdateNoteMutation();
   const [deleteNote, { isLoading: isDeleting }] = useDeleteNoteMutation();
 
   useEffect(() => {
+    console.log('Notes Debug: Raw API response:', notesData);
     if (notesData) {
       // Handle both array and object response structures
-      const notesArray = Array.isArray(notesData) 
-        ? notesData 
-        : (notesData.data?.notes || notesData.notes || []);
+      let notesArray = [];
+      if (Array.isArray(notesData)) {
+        notesArray = notesData;
+      } else if (notesData.data?.notes) {
+        notesArray = notesData.data.notes;
+      } else if (notesData.notes) {
+        notesArray = notesData.notes;
+      } else if (notesData.data && Array.isArray(notesData.data)) {
+        notesArray = notesData.data;
+      }
+      
+      console.log('Notes Debug: Extracted notes array:', notesArray);
       setNotes(notesArray);
     }
   }, [notesData]);
 
-  // Filter notes by selected building - ensure we always have an array
-  const filteredNotes = selectedBuilding 
-    ? (notes || []).filter(note => note.building === selectedBuilding._id)
-    : (notes || []);
+  // Don't filter by building here since we're already filtering in the API query
+  const filteredNotes = notes || [];
 
   const handleOpenDialog = (note = null) => {
     if (note) {
