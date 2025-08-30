@@ -18,12 +18,14 @@ import {
   InputAdornment,
   CircularProgress,
   Alert,
+  Chip,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import PhotoUpload from '../common/PhotoUpload';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
+import { useGetWorkersQuery } from '../../features/workers/workersApiSlice';
 import { toast } from 'react-toastify';
 
 const WorkOrderForm = ({
@@ -34,7 +36,9 @@ const WorkOrderForm = ({
 }) => {
   const { t } = useTranslation();
   const { data: buildingsData, isLoading: buildingsLoading, error: buildingsError } = useGetBuildingsQuery();
+  const { data: workersData, isLoading: workersLoading, error: workersError } = useGetWorkersQuery();
   const buildings = buildingsData?.data?.buildings || [];
+  const workers = workersData?.data?.workers || [];
   const [photos, setPhotos] = useState([]);
   const [submitError, setSubmitError] = useState([]);
   const [availableBlocks, setAvailableBlocks] = useState([]);
@@ -51,6 +55,7 @@ const WorkOrderForm = ({
     startDate: Yup.date().required(t('validation.required')),
     estimatedCost: Yup.number(),
     notes: Yup.string(),
+    assignedTo: Yup.string().required(t('validation.required')),
   });
 
   const initialValues = {
@@ -65,6 +70,7 @@ const WorkOrderForm = ({
     startDate: new Date(),
     estimatedCost: '',
     notes: '',
+    assignedTo: '',
     ...initialValuesProp,
   };
 
@@ -111,7 +117,7 @@ const WorkOrderForm = ({
     },
   });
 
-  if (buildingsError) {
+  if (buildingsError || workersError) {
     return (
       <Alert severity="error" sx={{ mb: 2 }}>
         {t('errors.general')}
@@ -303,6 +309,31 @@ const WorkOrderForm = ({
                   </Select>
                   {formik.touched.priority && formik.errors.priority && (
                     <FormHelperText>{formik.errors.priority}</FormHelperText>
+                  )}
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <FormControl 
+                  fullWidth 
+                  error={formik.touched.assignedTo && Boolean(formik.errors.assignedTo)}
+                >
+                  <InputLabel>{t('workOrders.assignedTo')}</InputLabel>
+                  <Select
+                    name="assignedTo"
+                    value={formik.values.assignedTo}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    label={t('workOrders.assignedTo')}
+                  >
+                    {workers.map((worker) => (
+                      <MenuItem key={worker._id} value={worker._id}>
+                        {worker.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {formik.touched.assignedTo && formik.errors.assignedTo && (
+                    <FormHelperText>{formik.errors.assignedTo}</FormHelperText>
                   )}
                 </FormControl>
               </Grid>

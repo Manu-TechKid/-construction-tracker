@@ -15,7 +15,10 @@ const isValidWorkType = (type) => {
 };
 
 exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
-    // Filtering
+    // Set timeout for the query
+    const queryTimeout = 10000; // 10 seconds
+    
+    // Build filter object
     const queryObj = { ...req.query };
     const excludedFields = ['page', 'sort', 'limit', 'fields'];
     excludedFields.forEach(el => delete queryObj[el]);
@@ -23,47 +26,27 @@ exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
     // Advanced filtering
     let queryStr = JSON.stringify(queryObj);
     queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, match => `$${match}`);
-    
-    let query = WorkOrder.find(JSON.parse(queryStr));
 
-    // Sorting
-    if (req.query.sort) {
-        const sortBy = req.query.sort.split(',').join(' ');
-        query = query.sort(sortBy);
-    } else {
-        query = query.sort('-createdAt');
-    }
-
-    // Field limiting
-    if (req.query.fields) {
-        const fields = req.query.fields.split(',').join(' ');
-        query = query.select(fields);
-    } else {
-        query = query.select('-__v');
-    }
-
-    // Pagination
-    const page = req.query.page * 1 || 1;
-    const limit = req.query.limit * 1 || 100;
+    // Parse query parameters
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
     const skip = (page - 1) * limit;
-    
-    query = query.skip(skip).limit(limit);
 
-    // Execute query with error handling
+    // Create query with timeout
+    let query = WorkOrder.find(JSON.parse(queryStr))
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 })
+        .maxTimeMS(queryTimeout);
+
+    // Execute query with minimal population to avoid timeouts
     try {
         const workOrders = await query
             .populate('building', 'name address')
-            .populate('createdBy', 'name email')
-            .populate({
-                path: 'assignedTo',
-                populate: {
-                    path: 'worker',
-                    select: 'name email'
-                }
-            });
+            .populate('createdBy', 'name email');
 
-        // Get total count for pagination
-        const total = await WorkOrder.countDocuments(JSON.parse(queryStr));
+        // Get total count with timeout
+        const total = await WorkOrder.countDocuments(JSON.parse(queryStr)).maxTimeMS(queryTimeout);
 
         res.status(200).json({
             status: 'success',
