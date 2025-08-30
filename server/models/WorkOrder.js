@@ -36,7 +36,7 @@ const workOrderSchema = new mongoose.Schema({
     workType: {
         type: String,
         required: [true, 'Work type is required'],
-        enum: ['painting', 'cleaning', 'repair', 'maintenance', 'inspection', 'other']
+        enum: ['painting', 'cleaning', 'repair', 'maintenance', 'inspection', 'other', 'plumbing', 'electrical', 'hvac', 'flooring', 'roofing', 'carpentry']
     },
     workSubType: {
         type: String,

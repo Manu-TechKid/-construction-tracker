@@ -88,6 +88,16 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
             req.body.photos = req.body.photos.filter(photo => photo && photo.trim() !== '');
         }
         
+        // Handle notes field - convert string to proper notes array format
+        if (req.body.notes && typeof req.body.notes === 'string') {
+            req.body.notes = [{
+                content: req.body.notes,
+                createdBy: req.user.id,
+                createdAt: new Date(),
+                isPrivate: false
+            }];
+        }
+        
         // Ensure required fields are present
         if (!req.body.building) {
             return next(new AppError('Building is required', 400));
@@ -95,6 +105,11 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
         
         if (!req.body.title) {
             return next(new AppError('Title is required', 400));
+        }
+        
+        // Normalize workType to lowercase
+        if (req.body.workType) {
+            req.body.workType = req.body.workType.toLowerCase();
         }
         
         const newWorkOrder = await WorkOrder.create(req.body);
