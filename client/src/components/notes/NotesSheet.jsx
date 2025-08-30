@@ -146,25 +146,27 @@ const NotesSheet = () => {
       return;
     }
 
-    const noteData = {
-      title: formData.title,
-      content: formData.content,
-      building: formData.building,
-      apartment: formData.apartment || '',
-      type: formData.type || 'general',
-      priority: formData.priority || 'medium',
-      status: formData.status || 'active',
-      tags: formData.tags || [],
-      assignedTo: formData.assignedTo || []
-    };
-
     try {
+      const noteData = {
+        title: formData.title,
+        content: formData.content,
+        building: formData.building,
+        apartment: formData.apartment || '',
+        type: formData.type || 'general',
+        priority: formData.priority || 'medium',
+        status: formData.status || 'active',
+        tags: formData.tags || [],
+        assignedTo: formData.assignedTo || []
+      };
+
+      console.log('Saving note with data:', noteData);
+
       if (editingNote) {
         await updateNote({ id: editingNote._id || editingNote.id, ...noteData }).unwrap();
         toast.success('Note updated successfully');
       } else {
         const result = await createNote(noteData).unwrap();
-        toast.success('Note created successfully');
+        console.log('Note created successfully:', result);
         // Add the new note to the local state immediately
         if (result?.data?.note) {
           setNotes(prevNotes => [result.data.note, ...prevNotes]);
@@ -173,10 +175,10 @@ const NotesSheet = () => {
       handleCloseDialog();
       // Force refetch to ensure UI is updated
       refetch();
+      toast.success('Note saved successfully');
     } catch (error) {
       console.error('Error saving note:', error);
-      const errorMessage = error?.data?.message || error?.message || 'Failed to save note';
-      toast.error(errorMessage);
+      toast.error(error?.data?.message || 'Failed to save note');
     }
   };
 

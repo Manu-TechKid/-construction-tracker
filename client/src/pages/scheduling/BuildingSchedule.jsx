@@ -160,8 +160,8 @@ const BuildingSchedule = () => {
     try {
       const scheduleData = {
         ...formData,
-        building: selectedBuilding,
-        date: selectedDate || new Date(),
+        building: selectedBuilding?._id,
+        date: selectedDate || formData.startDate || new Date(),
         startTime: formData.startTime || '09:00',
         endTime: formData.endTime || '17:00'
       };

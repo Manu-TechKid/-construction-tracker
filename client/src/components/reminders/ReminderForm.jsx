@@ -48,11 +48,11 @@ const validationSchema = Yup.object({
   type: Yup.string().oneOf(['building', 'apartment']).default('building'),
   apartment: Yup.object().when('type', {
     is: 'apartment',
-    then: Yup.object({
+    then: (schema) => schema.shape({
       number: Yup.string().required('Apartment number is required'),
       _id: Yup.string().required('Apartment ID is required')
     }),
-    otherwise: Yup.object().nullable()
+    otherwise: (schema) => schema.nullable()
   }),
   dueDate: Yup.date().required('Due date is required').min(new Date(), 'Due date must be in the future'),
   status: Yup.string().required('Status is required'),

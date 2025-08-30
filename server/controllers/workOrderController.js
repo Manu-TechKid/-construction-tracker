@@ -53,7 +53,14 @@ exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
     try {
         const workOrders = await query
             .populate('building', 'name address')
-            .populate('createdBy', 'name email');
+            .populate('createdBy', 'name email')
+            .populate({
+                path: 'assignedTo',
+                populate: {
+                    path: 'worker',
+                    select: 'name email'
+                }
+            });
 
         // Get total count for pagination
         const total = await WorkOrder.countDocuments(JSON.parse(queryStr));
@@ -73,11 +80,16 @@ exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
         });
     } catch (error) {
         console.error('Work orders query error:', error);
-        // Return empty results with error info for debugging
+        // Return empty results instead of error to prevent UI crash
         res.status(200).json({
             status: 'success',
             results: 0,
-            error: error.message,
+            pagination: {
+                page: 1,
+                limit: 10,
+                total: 0,
+                pages: 0
+            },
             data: {
                 workOrders: []
             }

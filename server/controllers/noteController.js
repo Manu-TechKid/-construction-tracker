@@ -52,8 +52,14 @@ exports.getNote = catchAsync(async (req, res, next) => {
 // Create note with building auto-assignment
 exports.createNote = catchAsync(async (req, res, next) => {
   console.log('Creating note with data:', req.body);
+  console.log('User from request:', req.user);
   
   let { building, buildingName, ...noteData } = req.body;
+  
+  // Ensure user is authenticated
+  if (!req.user || !req.user.id) {
+    return next(new AppError('User authentication required', 401));
+  }
   
   // If building name is provided instead of ID, try to find the building
   if (buildingName && !building) {
@@ -75,11 +81,15 @@ exports.createNote = catchAsync(async (req, res, next) => {
   }
 
   try {
-    const note = await Note.create({
+    const noteToCreate = {
       ...noteData,
       building,
-      createdBy: req.user ? req.user.id : null
-    });
+      createdBy: req.user.id
+    };
+    
+    console.log('Creating note with data:', noteToCreate);
+    
+    const note = await Note.create(noteToCreate);
     
     const populatedNote = await Note.findById(note._id)
       .populate('building', 'name address')
