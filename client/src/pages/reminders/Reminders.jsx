@@ -184,7 +184,7 @@ const Reminders = () => {
             variant="contained"
             color="primary"
             startIcon={<AddIcon />}
-            onClick={() => navigate('/reminders/new')}
+            onClick={() => navigate('/reminders/create')}
           >
             New Reminder
           </Button>
@@ -357,7 +357,7 @@ const Reminders = () => {
                         <Button
                           variant="contained"
                           startIcon={<AddIcon />}
-                          onClick={() => navigate('/reminders/new')}
+                          onClick={() => navigate('/reminders/create')}
                           sx={{ mt: 2 }}
                         >
                           Create Your First Reminder

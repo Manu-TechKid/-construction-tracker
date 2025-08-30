@@ -148,25 +148,23 @@ const NotesSheet = () => {
 
     const noteData = {
       ...formData,
-      id: editingNote?.id || Date.now().toString(),
-      createdAt: editingNote?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      visitDate: formData.visitDate.toISOString(),
     };
 
     try {
       if (editingNote) {
-        await updateNote(noteData);
+        await updateNote({ id: editingNote._id || editingNote.id, ...noteData }).unwrap();
         toast.success('Note updated successfully');
       } else {
-        await createNote(noteData);
+        await createNote(noteData).unwrap();
         toast.success('Note created successfully');
       }
+      handleCloseDialog();
     } catch (error) {
       console.error('Error saving note:', error);
-      toast.error('Failed to save note');
+      const errorMessage = error?.data?.message || error?.message || 'Failed to save note';
+      toast.error(errorMessage);
     }
-
-    handleCloseDialog();
   };
 
   const handleDeleteNote = async (noteId) => {

@@ -139,7 +139,7 @@ const Invoices = () => {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => navigate('/invoices/new')}
+          onClick={() => navigate('/invoices/create')}
         >
           Create Invoice
         </Button>
@@ -217,7 +217,7 @@ const Invoices = () => {
                       <Button
                         variant="contained"
                         startIcon={<AddIcon />}
-                        onClick={() => navigate('/invoices/new')}
+                        onClick={() => navigate('/invoices/create')}
                         sx={{ mt: 2 }}
                       >
                         Create Your First Invoice

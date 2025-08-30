@@ -81,7 +81,18 @@ const WorkOrders = () => {
     limit: paginationModel.pageSize,
     search: searchTerm,
     ...filters,
-    ...getBuildingFilterParams(),
+    // Only apply building filter if a building is selected
+    ...(selectedBuilding ? getBuildingFilterParams() : {}),
+  });
+
+  // Debug log to see what data we're getting
+  console.log('WorkOrders Debug:', {
+    workOrdersData,
+    selectedBuilding,
+    filters,
+    isLoading,
+    isError,
+    error
   });
 
   // Handle menu open

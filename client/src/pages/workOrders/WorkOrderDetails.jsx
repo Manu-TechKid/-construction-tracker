@@ -153,7 +153,7 @@ const WorkOrderInfoTab = ({ workOrder, buildings, workers, onUpdateWorkOrder }) 
                   onChange={handleChange}
                   label="Building"
                 >
-                  {buildings?.map((building) => (
+                  {(buildings || []).map((building) => (
                     <MenuItem key={building._id} value={building._id}>
                       {building.name}
                     </MenuItem>

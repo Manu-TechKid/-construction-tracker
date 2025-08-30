@@ -115,7 +115,7 @@ const BuildingSchedule = () => {
     });
   };
 
-  const handleOpenDialog = (schedule = null) => {
+  const handleOpenDialog = (schedule = null, selectedDate = null) => {
     if (schedule) {
       setEditingSchedule(schedule);
       setFormData({
@@ -125,14 +125,15 @@ const BuildingSchedule = () => {
       });
     } else {
       setEditingSchedule(null);
+      const defaultDate = selectedDate || new Date();
       setFormData({
         title: '',
         description: '',
         type: 'painting',
         building: selectedBuilding?._id || '',
         apartment: '',
-        startDate: new Date(),
-        endDate: new Date(),
+        startDate: defaultDate,
+        endDate: defaultDate,
         status: 'planned',
         estimatedCost: '',
         notes: ''
@@ -331,13 +332,14 @@ const BuildingSchedule = () => {
               {getMonthDays().map(day => {
                 const daySchedules = getSchedulesForDay(day);
                 return (
-                  <Grid item xs key={day.toISOString()}>
+                  <Grid item xs key={day.toISOString()} onClick={() => handleOpenDialog(null, day)}>
                     <Card 
                       variant="outlined" 
                       sx={{ 
                         minHeight: 120, 
                         p: 1,
-                        backgroundColor: daySchedules.length > 0 ? 'action.hover' : 'background.paper'
+                        backgroundColor: daySchedules.length > 0 ? 'action.hover' : 'background.paper',
+                        cursor: 'pointer'
                       }}
                     >
                       <Typography variant="body2" sx={{ mb: 1 }}>
