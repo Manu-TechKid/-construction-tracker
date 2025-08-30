@@ -220,14 +220,14 @@ const WorkOrders = () => {
       field: 'workSubType',
       headerName: 'Service',
       width: 150,
-      valueGetter: (params) => params.row?.workSubType || 'N/A'
+      valueGetter: (value, row) => row?.workSubType || 'N/A'
     },
     {
       field: 'building',
       headerName: 'Building',
       width: 200,
-      valueGetter: (params) => {
-        const building = params.row?.building;
+      valueGetter: (value, row) => {
+        const building = row?.building;
         if (typeof building === 'object' && building?.name) {
           return building.name;
         }
@@ -238,9 +238,9 @@ const WorkOrders = () => {
       field: 'apartmentDetails',
       headerName: 'Apartment',
       width: 120,
-      valueGetter: (params) => {
-        const apt = params.row?.apartmentNumber || 'N/A';
-        const block = params.row?.block || 'N/A';
+      valueGetter: (value, row) => {
+        const apt = row?.apartmentNumber || 'N/A';
+        const block = row?.block || 'N/A';
         return `${apt} - ${block}`;
       }
     },
@@ -292,8 +292,8 @@ const WorkOrders = () => {
       field: 'description',
       headerName: 'Description',
       width: 200,
-      valueGetter: (params) => {
-        const desc = params.row?.description || '';
+      valueGetter: (value, row) => {
+        const desc = row?.description || '';
         return desc.length > 50 ? desc.substring(0, 50) + '...' : desc;
       }
     },
@@ -301,8 +301,8 @@ const WorkOrders = () => {
       field: 'estimatedCost',
       headerName: 'Est. Cost',
       width: 100,
-      valueGetter: (params) => {
-        const cost = params.row?.estimatedCost;
+      valueGetter: (value, row) => {
+        const cost = row?.estimatedCost;
         return cost ? `$${cost.toFixed(2)}` : 'N/A';
       }
     },
@@ -326,9 +326,9 @@ const WorkOrders = () => {
       field: 'createdAt',
       headerName: 'Created',
       width: 120,
-      valueGetter: (params) => {
+      valueGetter: (value, row) => {
         try {
-          const date = params.row?.createdAt;
+          const date = row?.createdAt;
           if (!date) return 'N/A';
           return format(new Date(date), 'MMM dd, yyyy');
         } catch (error) {
