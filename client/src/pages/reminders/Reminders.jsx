@@ -184,7 +184,15 @@ const Reminders = () => {
             variant="contained"
             color="primary"
             startIcon={<AddIcon />}
-            onClick={() => navigate('/reminders/create')}
+            onClick={() => {
+              try {
+                navigate('/reminders/create');
+                toast.info('Opening reminder creation form...');
+              } catch (error) {
+                console.error('Navigation error:', error);
+                toast.error('Failed to open reminder form');
+              }
+            }}
           >
             New Reminder
           </Button>

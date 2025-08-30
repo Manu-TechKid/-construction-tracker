@@ -22,7 +22,7 @@ const noteSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['general', 'maintenance', 'issue', 'reminder', 'inspection'],
+    enum: ['general', 'maintenance', 'issue', 'reminder', 'inspection', 'visit'],
     default: 'general'
   },
   priority: {

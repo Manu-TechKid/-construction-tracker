@@ -69,13 +69,13 @@ const WorkOrders = () => {
     pageSize: 10,
   });
 
-  // Fetch work orders data
-  const {
-    data: workOrdersData,
-    isLoading,
+  // Fetch work orders data using same logic as dashboard
+  const { 
+    data: workOrdersData, 
+    isLoading, 
     isError,
     error,
-    refetch,
+    refetch 
   } = useGetWorkOrdersQuery({
     page: paginationModel.page + 1,
     limit: paginationModel.pageSize,
@@ -85,9 +85,15 @@ const WorkOrders = () => {
     ...(selectedBuilding ? getBuildingFilterParams() : {}),
   });
 
+  // Extract work orders array using dashboard logic
+  const workOrders = workOrdersData?.data?.workOrders || workOrdersData?.data || [];
+  const totalCount = workOrdersData?.pagination?.total || workOrdersData?.total || 0;
+
   // Debug log to see what data we're getting
   console.log('WorkOrders Debug:', {
     workOrdersData,
+    workOrders,
+    totalCount,
     selectedBuilding,
     filters,
     isLoading,
@@ -480,14 +486,14 @@ const WorkOrders = () => {
 
               <Box sx={{ height: 600, width: '100%' }}>
                 <DataGrid
-                  rows={workOrdersData?.data?.workOrders || workOrdersData?.data || []}
+                  rows={workOrders}
                   columns={columns}
                   loading={isLoading}
                   pageSizeOptions={[10, 25, 50]}
                   paginationModel={paginationModel}
                   onPaginationModelChange={setPaginationModel}
                   paginationMode="server"
-                  rowCount={workOrdersData?.pagination?.total || workOrdersData?.total || 0}
+                  rowCount={totalCount}
                   disableRowSelectionOnClick
                   disableColumnMenu
                   disableDensitySelector

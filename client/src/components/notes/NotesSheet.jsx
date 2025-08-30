@@ -136,8 +136,8 @@ const NotesSheet = () => {
   };
 
   const handleSaveNote = async () => {
-    if (!formData.title.trim() || !formData.content.trim()) {
-      toast.error('Title and content are required');
+    if (!formData.content.trim()) {
+      toast.error('Please enter a note');
       return;
     }
 
@@ -148,15 +148,12 @@ const NotesSheet = () => {
 
     try {
       const noteData = {
-        title: formData.title,
-        content: formData.content,
+        title: formData.content.trim().substring(0, 50) + (formData.content.trim().length > 50 ? '...' : ''), // Generate title from content
+        content: formData.content.trim(),
         building: formData.building,
-        apartment: formData.apartment || '',
-        type: formData.type || 'general',
+        type: formData.type === 'visit' ? 'visit' : formData.type || 'general', // Ensure 'visit' is handled
         priority: formData.priority || 'medium',
-        status: formData.status || 'active',
-        tags: formData.tags || [],
-        assignedTo: formData.assignedTo || []
+        status: 'active'
       };
 
       console.log('Saving note with data:', noteData);

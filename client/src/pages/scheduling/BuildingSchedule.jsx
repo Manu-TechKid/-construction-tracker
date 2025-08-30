@@ -218,40 +218,31 @@ const BuildingSchedule = () => {
     );
   }
 
-  if (!selectedBuilding) {
+  if (isLoading) {
     return (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography variant="h6" color="text.secondary" gutterBottom>
-          Please select a building to view its schedule
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Choose a building from the dropdown to manage schedules
-        </Typography>
+      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center' }}>
+        <CircularProgress />
       </Box>
     );
   }
 
   if (error) {
     return (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography variant="h6" color="error" gutterBottom>
-          Error loading schedules
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {error?.message || 'Failed to load schedule data'}
-        </Typography>
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">
+          Failed to load schedules. Please try again later.
+        </Alert>
       </Box>
     );
   }
 
-  if (isLoading) {
+  if (!selectedBuilding) {
     return (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
-        <CircularProgress />
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-          Loading schedules...
-        </Typography>
-      </Box>
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Alert severity="info">
+          Please select a building to view schedules.
+        </Alert>
+      </Container>
     );
   }
 
