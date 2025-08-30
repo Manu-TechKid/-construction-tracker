@@ -93,10 +93,13 @@ const WorkOrders = () => {
     search: searchTerm,
   });
 
-  const { data: buildings = [] } = useGetBuildingsQuery();
+  const { data: buildings = [], isLoading: buildingsLoading, error: buildingsError } = useGetBuildingsQuery();
   const [deleteWorkOrder, { isLoading: isDeleting }] = useDeleteWorkOrderMutation();
 
   console.log('WorkOrders Debug: Raw API response:', workOrdersData);
+  console.log('WorkOrders Debug: Buildings data:', buildings);
+  console.log('WorkOrders Debug: Buildings loading:', buildingsLoading);
+  console.log('WorkOrders Debug: Buildings error:', buildingsError);
 
   // Extract work orders from API response with proper error handling
   const workOrders = useMemo(() => {
@@ -509,11 +512,19 @@ const WorkOrders = () => {
               onChange={(e) => handleFilterChange('building', e.target.value)}
             >
               <MenuItem value="">All Buildings</MenuItem>
-              {buildings.map((building) => (
-                <MenuItem key={building._id} value={building._id}>
-                  {building.name}
-                </MenuItem>
-              ))}
+              {buildingsLoading ? (
+                <MenuItem value="">Loading...</MenuItem>
+              ) : buildingsError ? (
+                <MenuItem value="">Error loading buildings</MenuItem>
+              ) : buildings.length === 0 ? (
+                <MenuItem value="">No buildings found</MenuItem>
+              ) : (
+                Array.isArray(buildings) && buildings.map((building) => (
+                  <MenuItem key={building._id} value={building._id}>
+                    {building.name}
+                  </MenuItem>
+                ))
+              )}
             </Select>
           </FormControl>
         </Box>
