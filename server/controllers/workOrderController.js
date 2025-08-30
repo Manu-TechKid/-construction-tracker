@@ -7,11 +7,11 @@ const User = require('../models/User');
 // Helper function to validate work type
 const isValidWorkType = (type) => {
   const validTypes = [
-    'painting', 'cleaning', 'repair', 'maintenance', 
+    'painting', 'cleaning', 'repairs', 'maintenance', 
     'inspection', 'other', 'plumbing', 'electrical', 
     'hvac', 'flooring', 'roofing', 'carpentry'
   ];
-  return validTypes.includes(type);
+  return validTypes.includes(type.toLowerCase());
 };
 
 exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
@@ -62,6 +62,7 @@ exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
         });
     } catch (error) {
         console.error('Work orders query error:', error);
+        // Return empty results instead of error to prevent frontend crashes
         res.status(200).json({
             status: 'success',
             results: 0,

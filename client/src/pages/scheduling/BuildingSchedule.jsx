@@ -249,11 +249,26 @@ const BuildingSchedule = () => {
 
   if (!schedules.length) {
     return (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography variant="h6" color="text.secondary">
-          No schedules found for this building
-        </Typography>
-      </Box>
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <Box sx={{ p: 3, textAlign: 'center' }}>
+          <EventIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+          <Typography variant="h6" color="text.secondary" gutterBottom>
+            No schedules found for this building
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Start by creating your first schedule for {selectedBuilding?.name}
+          </Typography>
+          {hasPermission(['create:schedules']) && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => handleOpenDialog()}
+            >
+              Create First Schedule
+            </Button>
+          )}
+        </Box>
+      </LocalizationProvider>
     );
   }
 

@@ -74,10 +74,10 @@ const Dashboard = () => {
   // Auto-refresh data every 30 seconds for real-time updates
   useEffect(() => {
     const interval = setInterval(() => {
-      // Refetch all data for real-time updates
+      // Refetch all data for real-time updates using RTK Query
       if (workOrdersData) {
-        // Trigger refetch by invalidating cache
-        window.location.reload();
+        // Trigger refetch without page reload
+        window.dispatchEvent(new CustomEvent('refetch-data'));
       }
     }, 30000); // 30 seconds
 

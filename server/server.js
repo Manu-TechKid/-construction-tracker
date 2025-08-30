@@ -24,6 +24,7 @@ const noteRoutes = require('./routes/noteRoutes');
 const AppError = require('./utils/appError');
 const globalErrorHandler = require('./controllers/errorController');
 const routes = require('./routes');
+const reminderRoutes = require('./routes/reminderRoutes');
 
 // Initialize Express app
 const app = express();
@@ -117,6 +118,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/invoices', invoiceRoutes);
 app.use('/api/v1/schedules', scheduleRoutes);
 app.use('/api/v1/notes', noteRoutes);
+app.use('/api/v1/reminders', reminderRoutes);
 
 // Health check endpoints
 app.get('/api/v1/health', (req, res) => {

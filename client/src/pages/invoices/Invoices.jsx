@@ -207,8 +207,12 @@ const Invoices = () => {
                   <TableCell colSpan={7} align="center">
                     <Box py={4}>
                       <ReceiptIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                      <Typography variant="h6" color="text.secondary">
+                      <Typography variant="h6" color="text.secondary" gutterBottom>
                         No invoices found
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        {filterStatus || filterBuilding ? 'Try adjusting your filters or ' : ''}
+                        Create your first invoice to get started
                       </Typography>
                       <Button
                         variant="contained"

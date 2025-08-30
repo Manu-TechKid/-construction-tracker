@@ -68,13 +68,14 @@ const workOrderSchema = new mongoose.Schema({
       values: ['vacant', 'occupied', 'under_renovation', 'reserved'],
       message: 'Apartment status must be one of: vacant, occupied, under_renovation, reserved'
     },
-    default: 'vacant'
+    default: 'vacant',
+    lowercase: true
   },
   workType: {
     type: String,
     required: [true, 'Work type is required'],
     enum: {
-      values: ['painting', 'cleaning', 'repair', 'maintenance', 'inspection', 'other', 'plumbing', 'electrical', 'hvac', 'flooring', 'roofing', 'carpentry'],
+      values: ['painting', 'cleaning', 'repairs', 'maintenance', 'inspection', 'other', 'plumbing', 'electrical', 'hvac', 'flooring', 'roofing', 'carpentry'],
       message: 'Invalid work type'
     },
     lowercase: true
@@ -92,7 +93,7 @@ const workOrderSchema = new mongoose.Schema({
   },
   priority: {
     type: String,
-    enum: ['low', 'medium', 'high', 'emergency'],
+    enum: ['low', 'medium', 'high', 'urgent'],
     default: 'medium'
   },
   status: {

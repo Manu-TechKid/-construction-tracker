@@ -57,7 +57,7 @@ const WorkOrderForm = ({
     building: initialValuesProp?.building || '',
     apartmentNumber: '',
     block: '',
-    apartmentStatus: '',
+    apartmentStatus: 'vacant',
     workType: '',
     workSubType: '',
     description: '',
@@ -70,9 +70,9 @@ const WorkOrderForm = ({
 
   // Work type options based on DSJ Company services
   const workTypes = {
-    'Painting': ['1 Room Painting', '2 Room Painting', '3 Room Painting', 'Door Painting', 'Ceiling Painting', 'Cabinet Painting', 'Hallway Painting', 'Paint Touch-ups'],
-    'Cleaning': ['1 Bedroom Cleaning', '2 Bedroom Cleaning', '3 Bedroom Cleaning', 'Touch-up Cleaning', 'Heavy Cleaning', 'Carpet Cleaning', 'Gutter Cleaning'],
-    'Repairs': ['Air Conditioning Repair', 'Door Repair', 'Ceiling Repair', 'Floor Repair', 'General Maintenance', 'Plumbing Repair', 'Electrical Repair']
+    'painting': ['1 Room Painting', '2 Room Painting', '3 Room Painting', 'Door Painting', 'Ceiling Painting', 'Cabinet Painting', 'Hallway Painting', 'Paint Touch-ups'],
+    'cleaning': ['1 Bedroom Cleaning', '2 Bedroom Cleaning', '3 Bedroom Cleaning', 'Touch-up Cleaning', 'Heavy Cleaning', 'Carpet Cleaning', 'Gutter Cleaning'],
+    'repairs': ['Air Conditioning Repair', 'Door Repair', 'Ceiling Repair', 'Floor Repair', 'General Maintenance', 'Plumbing Repair', 'Electrical Repair']
   };
 
   const workSubTypes = workTypes;
@@ -201,8 +201,10 @@ const WorkOrderForm = ({
                     onBlur={formik.handleBlur}
                     label="Apartment Status"
                   >
-                    <MenuItem value="Occupied">Occupied</MenuItem>
-                    <MenuItem value="Vacant">Vacant</MenuItem>
+                    <MenuItem value="occupied">Occupied</MenuItem>
+                    <MenuItem value="vacant">Vacant</MenuItem>
+                    <MenuItem value="under_renovation">Under Renovation</MenuItem>
+                    <MenuItem value="reserved">Reserved</MenuItem>
                   </Select>
                   {formik.touched.apartmentStatus && formik.errors.apartmentStatus && (
                     <FormHelperText>{formik.errors.apartmentStatus}</FormHelperText>
