@@ -571,13 +571,3 @@ const WorkOrders = () => {
 };
 
 export default WorkOrders;
-    </Container>
-  );
-};
-
-export default WorkOrders;
-    </Container>
-  );
-};
-
-export default WorkOrders;
