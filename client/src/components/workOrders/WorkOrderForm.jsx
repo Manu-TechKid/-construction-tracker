@@ -46,42 +46,67 @@ const WorkOrderForm = ({
 
   const validationSchema = Yup.object({
     building: Yup.string().required(t('validation.required')),
-    apartmentNumber: Yup.string().required(t('validation.required')),
-    block: Yup.string().required(t('validation.required')),
-    apartmentStatus: Yup.string().required('Apartment status is required'),
-    workType: Yup.string().required(t('validation.required')),
-    workSubType: Yup.string().required(t('validation.required')),
+    apartmentNumber: Yup.string()
+      .required(t('validation.required'))
+      .max(20, t('validation.max', { max: 20 })),
+    block: Yup.string()
+      .required(t('validation.required'))
+      .max(50, t('validation.max', { max: 50 })),
+    apartmentStatus: Yup.string()
+      .required(t('validation.required'))
+      .oneOf(['vacant', 'occupied', 'under_renovation', 'reserved'], t('validation.invalid')),
+    workType: Yup.string()
+      .required(t('validation.required'))
+      .oneOf(['painting', 'cleaning', 'repairs', 'maintenance', 'inspection', 'other', 'plumbing', 'electrical', 'hvac', 'flooring', 'roofing', 'carpentry'], t('validation.invalid')),
+    workSubType: Yup.string()
+      .required(t('validation.required'))
+      .max(100, t('validation.max', { max: 100 })),
     description: Yup.string().required(t('validation.required')),
-    priority: Yup.string().required(t('validation.required')),
-    estimatedCost: Yup.number().min(0, 'Cost must be positive'),
+    priority: Yup.string()
+      .required(t('validation.required'))
+      .oneOf(['low', 'medium', 'high', 'urgent'], t('validation.invalid')),
+    estimatedCost: Yup.number()
+      .min(0, t('validation.min', { min: 0 }))
+      .nullable(),
     notes: Yup.string(),
-    // Remove assignedTo requirement to match database model
   });
 
   const initialValues = {
     building: initialValuesProp?.building || '',
-    apartmentNumber: '',
-    block: '',
-    apartmentStatus: '',
-    workType: '',
-    workSubType: '',
-    description: '',
-    priority: 'medium',
-    startDate: new Date(),
-    estimatedCost: '',
-    notes: '',
-    assignedTo: '',
+    apartmentNumber: initialValuesProp?.apartmentNumber || '',
+    block: initialValuesProp?.block || '',
+    apartmentStatus: initialValuesProp?.apartmentStatus || 'vacant',
+    workType: initialValuesProp?.workType || '',
+    workSubType: initialValuesProp?.workSubType || '',
+    description: initialValuesProp?.description || '',
+    priority: initialValuesProp?.priority || 'medium',
+    startDate: initialValuesProp?.startDate || new Date(),
+    estimatedCost: initialValuesProp?.estimatedCost || '',
+    notes: initialValuesProp?.notes || '',
     ...initialValuesProp,
   };
 
-  // Work type options based on DSJ Company services
-  const workTypes = {
-    'painting': ['1 Room Painting', '2 Room Painting', '3 Room Painting', 'Door Painting', 'Ceiling Painting', 'Cabinet Painting', 'Hallway Painting', 'Paint Touch-ups'],
-    'cleaning': ['1 Bedroom Cleaning', '2 Bedroom Cleaning', '3 Bedroom Cleaning', 'Touch-up Cleaning', 'Heavy Cleaning', 'Carpet Cleaning', 'Gutter Cleaning'],
-    'repairs': ['Air Conditioning Repair', 'Door Repair', 'Ceiling Repair', 'Floor Repair', 'General Maintenance', 'Plumbing Repair', 'Electrical Repair']
-  };
+  const workTypes = [
+    { value: 'painting', label: t('workOrders.types.painting') },
+    { value: 'cleaning', label: t('workOrders.types.cleaning') },
+    { value: 'repairs', label: t('workOrders.types.repairs') },
+    { value: 'maintenance', label: t('workOrders.types.maintenance') },
+    { value: 'inspection', label: t('workOrders.types.inspection') },
+    { value: 'plumbing', label: t('workOrders.types.plumbing') },
+    { value: 'electrical', label: t('workOrders.types.electrical') },
+    { value: 'hvac', label: t('workOrders.types.hvac') },
+    { value: 'flooring', label: t('workOrders.types.flooring') },
+    { value: 'roofing', label: t('workOrders.types.roofing') },
+    { value: 'carpentry', label: t('workOrders.types.carpentry') },
+    { value: 'other', label: t('workOrders.types.other') }
+  ];
 
-  const workSubTypes = workTypes;
+  const apartmentStatuses = [
+    { value: 'vacant', label: t('workOrders.statuses.vacant') },
+    { value: 'occupied', label: t('workOrders.statuses.occupied') },
+    { value: 'under_renovation', label: t('workOrders.statuses.under_renovation') },
+    { value: 'reserved', label: t('workOrders.statuses.reserved') }
+  ];
 
   const priorities = [
     { value: 'low', label: t('workOrders.priorities.low') },
@@ -208,13 +233,11 @@ const WorkOrderForm = ({
                     onBlur={formik.handleBlur}
                     label="Apartment Status *"
                   >
-                    <MenuItem value="">
-                      <em>Choose Status</em>
-                    </MenuItem>
-                    <MenuItem value="occupied">Occupied</MenuItem>
-                    <MenuItem value="vacant">Vacant</MenuItem>
-                    <MenuItem value="under_renovation">Under Renovation</MenuItem>
-                    <MenuItem value="reserved">Reserved</MenuItem>
+                    {apartmentStatuses.map((status) => (
+                      <MenuItem key={status.value} value={status.value}>
+                        {status.label}
+                      </MenuItem>
+                    ))}
                   </Select>
                   {formik.touched.apartmentStatus && formik.errors.apartmentStatus && (
                     <FormHelperText>{formik.errors.apartmentStatus}</FormHelperText>
@@ -235,9 +258,9 @@ const WorkOrderForm = ({
                     onBlur={formik.handleBlur}
                     label={t('workOrders.type')}
                   >
-                    {Object.keys(workTypes).map((type) => (
-                      <MenuItem key={type} value={type}>
-                        {type}
+                    {workTypes.map((type) => (
+                      <MenuItem key={type.value} value={type.value}>
+                        {type.label}
                       </MenuItem>
                     ))}
                   </Select>
@@ -248,29 +271,16 @@ const WorkOrderForm = ({
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <FormControl 
-                  fullWidth 
+                <TextField
+                  fullWidth
+                  name="workSubType"
+                  label={t('workOrders.service')}
+                  value={formik.values.workSubType}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
                   error={formik.touched.workSubType && Boolean(formik.errors.workSubType)}
-                  disabled={!formik.values.workType}
-                >
-                  <InputLabel>{t('workOrders.service')}</InputLabel>
-                  <Select
-                    name="workSubType"
-                    value={formik.values.workSubType}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    label={t('workOrders.service')}
-                  >
-                    {(workTypes[formik.values.workType] || []).map((subType) => (
-                      <MenuItem key={subType} value={subType}>
-                        {subType}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {formik.touched.workSubType && formik.errors.workSubType && (
-                    <FormHelperText>{formik.errors.workSubType}</FormHelperText>
-                  )}
-                </FormControl>
+                  helperText={formik.touched.workSubType && formik.errors.workSubType}
+                />
               </Grid>
 
               <Grid item xs={12}>
@@ -309,31 +319,6 @@ const WorkOrderForm = ({
                   </Select>
                   {formik.touched.priority && formik.errors.priority && (
                     <FormHelperText>{formik.errors.priority}</FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <FormControl 
-                  fullWidth 
-                  error={formik.touched.assignedTo && Boolean(formik.errors.assignedTo)}
-                >
-                  <InputLabel>{t('workOrders.assignedTo')}</InputLabel>
-                  <Select
-                    name="assignedTo"
-                    value={formik.values.assignedTo}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    label={t('workOrders.assignedTo')}
-                  >
-                    {workers.map((worker) => (
-                      <MenuItem key={worker._id} value={worker._id}>
-                        {worker.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {formik.touched.assignedTo && formik.errors.assignedTo && (
-                    <FormHelperText>{formik.errors.assignedTo}</FormHelperText>
                   )}
                 </FormControl>
               </Grid>

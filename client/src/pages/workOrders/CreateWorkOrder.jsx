@@ -14,12 +14,11 @@ const CreateWorkOrder = () => {
     building: '',
     apartmentNumber: '',
     block: '',
-    apartmentStatus: '',
+    apartmentStatus: 'vacant',
     workType: '',
     workSubType: '',
     description: '',
     priority: 'medium',
-    startDate: new Date(),
     estimatedCost: '',
     notes: ''
   });

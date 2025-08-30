@@ -30,6 +30,7 @@ import BuildingEdit from './pages/buildings/BuildingEdit';
 import WorkOrders from './pages/workOrders/WorkOrders';
 import CreateWorkOrder from './pages/workOrders/CreateWorkOrder';
 import WorkOrderDetails from './pages/workOrders/WorkOrderDetails';
+import EditWorkOrder from './pages/workOrders/EditWorkOrder';
 import Workers from './pages/workers/Workers';
 import CreateWorker from './pages/workers/CreateWorker';
 import Reminders from './pages/reminders/Reminders';
@@ -97,6 +98,7 @@ const AppContent = () => {
             {/* Work Orders */}
             <Route path="work-orders" element={<WorkOrders />} />
             <Route path="work-orders/create" element={<CreateWorkOrder />} />
+            <Route path="work-orders/:id/edit" element={<EditWorkOrder />} />
             <Route path="work-orders/:id" element={<WorkOrderDetails />} />
             
             {/* Workers */}

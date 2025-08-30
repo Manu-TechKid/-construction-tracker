@@ -200,192 +200,175 @@ const WorkOrders = () => {
   // Columns for the DataGrid
   const columns = [
     {
-      field: 'workOrder',
-      headerName: 'Work Order',
-      flex: 1,
-      renderCell: (params) => (
-        <Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-            <WorkOrderIcon sx={{ mr: 1, color: 'primary.main' }} />
-            <Typography variant="body2" fontWeight="medium">
-              {params.row.workType} - {params.row.workSubType}
-            </Typography>
-          </Box>
-          <Typography variant="body2" color="text.secondary">
-            Apt {params.row.apartmentNumber}, Block {params.row.block}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            #{params.row._id?.slice(-6)}
-          </Typography>
-        </Box>
-      ),
+      field: 'workType',
+      headerName: 'Work Type',
+      width: 120,
+      renderCell: (params) => {
+        const workType = params.row?.workType || 'N/A';
+        return (
+          <Chip
+            label={workType.charAt(0).toUpperCase() + workType.slice(1)}
+            size="small"
+            color="primary"
+            variant="outlined"
+          />
+        );
+      }
+    },
+    {
+      field: 'workSubType',
+      headerName: 'Service',
+      width: 150,
+      valueGetter: (params) => params.row?.workSubType || 'N/A'
+    },
+    {
+      field: 'building',
+      headerName: 'Building',
+      width: 200,
+      valueGetter: (params) => {
+        const building = params.row?.building;
+        if (typeof building === 'object' && building?.name) {
+          return building.name;
+        }
+        return building || 'N/A';
+      }
+    },
+    {
+      field: 'apartmentDetails',
+      headerName: 'Apartment',
+      width: 120,
+      valueGetter: (params) => {
+        const apt = params.row?.apartmentNumber || 'N/A';
+        const block = params.row?.block || 'N/A';
+        return `${apt} - ${block}`;
+      }
+    },
+    {
+      field: 'apartmentStatus',
+      headerName: 'Status',
+      width: 120,
+      renderCell: (params) => {
+        const status = params.row?.apartmentStatus || 'vacant';
+        const statusColors = {
+          vacant: 'default',
+          occupied: 'success',
+          under_renovation: 'warning',
+          reserved: 'info'
+        };
+        return (
+          <Chip
+            label={status.replace('_', ' ').toUpperCase()}
+            size="small"
+            color={statusColors[status] || 'default'}
+            variant="filled"
+          />
+        );
+      }
+    },
+    {
+      field: 'priority',
+      headerName: 'Priority',
+      width: 100,
+      renderCell: (params) => {
+        const priority = params.row?.priority || 'medium';
+        const priorityColors = {
+          low: 'success',
+          medium: 'warning',
+          high: 'error',
+          urgent: 'error'
+        };
+        return (
+          <Chip
+            label={priority.toUpperCase()}
+            size="small"
+            color={priorityColors[priority] || 'default'}
+            variant={priority === 'urgent' ? 'filled' : 'outlined'}
+          />
+        );
+      }
+    },
+    {
+      field: 'description',
+      headerName: 'Description',
+      width: 200,
+      valueGetter: (params) => {
+        const desc = params.row?.description || '';
+        return desc.length > 50 ? desc.substring(0, 50) + '...' : desc;
+      }
+    },
+    {
+      field: 'estimatedCost',
+      headerName: 'Est. Cost',
+      width: 100,
+      valueGetter: (params) => {
+        const cost = params.row?.estimatedCost;
+        return cost ? `$${cost.toFixed(2)}` : 'N/A';
+      }
     },
     {
       field: 'photos',
       headerName: 'Photos',
       width: 80,
-      renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          {params.row.photos && params.row.photos.length > 0 ? (
-            <Chip
-              label={params.row.photos.length}
-              size="small"
-              color="primary"
-              variant="outlined"
-            />
-          ) : (
-            <Typography variant="caption" color="text.secondary">
-              No photos
-            </Typography>
-          )}
-        </Box>
-      ),
-    },
-    {
-      field: 'building',
-      headerName: 'Building',
-      flex: 1,
-      renderCell: (params) => (
-        <Typography variant="body2">
-          {params.value?.name || 'N/A'}
-        </Typography>
-      ),
-    },
-    {
-      field: 'assignedTo',
-      headerName: 'Assigned To',
-      flex: 1,
       renderCell: (params) => {
-        const assignedTo = params.value || [];
-        if (assignedTo.length === 0) return 'Unassigned';
-        
-        return (
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            {assignedTo[0]?.avatar ? (
-              <Avatar 
-                src={assignedTo[0].avatar} 
-                alt={assignedTo[0].name}
-                sx={{ width: 24, height: 24, mr: 1 }}
-              />
-            ) : (
-              <Avatar 
-                sx={{ 
-                  width: 24, 
-                  height: 24, 
-                  mr: 1,
-                  bgcolor: 'primary.main',
-                  fontSize: '0.75rem',
-                }}
-              >
-                {assignedTo[0]?.name?.charAt(0) || '?'}
-              </Avatar>
-            )}
-            <Typography variant="body2">
-              {assignedTo[0]?.name || 'Unknown'}
-              {assignedTo.length > 1 && ` +${assignedTo.length - 1}`}
-            </Typography>
-          </Box>
-        );
-      },
-    },
-    {
-      field: 'dueDate',
-      headerName: 'Due Date',
-      width: 150,
-      renderCell: (params) => {
-        if (!params.value) {
-          return <Typography variant="body2" color="text.secondary">No date</Typography>;
-        }
-        
-        try {
-          const dueDate = new Date(params.value);
-          // Check if date is valid
-          if (isNaN(dueDate.getTime())) {
-            return <Typography variant="body2" color="text.secondary">Invalid date</Typography>;
-          }
-          
-          const now = new Date();
-          const isOverdue = dueDate < now && params.row.status !== 'completed';
-          
-          return (
-            <Box>
-              <Typography 
-                variant="body2" 
-                color={isOverdue ? 'error' : 'text.primary'}
-                sx={{ fontWeight: isOverdue ? 500 : 'normal' }}
-              >
-                {formatDate(dueDate, 'short')}
-              </Typography>
-              {isOverdue && (
-                <Typography variant="caption" color="error">
-                  Overdue
-                </Typography>
-              )}
-            </Box>
-          );
-        } catch (error) {
-          console.error('Date parsing error:', error, 'Value:', params.value);
-          return <Typography variant="body2" color="text.secondary">Invalid date</Typography>;
-        }
-      },
-    },
-    {
-      field: 'status',
-      headerName: 'Status',
-      width: 140,
-      renderCell: (params) => {
-        const status = statusOptions.find(s => s.value === params.value) || 
-                      { label: params.value, color: 'default' };
-        
+        const photoCount = params.row?.photos?.length || 0;
         return (
           <Chip
-            icon={status.icon}
-            label={status.label}
-            color={status.color}
+            label={photoCount}
             size="small"
+            color={photoCount > 0 ? 'primary' : 'default'}
             variant="outlined"
-            sx={{ textTransform: 'capitalize' }}
           />
         );
-      },
+      }
     },
     {
-      field: 'priority',
-      headerName: 'Priority',
+      field: 'createdAt',
+      headerName: 'Created',
       width: 120,
-      renderCell: (params) => {
-        const priority = priorityOptions.find(p => p.value === params.value) || 
-                        { label: params.value, color: 'default' };
-        
-        return (
-          <Chip
-            label={priority.label}
-            color={priority.color}
-            size="small"
-            variant="outlined"
-            sx={{ textTransform: 'capitalize' }}
-          />
-        );
-      },
+      valueGetter: (params) => {
+        try {
+          const date = params.row?.createdAt;
+          if (!date) return 'N/A';
+          return format(new Date(date), 'MMM dd, yyyy');
+        } catch (error) {
+          console.error('Date formatting error:', error);
+          return 'Invalid Date';
+        }
+      }
     },
     {
       field: 'actions',
       headerName: 'Actions',
-      width: 80,
+      width: 120,
       sortable: false,
       filterable: false,
       renderCell: (params) => (
-        <Box>
+        <Box sx={{ display: 'flex', gap: 0.5 }}>
           <IconButton
             size="small"
-            onClick={(e) => handleMenuOpen(e, params.row)}
-            aria-label="actions"
+            onClick={() => handleView(params.row)}
+            title="View Details"
           >
-            <MoreVertIcon />
+            <VisibilityIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={() => handleEdit(params.row)}
+            title="Edit"
+          >
+            <EditIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={() => handleDelete(params.row)}
+            title="Delete"
+            color="error"
+          >
+            <DeleteIcon fontSize="small" />
           </IconButton>
         </Box>
-      ),
-    },
+      )
+    }
   ];
 
   // Action menu
