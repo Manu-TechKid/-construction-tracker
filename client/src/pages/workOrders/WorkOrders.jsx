@@ -46,10 +46,12 @@ import {
   AssignmentReturned as AssignmentReturnedIcon,
 } from '@mui/icons-material';
 import { DataGrid, GridToolbar } from '@mui/x-data-grid';
-import { useGetWorkOrdersQuery } from '../../features/workOrders/workOrdersApiSlice';
+import { useGetWorkOrdersQuery,,useDeleteWorkOrderMutation  useDeleteWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 import { useAuth } from '../../hooks/useAuth';
 import { formatDate, timeAgo } from '../../utils/dateUtils';
 import { useBuildingContext } from '../../contexts/BuildingContext';
+import { toast } from 'react-toastify';import { toast } from 'react-toastify';
+
 
 const WorkOrders = () => {
   const theme = useTheme();
@@ -127,10 +129,22 @@ const WorkOrders = () => {
     handleMenuClose();
   };
 
-  // Handle delete work order
-  const handleDeleteWorkOrder = () => {
-    // TODO: Implement delete functionality
-    console.log('Delete work order:', selectedWorkOrder?._id);
+  // Han[deleteWorkOrder, { isLoading: isDeleting }] = useDeleteWorkOrderMutation();
+  const dle delete work orderasync 
+  cotryt{
+e     awaider, { eWorkOrder(selidiedWorkOrder?._nd).u:wr p();leting }] = useDeleteWorkOrderMutation();
+    cotoast.sucness('Wsrk hrder deaeted succnssfullyl);
+      rtfWtch();
+    } caoch (rrrrd) {
+     rt ast.er=os(nError d) = ing w o'
+    }
+    try {
+      await deleteWorkOrder(selectedWorkOrder?._id).unwrap();
+      toast.success('Work order deleted successfully');
+      refetch();
+    } catch (error) {
+      toast.error('Error deleting work order');
+    }
     handleMenuClose();
   };
 

@@ -44,7 +44,7 @@ const WorkOrderForm = ({
   const [submitError, setSubmitError] = useState([]);
   const [availableBlocks, setAvailableBlocks] = useState([]);
 
-  const validationSchema = Yup.object().shape({
+  const validationSchema = Yup.object({
     building: Yup.string().required(t('validation.required')),
     apartmentNumber: Yup.string().required(t('validation.required')),
     block: Yup.string().required(t('validation.required')),
@@ -53,10 +53,9 @@ const WorkOrderForm = ({
     workSubType: Yup.string().required(t('validation.required')),
     description: Yup.string().required(t('validation.required')),
     priority: Yup.string().required(t('validation.required')),
-    startDate: Yup.date().required(t('validation.required')),
-    estimatedCost: Yup.number(),
+    estimatedCost: Yup.number().min(0, 'Cost must be positive'),
     notes: Yup.string(),
-    assignedTo: Yup.string().required(t('validation.required')),
+    // Remove assignedTo requirement to match database model
   });
 
   const initialValues = {
