@@ -23,6 +23,8 @@ import {
   Select,
   MenuItem,
   Fab,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -39,6 +41,12 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format } from 'date-fns';
 import { useBuildingContext } from '../../contexts/BuildingContext';
 import { useAuth } from '../../hooks/useAuth';
+import { 
+  useGetNotesQuery,
+  useCreateNoteMutation,
+  useUpdateNoteMutation,
+  useDeleteNoteMutation
+} from '../../features/notes/notesApiSlice';
 import { toast } from 'react-toastify';
 
 const NotesSheet = () => {
@@ -71,23 +79,16 @@ const NotesSheet = () => {
     { value: 'high', label: 'High', color: 'error' },
   ];
 
-  // Load notes from localStorage
-  useEffect(() => {
-    const savedNotes = localStorage.getItem('buildingNotes');
-    if (savedNotes) {
-      try {
-        setNotes(JSON.parse(savedNotes));
-      } catch (error) {
-        console.error('Error loading notes:', error);
-      }
-    }
-  }, []);
+  const { data: notesData, isLoading, isError } = useGetNotesQuery();
+  const [createNote, { isLoading: isCreating }] = useCreateNoteMutation();
+  const [updateNote, { isLoading: isUpdating }] = useUpdateNoteMutation();
+  const [deleteNote, { isLoading: isDeleting }] = useDeleteNoteMutation();
 
-  // Save notes to localStorage
-  const saveNotes = (updatedNotes) => {
-    localStorage.setItem('buildingNotes', JSON.stringify(updatedNotes));
-    setNotes(updatedNotes);
-  };
+  useEffect(() => {
+    if (notesData) {
+      setNotes(notesData);
+    }
+  }, [notesData]);
 
   // Filter notes by selected building
   const filteredNotes = selectedBuilding 
@@ -130,7 +131,7 @@ const NotesSheet = () => {
     });
   };
 
-  const handleSaveNote = () => {
+  const handleSaveNote = async () => {
     if (!formData.title.trim() || !formData.content.trim()) {
       toast.error('Title and content are required');
       return;
@@ -148,26 +149,31 @@ const NotesSheet = () => {
       updatedAt: new Date().toISOString(),
     };
 
-    let updatedNotes;
-    if (editingNote) {
-      updatedNotes = notes.map(note => 
-        note.id === editingNote.id ? noteData : note
-      );
-      toast.success('Note updated successfully');
-    } else {
-      updatedNotes = [...notes, noteData];
-      toast.success('Note created successfully');
+    try {
+      if (editingNote) {
+        await updateNote(noteData);
+        toast.success('Note updated successfully');
+      } else {
+        await createNote(noteData);
+        toast.success('Note created successfully');
+      }
+    } catch (error) {
+      console.error('Error saving note:', error);
+      toast.error('Failed to save note');
     }
 
-    saveNotes(updatedNotes);
     handleCloseDialog();
   };
 
-  const handleDeleteNote = (noteId) => {
+  const handleDeleteNote = async (noteId) => {
     if (window.confirm('Are you sure you want to delete this note?')) {
-      const updatedNotes = notes.filter(note => note.id !== noteId);
-      saveNotes(updatedNotes);
-      toast.success('Note deleted successfully');
+      try {
+        await deleteNote(noteId);
+        toast.success('Note deleted successfully');
+      } catch (error) {
+        console.error('Error deleting note:', error);
+        toast.error('Failed to delete note');
+      }
     }
   };
 
@@ -190,6 +196,22 @@ const NotesSheet = () => {
         <Typography variant="h6" color="text.secondary">
           You don't have permission to access notes
         </Typography>
+      </Box>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Alert severity="error">Failed to load notes</Alert>
       </Box>
     );
   }
@@ -465,6 +487,7 @@ const NotesSheet = () => {
               onClick={handleSaveNote} 
               variant="contained" 
               startIcon={<SaveIcon />}
+              disabled={isCreating || isUpdating}
             >
               {editingNote ? 'Update' : 'Save'} Note
             </Button>

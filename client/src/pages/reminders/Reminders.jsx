@@ -149,27 +149,24 @@ const Reminders = () => {
     setReminderToDelete(null);
   };
 
+  // Loading state
   if (isLoading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <CircularProgress />
-      </Box>
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+          <CircularProgress />
+        </Box>
+      </Container>
     );
   }
 
-  if (isError) {
+  // Error state
+  if (error) {
     return (
-      <Container maxWidth="xl">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-          <Paper sx={{ p: 3, textAlign: 'center' }}>
-            <Typography color="error" gutterBottom>
-              Error loading reminders: {error?.data?.message || 'Unknown error'}
-            </Typography>
-            <Button variant="contained" color="primary" onClick={() => window.location.reload()}>
-              Retry
-            </Button>
-          </Paper>
-        </Box>
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error?.message || 'Failed to load reminders'}
+        </Alert>
       </Container>
     );
   }

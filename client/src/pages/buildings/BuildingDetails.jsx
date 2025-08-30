@@ -606,12 +606,8 @@ const BuildingDetails = () => {
     error 
   } = useGetBuildingQuery(id);
   
-  const building = buildingData?.data || null;
+  const building = buildingData?.data || buildingData;
   
-  console.log('BuildingDetails - buildingData:', buildingData);
-  console.log('BuildingDetails - building:', building);
-  console.log('BuildingDetails - building._id:', building?._id);
-
   // Loading state
   if (isLoading) {
     return (

@@ -619,6 +619,16 @@ const WorkOrderDetails = () => {
     }
   };
   
+  // Handle edit work order
+  const handleEdit = () => {
+    navigate(`/work-orders/${id}/edit`, { 
+      state: { 
+        workOrder: workOrder,
+        returnPath: `/work-orders/${id}` 
+      } 
+    });
+  };
+  
   // Set data when loaded
   useEffect(() => {
     if (workOrderData) {
@@ -747,6 +757,16 @@ const WorkOrderDetails = () => {
             </Box>
           </CardContent>
         </Card>
+        {hasPermission('update:work-orders') && (
+          <Button
+            variant="outlined"
+            startIcon={<EditIcon />}
+            onClick={handleEdit}
+            sx={{ mt: 2 }}
+          >
+            Edit
+          </Button>
+        )}
       </Box>
     </Container>
   );

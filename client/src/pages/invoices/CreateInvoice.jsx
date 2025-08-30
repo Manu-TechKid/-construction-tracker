@@ -129,19 +129,23 @@ const CreateInvoice = () => {
 
   const { subtotal, tax, total } = calculateTotals();
 
-  if (!isInitialized) {
+  // Loading state
+  if (buildingsLoading || workOrdersLoading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 10 }}>
-        <CircularProgress />
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+          <CircularProgress />
+        </Box>
       </Container>
     );
   }
 
-  if (buildingsError || workOrdersError) {
+  // Error state
+  if (buildingsError || workOrdersError || error) {
     return (
-      <Container maxWidth="lg" sx={{ py: 10 }}>
-        <Alert severity="error">
-          An error occurred while loading data. Please try again later.
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error || buildingsError?.message || workOrdersError?.message || 'An error occurred'}
         </Alert>
       </Container>
     );

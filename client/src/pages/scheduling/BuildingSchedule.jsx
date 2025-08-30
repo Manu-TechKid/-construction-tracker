@@ -210,10 +210,15 @@ const BuildingSchedule = () => {
     );
   }
 
-  if (isLoading) {
+  if (!selectedBuilding) {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
-        <CircularProgress />
+        <Typography variant="h6" color="text.secondary" gutterBottom>
+          Please select a building to view its schedule
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Choose a building from the dropdown to manage schedules
+        </Typography>
       </Box>
     );
   }
@@ -221,18 +226,22 @@ const BuildingSchedule = () => {
   if (error) {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Alert severity="error">
-          {error.message}
-        </Alert>
+        <Typography variant="h6" color="error" gutterBottom>
+          Error loading schedules
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {error?.message || 'Failed to load schedule data'}
+        </Typography>
       </Box>
     );
   }
 
-  if (!selectedBuilding) {
+  if (isLoading) {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography variant="h6" color="text.secondary">
-          Please select a building to view its schedule
+        <CircularProgress />
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+          Loading schedules...
         </Typography>
       </Box>
     );

@@ -57,7 +57,7 @@ const Buildings = () => {
   const { hasPermission } = useAuth();
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('active');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [buildingToDelete, setBuildingToDelete] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);

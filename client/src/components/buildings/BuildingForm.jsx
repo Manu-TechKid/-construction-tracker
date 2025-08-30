@@ -17,6 +17,7 @@ const validationSchema = Yup.object().shape({
   name: Yup.string().required('Building name is required'),
   address: Yup.string().required('Address is required'),
   city: Yup.string().required('City is required'),
+  administratorName: Yup.string().required('Administrator name is required'),
 });
 
 const BuildingForm = ({
@@ -30,6 +31,7 @@ const BuildingForm = ({
     name: '',
     address: '',
     city: '',
+    administratorName: '',
     ...initialValuesProp
   };
 
@@ -105,6 +107,22 @@ const BuildingForm = ({
                       onBlur={formik.handleBlur}
                       error={formik.touched.city && Boolean(formik.errors.city)}
                       helperText={formik.touched.city && formik.errors.city}
+                      variant="outlined"
+                      margin="normal"
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      id="administratorName"
+                      name="administratorName"
+                      label="Administrator Name"
+                      value={formik.values.administratorName}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      error={formik.touched.administratorName && Boolean(formik.errors.administratorName)}
+                      helperText={formik.touched.administratorName && formik.errors.administratorName}
                       variant="outlined"
                       margin="normal"
                     />
