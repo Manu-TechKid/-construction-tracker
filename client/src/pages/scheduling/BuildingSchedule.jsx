@@ -322,7 +322,7 @@ const BuildingSchedule = () => {
             
             <Grid container spacing={1}>
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                <Grid item xs key={day}>
+                <Grid item xs={12/7} key={day}>
                   <Box sx={{ p: 1, textAlign: 'center', fontWeight: 'bold' }}>
                     {day}
                   </Box>
@@ -332,15 +332,19 @@ const BuildingSchedule = () => {
               {getMonthDays().map(day => {
                 const daySchedules = getSchedulesForDay(day);
                 return (
-                  <Grid item xs key={day.toISOString()} onClick={() => handleOpenDialog(null, day)}>
+                  <Grid item xs={12/7} key={day.toISOString()}>
                     <Card 
                       variant="outlined" 
                       sx={{ 
                         minHeight: 120, 
                         p: 1,
                         backgroundColor: daySchedules.length > 0 ? 'action.hover' : 'background.paper',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        '&:hover': {
+                          backgroundColor: 'action.selected'
+                        }
                       }}
+                      onClick={() => handleOpenDialog(null, day)}
                     >
                       <Typography variant="body2" sx={{ mb: 1 }}>
                         {format(day, 'd')}
@@ -352,7 +356,7 @@ const BuildingSchedule = () => {
                         
                         return (
                           <Chip
-                            key={schedule.id}
+                            key={schedule._id || schedule.id}
                             label={schedule.title}
                             size="small"
                             color={typeConfig.color}
@@ -368,7 +372,10 @@ const BuildingSchedule = () => {
                                 whiteSpace: 'nowrap',
                               }
                             }}
-                            onClick={() => handleOpenDialog(schedule)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenDialog(schedule);
+                            }}
                           />
                         );
                       })}

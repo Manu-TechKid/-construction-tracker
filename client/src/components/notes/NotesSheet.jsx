@@ -147,8 +147,15 @@ const NotesSheet = () => {
     }
 
     const noteData = {
-      ...formData,
-      visitDate: formData.visitDate.toISOString(),
+      title: formData.title,
+      content: formData.content,
+      building: formData.building,
+      apartment: formData.apartment || '',
+      type: formData.type || 'general',
+      priority: formData.priority || 'medium',
+      status: formData.status || 'active',
+      tags: formData.tags || [],
+      assignedTo: formData.assignedTo || []
     };
 
     try {

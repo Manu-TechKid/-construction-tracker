@@ -85,8 +85,8 @@ const Buildings = () => {
       (building.city && building.city.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesStatus = statusFilter === 'all' || 
-      (building.status && building.status.toLowerCase() === statusFilter.toLowerCase()) ||
-      (!building.status && statusFilter === 'active'); // Default to active if no status
+      building.status === statusFilter ||
+      (statusFilter === 'active' && (!building.status || building.status === 'active'));
     
     return matchesSearch && matchesStatus;
   });

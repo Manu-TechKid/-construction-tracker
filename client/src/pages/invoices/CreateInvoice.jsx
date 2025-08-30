@@ -100,22 +100,16 @@ const CreateInvoice = () => {
     }
 
     try {
-      const { subtotal, tax, total } = calculateTotals();
-      
       const invoiceData = {
-        building: selectedBuilding,
-        workOrders: selectedWorkOrders,
-        subtotal,
-        tax,
-        total,
-        issueDate: new Date(),
-        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-        status: 'pending'
+        buildingId: selectedBuilding,
+        workOrderIds: selectedWorkOrders,
+        dueDate,
+        notes
       };
 
-      await createInvoice(invoiceData).unwrap();
+      const result = await createInvoice(invoiceData).unwrap();
       toast.success('Invoice created successfully!');
-      navigate('/invoices');
+      navigate(`/invoices/${result.data.invoice._id}`);
     } catch (error) {
       console.error('Failed to create invoice:', error);
       const errorMessage = error?.data?.message || error?.message || 'Failed to create invoice';

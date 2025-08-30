@@ -51,25 +51,27 @@ exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
 
     // Execute query with error handling
     try {
-        const workOrders = await query.populate('building assignedTo.worker createdBy');
+        const workOrders = await query.populate('building assignedTo createdBy');
+
+        // Get total count for pagination
+        const total = await WorkOrder.countDocuments(JSON.parse(queryStr));
 
         res.status(200).json({
             status: 'success',
             results: workOrders.length,
+            pagination: {
+                page,
+                limit,
+                total,
+                pages: Math.ceil(total / limit)
+            },
             data: {
                 workOrders
             }
         });
     } catch (error) {
         console.error('Work orders query error:', error);
-        // Return empty results instead of error to prevent frontend crashes
-        res.status(200).json({
-            status: 'success',
-            results: 0,
-            data: {
-                workOrders: []
-            }
-        });
+        return next(new AppError('Error fetching work orders', 500));
     }
 });
 
