@@ -48,6 +48,7 @@ const BuildingSchedule = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [openDialog, setOpenDialog] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -116,9 +117,10 @@ const BuildingSchedule = () => {
     });
   };
 
-  const handleOpenDialog = (schedule = null, selectedDate = null) => {
+  const handleOpenDialog = (schedule = null, clickedDate = null) => {
     if (schedule) {
       setEditingSchedule(schedule);
+      setSelectedDate(new Date(schedule.startDate));
       setFormData({
         ...schedule,
         startDate: new Date(schedule.startDate),
@@ -126,7 +128,8 @@ const BuildingSchedule = () => {
       });
     } else {
       setEditingSchedule(null);
-      const defaultDate = selectedDate || new Date();
+      const defaultDate = clickedDate || new Date();
+      setSelectedDate(defaultDate);
       setFormData({
         title: '',
         description: '',
