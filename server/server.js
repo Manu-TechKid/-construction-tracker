@@ -265,6 +265,3 @@ const startServer = async () => {
 
 // Start the application
 startServer();
-
-// Start the application
-startServer();
