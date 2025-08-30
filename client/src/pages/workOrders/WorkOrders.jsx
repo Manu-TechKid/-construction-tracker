@@ -1,63 +1,54 @@
-import React, { useState, useMemo } from 'react';
-import { useSelector } from 'react-redux';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
   Container,
-  Grid,
-  TextField,
-  MenuItem,
   Typography,
-  Chip,
+  Button,
+  Paper,
   IconButton,
-  Tooltip,
-  CircularProgress,
-  Alert,
-  useTheme,
+  Chip,
+  Menu,
+  MenuItem,
+  TextField,
   FormControl,
   InputLabel,
   Select,
-  Avatar,
-  Paper,
-  LinearProgress,
-  Menu,
+  Divider,
+  Alert,
+  CircularProgress,
   ListItemIcon,
   ListItemText,
-  Divider,
-  InputAdornment,
+  InputAdornment
 } from '@mui/material';
 import {
   Add as AddIcon,
-  Search as SearchIcon,
   FilterList as FilterIcon,
+  Search as SearchIcon,
   MoreVert as MoreVertIcon,
   Visibility as VisibilityIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Assignment as WorkOrderIcon,
-  CheckCircle as CheckCircleIcon,
-  Pending as PendingIcon,
-  Work as WorkIcon,
-  Pause as PauseIcon,
-  Cancel as CancelIcon,
+  Work as WorkOrderIcon
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
-import { useGetWorkOrdersQuery, useDeleteWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
-import { useAuth } from '../../hooks/useAuth';
-import { formatDate, timeAgo } from '../../utils/dateUtils';
+import { format } from 'date-fns';
 import { toast } from 'react-toastify';
+
+import {
+  useGetWorkOrdersQuery,
+  useDeleteWorkOrderMutation
+} from '../../features/workOrders/workOrdersApiSlice';
+import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
+import { useAuth } from '../../hooks/useAuth';
 
 // Status options
 const statusOptions = [
-  { value: 'pending', label: 'Pending', color: 'warning', icon: <PendingIcon /> },
-  { value: 'in_progress', label: 'In Progress', color: 'info', icon: <WorkIcon /> },
-  { value: 'on_hold', label: 'On Hold', color: 'default', icon: <PauseIcon /> },
-  { value: 'completed', label: 'Completed', color: 'success', icon: <CheckCircleIcon /> },
-  { value: 'cancelled', label: 'Cancelled', color: 'error', icon: <CancelIcon /> },
+  { value: 'pending', label: 'Pending', color: 'warning', icon: <MoreVertIcon /> },
+  { value: 'in_progress', label: 'In Progress', color: 'info', icon: <MoreVertIcon /> },
+  { value: 'on_hold', label: 'On Hold', color: 'default', icon: <MoreVertIcon /> },
+  { value: 'completed', label: 'Completed', color: 'success', icon: <MoreVertIcon /> },
+  { value: 'cancelled', label: 'Cancelled', color: 'error', icon: <MoreVertIcon /> },
 ];
 
 // Priority options
@@ -99,102 +90,96 @@ const WorkOrders = () => {
     status: filters.status,
     priority: filters.priority,
     building: filters.building,
-    search: searchTerm
+    search: searchTerm,
   });
+
+  const { data: buildings = [] } = useGetBuildingsQuery();
+  const [deleteWorkOrder, { isLoading: isDeleting }] = useDeleteWorkOrderMutation();
 
   console.log('WorkOrders Debug: Raw API response:', workOrdersData);
 
-  // Extract work orders from response with multiple fallback patterns
+  // Extract work orders from API response with proper error handling
   const workOrders = useMemo(() => {
-    if (!workOrdersData) {
-      console.log('WorkOrders Debug: No data received');
-      return [];
-    }
-
+    if (!workOrdersData) return [];
+    
     // Handle different response structures
-    let extractedData = [];
-    if (Array.isArray(workOrdersData)) {
-      extractedData = workOrdersData;
-    } else if (workOrdersData.data?.workOrders) {
-      extractedData = workOrdersData.data.workOrders;
-    } else if (workOrdersData.workOrders) {
-      extractedData = workOrdersData.workOrders;
-    } else if (workOrdersData.data && Array.isArray(workOrdersData.data)) {
-      extractedData = workOrdersData.data;
+    let orders = [];
+    if (workOrdersData.data?.workOrders) {
+      orders = workOrdersData.data.workOrders;
+    } else if (Array.isArray(workOrdersData.data)) {
+      orders = workOrdersData.data;
+    } else if (Array.isArray(workOrdersData)) {
+      orders = workOrdersData;
     }
-
-    console.log('WorkOrders Debug: Extracted data:', extractedData);
-    console.log('WorkOrders Debug: Data length:', extractedData.length);
-
-    // Validate and clean the data
-    const validWorkOrders = extractedData.filter(wo => wo && wo._id).map(wo => ({
-      ...wo,
-      // Ensure dates are properly formatted or null
-      dueDate: wo.dueDate && !isNaN(new Date(wo.dueDate).getTime()) ? wo.dueDate : null,
-      scheduledDate: wo.scheduledDate && !isNaN(new Date(wo.scheduledDate).getTime()) ? wo.scheduledDate : null,
-      createdAt: wo.createdAt && !isNaN(new Date(wo.createdAt).getTime()) ? wo.createdAt : new Date().toISOString(),
-      // Ensure assignedTo is always an array
-      assignedTo: Array.isArray(wo.assignedTo) ? wo.assignedTo : []
+    
+    // Ensure each order has required fields with fallbacks
+    return orders.map(order => ({
+      ...order,
+      id: order._id || order.id,
+      workType: order.workType || 'N/A',
+      workSubType: order.workSubType || 'N/A',
+      apartmentNumber: order.apartmentNumber || 'N/A',
+      block: order.block || 'N/A',
+      apartmentStatus: order.apartmentStatus || 'vacant',
+      priority: order.priority || 'medium',
+      description: order.description || '',
+      estimatedCost: order.estimatedCost || 0,
+      photos: order.photos || [],
+      createdAt: order.createdAt || new Date().toISOString(),
+      building: order.building || {}
     }));
-
-    console.log('WorkOrders Debug: Valid work orders:', validWorkOrders);
-    return validWorkOrders;
   }, [workOrdersData]);
 
   const totalCount = workOrdersData?.pagination?.total || workOrdersData?.total || 0;
 
-  // Handle menu open
+  // Menu handlers
   const handleMenuOpen = (event, workOrder) => {
     setAnchorEl(event.currentTarget);
     setSelectedWorkOrder(workOrder);
   };
 
-  // Handle menu close
   const handleMenuClose = () => {
     setAnchorEl(null);
     setSelectedWorkOrder(null);
   };
 
-  // Handle view work order
-  const handleViewWorkOrder = (id) => {
-    navigate(`/work-orders/${id}`);
-    handleMenuClose();
-  };
+  // Action handlers
+  const handleView = useCallback((workOrder) => {
+    navigate(`/work-orders/${workOrder._id}`);
+  }, [navigate]);
 
-  // Handle edit work order
-  const handleEditWorkOrder = (id) => {
-    navigate(`/work-orders/${id}/edit`);
-    handleMenuClose();
-  };
+  const handleEdit = useCallback((workOrder) => {
+    navigate(`/work-orders/${workOrder._id}/edit`);
+  }, [navigate]);
 
-  // Handle delete work order
-  const [deleteWorkOrder, { isLoading: isDeleting }] = useDeleteWorkOrderMutation();
-  const handleDeleteWorkOrder = async () => {
-    try {
-      await deleteWorkOrder(selectedWorkOrder?._id).unwrap();
-      toast.success('Work order deleted successfully');
-      refetch();
-    } catch (error) {
-      toast.error('Error deleting work order');
+  const handleDelete = useCallback(async (workOrder) => {
+    if (window.confirm(`Are you sure you want to delete this work order?`)) {
+      try {
+        await deleteWorkOrder(workOrder._id).unwrap();
+        toast.success('Work order deleted successfully');
+      } catch (error) {
+        console.error('Failed to delete work order:', error);
+        toast.error(error?.data?.message || 'Failed to delete work order');
+      }
     }
-    handleMenuClose();
-  };
+  }, [deleteWorkOrder]);
 
   // Handle search input change
   const handleSearchChange = (event) => {
     setSearchTerm(event.target.value);
-    // Reset to first page when searching
-    setPagination(prev => ({ ...prev, page: 0 }));
   };
 
-  // Handle filter change
-  const handleFilterChange = (filterName, value) => {
+  // Handle filter changes
+  const handleFilterChange = (filterType, value) => {
     setFilters(prev => ({
       ...prev,
-      [filterName]: value,
+      [filterType]: value
     }));
-    // Reset to first page when filtering
-    setPagination(prev => ({ ...prev, page: 0 }));
+  };
+
+  // Handle pagination changes
+  const handlePaginationChange = (newPagination) => {
+    setPagination(newPagination);
   };
 
   // Columns for the DataGrid
@@ -378,7 +363,7 @@ const WorkOrders = () => {
       open={Boolean(anchorEl)}
       onClose={handleMenuClose}
       anchorOrigin={{
-        vertical: 'top',
+        vertical: 'bottom',
         horizontal: 'right',
       }}
       transformOrigin={{
@@ -386,7 +371,7 @@ const WorkOrders = () => {
         horizontal: 'right',
       }}
     >
-      <MenuItem onClick={() => handleViewWorkOrder(selectedWorkOrder?._id)}>
+      <MenuItem onClick={() => handleView(selectedWorkOrder)}>
         <ListItemIcon>
           <VisibilityIcon fontSize="small" />
         </ListItemIcon>
@@ -394,7 +379,7 @@ const WorkOrders = () => {
       </MenuItem>
       
       {hasPermission('update:work-orders') && (
-        <MenuItem onClick={() => handleEditWorkOrder(selectedWorkOrder?._id)}>
+        <MenuItem onClick={() => handleEdit(selectedWorkOrder)}>
           <ListItemIcon>
             <EditIcon fontSize="small" />
           </ListItemIcon>
@@ -405,13 +390,11 @@ const WorkOrders = () => {
       {hasPermission('delete:work-orders') && (
         <>
           <Divider />
-          <MenuItem onClick={handleDeleteWorkOrder}>
+          <MenuItem onClick={() => handleDelete(selectedWorkOrder)}>
             <ListItemIcon>
               <DeleteIcon fontSize="small" color="error" />
             </ListItemIcon>
-            <ListItemText primaryTypographyProps={{ color: 'error' }}>
-              Delete
-            </ListItemText>
+            <ListItemText>Delete</ListItemText>
           </MenuItem>
         </>
       )}
@@ -431,14 +414,9 @@ const WorkOrders = () => {
   if (isError) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Paper sx={{ p: 3 }}>
-          <Typography color="error" gutterBottom>
-            Error loading work orders: {error?.data?.message || 'Unknown error'}
-          </Typography>
-          <Button variant="contained" color="primary" onClick={() => refetch()}>
-            Retry
-          </Button>
-        </Paper>
+        <Alert severity="error">
+          Error loading work orders: {error?.data?.message || error?.message}
+        </Alert>
       </Container>
     );
   }
@@ -446,8 +424,7 @@ const WorkOrders = () => {
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1" sx={{ display: 'flex', alignItems: 'center' }}>
-          <WorkOrderIcon sx={{ mr: 2 }} />
+        <Typography variant="h4" component="h1">
           Work Orders
         </Typography>
         {hasPermission('create:work-orders') && (
@@ -461,86 +438,91 @@ const WorkOrders = () => {
         )}
       </Box>
 
+      {/* Search and Filters */}
       <Paper sx={{ p: 2, mb: 3 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={4}>
-            <TextField
-              fullWidth
-              placeholder="Search work orders..."
-              value={searchTerm}
-              onChange={handleSearchChange}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </Grid>
-          <Grid item xs={12} md={2}>
-            <FormControl fullWidth>
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={filters.status}
-                onChange={(e) => handleFilterChange('status', e.target.value)}
-                label="Status"
-              >
-                <MenuItem value="">All Status</MenuItem>
-                {statusOptions.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} md={2}>
-            <FormControl fullWidth>
-              <InputLabel>Priority</InputLabel>
-              <Select
-                value={filters.priority}
-                onChange={(e) => handleFilterChange('priority', e.target.value)}
-                label="Priority"
-              >
-                <MenuItem value="">All Priorities</MenuItem>
-                {priorityOptions.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} md={2}>
-            <Button
-              variant="outlined"
-              startIcon={<FilterIcon />}
-              fullWidth
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+          <TextField
+            placeholder="Search work orders..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+            size="small"
+            sx={{ minWidth: 200 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+          
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <InputLabel>Status</InputLabel>
+            <Select
+              value={filters.status}
+              label="Status"
+              onChange={(e) => handleFilterChange('status', e.target.value)}
             >
-              More Filters
-            </Button>
-          </Grid>
-        </Grid>
+              <MenuItem value="">All</MenuItem>
+              {statusOptions.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <InputLabel>Priority</InputLabel>
+            <Select
+              value={filters.priority}
+              label="Priority"
+              onChange={(e) => handleFilterChange('priority', e.target.value)}
+            >
+              <MenuItem value="">All</MenuItem>
+              {priorityOptions.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel>Building</InputLabel>
+            <Select
+              value={filters.building}
+              label="Building"
+              onChange={(e) => handleFilterChange('building', e.target.value)}
+            >
+              <MenuItem value="">All Buildings</MenuItem>
+              {buildings.map((building) => (
+                <MenuItem key={building._id} value={building._id}>
+                  {building.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
       </Paper>
 
+      {/* Data Grid */}
       <Paper sx={{ height: 600, width: '100%' }}>
         <DataGrid
           rows={workOrders}
           columns={columns}
-          getRowId={(row) => row._id}
-          paginationModel={pagination}
-          onPaginationModelChange={setPagination}
-          pageSizeOptions={[5, 10, 25, 50]}
-          checkboxSelection
-          disableRowSelectionOnClick
-          loading={isLoading}
-          rowCount={totalCount}
+          getRowId={(row) => row._id || row.id}
           paginationMode="server"
-          sortingMode="server"
-          filterMode="server"
+          rowCount={totalCount}
+          paginationModel={pagination}
+          onPaginationModelChange={handlePaginationChange}
+          pageSizeOptions={[5, 10, 25, 50]}
+          loading={isLoading}
+          disableRowSelectionOnClick
           sx={{
-            height: 600,
+            '& .MuiDataGrid-cell:focus': {
+              outline: 'none',
+            },
             '& .MuiDataGrid-row:hover': {
               backgroundColor: 'action.hover',
             },
