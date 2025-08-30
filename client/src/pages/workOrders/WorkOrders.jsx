@@ -47,18 +47,19 @@ import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 import { useGetWorkOrdersQuery } from '../../features/workOrders/workOrdersApiSlice';
 import { useAuth } from '../../hooks/useAuth';
 import { formatDate, timeAgo } from '../../utils/dateUtils';
+import { useBuildingContext } from '../../contexts/BuildingContext';
 
 const WorkOrders = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
+  const { selectedBuilding, getBuildingFilterParams } = useBuildingContext();
   
   // State for search, filters, and pagination
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     status: '',
     priority: '',
-    building: '',
     assignedTo: '',
   });
   const [anchorEl, setAnchorEl] = useState(null);
@@ -80,6 +81,7 @@ const WorkOrders = () => {
     limit: paginationModel.pageSize,
     search: searchTerm,
     ...filters,
+    ...getBuildingFilterParams(),
   });
 
   // Handle menu open
@@ -467,14 +469,14 @@ const WorkOrders = () => {
 
               <Box sx={{ height: 600, width: '100%' }}>
                 <DataGrid
-                  rows={workOrdersData?.data || []}
+                  rows={workOrdersData?.data?.workOrders || workOrdersData?.data || []}
                   columns={columns}
                   loading={isLoading}
                   pageSizeOptions={[10, 25, 50]}
                   paginationModel={paginationModel}
                   onPaginationModelChange={setPaginationModel}
                   paginationMode="server"
-                  rowCount={workOrdersData?.pagination?.total || 0}
+                  rowCount={workOrdersData?.pagination?.total || workOrdersData?.total || 0}
                   disableRowSelectionOnClick
                   disableColumnMenu
                   disableDensitySelector

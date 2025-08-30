@@ -72,7 +72,7 @@ const BuildingSelector = ({
                   color="text.secondary" 
                   sx={{ ml: 1 }}
                 >
-                  ({building.address?.city || 'No city'})
+                  ({building.city || 'No city'})
                 </Typography>
               </Box>
             </MenuItem>

@@ -250,11 +250,11 @@ const BuildingSchedule = () => {
   if (!schedules.length) {
     return (
       <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <Box sx={{ p: 3, textAlign: 'center' }}>
+      <Box sx={{ p: 3, textAlign: 'center' }}>
           <EventIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
           <Typography variant="h6" color="text.secondary" gutterBottom>
-            No schedules found for this building
-          </Typography>
+          No schedules found for this building
+        </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             Start by creating your first schedule for {selectedBuilding?.name}
           </Typography>
@@ -267,7 +267,7 @@ const BuildingSchedule = () => {
               Create First Schedule
             </Button>
           )}
-        </Box>
+      </Box>
       </LocalizationProvider>
     );
   }

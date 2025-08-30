@@ -86,14 +86,18 @@ const NotesSheet = () => {
 
   useEffect(() => {
     if (notesData) {
-      setNotes(notesData);
+      // Handle both array and object response structures
+      const notesArray = Array.isArray(notesData) 
+        ? notesData 
+        : (notesData.data?.notes || notesData.notes || []);
+      setNotes(notesArray);
     }
   }, [notesData]);
 
-  // Filter notes by selected building
+  // Filter notes by selected building - ensure we always have an array
   const filteredNotes = selectedBuilding 
-    ? notes.filter(note => note.building === selectedBuilding._id)
-    : notes;
+    ? (notes || []).filter(note => note.building === selectedBuilding._id)
+    : (notes || []);
 
   const handleOpenDialog = (note = null) => {
     if (note) {

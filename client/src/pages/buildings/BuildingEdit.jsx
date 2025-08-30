@@ -45,7 +45,29 @@ const BuildingEdit = () => {
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Paper sx={{ p: 3, textAlign: 'center' }}>
           <Typography color="error" gutterBottom>
-            Error loading building: {error?.data?.message || 'Building not found'}
+            Error loading building: {error?.data?.message || error?.message || 'Building not found'}
+          </Typography>
+          <Button 
+            variant="outlined" 
+            color="primary" 
+            onClick={() => navigate('/buildings')}
+            startIcon={<ArrowBackIcon />}
+            sx={{ mt: 2 }}
+          >
+            Back to Buildings
+          </Button>
+        </Paper>
+      </Container>
+    );
+  }
+
+  // Add check for empty building data
+  if (!isLoading && (!building || Object.keys(building).length === 0)) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Paper sx={{ p: 3, textAlign: 'center' }}>
+          <Typography color="error" gutterBottom>
+            Building data not found or empty
           </Typography>
           <Button 
             variant="outlined" 

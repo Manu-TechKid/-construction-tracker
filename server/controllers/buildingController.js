@@ -137,6 +137,8 @@ exports.createBuilding = catchAsync(async (req, res, next) => {
         const newBuilding = await Building.create({
             name: req.body.name,
             address: req.body.address,
+            city: req.body.city || '',
+            administratorName: req.body.administratorName || '',
             description: req.body.description || '',
             status: req.body.status || 'active',
             createdBy: req.user ? req.user._id : null
