@@ -128,25 +128,31 @@ const ReminderForm = ({
     enableReinitialize: true,
     onSubmit: async (values, { setSubmitting, setFieldError }) => {
       try {
-        // Create a proper JSON payload instead of FormData for now
+        // Create a proper JSON payload
         const payload = {
           title: values.title,
           description: values.description,
           building: values.building,
-          type: values.type,
-          apartment: values.apartment,
+          type: values.type || 'building',
           dueDate: values.dueDate,
           priority: values.priority,
           category: values.category,
           status: values.status || 'pending',
           notes: values.notes || []
         };
+
+        // Add apartment data if type is apartment
+        if (values.type === 'apartment' && values.apartment) {
+          payload.apartment = values.apartment;
+        }
         
+        console.log('Submitting reminder payload:', payload);
         await onSubmit(payload);
         setSubmitting(false);
       } catch (error) {
         console.error('Form submission error:', error);
         setSubmitting(false);
+        // Don't throw here, let the parent handle the error
       }
     },
   });

@@ -65,7 +65,8 @@ const BuildingSchedule = () => {
   const { 
     data: schedulesData, 
     isLoading, 
-    error 
+    error,
+    refetch
   } = useGetBuildingSchedulesQuery(
     { 
       buildingId: selectedBuilding?._id,
@@ -148,37 +149,40 @@ const BuildingSchedule = () => {
   };
 
   const handleSaveSchedule = async () => {
-    if (!formData.title.trim()) {
-      toast.error('Title is required');
+    if (!formData.title || !formData.type) {
+      toast.error('Please fill in all required fields');
       return;
     }
-
-    if (!formData.building) {
-      toast.error('Please select a building');
-      return;
-    }
-
-    const scheduleData = {
-      ...formData,
-      id: editingSchedule?.id || Date.now().toString(),
-      createdAt: editingSchedule?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
 
     try {
+      const scheduleData = {
+        ...formData,
+        building: selectedBuilding,
+        date: selectedDate || new Date(),
+        startTime: formData.startTime || '09:00',
+        endTime: formData.endTime || '17:00'
+      };
+
+      console.log('Saving schedule:', scheduleData);
+
       if (editingSchedule) {
-        await updateSchedule(scheduleData);
+        await updateSchedule({ 
+          id: editingSchedule._id || editingSchedule.id, 
+          ...scheduleData 
+        }).unwrap();
         toast.success('Schedule updated successfully');
       } else {
-        await createSchedule(scheduleData);
+        await createSchedule(scheduleData).unwrap();
         toast.success('Schedule created successfully');
       }
+
+      handleCloseDialog();
+      // Force refetch of schedules
+      refetch();
     } catch (error) {
       console.error('Error saving schedule:', error);
-      toast.error('Error saving schedule');
+      toast.error(error?.data?.message || 'Failed to save schedule');
     }
-
-    handleCloseDialog();
   };
 
   const handleDeleteSchedule = async (scheduleId) => {

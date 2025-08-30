@@ -53,8 +53,7 @@ exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
     try {
         const workOrders = await query
             .populate('building', 'name address')
-            .populate('createdBy', 'name email')
-            .populate('assignedTo.worker', 'name email');
+            .populate('createdBy', 'name email');
 
         // Get total count for pagination
         const total = await WorkOrder.countDocuments(JSON.parse(queryStr));
@@ -89,8 +88,7 @@ exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
 exports.getWorkOrder = catchAsync(async (req, res, next) => {
     const workOrder = await WorkOrder.findById(req.params.id)
         .populate({ path: 'building', select: 'name address' })
-        .populate({ path: 'createdBy', select: 'name email' })
-        .populate({ path: 'assignedTo.worker', select: 'name email' });
+        .populate({ path: 'createdBy', select: 'name email' });
     
     if (!workOrder) {
         return next(new AppError('No work order found with that ID', 404));
@@ -177,7 +175,6 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
     // 9) Populate response data
     const populatedWorkOrder = await WorkOrder.findById(workOrder._id)
       .populate({ path: 'building', select: 'name address' })
-      .populate({ path: 'assignedTo.worker', select: 'name email' })
       .populate({ path: 'createdBy', select: 'name email' });
 
     res.status(201).json({
@@ -218,7 +215,6 @@ exports.updateWorkOrder = catchAsync(async (req, res, next) => {
                 runValidators: true
             }
         ).populate({ path: 'building', select: 'name address' })
-        .populate({ path: 'assignedTo.worker', select: 'name email' })
         .populate({ path: 'createdBy', select: 'name email' });
         
         if (!workOrder) {

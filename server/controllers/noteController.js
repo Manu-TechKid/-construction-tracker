@@ -51,15 +51,22 @@ exports.getNote = catchAsync(async (req, res, next) => {
 
 // Create note with building auto-assignment
 exports.createNote = catchAsync(async (req, res, next) => {
+  console.log('Creating note with data:', req.body);
+  
   let { building, buildingName, ...noteData } = req.body;
   
   // If building name is provided instead of ID, try to find the building
   if (buildingName && !building) {
-    const foundBuilding = await Note.findBuildingByName(buildingName);
-    if (foundBuilding) {
-      building = foundBuilding._id;
-    } else {
-      return next(new AppError(`Building "${buildingName}" not found`, 404));
+    try {
+      const foundBuilding = await Note.findBuildingByName(buildingName);
+      if (foundBuilding) {
+        building = foundBuilding._id;
+      } else {
+        return next(new AppError(`Building "${buildingName}" not found`, 404));
+      }
+    } catch (error) {
+      console.error('Error finding building by name:', error);
+      return next(new AppError('Error finding building', 500));
     }
   }
   
@@ -67,23 +74,27 @@ exports.createNote = catchAsync(async (req, res, next) => {
     return next(new AppError('Building is required', 400));
   }
 
-  const note = await Note.create({
-    ...noteData,
-    building,
-    createdBy: req.user ? req.user.id : null
-  });
-  
-  await note.populate([
-    { path: 'building', select: 'name address' },
-    { path: 'createdBy', select: 'name email' }
-  ]);
+  try {
+    const note = await Note.create({
+      ...noteData,
+      building,
+      createdBy: req.user ? req.user.id : null
+    });
+    
+    const populatedNote = await Note.findById(note._id)
+      .populate('building', 'name address')
+      .populate('createdBy', 'name email');
 
-  res.status(201).json({
-    status: 'success',
-    data: {
-      note
-    }
-  });
+    res.status(201).json({
+      status: 'success',
+      data: {
+        note: populatedNote
+      }
+    });
+  } catch (error) {
+    console.error('Error creating note:', error);
+    return next(new AppError('Failed to create note: ' + error.message, 500));
+  }
 });
 
 // Update note
