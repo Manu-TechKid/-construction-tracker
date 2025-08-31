@@ -7,7 +7,7 @@
   "license": "ISC",
   "description": "Construction Tracker API Server",
   "engines": {
-    "node": "18.x"
+    "node": ">=18.0.0"
   },
   "scripts": {
     "start": "node server.js",
