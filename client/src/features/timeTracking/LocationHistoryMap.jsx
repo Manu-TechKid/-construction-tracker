@@ -27,7 +27,7 @@ const LocationHistoryMap = ({
   const [dateRange, setDateRange] = useState(7);
   const mapRef = useRef(null);
   
-  const { data: locationHistory = [], isLoading: isLoadingLocationHistory, isError: isErrorLocationHistory } = useGetWorkerLocationHistoryQuery({
+  const { data: locationHistory = [], isLoading: isLoadingLocationHistory, isError: isErrorLocationHistory, error: errorLocationHistory } = useGetWorkerLocationHistoryQuery({
     workerId,
     startDate: format(subDays(new Date(), dateRange), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd')

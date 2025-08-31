@@ -42,6 +42,7 @@ const TimeTrackingPage = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const { enqueueSnackbar } = useSnackbar();
+  const { auth } = useAuth();
 
   // Fetch worker status
   const { 

@@ -2,6 +2,16 @@ import { apiSlice } from '../../app/api/apiSlice';
 
 export const scheduleApiSlice = apiSlice.injectEndpoints({
   endpoints: builder => ({
+    // Get worker location history
+    getWorkerLocationHistory: builder.query({
+      query: ({ workerId, startDate, endDate }) => ({
+        url: `/workers/${workerId}/locations`,
+        method: 'GET',
+        params: { startDate, endDate }
+      }),
+      providesTags: ['LocationHistory']
+    }),
+
     // Get schedule items
     getSchedule: builder.query({
       query: ({ startDate, endDate, worker, status }) => ({
@@ -90,5 +100,6 @@ export const {
   useUpdateScheduleItemMutation,
   useDeleteScheduleItemMutation,
   useCheckInWorkerMutation,
-  useCheckOutWorkerMutation
+  useCheckOutWorkerMutation,
+  useGetWorkerLocationHistoryQuery
 } = scheduleApiSlice;
