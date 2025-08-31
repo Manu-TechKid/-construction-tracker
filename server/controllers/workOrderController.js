@@ -251,19 +251,60 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
 
 exports.updateWorkOrder = catchAsync(async (req, res, next) => {
     try {
+        // Validate and clean up the request body
+        const updateData = { ...req.body };
+
+        // Handle assignedTo array properly
+        if (updateData.assignedTo && Array.isArray(updateData.assignedTo)) {
+            // Convert worker IDs to proper assignment format
+            updateData.assignedTo = updateData.assignedTo
+                .filter(workerId => workerId && workerId.trim() !== '')
+                .map(workerId => ({
+                    worker: workerId,
+                    assignedAt: new Date(),
+                    status: 'assigned'
+                }));
+        }
+
         // Validate photos array if present
-        if (req.body.photos && Array.isArray(req.body.photos)) {
-            req.body.photos = req.body.photos.filter(photo => photo && photo.trim() !== '');
+        if (updateData.photos && Array.isArray(updateData.photos)) {
+            updateData.photos = updateData.photos.filter(photo => photo && photo.trim() !== '');
+        }
+
+        // Handle date fields
+        if (updateData.scheduledDate) {
+            updateData.scheduledDate = new Date(updateData.scheduledDate);
+        }
+        if (updateData.estimatedCompletionDate) {
+            updateData.estimatedCompletionDate = new Date(updateData.estimatedCompletionDate);
+        }
+
+        // Validate building exists if provided
+        if (updateData.building) {
+            const building = await Building.findById(updateData.building);
+            if (!building) {
+                return next(new AppError('Building not found', 404));
+            }
+        }
+
+        // Validate assigned workers exist
+        if (updateData.assignedTo && updateData.assignedTo.length > 0) {
+            const workerIds = updateData.assignedTo.map(assignment => assignment.worker);
+            const workers = await User.find({ _id: { $in: workerIds } });
+            if (workers.length !== workerIds.length) {
+                return next(new AppError('One or more assigned workers not found', 404));
+            }
         }
         
         const workOrder = await WorkOrder.findByIdAndUpdate(
             req.params.id,
-            req.body,
+            updateData,
             {
                 new: true,
                 runValidators: true
             }
         ).populate({ path: 'building', select: 'name address' })
+        .populate({ path: 'assignedTo.worker', select: 'name email phone' })
         .populate({ path: 'createdBy', select: 'name email' });
         
         if (!workOrder) {
@@ -283,6 +324,11 @@ exports.updateWorkOrder = catchAsync(async (req, res, next) => {
         if (error.name === 'ValidationError') {
             const errors = Object.values(error.errors).map(err => err.message);
             return next(new AppError(`Validation Error: ${errors.join(', ')}`, 400));
+        }
+        
+        // Handle cast errors (invalid ObjectId)
+        if (error.name === 'CastError') {
+            return next(new AppError('Invalid ID format', 400));
         }
         
         return next(new AppError('Failed to update work order', 500));

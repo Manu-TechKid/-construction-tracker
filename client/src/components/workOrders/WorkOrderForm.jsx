@@ -204,11 +204,7 @@ const WorkOrderForm = ({
         const formData = {
           ...values,
           photos: processedPhotos,
-          assignedTo: values.assignedTo.map(worker => ({
-            worker: worker._id || worker,
-            assignedAt: new Date(),
-            status: 'pending'
-          }))
+          assignedTo: values.assignedTo.map(worker => worker._id || worker),
         };
         
         await onSubmit(formData);

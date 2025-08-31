@@ -117,7 +117,15 @@ const Workers = () => {
   };
 
   const handleDelete = async () => {
-    if (selectedWorker) {
+    if (selectedWorker && selectedWorker._id) {
+      // Prevent deletion of admin users
+      if (selectedWorker.role === 'admin') {
+        toast.error('Cannot delete admin users - they control the system');
+        setDeleteDialogOpen(false);
+        handleMenuClose();
+        return;
+      }
+
       try {
         await deleteWorker(selectedWorker._id).unwrap();
         toast.success('Worker deleted successfully');
@@ -128,6 +136,10 @@ const Workers = () => {
         console.error('Error deleting worker:', error);
         toast.error(error?.data?.message || 'Failed to delete worker');
       }
+    } else {
+      toast.error('Cannot delete worker - invalid worker data');
+      setDeleteDialogOpen(false);
+      handleMenuClose();
     }
   };
 
@@ -597,7 +609,7 @@ const Workers = () => {
             Edit
           </MenuItem>
         )}
-        {hasPermission(['delete:workers']) && (
+        {hasPermission(['delete:workers']) && selectedWorker?.role !== 'admin' && (
           <MenuItem 
             onClick={() => {
               setDeleteDialogOpen(true);
