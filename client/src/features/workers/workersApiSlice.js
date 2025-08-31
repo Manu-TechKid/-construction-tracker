@@ -1,77 +1,111 @@
-import { apiSlice } from '../../app/api/apiSlice';
+import { apiSlice } from '../api/apiSlice';
 
 export const workersApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
+    // Get all workers (users with role='worker')
     getWorkers: builder.query({
-      query: (params = {}) => ({
-        url: '/workers',
-        params,
-      }),
-      providesTags: (result = {}, error, arg) => {
-        if (result?.data?.workers) {
-          return [
-            'Worker',
-            ...result.data.workers.map(({ _id }) => ({ type: 'Worker', id: _id })),
-          ];
-        }
-        return ['Worker'];
+      query: (params = {}) => {
+        const queryParams = new URLSearchParams();
+        
+        // Add filters
+        queryParams.append('role', 'worker');
+        if (params.status) queryParams.append('status', params.status);
+        if (params.approvalStatus) queryParams.append('approvalStatus', params.approvalStatus);
+        if (params.skills) queryParams.append('skills', params.skills);
+        
+        return `/users/workers?${queryParams.toString()}`;
       },
+      providesTags: ['Worker'],
     }),
+
+    // Get available workers for assignment
+    getAvailableWorkers: builder.query({
+      query: () => '/users/workers/available',
+      providesTags: ['Worker'],
+    }),
+
+    // Get single worker
     getWorker: builder.query({
-      query: (id) => `/workers/${id}`,
+      query: (id) => `/users/${id}`,
       providesTags: (result, error, id) => [{ type: 'Worker', id }],
     }),
+
+    // Create worker (by employer/admin)
     createWorker: builder.mutation({
       query: (workerData) => ({
-        url: '/workers',
+        url: '/users/workers',
         method: 'POST',
         body: workerData,
       }),
       invalidatesTags: ['Worker'],
     }),
+
+    // Update worker
     updateWorker: builder.mutation({
-      query: ({ id, ...updates }) => ({
-        url: `/workers/${id}`,
+      query: ({ id, ...workerData }) => ({
+        url: `/users/${id}`,
         method: 'PATCH',
-        body: updates,
+        body: workerData,
       }),
       invalidatesTags: (result, error, { id }) => [
         { type: 'Worker', id },
         'Worker',
       ],
     }),
-    deleteWorker: builder.mutation({
-      query: (id) => ({
-        url: `/workers/${id}`,
-        method: 'DELETE',
+
+    // Update worker approval status
+    updateWorkerApproval: builder.mutation({
+      query: ({ id, approvalStatus, notes }) => ({
+        url: `/users/${id}/approval`,
+        method: 'PATCH',
+        body: { approvalStatus, notes },
       }),
-      invalidatesTags: ['Worker'],
-    }),
-    getWorkerAssignments: builder.query({
-      query: (workerId) => `/workers/${workerId}/assignments`,
-      providesTags: (result = [], error, workerId) => [
-        { type: 'Worker', id: workerId },
-        ...result.map(({ _id }) => ({ type: 'WorkOrder', id: _id })),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Worker', id },
+        'Worker',
       ],
     }),
+
+    // Update worker skills
     updateWorkerSkills: builder.mutation({
       query: ({ id, skills }) => ({
-        url: `/workers/${id}/skills`,
+        url: `/users/${id}/skills`,
         method: 'PATCH',
         body: { skills },
       }),
       invalidatesTags: (result, error, { id }) => [
         { type: 'Worker', id },
+        'Worker',
       ],
     }),
+
+    // Update worker status
     updateWorkerStatus: builder.mutation({
       query: ({ id, status }) => ({
-        url: `/workers/${id}/status`,
+        url: `/users/${id}/status`,
         method: 'PATCH',
         body: { status },
       }),
       invalidatesTags: (result, error, { id }) => [
         { type: 'Worker', id },
+        'Worker',
+      ],
+    }),
+
+    // Delete worker
+    deleteWorker: builder.mutation({
+      query: (id) => ({
+        url: `/users/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Worker'],
+    }),
+
+    // Get worker assignments
+    getWorkerAssignments: builder.query({
+      query: (workerId) => `/users/${workerId}/assignments`,
+      providesTags: (result, error, workerId) => [
+        { type: 'WorkerAssignment', id: workerId },
       ],
     }),
   }),
@@ -79,11 +113,13 @@ export const workersApiSlice = apiSlice.injectEndpoints({
 
 export const {
   useGetWorkersQuery,
+  useGetAvailableWorkersQuery,
   useGetWorkerQuery,
   useCreateWorkerMutation,
   useUpdateWorkerMutation,
-  useDeleteWorkerMutation,
-  useGetWorkerAssignmentsQuery,
+  useUpdateWorkerApprovalMutation,
   useUpdateWorkerSkillsMutation,
   useUpdateWorkerStatusMutation,
+  useDeleteWorkerMutation,
+  useGetWorkerAssignmentsQuery,
 } = workersApiSlice;

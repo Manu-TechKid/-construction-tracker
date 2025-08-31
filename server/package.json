@@ -15,6 +15,8 @@
     "build:client": "cd ../client && npm install --legacy-peer-deps && npm run build",
     "migrate:apartments": "node migrations/20240101_update_apartment_schema.js",
     "migrate:apartment-photos": "node migrations/20240102_add_apartment_photos.js",
+    "migrate:workers": "node scripts/run-migration.js",
+    "postinstall": "npm run migrate:workers",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {

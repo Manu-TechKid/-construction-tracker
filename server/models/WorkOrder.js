@@ -18,7 +18,7 @@ const taskItemSchema = new mongoose.Schema({
   },
   completedBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Worker'
+    ref: 'User'
   },
   completedAt: Date,
   notes: [{
@@ -104,7 +104,7 @@ const workOrderSchema = new mongoose.Schema({
   assignedTo: [{
     worker: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Worker'
+      ref: 'User'
     },
     assignedAt: {
       type: Date,

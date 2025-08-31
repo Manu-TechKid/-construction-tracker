@@ -1,178 +1,91 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Container,
   Typography,
   Button,
+  Card,
+  CardContent,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Paper,
-  IconButton,
   Chip,
+  IconButton,
   Menu,
   MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   TextField,
   FormControl,
   InputLabel,
   Select,
-  Divider,
+  Grid,
   Alert,
   CircularProgress,
-  ListItemIcon,
-  ListItemText,
-  InputAdornment
+  Avatar,
+  AvatarGroup,
+  Tooltip,
 } from '@mui/material';
 import {
   Add as AddIcon,
-  FilterList as FilterIcon,
-  Search as SearchIcon,
   MoreVert as MoreVertIcon,
-  Visibility as VisibilityIcon,
+  Visibility as ViewIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Work as WorkOrderIcon,
-  Assignment as AssignmentIcon,
-  Person as PersonIcon
+  Assignment as AssignIcon,
+  FilterList as FilterIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
-import { DataGrid } from '@mui/x-data-grid';
+import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
 
-import {
-  useGetWorkOrdersQuery,
-  useDeleteWorkOrderMutation
-} from '../../features/workOrders/workOrdersApiSlice';
+import { useGetWorkOrdersQuery, useDeleteWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { useAuth } from '../../hooks/useAuth';
-import WorkerAssignmentDialog from '../../components/workOrders/WorkerAssignmentDialog';
-
-// Status options
-const statusOptions = [
-  { value: 'pending', label: 'Pending', color: 'warning', icon: <MoreVertIcon /> },
-  { value: 'in_progress', label: 'In Progress', color: 'info', icon: <MoreVertIcon /> },
-  { value: 'on_hold', label: 'On Hold', color: 'default', icon: <MoreVertIcon /> },
-  { value: 'completed', label: 'Completed', color: 'success', icon: <MoreVertIcon /> },
-  { value: 'cancelled', label: 'Cancelled', color: 'error', icon: <MoreVertIcon /> },
-];
-
-// Priority options
-const priorityOptions = [
-  { value: 'low', label: 'Low', color: 'success' },
-  { value: 'medium', label: 'Medium', color: 'warning' },
-  { value: 'high', label: 'High', color: 'error' },
-  { value: 'urgent', label: 'Urgent', color: 'error' },
-];
+import { useBuildingContext } from '../../contexts/BuildingContext';
 
 const WorkOrders = () => {
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
+  const { user, hasPermission, isWorker } = useAuth();
+  const { selectedBuilding } = useBuildingContext();
   
-  // State for search, filters, and pagination
-  const [searchTerm, setSearchTerm] = useState('');
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [filters, setFilters] = useState({
     status: '',
     priority: '',
-    building: '',
-  });
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
-  const [pagination, setPagination] = useState({
-    page: 0,
-    pageSize: 10,
-  });
-  
-  // Worker assignment dialog state
-  const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
-  const [workOrderToAssign, setWorkOrderToAssign] = useState(null);
-
-  // Get work orders data with proper error handling
-  const {
-    data: workOrdersData,
-    isLoading,
-    isError,
-    error,
-    refetch
-  } = useGetWorkOrdersQuery({
-    page: pagination.page + 1,
-    limit: pagination.pageSize,
-    status: filters.status,
-    priority: filters.priority,
-    building: filters.building,
-    search: searchTerm,
+    building: selectedBuilding?._id || '',
+    search: ''
   });
 
-  const { data: buildingsData, isLoading: buildingsLoading, error: buildingsError } = useGetBuildingsQuery();
+  // API calls
+  const { data: workOrdersData, isLoading, error, refetch } = useGetWorkOrdersQuery(filters);
+  const { data: buildingsData } = useGetBuildingsQuery();
   const [deleteWorkOrder, { isLoading: isDeleting }] = useDeleteWorkOrderMutation();
 
-  console.log('WorkOrders Debug: Raw API response:', workOrdersData);
-  console.log('WorkOrders Debug: Buildings data:', buildingsData);
-  console.log('WorkOrders Debug: Buildings loading:', buildingsLoading);
-  console.log('WorkOrders Debug: Buildings error:', buildingsError);
+  const workOrders = workOrdersData?.data?.workOrders || [];
+  const buildings = buildingsData?.data?.buildings || [];
 
-  // Extract buildings from API response
-  const buildings = useMemo(() => {
-    if (!buildingsData) return [];
-    
-    if (buildingsData.data?.buildings && Array.isArray(buildingsData.data.buildings)) {
-      return buildingsData.data.buildings;
-    } else if (Array.isArray(buildingsData.data)) {
-      return buildingsData.data;
-    } else if (Array.isArray(buildingsData)) {
-      return buildingsData;
+  // Filter work orders for workers - show only assigned tasks
+  const filteredWorkOrders = isWorker 
+    ? workOrders.filter(wo => wo.assignedTo?.some(assignment => assignment.worker?._id === user?._id))
+    : workOrders;
+
+  // Update building filter when selectedBuilding changes
+  useEffect(() => {
+    if (selectedBuilding) {
+      setFilters(prev => ({ ...prev, building: selectedBuilding._id }));
     }
-    
-    return [];
-  }, [buildingsData]);
+  }, [selectedBuilding]);
 
-  // Extract work orders from API response with proper error handling
-  const workOrders = useMemo(() => {
-    if (!workOrdersData) return [];
-    
-    console.log('WorkOrders Debug: Processing data:', workOrdersData);
-    
-    // Handle different response structures
-    let orders = [];
-    if (workOrdersData.data?.workOrders && Array.isArray(workOrdersData.data.workOrders)) {
-      orders = workOrdersData.data.workOrders;
-    } else if (workOrdersData.data && Array.isArray(workOrdersData.data)) {
-      orders = workOrdersData.data;
-    } else if (Array.isArray(workOrdersData)) {
-      orders = workOrdersData;
-    } else {
-      console.warn('WorkOrders Debug: Unexpected data structure:', workOrdersData);
-      return [];
-    }
-    
-    console.log('WorkOrders Debug: Extracted orders array:', orders);
-    
-    // Ensure orders is an array before mapping
-    if (!Array.isArray(orders)) {
-      console.error('WorkOrders Debug: Orders is not an array:', orders);
-      return [];
-    }
-    
-    // Ensure each order has required fields with fallbacks
-    return orders.map(order => ({
-      ...order,
-      id: order._id || order.id,
-      workType: order.workType || 'N/A',
-      workSubType: order.workSubType || 'N/A',
-      apartmentNumber: order.apartmentNumber || 'N/A',
-      block: order.block || 'N/A',
-      apartmentStatus: order.apartmentStatus || 'vacant',
-      priority: order.priority || 'medium',
-      description: order.description || '',
-      estimatedCost: order.estimatedCost || 0,
-      photos: order.photos || [],
-      createdAt: order.createdAt || new Date().toISOString(),
-      building: order.building || {},
-      assignedTo: order.assignedTo || []
-    }));
-  }, [workOrdersData]);
-
-  const totalCount = workOrdersData?.pagination?.total || workOrdersData?.total || 0;
-
-  // Menu handlers
-  const handleMenuOpen = (event, workOrder) => {
+  const handleMenuClick = (event, workOrder) => {
     setAnchorEl(event.currentTarget);
     setSelectedWorkOrder(workOrder);
   };
@@ -182,470 +95,332 @@ const WorkOrders = () => {
     setSelectedWorkOrder(null);
   };
 
-  // Action handlers
-  const handleView = useCallback((workOrder) => {
-    navigate(`/work-orders/${workOrder._id}`);
-  }, [navigate]);
-
-  const handleEdit = useCallback((workOrder) => {
-    navigate(`/work-orders/${workOrder._id}/edit`);
-  }, [navigate]);
-
-  const handleDelete = useCallback(async (workOrder) => {
-    if (window.confirm(`Are you sure you want to delete this work order?`)) {
+  const handleDelete = async () => {
+    if (selectedWorkOrder) {
       try {
-        await deleteWorkOrder(workOrder._id).unwrap();
+        await deleteWorkOrder(selectedWorkOrder._id).unwrap();
         toast.success('Work order deleted successfully');
+        setDeleteDialogOpen(false);
+        handleMenuClose();
+        refetch();
       } catch (error) {
-        console.error('Failed to delete work order:', error);
+        console.error('Error deleting work order:', error);
         toast.error(error?.data?.message || 'Failed to delete work order');
       }
     }
-  }, [deleteWorkOrder]);
-
-  // Worker assignment handlers
-  const handleAssignWorkers = useCallback((workOrder) => {
-    setWorkOrderToAssign(workOrder);
-    setAssignmentDialogOpen(true);
-    handleMenuClose();
-  }, []);
-
-  const handleAssignmentComplete = useCallback(() => {
-    refetch(); // Refresh work orders to show updated assignments
-  }, [refetch]);
-
-  // Handle search input change
-  const handleSearchChange = (event) => {
-    setSearchTerm(event.target.value);
   };
 
-  // Handle filter changes
-  const handleFilterChange = (filterType, value) => {
-    setFilters(prev => ({
-      ...prev,
-      [filterType]: value
-    }));
-  };
-
-  // Handle pagination changes
-  const handlePaginationChange = (newPagination) => {
-    setPagination(newPagination);
-  };
-
-  // Columns for the DataGrid
-  const columns = [
-    {
-      field: 'workType',
-      headerName: 'Work Type',
-      width: 120,
-      renderCell: (params) => {
-        const workType = params.row?.workType || 'N/A';
-        return (
-          <Chip
-            label={workType.charAt(0).toUpperCase() + workType.slice(1)}
-            size="small"
-            color="primary"
-            variant="outlined"
-          />
-        );
-      }
-    },
-    {
-      field: 'workSubType',
-      headerName: 'Service',
-      width: 150,
-      valueGetter: (value, row) => row?.workSubType || 'N/A'
-    },
-    {
-      field: 'building',
-      headerName: 'Building',
-      width: 200,
-      valueGetter: (value, row) => {
-        const building = row?.building;
-        if (typeof building === 'object' && building?.name) {
-          return building.name;
-        }
-        return building || 'N/A';
-      }
-    },
-    {
-      field: 'apartmentDetails',
-      headerName: 'Apartment',
-      width: 120,
-      valueGetter: (value, row) => {
-        const apt = row?.apartmentNumber || 'N/A';
-        const block = row?.block || 'N/A';
-        return `${apt} - ${block}`;
-      }
-    },
-    {
-      field: 'assignedWorkers',
-      headerName: 'Assigned Workers',
-      width: 180,
-      renderCell: (params) => {
-        const assignedWorkers = params.row?.assignedTo || [];
-        const workerCount = assignedWorkers.length;
-        
-        if (workerCount === 0) {
-          return (
-            <Chip
-              label="Unassigned"
-              size="small"
-              color="default"
-              variant="outlined"
-              icon={<PersonIcon />}
-            />
-          );
-        }
-        
-        return (
-          <Chip
-            label={`${workerCount} Worker${workerCount > 1 ? 's' : ''}`}
-            size="small"
-            color="primary"
-            variant="filled"
-            icon={<PersonIcon />}
-          />
-        );
-      }
-    },
-    {
-      field: 'apartmentStatus',
-      headerName: 'Status',
-      width: 120,
-      renderCell: (params) => {
-        const status = params.row?.apartmentStatus || 'vacant';
-        const statusColors = {
-          vacant: 'default',
-          occupied: 'success',
-          under_renovation: 'warning',
-          reserved: 'info'
-        };
-        return (
-          <Chip
-            label={status.replace('_', ' ').toUpperCase()}
-            size="small"
-            color={statusColors[status] || 'default'}
-            variant="filled"
-          />
-        );
-      }
-    },
-    {
-      field: 'priority',
-      headerName: 'Priority',
-      width: 100,
-      renderCell: (params) => {
-        const priority = params.row?.priority || 'medium';
-        const priorityColors = {
-          low: 'success',
-          medium: 'warning',
-          high: 'error',
-          urgent: 'error'
-        };
-        return (
-          <Chip
-            label={priority.toUpperCase()}
-            size="small"
-            color={priorityColors[priority] || 'default'}
-            variant={priority === 'urgent' ? 'filled' : 'outlined'}
-          />
-        );
-      }
-    },
-    {
-      field: 'description',
-      headerName: 'Description',
-      width: 200,
-      valueGetter: (value, row) => {
-        const desc = row?.description || '';
-        return desc.length > 50 ? desc.substring(0, 50) + '...' : desc;
-      }
-    },
-    {
-      field: 'estimatedCost',
-      headerName: 'Est. Cost',
-      width: 100,
-      valueGetter: (value, row) => {
-        const cost = row?.estimatedCost;
-        return cost ? `$${cost.toFixed(2)}` : 'N/A';
-      }
-    },
-    {
-      field: 'photos',
-      headerName: 'Photos',
-      width: 80,
-      renderCell: (params) => {
-        const photoCount = params.row?.photos?.length || 0;
-        return (
-          <Chip
-            label={photoCount}
-            size="small"
-            color={photoCount > 0 ? 'primary' : 'default'}
-            variant="outlined"
-          />
-        );
-      }
-    },
-    {
-      field: 'createdAt',
-      headerName: 'Created',
-      width: 120,
-      valueGetter: (value, row) => {
-        try {
-          const date = row?.createdAt;
-          if (!date) return 'N/A';
-          return format(new Date(date), 'MMM dd, yyyy');
-        } catch (error) {
-          console.error('Date formatting error:', error);
-          return 'Invalid Date';
-        }
-      }
-    },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 120,
-      sortable: false,
-      filterable: false,
-      renderCell: (params) => (
-        <Box sx={{ display: 'flex', gap: 0.5 }}>
-          <IconButton
-            size="small"
-            onClick={() => handleView(params.row)}
-            title="View Details"
-          >
-            <VisibilityIcon fontSize="small" />
-          </IconButton>
-          <IconButton
-            size="small"
-            onClick={() => handleEdit(params.row)}
-            title="Edit"
-          >
-            <EditIcon fontSize="small" />
-          </IconButton>
-          <IconButton
-            size="small"
-            onClick={() => handleAssignWorkers(params.row)}
-            title="Assign Workers"
-            color="primary"
-          >
-            <AssignmentIcon fontSize="small" />
-          </IconButton>
-          <IconButton
-            size="small"
-            onClick={() => handleDelete(params.row)}
-            title="Delete"
-            color="error"
-          >
-            <DeleteIcon fontSize="small" />
-          </IconButton>
-        </Box>
-      )
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'pending': return 'warning';
+      case 'in_progress': return 'info';
+      case 'completed': return 'success';
+      case 'on_hold': return 'default';
+      case 'cancelled': return 'error';
+      default: return 'default';
     }
-  ];
+  };
 
-  // Action menu
-  const renderMenu = (
-    <Menu
-      anchorEl={anchorEl}
-      open={Boolean(anchorEl)}
-      onClose={handleMenuClose}
-      anchorOrigin={{
-        vertical: 'bottom',
-        horizontal: 'right',
-      }}
-      transformOrigin={{
-        vertical: 'top',
-        horizontal: 'right',
-      }}
-    >
-      <MenuItem onClick={() => handleView(selectedWorkOrder)}>
-        <ListItemIcon>
-          <VisibilityIcon fontSize="small" />
-        </ListItemIcon>
-        <ListItemText>View Details</ListItemText>
-      </MenuItem>
-      
-      {hasPermission('update:work-orders') && (
-        <MenuItem onClick={() => handleEdit(selectedWorkOrder)}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Edit</ListItemText>
-        </MenuItem>
-      )}
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'urgent': return 'error';
+      case 'high': return 'error';
+      case 'medium': return 'warning';
+      case 'low': return 'success';
+      default: return 'default';
+    }
+  };
 
-      {hasPermission('assign:workers') && (
-        <MenuItem onClick={() => handleAssignWorkers(selectedWorkOrder)}>
-          <ListItemIcon>
-            <AssignmentIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Assign Workers</ListItemText>
-        </MenuItem>
-      )}
-      
-      {hasPermission('delete:work-orders') && (
-        <>
-          <Divider />
-          <MenuItem onClick={() => handleDelete(selectedWorkOrder)}>
-            <ListItemIcon>
-              <DeleteIcon fontSize="small" color="error" />
-            </ListItemIcon>
-            <ListItemText>Delete</ListItemText>
-          </MenuItem>
-        </>
-      )}
-    </Menu>
-  );
+  const renderAssignedWorkers = (assignedTo) => {
+    if (!assignedTo || assignedTo.length === 0) {
+      return <Typography variant="body2" color="text.secondary">Unassigned</Typography>;
+    }
+
+    return (
+      <AvatarGroup max={3} sx={{ justifyContent: 'flex-start' }}>
+        {assignedTo.map((assignment, index) => (
+          <Tooltip key={index} title={`${assignment.worker?.name} (${assignment.status})`}>
+            <Avatar sx={{ width: 32, height: 32, fontSize: '0.8rem' }}>
+              {assignment.worker?.name?.charAt(0)?.toUpperCase()}
+            </Avatar>
+          </Tooltip>
+        ))}
+      </AvatarGroup>
+    );
+  };
 
   if (isLoading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-          <CircularProgress />
-        </Box>
-      </Container>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <CircularProgress />
+      </Box>
     );
   }
 
-  if (isError) {
+  if (error) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Alert severity="error">
-          Error loading work orders: {error?.data?.message || error?.message}
-        </Alert>
-      </Container>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <Typography color="error">Error loading work orders: {error?.data?.message || 'Unknown error'}</Typography>
+      </Box>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+    <Box>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">
-          Work Orders
+          {isWorker ? 'My Work Orders' : 'Work Orders'}
         </Typography>
-        {hasPermission('create:work-orders') && (
+        {!isWorker && hasPermission(['create:workorders']) && (
           <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => navigate('/work-orders/create')}
           >
-            New Work Order
+            Create Work Order
           </Button>
         )}
       </Box>
 
-      {/* Search and Filters */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-          <TextField
-            placeholder="Search work orders..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            size="small"
-            sx={{ minWidth: 200 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-          />
-          
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>Status</InputLabel>
-            <Select
-              value={filters.status}
-              label="Status"
-              onChange={(e) => handleFilterChange('status', e.target.value)}
-            >
-              <MenuItem value="">All</MenuItem>
-              {statusOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+      {/* Filters - simplified for workers */}
+      {!isWorker && (
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} sm={6} md={2}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  placeholder="Search..."
+                  value={filters.search}
+                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                  InputProps={{
+                    startAdornment: <SearchIcon color="action" sx={{ mr: 1 }} />
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={2}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Status</InputLabel>
+                  <Select
+                    value={filters.status}
+                    onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                    label="Status"
+                  >
+                    <MenuItem value="">All Statuses</MenuItem>
+                    <MenuItem value="pending">Pending</MenuItem>
+                    <MenuItem value="in_progress">In Progress</MenuItem>
+                    <MenuItem value="completed">Completed</MenuItem>
+                    <MenuItem value="on_hold">On Hold</MenuItem>
+                    <MenuItem value="cancelled">Cancelled</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6} md={2}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Priority</InputLabel>
+                  <Select
+                    value={filters.priority}
+                    onChange={(e) => setFilters(prev => ({ ...prev, priority: e.target.value }))}
+                    label="Priority"
+                  >
+                    <MenuItem value="">All Priorities</MenuItem>
+                    <MenuItem value="low">Low</MenuItem>
+                    <MenuItem value="medium">Medium</MenuItem>
+                    <MenuItem value="high">High</MenuItem>
+                    <MenuItem value="urgent">Urgent</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6} md={2}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Building</InputLabel>
+                  <Select
+                    value={filters.building}
+                    onChange={(e) => setFilters(prev => ({ ...prev, building: e.target.value }))}
+                    label="Building"
+                  >
+                    <MenuItem value="">All Buildings</MenuItem>
+                    {buildings.map((building) => (
+                      <MenuItem key={building._id} value={building._id}>
+                        {building.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      )}
 
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>Priority</InputLabel>
-            <Select
-              value={filters.priority}
-              label="Priority"
-              onChange={(e) => handleFilterChange('priority', e.target.value)}
-            >
-              <MenuItem value="">All</MenuItem>
-              {priorityOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControl size="small" sx={{ minWidth: 200 }}>
-            <InputLabel>Building</InputLabel>
-            <Select
-              value={filters.building}
-              label="Building"
-              onChange={(e) => handleFilterChange('building', e.target.value)}
-            >
-              <MenuItem value="">All Buildings</MenuItem>
-              {buildingsLoading ? (
-                <MenuItem value="">Loading...</MenuItem>
-              ) : buildingsError ? (
-                <MenuItem value="">Error loading buildings</MenuItem>
-              ) : buildings.length === 0 ? (
-                <MenuItem value="">No buildings found</MenuItem>
+      {/* Work Orders Table */}
+      <Card>
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Work Type</TableCell>
+                <TableCell>Building</TableCell>
+                <TableCell>Apartment</TableCell>
+                <TableCell>Assigned Workers</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Priority</TableCell>
+                <TableCell>Description</TableCell>
+                {!isWorker && <TableCell>Est. Cost</TableCell>}
+                <TableCell>Created</TableCell>
+                <TableCell>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredWorkOrders.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={isWorker ? 9 : 10} align="center">
+                    <Box py={4}>
+                      <Typography variant="h6" color="text.secondary" gutterBottom>
+                        {isWorker ? 'No work orders assigned to you' : 'No work orders found'}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {isWorker 
+                          ? 'Check back later for new assignments'
+                          : 'Create your first work order to get started'
+                        }
+                      </Typography>
+                      {!isWorker && hasPermission(['create:workorders']) && (
+                        <Button
+                          variant="contained"
+                          startIcon={<AddIcon />}
+                          onClick={() => navigate('/work-orders/create')}
+                          sx={{ mt: 2 }}
+                        >
+                          Create Your First Work Order
+                        </Button>
+                      )}
+                    </Box>
+                  </TableCell>
+                </TableRow>
               ) : (
-                Array.isArray(buildings) && buildings.map((building) => (
-                  <MenuItem key={building._id} value={building._id}>
-                    {building.name}
-                  </MenuItem>
+                filteredWorkOrders.map((workOrder) => (
+                  <TableRow key={workOrder._id} hover>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight="medium">
+                        {workOrder.workType?.toUpperCase()}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {workOrder.workSubType}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {workOrder.building?.name || 'N/A'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      {workOrder.apartmentNumber || 'N/A'}
+                      {workOrder.block && ` (${workOrder.block})`}
+                    </TableCell>
+                    <TableCell>
+                      {renderAssignedWorkers(workOrder.assignedTo)}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={workOrder.status?.replace('_', ' ').toUpperCase() || 'PENDING'}
+                        color={getStatusColor(workOrder.status)}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={workOrder.priority?.toUpperCase() || 'MEDIUM'}
+                        color={getPriorityColor(workOrder.priority)}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>
+                        {workOrder.description || 'No description'}
+                      </Typography>
+                    </TableCell>
+                    {!isWorker && (
+                      <TableCell>
+                        <Typography variant="body2">
+                          ${workOrder.estimatedCost?.toFixed(2) || '0.00'}
+                        </Typography>
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      {format(new Date(workOrder.createdAt), 'MMM dd, yyyy')}
+                    </TableCell>
+                    <TableCell>
+                      <IconButton
+                        onClick={(e) => handleMenuClick(e, workOrder)}
+                        size="small"
+                      >
+                        <MoreVertIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
-            </Select>
-          </FormControl>
-        </Box>
-      </Paper>
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Card>
 
-      {/* Data Grid */}
-      <Paper sx={{ height: 600, width: '100%' }}>
-        <DataGrid
-          rows={workOrders}
-          columns={columns}
-          getRowId={(row) => row._id || row.id}
-          paginationMode="server"
-          rowCount={totalCount}
-          paginationModel={pagination}
-          onPaginationModelChange={handlePaginationChange}
-          pageSizeOptions={[5, 10, 25, 50]}
-          loading={isLoading}
-          disableRowSelectionOnClick
-          sx={{
-            '& .MuiDataGrid-cell:focus': {
-              outline: 'none',
-            },
-            '& .MuiDataGrid-row:hover': {
-              backgroundColor: 'action.hover',
-            },
-          }}
-        />
-      </Paper>
+      {/* Action Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+      >
+        <MenuItem onClick={() => navigate(`/work-orders/${selectedWorkOrder?._id}`)}>
+          <ViewIcon sx={{ mr: 1 }} />
+          View Details
+        </MenuItem>
+        {!isWorker && hasPermission(['update:workorders']) && (
+          <MenuItem onClick={() => navigate(`/work-orders/${selectedWorkOrder?._id}/edit`)}>
+            <EditIcon sx={{ mr: 1 }} />
+            Edit
+          </MenuItem>
+        )}
+        {!isWorker && hasPermission(['delete:workorders']) && (
+          <MenuItem 
+            onClick={() => {
+              setDeleteDialogOpen(true);
+              handleMenuClose();
+            }}
+            sx={{ color: 'error.main' }}
+          >
+            <DeleteIcon sx={{ mr: 1 }} />
+            Delete
+          </MenuItem>
+        )}
+      </Menu>
 
-      {renderMenu}
-      
-      {/* Worker Assignment Dialog */}
-      <WorkerAssignmentDialog
-        open={assignmentDialogOpen}
-        onClose={() => setAssignmentDialogOpen(false)}
-        workOrder={workOrderToAssign}
-        onAssignmentComplete={handleAssignmentComplete}
-      />
-    </Container>
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Delete Work Order</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this work order? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDelete} 
+            color="error" 
+            variant="contained"
+            disabled={isDeleting}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
 

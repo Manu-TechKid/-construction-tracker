@@ -12,7 +12,7 @@ const ROLE_PERMISSIONS = {
     'read:reminders', 'create:reminders', 'update:reminders', 'delete:reminders',
     'read:schedules', 'create:schedules', 'update:schedules', 'delete:schedules',
     'read:notes', 'create:notes', 'update:notes', 'delete:notes',
-    'assign:workers', 'manage:users', 'view:costs', 'view:reports'
+    'assign:workers', 'manage:users', 'view:costs', 'view:reports', 'approve:workers'
   ],
   manager: [
     'read:buildings', 'create:buildings', 'update:buildings', 'delete:buildings',
@@ -22,7 +22,7 @@ const ROLE_PERMISSIONS = {
     'read:reminders', 'create:reminders', 'update:reminders', 'delete:reminders',
     'read:schedules', 'create:schedules', 'update:schedules', 'delete:schedules',
     'read:notes', 'create:notes', 'update:notes', 'delete:notes',
-    'assign:workers', 'view:costs', 'view:reports'
+    'assign:workers', 'view:costs', 'view:reports', 'approve:workers'
   ],
   supervisor: [
     'read:buildings', 'read:workorders', 'create:workorders', 'update:workorders',

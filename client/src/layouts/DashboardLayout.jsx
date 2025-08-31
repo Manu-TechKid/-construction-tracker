@@ -33,6 +33,7 @@ import {
   Settings as SettingsIcon,
   Logout as LogoutIcon,
   Work as WorkIcon,
+  CheckCircle as ApprovalIcon,
 } from '@mui/icons-material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
@@ -135,6 +136,16 @@ const DashboardLayout = () => {
         icon: <PeopleIcon />,
         path: '/workers',
         permission: 'read:workers'
+      });
+    }
+
+    // Worker Approval - for admins
+    if (!isWorker && hasPermission(['approve:workers'])) {
+      items.push({
+        text: 'Worker Approval',
+        icon: <ApprovalIcon />,
+        path: '/worker-approval',
+        permission: 'approve:workers'
       });
     }
 

@@ -31,23 +31,19 @@ import {
   Assignment as AssignmentIcon,
   LocationOn as LocationIcon,
   Schedule as ScheduleIcon,
-  Phone as PhoneIcon,
-  Email as EmailIcon,
   Work as WorkIcon,
   CheckCircle as CheckCircleIcon,
   PlayArrow as StartIcon,
   Pause as PauseIcon,
-  Stop as StopIcon,
   Notes as NotesIcon,
   Refresh as RefreshIcon,
-  Notifications as NotificationsIcon,
   Person as PersonIcon
 } from '@mui/icons-material';
 import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { toast } from 'react-toastify';
 
-import { useGetWorkerAssignmentsQuery } from '../../features/workers/workersApiSlice';
-import { useUpdateWorkOrderStatusMutation } from '../../features/workOrders/workOrdersApiSlice';
+import { useGetWorkOrdersQuery } from '../../features/workOrders/workOrdersApiSlice';
+import { useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 import { useAuth } from '../../hooks/useAuth';
 
 const WorkerDashboard = () => {
@@ -59,27 +55,38 @@ const WorkerDashboard = () => {
     notes: ''
   });
 
-  // Get worker assignments
+  // Get work orders assigned to this worker
   const {
-    data: assignmentsData,
+    data: workOrdersData,
     isLoading,
     isError,
     error,
     refetch
-  } = useGetWorkerAssignmentsQuery(user?.id, {
+  } = useGetWorkOrdersQuery({}, {
     pollingInterval: 30000, // Poll every 30 seconds for real-time updates
   });
 
-  const [updateWorkOrderStatus, { isLoading: updatingStatus }] = useUpdateWorkOrderStatusMutation();
+  const [updateWorkOrder, { isLoading: updatingStatus }] = useUpdateWorkOrderMutation();
 
-  // Extract assignments from API response
-  const assignments = assignmentsData || [];
+  // Filter work orders assigned to current worker
+  const assignments = (workOrdersData?.data?.workOrders || []).filter(workOrder => 
+    workOrder.assignedTo?.some(assignment => assignment.worker?._id === user?._id)
+  );
   
-  // Group assignments by status
+  // Group assignments by worker's assignment status
   const groupedAssignments = {
-    pending: assignments.filter(a => a.assignedTo?.find(at => at.worker._id === user?.id)?.status === 'pending'),
-    in_progress: assignments.filter(a => a.assignedTo?.find(at => at.worker._id === user?.id)?.status === 'in_progress'),
-    completed: assignments.filter(a => a.assignedTo?.find(at => at.worker._id === user?.id)?.status === 'completed'),
+    pending: assignments.filter(wo => {
+      const workerAssignment = wo.assignedTo?.find(at => at.worker?._id === user?._id);
+      return workerAssignment?.status === 'pending';
+    }),
+    in_progress: assignments.filter(wo => {
+      const workerAssignment = wo.assignedTo?.find(at => at.worker?._id === user?._id);
+      return workerAssignment?.status === 'in_progress';
+    }),
+    completed: assignments.filter(wo => {
+      const workerAssignment = wo.assignedTo?.find(at => at.worker?._id === user?._id);
+      return workerAssignment?.status === 'completed';
+    }),
   };
 
   const totalPending = groupedAssignments.pending.length;
@@ -94,11 +101,22 @@ const WorkerDashboard = () => {
     }
 
     try {
-      await updateWorkOrderStatus({
+      // Update the worker's assignment status within the work order
+      const updatedAssignedTo = selectedAssignment.assignedTo.map(assignment => {
+        if (assignment.worker._id === user._id) {
+          return {
+            ...assignment,
+            status: statusUpdate.status,
+            notes: statusUpdate.notes,
+            completedAt: statusUpdate.status === 'completed' ? new Date() : assignment.completedAt
+          };
+        }
+        return assignment;
+      });
+
+      await updateWorkOrder({
         id: selectedAssignment._id,
-        status: statusUpdate.status,
-        notes: statusUpdate.notes,
-        workerId: user?.id
+        assignedTo: updatedAssignedTo
       }).unwrap();
 
       toast.success('Status updated successfully');
@@ -114,8 +132,9 @@ const WorkerDashboard = () => {
 
   const openStatusDialog = (assignment) => {
     setSelectedAssignment(assignment);
-    const currentStatus = assignment.assignedTo?.find(at => at.worker._id === user?.id)?.status || 'pending';
-    setStatusUpdate({ status: currentStatus, notes: '' });
+    const workerAssignment = assignment.assignedTo?.find(at => at.worker._id === user._id);
+    const currentStatus = workerAssignment?.status || 'pending';
+    setStatusUpdate({ status: currentStatus, notes: workerAssignment?.notes || '' });
     setStatusUpdateDialog(true);
   };
 
@@ -150,10 +169,10 @@ const WorkerDashboard = () => {
   };
 
   const renderAssignmentCard = (assignment) => {
-    const workerAssignment = assignment.assignedTo?.find(at => at.worker._id === user?.id);
+    const workerAssignment = assignment.assignedTo?.find(at => at.worker._id === user._id);
     const status = workerAssignment?.status || 'pending';
     const assignedDate = workerAssignment?.assignedAt;
-    const otherWorkers = assignment.assignedTo?.filter(at => at.worker._id !== user?.id) || [];
+    const otherWorkers = assignment.assignedTo?.filter(at => at.worker._id !== user._id) || [];
 
     return (
       <Card 
@@ -242,13 +261,6 @@ const WorkerDashboard = () => {
                 ))}
               </Box>
             </Box>
-          )}
-
-          {/* Estimated cost */}
-          {assignment.estimatedCost && (
-            <Typography variant="body2" color="text.secondary">
-              Estimated Cost: ${assignment.estimatedCost.toFixed(2)}
-            </Typography>
           )}
         </CardContent>
 

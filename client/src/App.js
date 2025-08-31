@@ -48,6 +48,7 @@ import NotesSheet from './components/notes/NotesSheet';
 import BuildingSchedule from './pages/scheduling/BuildingSchedule';
 import WorkerDashboard from './pages/workers/WorkerDashboard';
 import EditWorker from './pages/workers/EditWorker';
+import WorkerApproval from './pages/admin/WorkerApproval';
 
 // Route Protection
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -291,6 +292,16 @@ const AppContent = () => {
                 element={
                   <RoleBasedRoute requiredPermissions={['read:schedules']}>
                     <BuildingSchedule />
+                  </RoleBasedRoute>
+                } 
+              />
+
+              {/* Worker Approval */}
+              <Route 
+                path="worker-approval" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['approve:workers']}>
+                    <WorkerApproval />
                   </RoleBasedRoute>
                 } 
               />

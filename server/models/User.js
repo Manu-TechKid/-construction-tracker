@@ -38,10 +38,61 @@ const userSchema = new mongoose.Schema({
     lastLogin: Date,
     passwordChangedAt: Date,
     passwordResetToken: String,
-    passwordResetExpires: Date
+    passwordResetExpires: Date,
+    
+    // Worker-specific fields (only used when role === 'worker')
+    workerProfile: {
+        skills: [{
+            type: String,
+            enum: ['painting', 'carpentry', 'plumbing', 'electrical', 'cleaning', 'general_labor', 'hvac', 'flooring', 'roofing']
+        }],
+        paymentType: {
+            type: String,
+            enum: ['hourly', 'contract'],
+            default: 'hourly'
+        },
+        hourlyRate: {
+            type: Number,
+            min: 0
+        },
+        contractRate: {
+            type: Number,
+            min: 0
+        },
+        status: {
+            type: String,
+            enum: ['active', 'inactive', 'on_leave'],
+            default: 'active'
+        },
+        notes: String,
+        // Track if this worker was created by an employer vs self-registered
+        createdBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        // Employer approval status for self-registered workers
+        approvalStatus: {
+            type: String,
+            enum: ['pending', 'approved', 'rejected'],
+            default: function() {
+                // Auto-approve if created by employer, pending if self-registered
+                return this.createdBy ? 'approved' : 'pending';
+            }
+        },
+        approvedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        approvedAt: Date
+    }
 }, {
     timestamps: true
 });
+
+// Index for worker queries
+userSchema.index({ role: 1, 'workerProfile.status': 1 });
+userSchema.index({ 'workerProfile.skills': 1 });
+userSchema.index({ 'workerProfile.approvalStatus': 1 });
 
 // Hash password before saving
 userSchema.pre('save', async function(next) {
@@ -55,6 +106,19 @@ userSchema.pre('save', async function(next) {
 userSchema.pre('save', function(next) {
     if (!this.isModified('password') || this.isNew) return next();
     this.passwordChangedAt = Date.now() - 1000; // ensure token issued after this
+    next();
+});
+
+// Initialize worker profile for workers
+userSchema.pre('save', function(next) {
+    if (this.role === 'worker' && !this.workerProfile) {
+        this.workerProfile = {
+            skills: [],
+            paymentType: 'hourly',
+            status: 'active',
+            approvalStatus: this.createdBy ? 'approved' : 'pending'
+        };
+    }
     next();
 });
 
@@ -84,6 +148,21 @@ userSchema.methods.createPasswordResetToken = function() {
         .digest('hex');
     this.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
     return resetToken;
+};
+
+// Virtual for checking if user is an approved worker
+userSchema.virtual('isApprovedWorker').get(function() {
+    return this.role === 'worker' && this.workerProfile?.approvalStatus === 'approved';
+});
+
+// Static method to get available workers
+userSchema.statics.getAvailableWorkers = function() {
+    return this.find({
+        role: 'worker',
+        isActive: true,
+        'workerProfile.status': 'active',
+        'workerProfile.approvalStatus': 'approved'
+    }).select('name email phone workerProfile');
 };
 
 module.exports = mongoose.model('User', userSchema);
