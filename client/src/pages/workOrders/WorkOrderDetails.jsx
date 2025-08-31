@@ -51,14 +51,39 @@ import {
   AssignmentReturned as AssignmentReturnedIcon,
   Cancel as CancelIcon,
   Save as SaveIcon,
+  MoreVert as MoreVertIcon,
 } from '@mui/icons-material';
-import { format, parseISO, isBefore } from 'date-fns';
+import { format, parseISO, isBefore, formatDistanceToNow } from 'date-fns';
 import { toast } from 'react-toastify';
 
 import { useGetWorkOrderQuery, useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { useAuth } from '../../hooks/useAuth';
 import PhotoUpload from '../../components/common/PhotoUpload';
+
+// Utility functions
+const formatDate = (dateString, type = 'default') => {
+  if (!dateString) return 'N/A';
+  try {
+    const date = parseISO(dateString);
+    if (type === 'full') {
+      return format(date, 'PPP p'); // Full date with time
+    }
+    return format(date, 'PPP'); // Default date format
+  } catch (error) {
+    return 'Invalid date';
+  }
+};
+
+const timeAgo = (dateString) => {
+  if (!dateString) return 'N/A';
+  try {
+    const date = parseISO(dateString);
+    return formatDistanceToNow(date, { addSuffix: true });
+  } catch (error) {
+    return 'Invalid date';
+  }
+};
 
 // Tab components
 const WorkOrderInfoTab = ({ workOrder, buildings, workers, onUpdateWorkOrder }) => {
