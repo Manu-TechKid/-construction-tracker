@@ -175,7 +175,7 @@ export const isFuture = (date) => {
 
 export const timeAgo = getTimeAgo; // Alias for backward compatibility
 
-export default {
+const dateUtils = {
   formatDate,
   getTimeAgo,
   timeAgo: getTimeAgo,
@@ -184,3 +184,5 @@ export default {
   isPast,
   isFuture,
 };
+
+export default dateUtils;
