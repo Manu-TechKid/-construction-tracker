@@ -3,7 +3,9 @@
     name: construction-tracker
     env: node
     buildCommand: |
-      cd client && npm install --legacy-peer-deps
+      cd client
+      npm install --legacy-peer-deps
+      npm install -g cross-env
       npm run build
       cd ../server
       npm install
