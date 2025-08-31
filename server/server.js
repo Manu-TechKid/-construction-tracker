@@ -20,6 +20,7 @@ const invoiceRoutes = require('./routes/invoiceRoutes');
 const scheduleRoutes = require('./routes/scheduleRoutes');
 const noteRoutes = require('./routes/noteRoutes');
 const reminderRoutes = require('./routes/reminderRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 
 // Import routes
 const AppError = require('./utils/appError');
@@ -119,6 +120,7 @@ app.use('/api/v1/invoices', invoiceRoutes);
 app.use('/api/v1/schedules', scheduleRoutes);
 app.use('/api/v1/notes', noteRoutes);
 app.use('/api/v1/reminders', reminderRoutes);
+app.use('/api/v1/uploads', uploadRoutes);
 
 // Health check endpoints
 app.get('/api/v1/health', (req, res) => {

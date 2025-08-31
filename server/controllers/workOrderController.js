@@ -426,7 +426,7 @@ exports.assignWorkers = catchAsync(async (req, res, next) => {
   // Add new assignments with proper structure matching WorkOrder model
   workers.forEach(assignment => {
     workOrder.assignedTo.push({
-      worker: assignment.worker,
+      worker: assignment.worker || assignment._id,
       assignedAt: new Date(),
       assignedBy: req.user.id,
       status: assignment.status || 'pending',
@@ -443,7 +443,7 @@ exports.assignWorkers = catchAsync(async (req, res, next) => {
   await workOrder.save();
   
   // Populate worker details for response
-  await workOrder.populate('assignedTo.worker', 'name email phone skills');
+  await workOrder.populate('assignedTo.worker', 'name email phone workerProfile.skills');
   await workOrder.populate('building', 'name address');
   
   res.status(200).json({
@@ -598,44 +598,6 @@ exports.getWorkerAssignments = catchAsync(async (req, res, next) => {
     status: 'success',
     data: {
       assignments: workOrder.assignedTo
-    }
-  });
-});
-
-// Assign workers to work order
-exports.assignWorkers = catchAsync(async (req, res, next) => {
-  const { workers } = req.body; // Array of { worker, scheduledDate, scheduledTime, hourlyRate, contractAmount }
-  
-  const workOrder = await WorkOrder.findById(req.params.id);
-  
-  if (!workOrder) {
-    return next(new AppError('No work order found with that ID', 404));
-  }
-  
-  // Clear existing assignments
-  workOrder.assignedTo = [];
-  
-  // Add new assignments
-  workers.forEach(assignment => {
-    workOrder.assignedTo.push({
-      worker: assignment.worker,
-      scheduledDate: assignment.scheduledDate,
-      scheduledTime: assignment.scheduledTime,
-      hourlyRate: assignment.hourlyRate,
-      contractAmount: assignment.contractAmount,
-      paymentType: assignment.paymentType || 'hourly',
-      assignedDate: new Date()
-    });
-  });
-  
-  await workOrder.save();
-  
-  await workOrder.populate({ path: 'assignedTo.worker', select: 'name email phone' });
-  
-  res.status(200).json({
-    status: 'success',
-    data: {
-      workOrder
     }
   });
 });

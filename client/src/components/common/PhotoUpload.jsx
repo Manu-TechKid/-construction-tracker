@@ -17,6 +17,8 @@ import {
   Select,
   MenuItem,
   Chip,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   CloudUpload as UploadIcon,
@@ -25,25 +27,56 @@ import {
   PhotoCamera as PhotoIcon,
 } from '@mui/icons-material';
 import { useDropzone } from 'react-dropzone';
+import { toast } from 'react-toastify';
+import photoService from '../../services/photoService';
 
-const PhotoUpload = ({ photos = [], onPhotosChange, maxPhotos = 10 }) => {
+const PhotoUpload = ({ photos = [], onPhotosChange, maxPhotos = 10, workOrderId = null }) => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingPhoto, setEditingPhoto] = useState(null);
   const [caption, setCaption] = useState('');
   const [photoType, setPhotoType] = useState('other');
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
 
-  const onDrop = useCallback((acceptedFiles) => {
-    const newPhotos = acceptedFiles.map(file => ({
-      id: Date.now() + Math.random(),
-      file,
-      url: URL.createObjectURL(file),
-      caption: '',
-      type: 'other',
-      uploadedAt: new Date().toISOString(),
-    }));
-
-    const updatedPhotos = [...photos, ...newPhotos].slice(0, maxPhotos);
-    onPhotosChange(updatedPhotos);
+  const onDrop = useCallback(async (acceptedFiles) => {
+    if (!acceptedFiles.length) return;
+    
+    setUploading(true);
+    setError('');
+    
+    try {
+      const newPhotos = [];
+      
+      for (const file of acceptedFiles) {
+        // Validate file
+        photoService.validateFile(file);
+        
+        // Create preview URL
+        const previewUrl = URL.createObjectURL(file);
+        
+        const photo = {
+          id: Date.now() + Math.random(),
+          file,
+          url: previewUrl,
+          caption: '',
+          type: 'other',
+          uploadedAt: new Date().toISOString(),
+          isUploaded: false
+        };
+        
+        newPhotos.push(photo);
+      }
+      
+      const updatedPhotos = [...photos, ...newPhotos].slice(0, maxPhotos);
+      onPhotosChange(updatedPhotos);
+      
+    } catch (error) {
+      console.error('Photo upload error:', error);
+      setError(error.message);
+      toast.error(error.message);
+    } finally {
+      setUploading(false);
+    }
   }, [photos, onPhotosChange, maxPhotos]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -52,12 +85,25 @@ const PhotoUpload = ({ photos = [], onPhotosChange, maxPhotos = 10 }) => {
       'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp']
     },
     maxFiles: maxPhotos - photos.length,
-    disabled: photos.length >= maxPhotos
+    disabled: photos.length >= maxPhotos || uploading
   });
 
-  const handleDeletePhoto = (photoId) => {
-    const updatedPhotos = photos.filter(photo => photo.id !== photoId);
-    onPhotosChange(updatedPhotos);
+  const handleDeletePhoto = async (photo) => {
+    try {
+      if (workOrderId && photo.isUploaded && photo._id) {
+        // Delete from server
+        await photoService.deletePhoto(workOrderId, photo._id);
+      }
+      
+      // Remove from local state
+      const updatedPhotos = photos.filter(p => p.id !== photo.id);
+      onPhotosChange(updatedPhotos);
+      
+      toast.success('Photo deleted successfully');
+    } catch (error) {
+      console.error('Delete photo error:', error);
+      toast.error('Failed to delete photo');
+    }
   };
 
   const handleEditPhoto = (photo) => {
@@ -76,6 +122,7 @@ const PhotoUpload = ({ photos = [], onPhotosChange, maxPhotos = 10 }) => {
     onPhotosChange(updatedPhotos);
     setEditDialogOpen(false);
     setEditingPhoto(null);
+    toast.success('Photo updated successfully');
   };
 
   const getPhotoTypeColor = (type) => {
@@ -144,6 +191,14 @@ const PhotoUpload = ({ photos = [], onPhotosChange, maxPhotos = 10 }) => {
               <Typography variant="caption" color="text.secondary" display="block" mt={1}>
                 Supports: JPEG, PNG, GIF, WebP (Max {maxPhotos} photos)
               </Typography>
+              {uploading && (
+                <CircularProgress sx={{ mt: 2 }} />
+              )}
+              {error && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                  {error}
+                </Alert>
+              )}
             </Box>
           </CardContent>
         </Card>
@@ -186,7 +241,7 @@ const PhotoUpload = ({ photos = [], onPhotosChange, maxPhotos = 10 }) => {
                     </IconButton>
                     <IconButton
                       size="small"
-                      onClick={() => handleDeletePhoto(photo.id)}
+                      onClick={() => handleDeletePhoto(photo)}
                       sx={{
                         backgroundColor: 'rgba(255, 255, 255, 0.8)',
                         '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' }

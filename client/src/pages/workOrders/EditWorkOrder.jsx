@@ -29,7 +29,11 @@ const EditWorkOrder = () => {
         priority: workOrder.priority || 'medium',
         status: workOrder.status || 'pending',
         estimatedCost: workOrder.estimatedCost || 0,
-        assignedTo: workOrder.assignedTo || []
+        actualCost: workOrder.actualCost || 0,
+        scheduledDate: workOrder.scheduledDate ? new Date(workOrder.scheduledDate) : null,
+        estimatedCompletionDate: workOrder.estimatedCompletionDate ? new Date(workOrder.estimatedCompletionDate) : null,
+        assignedTo: workOrder.assignedTo?.map(assignment => assignment.worker) || [],
+        photos: workOrder.photos || []
       });
     }
   }, [workOrderData]);

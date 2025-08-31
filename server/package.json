@@ -16,7 +16,6 @@
     "migrate:apartments": "node migrations/20240101_update_apartment_schema.js",
     "migrate:apartment-photos": "node migrations/20240102_add_apartment_photos.js",
     "migrate:workers": "node scripts/run-migration.js",
-    "postinstall": "npm run migrate:workers",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
@@ -34,7 +33,7 @@
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^7.0.3",
     "morgan": "^1.10.0",
-    "multer": "^2.0.2",
+    "multer": "^1.4.5-lts.1",
     "nodemailer": "^7.0.5",
     "nodemon": "^2.0.22",
     "xss-clean": "^0.1.1",

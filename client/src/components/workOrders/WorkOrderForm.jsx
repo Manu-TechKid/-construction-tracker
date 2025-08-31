@@ -162,6 +162,9 @@ const WorkOrderForm = ({
     priority: Yup.string().required('Priority is required'),
     status: Yup.string().required('Status is required'),
     estimatedCost: Yup.number().min(0, 'Cost must be positive'),
+    actualCost: Yup.number().min(0, 'Actual cost must be positive'),
+    scheduledDate: Yup.date().nullable(),
+    estimatedCompletionDate: Yup.date().nullable(),
   });
 
   const initialValues = {
@@ -175,7 +178,11 @@ const WorkOrderForm = ({
     priority: 'medium',
     status: 'pending',
     estimatedCost: 0,
+    actualCost: 0,
+    scheduledDate: null,
+    estimatedCompletionDate: null,
     assignedTo: [],
+    photos: [],
     ...initialValuesProp,
   };
 
@@ -185,15 +192,25 @@ const WorkOrderForm = ({
     onSubmit: async (values) => {
       try {
         setSubmitError('');
+        
+        // Process photos - convert to proper format for backend
+        const processedPhotos = photos.map(photo => ({
+          url: photo.url,
+          description: photo.caption || '',
+          type: photo.type || 'other',
+          uploadedAt: new Date().toISOString()
+        }));
+        
         const formData = {
           ...values,
-          photos,
+          photos: processedPhotos,
           assignedTo: values.assignedTo.map(worker => ({
             worker: worker._id || worker,
             assignedAt: new Date(),
             status: 'pending'
           }))
         };
+        
         await onSubmit(formData);
       } catch (error) {
         console.error('Form submission error:', error);
@@ -444,6 +461,54 @@ const WorkOrderForm = ({
                 </FormControl>
               </Grid>
 
+              {/* Scheduled Date */}
+              <Grid item xs={12} md={6}>
+                <FormControl 
+                  fullWidth 
+                  error={formik.touched.scheduledDate && Boolean(formik.errors.scheduledDate)}
+                >
+                  <LocalizationProvider dateAdapter={AdapterDateFns}>
+                    <DatePicker
+                      label="Scheduled Date"
+                      value={formik.values.scheduledDate}
+                      onChange={(newValue) => {
+                        formik.setFieldValue('scheduledDate', newValue);
+                      }}
+                      renderInput={(params) => (
+                        <TextField {...params} />
+                      )}
+                    />
+                  </LocalizationProvider>
+                  {formik.touched.scheduledDate && formik.errors.scheduledDate && (
+                    <FormHelperText>{formik.errors.scheduledDate}</FormHelperText>
+                  )}
+                </FormControl>
+              </Grid>
+
+              {/* Estimated Completion Date */}
+              <Grid item xs={12} md={6}>
+                <FormControl 
+                  fullWidth 
+                  error={formik.touched.estimatedCompletionDate && Boolean(formik.errors.estimatedCompletionDate)}
+                >
+                  <LocalizationProvider dateAdapter={AdapterDateFns}>
+                    <DatePicker
+                      label="Estimated Completion Date"
+                      value={formik.values.estimatedCompletionDate}
+                      onChange={(newValue) => {
+                        formik.setFieldValue('estimatedCompletionDate', newValue);
+                      }}
+                      renderInput={(params) => (
+                        <TextField {...params} />
+                      )}
+                    />
+                  </LocalizationProvider>
+                  {formik.touched.estimatedCompletionDate && formik.errors.estimatedCompletionDate && (
+                    <FormHelperText>{formik.errors.estimatedCompletionDate}</FormHelperText>
+                  )}
+                </FormControl>
+              </Grid>
+
               {/* Assigned Workers */}
               <Grid item xs={12}>
                 <Autocomplete
@@ -502,6 +567,24 @@ const WorkOrderForm = ({
                   onBlur={formik.handleBlur}
                   error={formik.touched.estimatedCost && Boolean(formik.errors.estimatedCost)}
                   helperText={formik.touched.estimatedCost && formik.errors.estimatedCost}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                  }}
+                />
+              </Grid>
+
+              {/* Actual Cost */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  name="actualCost"
+                  label="Actual Cost"
+                  value={formik.values.actualCost}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={formik.touched.actualCost && Boolean(formik.errors.actualCost)}
+                  helperText={formik.touched.actualCost && formik.errors.actualCost}
                   InputProps={{
                     startAdornment: <InputAdornment position="start">$</InputAdornment>,
                   }}
