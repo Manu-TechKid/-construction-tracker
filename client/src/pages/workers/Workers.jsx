@@ -112,6 +112,7 @@ const Workers = () => {
       setAnchorEl(event.currentTarget);
       setSelectedWorker(worker);
     } else {
+      console.error('Invalid worker data:', worker);
       toast.error('Invalid worker data - cannot perform action');
     }
   };
@@ -124,6 +125,7 @@ const Workers = () => {
   const handleDelete = async () => {
     // Comprehensive validation
     if (!selectedWorker || !selectedWorker._id) {
+      console.error('Delete attempted with invalid worker:', selectedWorker);
       toast.error('Cannot delete worker - invalid worker data');
       setDeleteDialogOpen(false);
       handleMenuClose();
@@ -147,6 +149,7 @@ const Workers = () => {
     }
 
     try {
+      console.log('Deleting worker with ID:', selectedWorker._id);
       await deleteWorker(selectedWorker._id).unwrap();
       toast.success('Worker deleted successfully');
       setDeleteDialogOpen(false);
