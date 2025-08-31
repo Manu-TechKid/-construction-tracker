@@ -2,13 +2,16 @@
   "name": "construction-tracker",
   "version": "1.0.0",
   "description": "A comprehensive construction management application",
-  "main": "server.js",
+  "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
-    "server": "nodemon server/server.js",
+    "server": "cd server && nodemon server.js",
     "client": "cd client && npm start",
+    "client:install": "cd client && npm install --legacy-peer-deps",
+    "client:build": "cd client && npm run build",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "heroku-postbuild": "cd client && npm install --legacy-peer-deps && npm run build"
+    "build": "cd server && npm install && cd ../client && npm install --legacy-peer-deps && npm run build",
+    "heroku-postbuild": "npm run build"
   },
   "repository": {
     "type": "git",
