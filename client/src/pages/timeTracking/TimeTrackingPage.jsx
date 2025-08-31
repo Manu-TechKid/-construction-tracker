@@ -32,7 +32,7 @@ import {
 } from '@mui/icons-material';
 import { format, formatDistanceToNow, parseISO } from 'date-fns';
 import { useGetWorkerStatusQuery } from '../../features/workers/workersApiSlice';
-import { useCheckInMutation, useCheckOutMutation } from '../../features/timeTracking/timeTrackingApiSlice';
+import { useCheckInWorkerMutation, useCheckOutWorkerMutation } from '../../features/timeTracking/timeTrackingApiSlice';
 import LocationHistoryMap from '../../features/timeTracking/LocationHistoryMap';
 import { useSnackbar } from 'notistack';
 
@@ -53,9 +53,9 @@ const TimeTrackingPage = () => {
     pollingInterval: 30000, // Poll every 30 seconds
   });
 
-  // Check in/out mutations
-  const [checkIn, { isLoading: isCheckingIn }] = useCheckInMutation();
-  const [checkOut, { isLoading: isCheckingOut }] = useCheckOutMutation();
+  // Mutations
+  const [checkIn, { isLoading: isCheckingIn }] = useCheckInWorkerMutation();
+  const [checkOut, { isLoading: isCheckingOut }] = useCheckOutWorkerMutation();
 
   // Handle tab change
   const handleTabChange = (event, newValue) => {
@@ -65,7 +65,7 @@ const TimeTrackingPage = () => {
   // Handle check in
   const handleCheckIn = async () => {
     try {
-      await checkIn(workerId).unwrap();
+      await checkIn({ workerId }).unwrap();
       enqueueSnackbar('Checked in successfully', { variant: 'success' });
       refetch();
     } catch (err) {
@@ -76,7 +76,7 @@ const TimeTrackingPage = () => {
   // Handle check out
   const handleCheckOut = async () => {
     try {
-      await checkOut(workerId).unwrap();
+      await checkOut({ workerId }).unwrap();
       enqueueSnackbar('Checked out successfully', { variant: 'success' });
       refetch();
     } catch (err) {
