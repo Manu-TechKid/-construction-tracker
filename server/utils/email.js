@@ -1,13 +1,27 @@
-const nodemailer = require('nodemailer');
+let nodemailer;
+try {
+  nodemailer = require('nodemailer');
+} catch (error) {
+  console.warn('Nodemailer not available - email functionality disabled');
+  nodemailer = null;
+}
 
 const sendEmail = async (options) => {
+  // Skip email sending if nodemailer is not available
+  if (!nodemailer) {
+    console.log('Email would be sent to:', options.email);
+    console.log('Subject:', options.subject);
+    console.log('Message:', options.message);
+    return Promise.resolve();
+  }
+
   // 1) Create a transporter
   let transporter;
   
   if (process.env.NODE_ENV === 'production') {
     // Production - use a real email service
     // You can use Gmail, SendGrid, Mailgun, etc.
-    transporter = nodemailer.createTransporter({
+    transporter = nodemailer.createTransport({
       service: 'Gmail', // or your preferred service
       auth: {
         user: process.env.EMAIL_FROM,
@@ -16,7 +30,7 @@ const sendEmail = async (options) => {
     });
   } else {
     // Development - use Mailtrap or similar
-    transporter = nodemailer.createTransporter({
+    transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST || 'smtp.mailtrap.io',
       port: process.env.EMAIL_PORT || 2525,
       auth: {
