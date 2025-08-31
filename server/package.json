@@ -16,6 +16,7 @@
     "migrate:apartments": "node migrations/20240101_update_apartment_schema.js",
     "migrate:apartment-photos": "node migrations/20240102_add_apartment_photos.js",
     "migrate:workers": "node scripts/run-migration.js",
+    "migrate:workorders": "node migrations/20240901_update_workorder_schema.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {

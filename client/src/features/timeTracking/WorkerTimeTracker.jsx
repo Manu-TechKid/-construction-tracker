@@ -40,12 +40,19 @@ const WorkerTimeTracker = ({ workerId, workerStatus }) => {
   const [checkOutWorker, { isLoading: isCheckingOut }] = useCheckOutWorkerMutation();
   
   // Get worker's schedules
-  const { data: schedulesData } = useGetWorkerSchedulesQuery(
+  const { 
+    data: schedulesData, 
+    isLoading: isLoadingSchedules,
+    error: schedulesError 
+  } = useGetWorkerSchedulesQuery(
     { workerId, status: 'upcoming' },
-    { skip: !workerId }
+    { 
+      skip: !workerId,
+      refetchOnMountOrArgChange: true
+    }
   );
   
-  const upcomingSchedule = schedulesData?.data?.[0];
+  const upcomingSchedule = schedulesData?.data?.schedules?.[0];
   const isCheckedIn = workerStatus?.status === 'checked-in';
   const currentSession = workerStatus?.currentSession;
 
@@ -73,6 +80,16 @@ const WorkerTimeTracker = ({ workerId, workerStatus }) => {
     
     return () => clearInterval(interval);
   }, [isCheckedIn, currentSession?.startTime]);
+
+  // Handle errors
+  useEffect(() => {
+    if (schedulesError) {
+      enqueueSnackbar(
+        schedulesError?.data?.message || 'Failed to load schedules', 
+        { variant: 'error' }
+      );
+    }
+  }, [schedulesError, enqueueSnackbar]);
 
   // Format time in HH:MM:SS
   const formatTime = (seconds) => {

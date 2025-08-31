@@ -33,6 +33,7 @@ import {
 import { format, formatDistanceToNow, parseISO } from 'date-fns';
 import { useGetWorkerStatusQuery } from '../../features/workers/workersApiSlice';
 import { useCheckInWorkerMutation, useCheckOutWorkerMutation } from '../../features/timeTracking/timeTrackingApiSlice';
+import { useGetWorkerLocationsQuery } from '../schedule/scheduleApiSlice';
 import LocationHistoryMap from './LocationHistoryMap';
 import { useSnackbar } from 'notistack';
 import { useAuth } from '../../hooks/useAuth';

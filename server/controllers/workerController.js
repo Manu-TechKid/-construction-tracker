@@ -202,3 +202,38 @@ exports.updateWorkerStatus = catchAsync(async (req, res, next) => {
         }
     });
 });
+
+// Get worker schedules
+exports.getWorkerSchedules = catchAsync(async (req, res, next) => {
+    const { status } = req.query;
+    const workerId = req.params.id;
+
+    // Verify the worker exists
+    const worker = await User.findById(workerId);
+    if (!worker || worker.role !== 'worker') {
+        return next(new AppError('No worker found with that ID', 404));
+    }
+
+    // Build the query
+    const query = { worker: workerId };
+    
+    // Add status filter if provided
+    if (status) {
+        query.status = status;
+    }
+
+    // Find schedules for the worker
+    const schedules = await WorkOrder.find(query)
+        .populate('building', 'name address')
+        .populate('assignedTo', 'name email')
+        .sort('startDate')
+        .lean();
+
+    res.status(200).json({
+        status: 'success',
+        results: schedules.length,
+        data: {
+            schedules
+        }
+    });
+});

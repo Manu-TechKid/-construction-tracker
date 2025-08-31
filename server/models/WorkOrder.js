@@ -138,7 +138,8 @@ const workOrderSchema = new mongoose.Schema({
   assignedTo: [{
     worker: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+      ref: 'User',
+      required: [true, 'Worker reference is required']
     },
     assignedAt: {
       type: Date,
@@ -146,7 +147,8 @@ const workOrderSchema = new mongoose.Schema({
     },
     assignedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+      ref: 'User',
+      required: [true, 'Assigned by user reference is required']
     },
     status: {
       type: String,
@@ -156,6 +158,20 @@ const workOrderSchema = new mongoose.Schema({
     completedAt: Date,
     notes: String
   }],
+  startDate: {
+    type: Date,
+    required: [true, 'Start date is required']
+  },
+  endDate: {
+    type: Date,
+    required: [true, 'End date is required'],
+    validate: {
+      validator: function(value) {
+        return value >= this.startDate;
+      },
+      message: 'End date must be after start date'
+    }
+  },
   estimatedCost: {
     type: Number,
     min: [0, 'Estimated cost cannot be negative'],
@@ -168,7 +184,10 @@ const workOrderSchema = new mongoose.Schema({
   },
   estimatedCompletionDate: Date,
   actualCompletionDate: Date,
-  scheduledDate: Date,
+  scheduledDate: {
+    type: Date,
+    required: [true, 'Scheduled date is required']
+  },
   completedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

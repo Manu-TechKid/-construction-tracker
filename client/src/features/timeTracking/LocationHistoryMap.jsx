@@ -5,7 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import { Box, Typography, Paper, Tabs, Tab } from '@mui/material';
 import { format, subDays, startOfDay, endOfDay, isWithinInterval, parseISO } from 'date-fns';
 import { useSnackbar } from 'notistack';
-import { useGetWorkerLocationHistoryQuery } from '../schedule/scheduleApiSlice';
+import { useGetWorkerLocationsQuery } from '../schedule/scheduleApiSlice';
 
 // Fix for default marker icons in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -27,7 +27,7 @@ const LocationHistoryMap = ({
   const [dateRange, setDateRange] = useState(7);
   const mapRef = useRef(null);
   
-  const { data: locationHistory = [], isLoading: isLoadingLocationHistory, isError: isErrorLocationHistory, error: errorLocationHistory } = useGetWorkerLocationHistoryQuery({
+  const { data: locationHistory = [], isLoading: isLoadingLocationHistory, isError: isErrorLocationHistory, error: errorLocationHistory } = useGetWorkerLocationsQuery({
     workerId,
     startDate: format(subDays(new Date(), dateRange), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd')

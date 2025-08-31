@@ -67,6 +67,12 @@ router
   .route('/:id/assignments')
   .get(workerController.getWorkerAssignments);
 
+// Get worker schedules
+router.get(
+  '/:id/schedules',
+  workerController.getWorkerSchedules
+);
+
 // Update worker's skills
 router
   .route('/:id/skills')
