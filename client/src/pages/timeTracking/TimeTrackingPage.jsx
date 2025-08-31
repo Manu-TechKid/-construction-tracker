@@ -35,6 +35,7 @@ import { useGetWorkerStatusQuery } from '../../features/workers/workersApiSlice'
 import { useCheckInWorkerMutation, useCheckOutWorkerMutation } from '../../features/timeTracking/timeTrackingApiSlice';
 import LocationHistoryMap from '../../features/timeTracking/LocationHistoryMap';
 import { useSnackbar } from 'notistack';
+import { useAuth } from '../../hooks/useAuth';
 
 const TimeTrackingPage = () => {
   const { workerId } = useParams();
