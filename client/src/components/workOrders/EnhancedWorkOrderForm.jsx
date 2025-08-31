@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -14,55 +14,102 @@ import {
   IconButton,
   Chip,
   Divider,
+  FormHelperText,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  InputAdornment
 } from '@mui/material';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
-  Calculate as EstimateIcon,
+  AttachFile as AttachFileIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon
 } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { useBuildingContext } from '../../contexts/BuildingContext';
+import { useBuildingContext } from '../../../contexts/BuildingContext';
+import { useCreateWorkOrderMutation, useUpdateWorkOrderMutation } from '../../../features/workOrders/workOrdersApiSlice';
+import { useGetWorkersQuery } from '../../../features/workers/workersApiSlice';
+import { useSnackbar } from 'notistack';
+import { useNavigate } from 'react-router-dom';
 
 const validationSchema = Yup.object({
   building: Yup.string().required('Building is required'),
   apartmentNumber: Yup.string().required('Apartment number is required'),
   description: Yup.string().required('Description is required'),
-  services: Yup.array().min(1, 'At least one service is required'),
-  estimateTotal: Yup.number().min(0, 'Estimate must be positive'),
+  priority: Yup.string().required('Priority is required'),
+  assignedTo: Yup.array().min(1, 'At least one worker must be assigned')
 });
 
-const EnhancedWorkOrderForm = ({ initialValues, onSubmit, isSubmitting, onCancel }) => {
-  const { selectedBuilding, getBuildingFilterParams } = useBuildingContext();
+const serviceTypes = [
+  { value: 'painting', label: 'Painting' },
+  { value: 'cleaning', label: 'Cleaning' },
+  { value: 'repair', label: 'Repair' },
+  { value: 'plumbing', label: 'Plumbing' },
+  { value: 'electrical', label: 'Electrical' },
+  { value: 'hvac', label: 'HVAC' },
+  { value: 'flooring', label: 'Flooring' },
+  { value: 'roofing', label: 'Roofing' },
+  { value: 'carpentry', label: 'Carpentry' },
+  { value: 'other', label: 'Other' }
+];
+
+const EnhancedWorkOrderForm = ({ workOrder, onCancel }) => {
+  const { selectedBuilding } = useBuildingContext();
+  const [createWorkOrder, { isLoading: isCreating }] = useCreateWorkOrderMutation();
+  const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
+  const { data: workersData } = useGetWorkersQuery();
+  const { enqueueSnackbar } = useSnackbar();
+  const navigate = useNavigate();
+  
   const [services, setServices] = useState([
     { type: 'painting', description: '', laborCost: 0, materialCost: 0 }
   ]);
 
-  const serviceTypes = [
-    'painting', 'cleaning', 'repair', 'plumbing', 'electrical', 'custom'
-  ];
-
   const formik = useFormik({
     initialValues: {
-      building: selectedBuilding?._id || '',
-      apartmentNumber: '',
-      description: '',
-      priority: 'medium',
-      estimateTotal: 0,
-      ...getBuildingFilterParams(),
-      ...initialValues,
+      building: workOrder?.building?._id || selectedBuilding?._id || '',
+      apartmentNumber: workOrder?.apartmentNumber || '',
+      block: workOrder?.block || '',
+      apartmentStatus: workOrder?.apartmentStatus || 'occupied',
+      description: workOrder?.description || '',
+      priority: workOrder?.priority || 'medium',
+      assignedTo: workOrder?.assignedTo?.map(a => a.worker._id) || [],
+      scheduledDate: workOrder?.scheduledDate || new Date(),
+      requiresInspection: workOrder?.requiresInspection || false,
+      inspectionNotes: workOrder?.inspectionNotes || ''
     },
     validationSchema,
-    onSubmit: (values) => {
-      const totalEstimate = services.reduce((sum, service) => 
-        sum + (service.laborCost || 0) + (service.materialCost || 0), 0
-      );
-      onSubmit({
-        ...values,
-        services,
-        estimateTotal: totalEstimate,
-      });
-    },
+    onSubmit: async (values) => {
+      try {
+        const workOrderData = {
+          ...values,
+          services: services.map(svc => ({
+            ...svc,
+            laborCost: parseFloat(svc.laborCost) || 0,
+            materialCost: parseFloat(svc.materialCost) || 0
+          }))
+        };
+
+        if (workOrder?._id) {
+          await updateWorkOrder(workOrderData).unwrap();
+          enqueueSnackbar('Work order updated successfully', { variant: 'success' });
+        } else {
+          await createWorkOrder(workOrderData).unwrap();
+          enqueueSnackbar('Work order created successfully', { variant: 'success' });
+        }
+
+        navigate('/work-orders');
+      } catch (error) {
+        enqueueSnackbar('Error creating or updating work order', { variant: 'error' });
+      }
+    }
   });
 
   const addService = () => {
@@ -78,12 +125,6 @@ const EnhancedWorkOrderForm = ({ initialValues, onSubmit, isSubmitting, onCancel
       i === index ? { ...service, [field]: value } : service
     );
     setServices(updated);
-  };
-
-  const calculateTotal = () => {
-    return services.reduce((sum, service) => 
-      sum + (parseFloat(service.laborCost) || 0) + (parseFloat(service.materialCost) || 0), 0
-    );
   };
 
   return (
@@ -163,8 +204,8 @@ const EnhancedWorkOrderForm = ({ initialValues, onSubmit, isSubmitting, onCancel
                           label="Service Type"
                         >
                           {serviceTypes.map(type => (
-                            <MenuItem key={type} value={type}>
-                              {type.charAt(0).toUpperCase() + type.slice(1)}
+                            <MenuItem key={type.value} value={type.value}>
+                              {type.label}
                             </MenuItem>
                           ))}
                         </Select>
@@ -189,6 +230,9 @@ const EnhancedWorkOrderForm = ({ initialValues, onSubmit, isSubmitting, onCancel
                         label="Labor ($)"
                         value={service.laborCost}
                         onChange={(e) => updateService(index, 'laborCost', e.target.value)}
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start">$</InputAdornment>
+                        }}
                       />
                     </Grid>
                     
@@ -200,6 +244,9 @@ const EnhancedWorkOrderForm = ({ initialValues, onSubmit, isSubmitting, onCancel
                         label="Materials ($)"
                         value={service.materialCost}
                         onChange={(e) => updateService(index, 'materialCost', e.target.value)}
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start">$</InputAdornment>
+                        }}
                       />
                     </Grid>
                     
@@ -219,10 +266,10 @@ const EnhancedWorkOrderForm = ({ initialValues, onSubmit, isSubmitting, onCancel
               <Divider sx={{ my: 2 }} />
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6">
-                  Total Estimate: ${calculateTotal().toFixed(2)}
+                  Total Estimate: ${services.reduce((sum, service) => sum + (parseFloat(service.laborCost) || 0) + (parseFloat(service.materialCost) || 0), 0).toFixed(2)}
                 </Typography>
                 <Chip 
-                  icon={<EstimateIcon />} 
+                  icon={<AttachFileIcon />} 
                   label={`${services.length} Service${services.length !== 1 ? 's' : ''}`}
                   color="primary"
                 />
@@ -241,15 +288,15 @@ const EnhancedWorkOrderForm = ({ initialValues, onSubmit, isSubmitting, onCancel
                 <Button
                   type="submit"
                   variant="contained"
-                  disabled={isSubmitting}
+                  disabled={isCreating || isUpdating}
                   fullWidth
                 >
-                  {isSubmitting ? 'Saving...' : 'Save Work Order'}
+                  {isCreating || isUpdating ? 'Saving...' : 'Save Work Order'}
                 </Button>
                 <Button
                   variant="outlined"
                   onClick={onCancel}
-                  disabled={isSubmitting}
+                  disabled={isCreating || isUpdating}
                   fullWidth
                 >
                   Cancel

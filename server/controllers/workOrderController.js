@@ -159,7 +159,7 @@ exports.getWorkOrder = catchAsync(async (req, res, next) => {
 exports.createWorkOrder = catchAsync(async (req, res, next) => {
   try {
     // 1) Basic validation
-    const requiredFields = ['building', 'workType', 'workSubType', 'description'];
+    const requiredFields = ['building', 'description'];
     const missingFields = requiredFields.filter(field => !req.body[field]);
     
     if (missingFields.length > 0) {
@@ -177,7 +177,34 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       req.body.createdBy = req.user.id;
     }
 
-    // 4) Process photos
+    // 4) Process services array
+    if (!Array.isArray(req.body.services) || req.body.services.length === 0) {
+      return next(new AppError('At least one service is required', 400));
+    }
+
+    // Validate each service
+    const validatedServices = [];
+    for (const service of req.body.services) {
+      if (!service.type) {
+        return next(new AppError('Each service must have a type', 400));
+      }
+      
+      validatedServices.push({
+        type: service.type,
+        description: service.description || '',
+        laborCost: parseFloat(service.laborCost) || 0,
+        materialCost: parseFloat(service.materialCost) || 0,
+        status: 'pending',
+        createdAt: new Date()
+      });
+    }
+
+    // 5) Calculate total estimate
+    const totalEstimate = validatedServices.reduce(
+      (sum, service) => sum + service.laborCost + service.materialCost, 0
+    );
+
+    // 6) Process photos
     if (!req.body.photos) {
       req.body.photos = [];
     } else if (Array.isArray(req.body.photos)) {
@@ -192,7 +219,7 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       req.body.photos = [];
     }
 
-    // 5) Process notes
+    // 7) Process notes
     if (!Array.isArray(req.body.notes)) {
       req.body.notes = [];
     }
@@ -206,20 +233,12 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
         isPrivate: !!note.isPrivate
       }));
 
-    // 6) Normalize and validate workType
-    if (req.body.workType) {
-      req.body.workType = req.body.workType.toLowerCase();
-      if (!isValidWorkType(req.body.workType)) {
-        return next(new AppError('Invalid work type', 400));
-      }
-    }
-
-    // 7) Set default status if not provided
+    // 8) Set default status if not provided
     if (!req.body.status) {
       req.body.status = 'pending';
     }
 
-    // 8) Process assigned workers
+    // 9) Process assigned workers
     if (req.body.assignedTo && !Array.isArray(req.body.assignedTo)) {
       req.body.assignedTo = [];
     } else if (Array.isArray(req.body.assignedTo)) {
@@ -234,10 +253,17 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
         }));
     }
 
-    // 9) Create work order
-    const workOrder = await WorkOrder.create(req.body);
+    // 10) Create work order with services
+    const workOrderData = {
+      ...req.body,
+      services: validatedServices,
+      estimatedCost: totalEstimate,
+      actualCost: 0 // Initialize actual cost
+    };
 
-    // 10) Populate response data
+    const workOrder = await WorkOrder.create(workOrderData);
+
+    // 11) Populate response data
     const populatedWorkOrder = await WorkOrder.findById(workOrder._id)
       .populate({ 
         path: 'building', 
@@ -246,10 +272,6 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       .populate({
         path: 'assignedTo.worker',
         select: 'name email phone'
-      })
-      .populate({ 
-        path: 'createdBy', 
-        select: 'name email' 
       });
 
     res.status(201).json({
@@ -258,20 +280,15 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
         workOrder: populatedWorkOrder
       }
     });
-
   } catch (error) {
-    console.error('Work order creation error:', error);
-    
     if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map(err => err.message);
-      return next(new AppError(`Validation Error: ${errors.join(', ')}`, 400));
+      const messages = Object.values(error.errors).map(val => val.message);
+      return next(new AppError(`Validation error: ${messages.join('. ')}`, 400));
     }
-    
     if (error.code === 11000) {
-      return next(new AppError('Duplicate work order detected', 400));
+      return next(new AppError('Duplicate field value entered', 400));
     }
-    
-    next(new AppError('Failed to create work order. Please try again.', 500));
+    next(error);
   }
 });
 
@@ -730,6 +747,38 @@ exports.addTaskToChecklist = catchAsync(async (req, res, next) => {
     status: 'success',
     data: {
       workOrder
+    }
+  });
+});
+
+exports.getWorkerAssignments = catchAsync(async (req, res, next) => {
+  const workOrder = await WorkOrder.findById(req.params.id)
+    .populate({ path: 'assignedTo.worker', select: 'name email phone' });
+  
+  if (!workOrder) {
+    return next(new AppError('No work order found with that ID', 404));
+  }
+  
+  res.status(200).json({
+    status: 'success',
+    data: {
+      assignments: workOrder.assignedTo
+    }
+  });
+});
+
+exports.getWorkerAssignments = catchAsync(async (req, res, next) => {
+  const workOrder = await WorkOrder.findById(req.params.id)
+    .populate({ path: 'assignedTo.worker', select: 'name email phone' });
+  
+  if (!workOrder) {
+    return next(new AppError('No work order found with that ID', 404));
+  }
+  
+  res.status(200).json({
+    status: 'success',
+    data: {
+      assignments: workOrder.assignedTo
     }
   });
 });

@@ -43,6 +43,56 @@ const taskItemSchema = new mongoose.Schema({
   }]
 }, { timestamps: true });
 
+const serviceSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    required: [true, 'Service type is required'],
+    enum: [
+      'painting', 'cleaning', 'repair', 'plumbing', 
+      'electrical', 'hvac', 'flooring', 'roofing', 'carpentry', 'other'
+    ]
+  },
+  description: {
+    type: String,
+    required: [true, 'Service description is required']
+  },
+  laborCost: {
+    type: Number,
+    default: 0,
+    min: [0, 'Labor cost cannot be negative']
+  },
+  materialCost: {
+    type: Number,
+    default: 0,
+    min: [0, 'Material cost cannot be negative']
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'in_progress', 'completed', 'on_hold', 'cancelled'],
+    default: 'pending'
+  },
+  notes: [{
+    content: String,
+    createdBy: {
+      type: mongoose.Schema.ObjectId,
+      ref: 'User'
+    },
+    isPrivate: {
+      type: Boolean,
+      default: false
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  completedAt: Date,
+  completedBy: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User'
+  }
+}, { timestamps: true });
+
 const workOrderSchema = new mongoose.Schema({
   building: {
     type: mongoose.Schema.Types.ObjectId,
@@ -69,21 +119,7 @@ const workOrderSchema = new mongoose.Schema({
     default: 'vacant',
     lowercase: true
   },
-  workType: {
-    type: String,
-    required: [true, 'Work type is required'],
-    enum: {
-      values: ['painting', 'cleaning', 'repairs', 'maintenance', 'inspection', 'other', 'plumbing', 'electrical', 'hvac', 'flooring', 'roofing', 'carpentry'],
-      message: 'Invalid work type'
-    },
-    lowercase: true
-  },
-  workSubType: {
-    type: String,
-    required: [true, 'Work sub-type is required'],
-    trim: true,
-    maxlength: [100, 'Work sub-type cannot be longer than 100 characters']
-  },
+  services: [serviceSchema],
   description: {
     type: String,
     required: [true, 'Description is required'],
@@ -203,15 +239,13 @@ const workOrderSchema = new mongoose.Schema({
 // Indexes for better query performance
 workOrderSchema.index({ building: 1 });
 workOrderSchema.index({ status: 1 });
-workOrderSchema.index({ workType: 1 });
-workOrderSchema.index({ apartmentStatus: 1 });
-workOrderSchema.index({ scheduledDate: 1 });
 workOrderSchema.index({ 'assignedTo.worker': 1 });
 workOrderSchema.index({ 'assignedTo.status': 1 });
+workOrderSchema.index({ scheduledDate: 1 });
 
 // Virtual for work order title
 workOrderSchema.virtual('title').get(function() {
-  return `WO-${this.workType.toUpperCase().substring(0, 3)}-${this._id.toString().substring(18, 24)}`;
+  return `WO-${this.services[0].type.toUpperCase().substring(0, 3)}-${this._id.toString().substring(18, 24)}`;
 });
 
 // Query middleware to filter out deleted work orders
