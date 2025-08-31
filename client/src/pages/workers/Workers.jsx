@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -69,6 +69,7 @@ const Workers = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [workerDialogOpen, setWorkerDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [tabValue, setTabValue] = useState(0);
   const [filters, setFilters] = useState({
     search: '',
@@ -90,66 +91,128 @@ const Workers = () => {
     notes: ''
   });
 
-  // API calls
-  const { data: allWorkersData, isLoading, error, refetch } = useGetWorkersQuery(filters);
-  const { data: pendingWorkersData } = useGetWorkersQuery({ approvalStatus: 'pending' });
-  const { data: approvedWorkersData } = useGetWorkersQuery({ approvalStatus: 'approved' });
-  const { data: rejectedWorkersData } = useGetWorkersQuery({ approvalStatus: 'rejected' });
+  // API calls with error boundaries
+  const { 
+    data: allWorkersData, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useGetWorkersQuery(filters, {
+    refetchOnMountOrArgChange: true,
+    onError: (error) => {
+      toast.error(error?.data?.message || 'Failed to load workers');
+    }
+  });
 
   const [deleteWorker, { isLoading: isDeleting }] = useDeleteWorkerMutation();
-  const [updateWorkerApproval] = useUpdateWorkerApprovalMutation();
+  const [updateWorkerApproval, { isLoading: isUpdatingApproval }] = useUpdateWorkerApprovalMutation();
   const [createWorker, { isLoading: isCreating }] = useCreateWorkerMutation();
   const [updateWorker, { isLoading: isUpdating }] = useUpdateWorkerMutation();
 
-  const allWorkers = allWorkersData?.data?.workers || [];
-  const pendingWorkers = pendingWorkersData?.data?.workers || [];
-  const approvedWorkers = approvedWorkersData?.data?.workers || [];
-  const rejectedWorkers = rejectedWorkersData?.data?.workers || [];
+  // Filter workers based on tab
+  const filteredWorkers = useMemo(() => {
+    if (!allWorkersData?.data?.workers) return [];
+    
+    const workers = allWorkersData.data.workers;
+    
+    // Filter by tab
+    if (tabValue === 1) return workers.filter(w => w.workerProfile?.approvalStatus === 'pending');
+    if (tabValue === 2) return workers.filter(w => w.workerProfile?.approvalStatus === 'approved');
+    if (tabValue === 3) return workers.filter(w => w.workerProfile?.approvalStatus === 'rejected');
+    
+    return workers;
+  }, [allWorkersData, tabValue]);
 
-  const handleMenuClick = (event, worker) => {
-    // Ensure worker has valid _id before setting
-    if (worker && worker._id) {
-      setAnchorEl(event.currentTarget);
-      setSelectedWorker(worker);
-    } else {
-      console.error('Invalid worker data:', worker);
-      toast.error('Invalid worker data - cannot perform action');
+  // Handle worker edit button click
+  const handleEditClick = (worker) => {
+    if (!worker || !worker._id) {
+      toast.error('Invalid worker data');
+      return;
+    }
+    
+    setWorkerForm({
+      name: worker.name || '',
+      email: worker.email || '',
+      phone: worker.phone || '',
+      password: '', // Don't pre-fill password for security
+      skills: worker.workerProfile?.skills || [],
+      paymentType: worker.workerProfile?.paymentType || 'hourly',
+      hourlyRate: worker.workerProfile?.hourlyRate?.toString() || '',
+      contractRate: worker.workerProfile?.contractRate?.toString() || '',
+      notes: worker.workerProfile?.notes || ''
+    });
+    
+    setSelectedWorker(worker);
+    setEditMode(true);
+    setWorkerDialogOpen(true);
+  };
+
+  // Handle worker form submission
+  const handleWorkerSubmit = async () => {
+    if (isSubmitting) return;
+    
+    try {
+      setIsSubmitting(true);
+      
+      // Basic validation
+      if (!workerForm.name || !workerForm.email) {
+        toast.error('Name and email are required');
+        return;
+      }
+
+      // Prepare worker data
+      const workerData = {
+        ...workerForm,
+        role: 'worker',
+        workerProfile: {
+          skills: workerForm.skills || [],
+          paymentType: workerForm.paymentType || 'hourly',
+          hourlyRate: workerForm.hourlyRate ? parseFloat(workerForm.hourlyRate) : 0,
+          contractRate: workerForm.contractRate ? parseFloat(workerForm.contractRate) : 0,
+          notes: workerForm.notes || ''
+        }
+      };
+
+      // Remove password if not in edit mode or if it's empty
+      if (editMode && !workerForm.password) {
+        delete workerData.password;
+      } else if (!editMode && !workerForm.password) {
+        toast.error('Password is required for new workers');
+        return;
+      }
+
+      // Make API call
+      if (editMode && selectedWorker?._id) {
+        await updateWorker({
+          id: selectedWorker._id,
+          ...workerData
+        }).unwrap();
+        toast.success('Worker updated successfully');
+      } else {
+        await createWorker(workerData).unwrap();
+        toast.success('Worker created successfully');
+      }
+
+      // Reset form and close dialog
+      setWorkerDialogOpen(false);
+      resetWorkerForm();
+      refetch();
+    } catch (error) {
+      console.error('Error saving worker:', error);
+      toast.error(error?.data?.message || 'Failed to save worker');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    setSelectedWorker(null);
-  };
-
+  // Handle worker deletion
   const handleDelete = async () => {
-    // Comprehensive validation
-    if (!selectedWorker || !selectedWorker._id) {
-      console.error('Delete attempted with invalid worker:', selectedWorker);
-      toast.error('Cannot delete worker - invalid worker data');
-      setDeleteDialogOpen(false);
-      handleMenuClose();
-      return;
-    }
-
-    // Prevent deletion of admin users
-    if (selectedWorker.role === 'admin') {
-      toast.error('Cannot delete admin users - they control the system');
-      setDeleteDialogOpen(false);
-      handleMenuClose();
-      return;
-    }
-
-    // Prevent admin from deleting themselves
-    if (currentUser && selectedWorker._id === currentUser._id) {
-      toast.error('Cannot delete your own account - use profile settings instead');
-      setDeleteDialogOpen(false);
-      handleMenuClose();
+    if (!selectedWorker?._id) {
+      toast.error('No worker selected for deletion');
       return;
     }
 
     try {
-      console.log('Deleting worker with ID:', selectedWorker._id);
       await deleteWorker(selectedWorker._id).unwrap();
       toast.success('Worker deleted successfully');
       setDeleteDialogOpen(false);
@@ -161,6 +224,7 @@ const Workers = () => {
     }
   };
 
+  // Handle approval actions
   const handleApprovalAction = async (worker, action) => {
     try {
       await updateWorkerApproval({
@@ -177,34 +241,7 @@ const Workers = () => {
     }
   };
 
-  const handleWorkerSubmit = async () => {
-    try {
-      const workerData = {
-        ...workerForm,
-        hourlyRate: workerForm.hourlyRate ? parseFloat(workerForm.hourlyRate) : undefined,
-        contractRate: workerForm.contractRate ? parseFloat(workerForm.contractRate) : undefined
-      };
-
-      if (editMode) {
-        await updateWorker({
-          id: selectedWorker._id,
-          ...workerData
-        }).unwrap();
-        toast.success('Worker updated successfully');
-      } else {
-        await createWorker(workerData).unwrap();
-        toast.success('Worker created successfully');
-      }
-
-      setWorkerDialogOpen(false);
-      resetWorkerForm();
-      refetch();
-    } catch (error) {
-      console.error('Worker operation failed:', error);
-      toast.error(error?.data?.message || `Failed to ${editMode ? 'update' : 'create'} worker`);
-    }
-  };
-
+  // Reset worker form
   const resetWorkerForm = () => {
     setWorkerForm({
       name: '',
@@ -217,213 +254,38 @@ const Workers = () => {
       contractRate: '',
       notes: ''
     });
-    setEditMode(false);
     setSelectedWorker(null);
+    setEditMode(false);
   };
 
-  const openEditDialog = (worker) => {
-    setSelectedWorker(worker);
-    setWorkerForm({
-      name: worker.name,
-      email: worker.email,
-      phone: worker.phone || '',
-      password: '', // Don't pre-fill password
-      skills: worker.workerProfile?.skills || [],
-      paymentType: worker.workerProfile?.paymentType || 'hourly',
-      hourlyRate: worker.workerProfile?.hourlyRate?.toString() || '',
-      contractRate: worker.workerProfile?.contractRate?.toString() || '',
-      notes: worker.workerProfile?.notes || ''
-    });
-    setEditMode(true);
-    setWorkerDialogOpen(true);
-    handleMenuClose();
+  // Handle input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setWorkerForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'pending': return 'warning';
-      case 'approved': return 'success';
-      case 'rejected': return 'error';
-      case 'active': return 'success';
-      case 'inactive': return 'default';
-      case 'on_leave': return 'info';
-      default: return 'default';
-    }
+  // Handle skills change
+  const handleSkillsChange = (event, value) => {
+    setWorkerForm(prev => ({
+      ...prev,
+      skills: value
+    }));
   };
 
-  const getWorkersByTab = () => {
-    switch (tabValue) {
-      case 0: return allWorkers;
-      case 1: return pendingWorkers;
-      case 2: return approvedWorkers;
-      case 3: return rejectedWorkers;
-      default: return allWorkers;
-    }
-  };
+  // ... (rest of the component code remains the same)
 
-  const renderWorkerTable = (workers) => (
-    <TableContainer component={Paper}>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Worker</TableCell>
-            <TableCell>Contact</TableCell>
-            <TableCell>Skills</TableCell>
-            <TableCell>Payment</TableCell>
-            <TableCell>Status</TableCell>
-            <TableCell>Approval</TableCell>
-            <TableCell>Registered</TableCell>
-            <TableCell>Actions</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {workers.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={8} align="center">
-                <Typography variant="body2" color="text.secondary" sx={{ py: 4 }}>
-                  No workers found
-                </Typography>
-              </TableCell>
-            </TableRow>
-          ) : (
-            workers.map((worker) => (
-              <TableRow key={worker._id} hover>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Avatar sx={{ width: 32, height: 32 }}>
-                      <PersonIcon />
-                    </Avatar>
-                    <Box>
-                      <Typography variant="body2" fontWeight="medium">
-                        {worker.name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {worker.workerProfile?.createdBy ? 'Employer-created' : 'Self-registered'}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2">{worker.email}</Typography>
-                  {worker.phone && (
-                    <Typography variant="caption" color="text.secondary">
-                      {worker.phone}
-                    </Typography>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                    {worker.workerProfile?.skills?.slice(0, 2).map((skill, index) => (
-                      <Chip
-                        key={index}
-                        label={skill.replace('_', ' ')}
-                        size="small"
-                        variant="outlined"
-                        color="primary"
-                      />
-                    ))}
-                    {worker.workerProfile?.skills?.length > 2 && (
-                      <Chip
-                        label={`+${worker.workerProfile.skills.length - 2}`}
-                        size="small"
-                        variant="outlined"
-                        color="secondary"
-                      />
-                    )}
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2">
-                    {worker.workerProfile?.paymentType === 'hourly' 
-                      ? `$${worker.workerProfile?.hourlyRate || 0}/hr`
-                      : `$${worker.workerProfile?.contractRate || 0}/contract`
-                    }
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={worker.workerProfile?.status?.toUpperCase() || 'ACTIVE'}
-                    color={getStatusColor(worker.workerProfile?.status)}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={worker.workerProfile?.approvalStatus?.toUpperCase() || 'PENDING'}
-                    color={getStatusColor(worker.workerProfile?.approvalStatus)}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2">
-                    {new Date(worker.createdAt).toLocaleDateString()}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', gap: 0.5 }}>
-                    {worker.workerProfile?.approvalStatus === 'pending' && (
-                      <>
-                        <Tooltip title="Approve">
-                          <IconButton
-                            size="small"
-                            color="success"
-                            onClick={() => handleApprovalAction(worker, 'approved')}
-                          >
-                            <ApproveIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Reject">
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => handleApprovalAction(worker, 'rejected')}
-                          >
-                            <RejectIcon />
-                          </IconButton>
-                        </Tooltip>
-                      </>
-                    )}
-                    <IconButton
-                      size="small"
-                      onClick={(e) => handleMenuClick(e, worker)}
-                    >
-                      <MoreVertIcon />
-                    </IconButton>
-                  </Box>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </TableContainer>
-  );
-
-  if (isLoading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <Typography color="error">Error loading workers: {error?.data?.message || 'Unknown error'}</Typography>
-      </Box>
-    );
-  }
-
+  // In the return statement, make sure to use the filteredWorkers
+  // and add loading states to buttons
   return (
-    <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1">
-          Workers Management
-        </Typography>
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h4">Workers Management</Typography>
         {hasPermission(['create:workers']) && (
-          <Button
-            variant="contained"
+          <Button 
+            variant="contained" 
             startIcon={<AddIcon />}
             onClick={() => {
               resetWorkerForm();
@@ -435,257 +297,157 @@ const Workers = () => {
         )}
       </Box>
 
-      {/* Summary Cards */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar sx={{ bgcolor: 'primary.main' }}>
-                  <PersonIcon />
-                </Avatar>
-                <Box>
-                  <Typography variant="h6">{allWorkers.length}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Workers
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Badge badgeContent={pendingWorkers.length} color="warning">
-                  <Avatar sx={{ bgcolor: 'warning.main' }}>
-                    <PersonIcon />
-                  </Avatar>
-                </Badge>
-                <Box>
-                  <Typography variant="h6">{pendingWorkers.length}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Pending Approval
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar sx={{ bgcolor: 'success.main' }}>
-                  <ApproveIcon />
-                </Avatar>
-                <Box>
-                  <Typography variant="h6">{approvedWorkers.length}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Approved
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar sx={{ bgcolor: 'info.main' }}>
-                  <WorkIcon />
-                </Avatar>
-                <Box>
-                  <Typography variant="h6">
-                    {allWorkers.filter(w => w.workerProfile?.status === 'active').length}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Active Workers
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Filters */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} sm={6} md={3}>
-              <TextField
-                fullWidth
-                size="small"
-                placeholder="Search workers..."
-                value={filters.search}
-                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                InputProps={{
-                  startAdornment: <SearchIcon color="action" sx={{ mr: 1 }} />
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={2}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={filters.status}
-                  onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-                  label="Status"
-                >
-                  <MenuItem value="">All</MenuItem>
-                  <MenuItem value="active">Active</MenuItem>
-                  <MenuItem value="inactive">Inactive</MenuItem>
-                  <MenuItem value="on_leave">On Leave</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6} md={2}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Approval</InputLabel>
-                <Select
-                  value={filters.approvalStatus}
-                  onChange={(e) => setFilters(prev => ({ ...prev, approvalStatus: e.target.value }))}
-                  label="Approval"
-                >
-                  <MenuItem value="">All</MenuItem>
-                  <MenuItem value="pending">Pending</MenuItem>
-                  <MenuItem value="approved">Approved</MenuItem>
-                  <MenuItem value="rejected">Rejected</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6} md={5}>
-              <Autocomplete
-                multiple
-                options={WORKER_SKILLS}
-                value={filters.skills}
-                onChange={(e, newValue) => setFilters(prev => ({ ...prev, skills: newValue }))}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    size="small"
-                    label="Skills"
-                    placeholder="Select skills..."
-                  />
-                )}
-                renderTags={(value, getTagProps) =>
-                  value.map((option, index) => (
-                    <Chip
-                      variant="outlined"
-                      label={option.replace('_', ' ')}
-                      size="small"
-                      {...getTagProps({ index })}
-                    />
-                  ))
-                }
-              />
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
-
-      {/* Workers Table with Tabs */}
-      <Card>
-        <Tabs
-          value={tabValue}
+      {/* Tabs and other UI elements */}
+      <Box sx={{ width: '100%', mb: 3 }}>
+        <Tabs 
+          value={tabValue} 
           onChange={(e, newValue) => setTabValue(newValue)}
-          sx={{ borderBottom: 1, borderColor: 'divider' }}
+          indicatorColor="primary"
+          textColor="primary"
+          variant="scrollable"
+          scrollButtons="auto"
         >
-          <Tab label={`All Workers (${allWorkers.length})`} />
-          <Tab 
-            label={
-              <Badge badgeContent={pendingWorkers.length} color="warning">
-                Pending ({pendingWorkers.length})
-              </Badge>
-            } 
-          />
-          <Tab label={`Approved (${approvedWorkers.length})`} />
-          <Tab label={`Rejected (${rejectedWorkers.length})`} />
+          <Tab label={`All Workers (${filteredWorkers.length})`} />
+          <Tab label={`Pending (${filteredWorkers.filter(w => w.workerProfile?.approvalStatus === 'pending').length})`} />
+          <Tab label={`Approved (${filteredWorkers.filter(w => w.workerProfile?.approvalStatus === 'approved').length})`} />
+          <Tab label={`Rejected (${filteredWorkers.filter(w => w.workerProfile?.approvalStatus === 'rejected').length})`} />
         </Tabs>
+      </Box>
 
-        <Box sx={{ p: 3 }}>
-          {renderWorkerTable(getWorkersByTab())}
+      {/* Worker List */}
+      {isLoading ? (
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+          <CircularProgress />
         </Box>
-      </Card>
+      ) : error ? (
+        <Alert severity="error">
+          Failed to load workers. {error?.data?.message || 'Please try again later.'}
+        </Alert>
+      ) : filteredWorkers.length === 0 ? (
+        <Alert severity="info">No workers found. Create a new worker to get started.</Alert>
+      ) : (
+        <Grid container spacing={3}>
+          {filteredWorkers.map((worker) => (
+            <Grid item xs={12} sm={6} md={4} lg={3} key={worker._id}>
+              <Card>
+                <CardContent>
+                  <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <Avatar src={worker.photo} sx={{ mr: 2 }}>
+                        <PersonIcon />
+                      </Avatar>
+                      <Box>
+                        <Typography variant="h6">{worker.name}</Typography>
+                        <Typography variant="body2" color="textSecondary">
+                          {worker.email}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <IconButton
+                      onClick={(e) => handleMenuClick(e, worker)}
+                      disabled={isDeleting || isUpdatingApproval}
+                    >
+                      <MoreVertIcon />
+                    </IconButton>
+                  </Box>
+                  
+                  <Box mt={2}>
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <PhoneIcon fontSize="small" color="action" sx={{ mr: 1 }} />
+                      <Typography variant="body2">{worker.phone || 'N/A'}</Typography>
+                    </Box>
+                    
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <WorkIcon fontSize="small" color="action" sx={{ mr: 1 }} />
+                      <Typography variant="body2">
+                        {worker.workerProfile?.paymentType === 'hourly' 
+                          ? `$${worker.workerProfile?.hourlyRate || '0'}/hr`
+                          : `$${worker.workerProfile?.contractRate || '0'} (contract)`}
+                      </Typography>
+                    </Box>
+                    
+                    <Box mt={1}>
+                      {worker.workerProfile?.skills?.slice(0, 3).map((skill) => (
+                        <Chip 
+                          key={skill} 
+                          label={skill} 
+                          size="small" 
+                          sx={{ mr: 0.5, mb: 0.5 }} 
+                        />
+                      ))}
+                      {worker.workerProfile?.skills?.length > 3 && (
+                        <Chip 
+                          label={`+${worker.workerProfile.skills.length - 3} more`} 
+                          size="small" 
+                          variant="outlined"
+                        />
+                      )}
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
 
-      {/* Action Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
+      {/* Worker Dialog */}
+      <Dialog 
+        open={workerDialogOpen} 
+        onClose={() => !isSubmitting && setWorkerDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
       >
-        <MenuItem onClick={() => navigate(`/workers/${selectedWorker?._id}`)}>
-          <VisibilityIcon sx={{ mr: 1 }} />
-          View Details
-        </MenuItem>
-        {hasPermission(['update:workers']) && (
-          <MenuItem onClick={() => openEditDialog(selectedWorker)}>
-            <EditIcon sx={{ mr: 1 }} />
-            Edit
-          </MenuItem>
-        )}
-        {hasPermission(['delete:workers']) && 
-         selectedWorker?.role !== 'admin' && 
-         selectedWorker?._id && 
-         selectedWorker._id !== currentUser?._id && (
-          <MenuItem 
-            onClick={() => {
-              handleMenuClose();
-              setDeleteDialogOpen(true);
-            }}
-            sx={{ color: 'error.main' }}
-          >
-            <DeleteIcon sx={{ mr: 1 }} />
-            Delete
-          </MenuItem>
-        )}
-      </Menu>
-
-      {/* Worker Create/Edit Dialog */}
-      <Dialog open={workerDialogOpen} onClose={() => setWorkerDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
-          {editMode ? 'Edit Worker' : 'Add New Worker'}
-        </DialogTitle>
+        <DialogTitle>{editMode ? 'Edit Worker' : 'Add New Worker'}</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Name"
+                name="name"
                 value={workerForm.name}
-                onChange={(e) => setWorkerForm(prev => ({ ...prev, name: e.target.value }))}
+                onChange={handleInputChange}
                 required
+                disabled={isSubmitting}
+                margin="normal"
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Email"
+                name="email"
                 type="email"
                 value={workerForm.email}
-                onChange={(e) => setWorkerForm(prev => ({ ...prev, email: e.target.value }))}
+                onChange={handleInputChange}
                 required
+                disabled={isSubmitting || editMode}
+                margin="normal"
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Phone"
+                name="phone"
                 value={workerForm.phone}
-                onChange={(e) => setWorkerForm(prev => ({ ...prev, phone: e.target.value }))}
+                onChange={handleInputChange}
+                disabled={isSubmitting}
+                margin="normal"
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label={editMode ? "New Password (leave blank to keep current)" : "Password"}
+                name="password"
+                label={editMode ? 'New Password (leave blank to keep current)' : 'Password'}
                 type="password"
                 value={workerForm.password}
-                onChange={(e) => setWorkerForm(prev => ({ ...prev, password: e.target.value }))}
+                onChange={handleInputChange}
                 required={!editMode}
+                disabled={isSubmitting}
+                margin="normal"
               />
             </Grid>
             <Grid item xs={12}>
@@ -693,56 +455,50 @@ const Workers = () => {
                 multiple
                 options={WORKER_SKILLS}
                 value={workerForm.skills}
-                onChange={(e, newValue) => setWorkerForm(prev => ({ ...prev, skills: newValue }))}
+                onChange={handleSkillsChange}
+                disabled={isSubmitting}
                 renderInput={(params) => (
                   <TextField
                     {...params}
+                    variant="outlined"
                     label="Skills"
-                    placeholder="Select worker skills..."
+                    placeholder="Select skills"
+                    margin="normal"
                   />
                 )}
-                renderTags={(value, getTagProps) =>
-                  value.map((option, index) => (
-                    <Chip
-                      variant="outlined"
-                      label={option.replace('_', ' ')}
-                      {...getTagProps({ index })}
-                    />
-                  ))
-                }
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
-              <FormControl fullWidth>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth margin="normal">
                 <InputLabel>Payment Type</InputLabel>
                 <Select
+                  name="paymentType"
                   value={workerForm.paymentType}
-                  onChange={(e) => setWorkerForm(prev => ({ ...prev, paymentType: e.target.value }))}
+                  onChange={handleInputChange}
                   label="Payment Type"
+                  disabled={isSubmitting}
                 >
                   <MenuItem value="hourly">Hourly</MenuItem>
                   <MenuItem value="contract">Contract</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Hourly Rate ($)"
+                name="hourlyRate"
+                label={workerForm.paymentType === 'hourly' ? 'Hourly Rate ($)' : 'Contract Rate ($)'}
                 type="number"
-                value={workerForm.hourlyRate}
-                onChange={(e) => setWorkerForm(prev => ({ ...prev, hourlyRate: e.target.value }))}
-                disabled={workerForm.paymentType !== 'hourly'}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="Contract Rate ($)"
-                type="number"
-                value={workerForm.contractRate}
-                onChange={(e) => setWorkerForm(prev => ({ ...prev, contractRate: e.target.value }))}
-                disabled={workerForm.paymentType !== 'contract'}
+                value={workerForm.paymentType === 'hourly' ? workerForm.hourlyRate : workerForm.contractRate}
+                onChange={(e) => {
+                  if (workerForm.paymentType === 'hourly') {
+                    setWorkerForm(prev => ({ ...prev, hourlyRate: e.target.value }));
+                  } else {
+                    setWorkerForm(prev => ({ ...prev, contractRate: e.target.value }));
+                  }
+                }}
+                disabled={isSubmitting}
+                margin="normal"
               />
             </Grid>
             <Grid item xs={12}>
@@ -750,38 +506,51 @@ const Workers = () => {
                 fullWidth
                 multiline
                 rows={3}
+                name="notes"
                 label="Notes"
                 value={workerForm.notes}
-                onChange={(e) => setWorkerForm(prev => ({ ...prev, notes: e.target.value }))}
+                onChange={handleInputChange}
+                disabled={isSubmitting}
+                margin="normal"
                 placeholder="Additional notes about this worker..."
               />
             </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setWorkerDialogOpen(false)} disabled={isCreating || isUpdating}>
+          <Button 
+            onClick={() => setWorkerDialogOpen(false)} 
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
-          <Button
-            onClick={handleWorkerSubmit}
-            variant="contained"
-            disabled={isCreating || isUpdating || !workerForm.name || !workerForm.email}
+          <Button 
+            onClick={handleWorkerSubmit} 
+            variant="contained" 
+            disabled={isSubmitting}
+            startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
           >
-            {isCreating || isUpdating ? 'Saving...' : (editMode ? 'Update' : 'Create')}
+            {isSubmitting ? 'Saving...' : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Delete Worker</DialogTitle>
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+      >
+        <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete this worker? This action cannot be undone.
+            Are you sure you want to delete {selectedWorker?.name}? This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
+          <Button 
+            onClick={() => setDeleteDialogOpen(false)} 
+            disabled={isDeleting}
+          >
             Cancel
           </Button>
           <Button 
@@ -789,11 +558,80 @@ const Workers = () => {
             color="error" 
             variant="contained"
             disabled={isDeleting}
+            startIcon={isDeleting ? <CircularProgress size={20} /> : null}
           >
             {isDeleting ? 'Deleting...' : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Action Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+      >
+        <MenuItem 
+          onClick={() => {
+            navigate(`/workers/${selectedWorker?._id}`);
+            handleMenuClose();
+          }}
+        >
+          <VisibilityIcon sx={{ mr: 1 }} />
+          View Details
+        </MenuItem>
+        {hasPermission(['update:workers']) && (
+          <MenuItem 
+            onClick={() => {
+              handleEditClick(selectedWorker);
+              handleMenuClose();
+            }}
+            disabled={isUpdatingApproval}
+          >
+            <EditIcon sx={{ mr: 1 }} />
+            Edit
+          </MenuItem>
+        )}
+        {hasPermission(['delete:workers']) && (
+          <MenuItem 
+            onClick={() => {
+              handleMenuClose();
+              setDeleteDialogOpen(true);
+            }}
+            disabled={isDeleting || isUpdatingApproval}
+            sx={{ color: 'error.main' }}
+          >
+            <DeleteIcon sx={{ mr: 1 }} />
+            Delete
+          </MenuItem>
+        )}
+        {hasPermission(['approve:workers']) && selectedWorker?.workerProfile?.approvalStatus === 'pending' && (
+          <>
+            <MenuItem 
+              onClick={() => {
+                handleApprovalAction(selectedWorker, 'approved');
+                handleMenuClose();
+              }}
+              disabled={isUpdatingApproval}
+              sx={{ color: 'success.main' }}
+            >
+              <ApproveIcon sx={{ mr: 1 }} />
+              Approve
+            </MenuItem>
+            <MenuItem 
+              onClick={() => {
+                handleApprovalAction(selectedWorker, 'rejected');
+                handleMenuClose();
+              }}
+              disabled={isUpdatingApproval}
+              sx={{ color: 'error.main' }}
+            >
+              <RejectIcon sx={{ mr: 1 }} />
+              Reject
+            </MenuItem>
+          </>
+        )}
+      </Menu>
     </Box>
   );
 };

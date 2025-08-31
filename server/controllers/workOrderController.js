@@ -159,8 +159,11 @@ exports.getWorkOrder = catchAsync(async (req, res, next) => {
 exports.createWorkOrder = catchAsync(async (req, res, next) => {
   try {
     // 1) Basic validation
-    if (!req.body.building) {
-      return next(new AppError('Building ID is required', 400));
+    const requiredFields = ['building', 'workType', 'workSubType', 'description'];
+    const missingFields = requiredFields.filter(field => !req.body[field]);
+    
+    if (missingFields.length > 0) {
+      return next(new AppError(`Missing required fields: ${missingFields.join(', ')}`, 400));
     }
 
     // 2) Check if building exists
@@ -180,7 +183,11 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
     } else if (Array.isArray(req.body.photos)) {
       req.body.photos = req.body.photos
         .filter(photo => photo && typeof photo === 'string' && photo.trim() !== '')
-        .map(photo => photo.trim());
+        .map(photo => ({
+          url: photo.trim(),
+          uploadedBy: req.user.id,
+          uploadedAt: new Date()
+        }));
     } else {
       req.body.photos = [];
     }
@@ -191,13 +198,13 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
     }
     
     req.body.notes = req.body.notes
+      .filter(note => note && (typeof note === 'string' ? note.trim() : (note.content || '').trim()))
       .map(note => ({
         content: typeof note === 'string' ? note.trim() : (note.content || '').trim(),
         createdBy: req.user.id,
         createdAt: new Date(),
         isPrivate: !!note.isPrivate
-      }))
-      .filter(note => note.content);
+      }));
 
     // 6) Normalize and validate workType
     if (req.body.workType) {
@@ -207,29 +214,43 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       }
     }
 
-    // 7) Apply pricing based on apartment status
-    if (req.body.apartmentStatus && req.body.estimatedCost) {
-      const baseCost = parseFloat(req.body.estimatedCost);
-      if (!isNaN(baseCost)) {
-        const multipliers = {
-          occupied: 1.2,
-          under_renovation: 1.15,
-          reserved: 1.1,
-          vacant: 1.0
-        };
-        
-        const multiplier = multipliers[req.body.apartmentStatus] || 1.0;
-        req.body.estimatedCost = Math.round(baseCost * multiplier * 100) / 100;
-      }
+    // 7) Set default status if not provided
+    if (!req.body.status) {
+      req.body.status = 'pending';
     }
 
-    // 8) Create work order
+    // 8) Process assigned workers
+    if (req.body.assignedTo && !Array.isArray(req.body.assignedTo)) {
+      req.body.assignedTo = [];
+    } else if (Array.isArray(req.body.assignedTo)) {
+      // Ensure assignedTo has the correct structure
+      req.body.assignedTo = req.body.assignedTo
+        .filter(workerId => mongoose.Types.ObjectId.isValid(workerId))
+        .map(workerId => ({
+          worker: workerId,
+          assignedBy: req.user.id,
+          assignedAt: new Date(),
+          status: 'pending'
+        }));
+    }
+
+    // 9) Create work order
     const workOrder = await WorkOrder.create(req.body);
 
-    // 9) Populate response data
+    // 10) Populate response data
     const populatedWorkOrder = await WorkOrder.findById(workOrder._id)
-      .populate({ path: 'building', select: 'name address' })
-      .populate({ path: 'createdBy', select: 'name email' });
+      .populate({ 
+        path: 'building', 
+        select: 'name address city'
+      })
+      .populate({
+        path: 'assignedTo.worker',
+        select: 'name email phone'
+      })
+      .populate({ 
+        path: 'createdBy', 
+        select: 'name email' 
+      });
 
     res.status(201).json({
       status: 'success',
@@ -250,170 +271,162 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       return next(new AppError('Duplicate work order detected', 400));
     }
     
-    next(error);
+    next(new AppError('Failed to create work order. Please try again.', 500));
   }
 });
 
 exports.updateWorkOrder = catchAsync(async (req, res, next) => {
     try {
-        console.log('Update work order request:', req.params.id, req.body);
-        
-        // Validate and clean up the request body
-        const updateData = { ...req.body };
-
-        // Handle assignedTo array properly - check if it's already in correct format
-        if (updateData.assignedTo) {
-            if (Array.isArray(updateData.assignedTo)) {
-                // Check if items are already objects with worker property
-                const firstItem = updateData.assignedTo[0];
-                if (firstItem && typeof firstItem === 'object' && firstItem.worker) {
-                    // Already in correct format, just validate worker IDs exist
-                    const workerIds = updateData.assignedTo.map(assignment => assignment.worker);
-                    const workers = await User.find({ _id: { $in: workerIds }, role: 'worker' });
-                    if (workers.length !== workerIds.length) {
-                        return next(new AppError('One or more assigned workers not found', 400));
-                    }
-                } else {
-                    // Convert simple array of IDs to assignment format
-                    updateData.assignedTo = updateData.assignedTo
-                        .filter(workerId => workerId && workerId.toString().trim() !== '')
-                        .map(workerId => ({
-                            worker: workerId,
-                            assignedAt: new Date(),
-                            status: 'assigned'
-                        }));
-                    
-                    // Validate worker IDs exist
-                    if (updateData.assignedTo.length > 0) {
-                        const workerIds = updateData.assignedTo.map(assignment => assignment.worker);
-                        const workers = await User.find({ _id: { $in: workerIds }, role: 'worker' });
-                        if (workers.length !== workerIds.length) {
-                            return next(new AppError('One or more assigned workers not found', 400));
-                        }
-                    }
-                }
-            } else {
-                return next(new AppError('assignedTo must be an array', 400));
-            }
-        }
-
-        // Validate photos array if present
-        if (updateData.photos && Array.isArray(updateData.photos)) {
-            updateData.photos = updateData.photos.filter(photo => photo && photo.trim() !== '');
-        }
-
-        // Handle date fields with better validation
-        if (updateData.scheduledDate) {
-            const date = new Date(updateData.scheduledDate);
-            if (isNaN(date.getTime())) {
-                return next(new AppError('Invalid scheduled date format', 400));
-            }
-            updateData.scheduledDate = date;
-        }
-        if (updateData.estimatedCompletionDate) {
-            const date = new Date(updateData.estimatedCompletionDate);
-            if (isNaN(date.getTime())) {
-                return next(new AppError('Invalid estimated completion date format', 400));
-            }
-            updateData.estimatedCompletionDate = date;
-        }
-
-        // Validate building exists if provided
-        if (updateData.building) {
-            const building = await Building.findById(updateData.building);
-            if (!building) {
-                return next(new AppError('Building not found', 404));
-            }
-        }
-
-        // Validate work type if provided
-        if (updateData.workType) {
-            const validWorkTypes = ['painting', 'cleaning', 'repairs', 'maintenance', 'inspection', 'other', 'plumbing', 'electrical', 'hvac', 'flooring', 'roofing', 'carpentry'];
-            if (!validWorkTypes.includes(updateData.workType.toLowerCase())) {
-                return next(new AppError('Invalid work type', 400));
-            }
-            updateData.workType = updateData.workType.toLowerCase();
-        }
-
-        // Set updatedBy
-        updateData.updatedBy = req.user.id;
-        
-        const workOrder = await WorkOrder.findByIdAndUpdate(
-            req.params.id,
-            updateData,
-            {
-                new: true,
-                runValidators: true
-            }
-        ).populate({ path: 'building', select: 'name address' })
-        .populate({ path: 'assignedTo.worker', select: 'name email phone' })
-        .populate({ path: 'createdBy', select: 'name email' });
-        
+        // 1) Find the work order
+       const workOrder = await WorkOrder.findById(req.params.id);
         if (!workOrder) {
             return next(new AppError('No work order found with that ID', 404));
         }
-        
-        console.log('Work order updated successfully:', workOrder._id);
-        
+
+        // 2) Check if building exists if being updated
+        if (req.body.building) {
+          const building = await Building.findById(req.body.building);
+          if (!building) {
+            return next(new AppError('No building found with that ID', 404));
+          }
+        }
+
+        // 3) Process updates
+        const updateFields = [
+            'title', 'description', 'apartmentNumber', 'block', 'apartmentStatus',
+            'workType', 'workSubType', 'priority', 'status', 'estimatedCost',
+            'actualCost', 'scheduledDate', 'requireInspection', 'inspectionNotes'
+        ];
+
+        updateFields.forEach(field => {
+            if (req.body[field]) {
+                workOrder[field] = req.body[field];
+            }
+        });
+
+        // 4) Update photos
+        if (req.body.photos) {
+            if (!Array.isArray(req.body.photos)) {
+                req.body.photos = [];
+            }
+            workOrder.photos = req.body.photos
+                .filter(photo => photo && typeof photo === 'string' && photo.trim() !== '')
+                .map(photo => ({
+                    url: photo.trim(),
+                    uploadedBy: req.user.id,
+                    uploadedAt: new Date()
+                }));
+        } else {
+            workOrder.photos = [];
+        }
+
+        // 5) Handle notes updates
+        if (req.body.notes) {
+            if (!Array.isArray(req.body.notes)) {
+                req.body.notes = [];
+            }
+            workOrder.notes = req.body.notes
+                .filter(note => note && (typeof note === 'string' ? note.trim() : (note.content || '').trim()))
+                .map(note => ({
+                    content: typeof note === 'string' ? note.trim() : (note.content || '').trim(),
+                    createdBy: req.user.id,
+                    createdAt: new Date(),
+                    isPrivate: !!note.isPrivate
+                }));
+        }
+
+        // 6) Handle assigned workers updates
+        if (req.body.assignedTo) {
+            if (!Array.isArray(req.body.assignedTo)) {
+                req.body.assignedTo = [];
+            }
+            workOrder.assignedTo = req.body.assignedTo
+                .filter(workerId => mongoose.Types.ObjectId.isValid(workerId))
+                .map(workerId => ({
+                    worker: workerId,
+                    assignedBy: req.user.id,
+                    assignedAt: new Date(),
+                    status: 'pending'
+                }));
+        }
+
+        // 7) Set updatedBy
+        workOrder.updatedBy = req.user.id;
+        workOrder.updatedAt = new Date();
+
+        // 8) Save the updated work order
+        await workOrder.save();
+
+        // 9) Populate response data
+        const populatedWorkOrder = await WorkOrder.findById(workOrder._id)
+            .populate({ 
+                path: 'building', 
+                select: 'name address city'
+            })
+            .populate({
+                path: 'assignedTo.worker',
+                select: 'name email phone'
+            })
+            .populate({ 
+                path: 'updatedBy', 
+                select: 'name email'
+            });
+
         res.status(200).json({
             status: 'success',
             data: {
-                workOrder
+                workOrder: populatedWorkOrder
             }
         });
+
     } catch (error) {
         console.error('Work order update error:', error);
-        
-        // Handle validation errors
-        if (error.name === 'ValidationError') {
-            const errors = Object.values(error.errors).map(err => err.message);
-            console.error('Validation errors:', errors);
-            return next(new AppError(`Validation Error: ${errors.join(', ')}`, 400));
-        }
-        
-        // Handle cast errors (invalid ObjectId)
-        if (error.name === 'CastError') {
-            console.error('Cast error:', error.message);
-            return next(new AppError('Invalid ID format', 400));
-        }
-        
-        // Handle duplicate key errors
-        if (error.code === 11000) {
-            console.error('Duplicate key error:', error.message);
-            return next(new AppError('Duplicate data detected', 400));
-        }
-        
-        console.error('Unexpected error:', error);
-        return next(new AppError('Failed to update work order', 500));
+        next(new AppError('Failed to update work order. Please try again.', 500));
     }
 });
 
 exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
     try {
+        // 1) Find the work order
         const workOrder = await WorkOrder.findById(req.params.id);
         
         if (!workOrder) {
             return next(new AppError('No work order found with that ID', 404));
         }
 
-        // Check if work order can be deleted (optional business logic)
-        if (workOrder.status === 'in_progress') {
-            return next(new AppError('Cannot delete work order that is currently in progress', 400));
+        // 2) Check if the work order is already marked as deleted
+        if (workOrder.isDeleted) {
+            return next(new AppError('This work order has already been deleted', 400));
         }
 
-        await WorkOrder.findByIdAndDelete(req.params.id);
+        // 3) Perform soft delete (mark as deleted instead of removing from database)
+        workOrder.isDeleted = true;
+        workOrder.deletedAt = new Date();
+        workOrder.deletedBy = req.user.id;
         
+        // 4) Save the updated work order
+        await workOrder.save();
+
+        // 5) Optionally: Clean up related data (e.g., remove from worker assignments)
+        // This is a soft delete, so we're just updating the status
+        // If you need to clean up related data, add that logic here
+
         res.status(204).json({
             status: 'success',
             data: null
         });
+
     } catch (error) {
-        console.error('Delete work order error:', error);
-        return next(new AppError('Failed to delete work order', 500));
+        console.error('Work order deletion error:', error);
+        
+        if (error.name === 'CastError') {
+            return next(new AppError('Invalid work order ID format', 400));
+        }
+        
+        next(new AppError('Failed to delete work order. Please try again.', 500));
     }
 });
 
-// Get form data for creating work orders
 exports.getWorkOrderFormData = catchAsync(async (req, res, next) => {
     const buildings = await Building.find({ status: 'active' }).select('name address');
     const workers = await User.find({ role: { $in: ['worker', 'supervisor'] } }).select('name email role');
@@ -440,7 +453,6 @@ exports.getWorkOrderFormData = catchAsync(async (req, res, next) => {
     });
 });
 
-// Add a note to work order
 exports.addNoteToWorkOrder = catchAsync(async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -473,7 +485,6 @@ exports.addNoteToWorkOrder = catchAsync(async (req, res, next) => {
     }
 });
 
-// Update a note in work order
 exports.updateNoteInWorkOrder = catchAsync(async (req, res, next) => {
     try {
         const { id, noteId } = req.params;
@@ -506,7 +517,6 @@ exports.updateNoteInWorkOrder = catchAsync(async (req, res, next) => {
     }
 });
 
-// Delete a note from work order
 exports.deleteNoteFromWorkOrder = catchAsync(async (req, res, next) => {
     try {
         const { id, noteId } = req.params;
@@ -529,7 +539,6 @@ exports.deleteNoteFromWorkOrder = catchAsync(async (req, res, next) => {
     }
 });
 
-// Report an issue with a work order
 exports.reportIssue = catchAsync(async (req, res, next) => {
     const workOrder = await WorkOrder.findById(req.params.id);
     
@@ -552,7 +561,6 @@ exports.reportIssue = catchAsync(async (req, res, next) => {
     });
 });
 
-// Assign workers to work order
 exports.assignWorkers = catchAsync(async (req, res, next) => {
   const { workers, scheduledDate } = req.body;
   
@@ -600,7 +608,6 @@ exports.assignWorkers = catchAsync(async (req, res, next) => {
   });
 });
 
-// Update work order status
 exports.updateStatus = catchAsync(async (req, res, next) => {
     const { status } = req.body;
     
@@ -632,7 +639,6 @@ exports.updateStatus = catchAsync(async (req, res, next) => {
     });
 });
 
-// Add photo metadata to a work order after uploading to Cloudinary
 exports.addPhotoToWorkOrder = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   const { url, thumbnailUrl, publicId, caption, type } = req.body;
@@ -656,7 +662,6 @@ exports.addPhotoToWorkOrder = catchAsync(async (req, res, next) => {
   res.status(201).json({ status: 'success', data: workOrder });
 });
 
-// Remove photo metadata from a work order (optionally also delete in Cloudinary by publicId)
 exports.deletePhotoFromWorkOrder = catchAsync(async (req, res, next) => {
   const { id, photoId } = req.params;
   const workOrder = await WorkOrder.findById(id);
@@ -669,7 +674,6 @@ exports.deletePhotoFromWorkOrder = catchAsync(async (req, res, next) => {
   res.json({ status: 'success', data: workOrder });
 });
 
-// Update work order task checklist
 exports.updateTaskChecklist = catchAsync(async (req, res, next) => {
   const { taskId, completed, notes } = req.body;
   
@@ -705,7 +709,6 @@ exports.updateTaskChecklist = catchAsync(async (req, res, next) => {
   });
 });
 
-// Add task to checklist
 exports.addTaskToChecklist = catchAsync(async (req, res, next) => {
   const { name, description } = req.body;
   
@@ -731,7 +734,6 @@ exports.addTaskToChecklist = catchAsync(async (req, res, next) => {
   });
 });
 
-// Get worker assignments for a work order
 exports.getWorkerAssignments = catchAsync(async (req, res, next) => {
   const workOrder = await WorkOrder.findById(req.params.id)
     .populate({ path: 'assignedTo.worker', select: 'name email phone' });

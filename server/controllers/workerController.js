@@ -59,28 +59,53 @@ exports.createWorker = catchAsync(async (req, res, next) => {
 });
 
 exports.updateWorker = catchAsync(async (req, res, next) => {
-    const worker = await User.findOneAndUpdate(
-        { _id: req.params.id, role: 'worker' },
-        req.body,
-        {
-            new: true,
-            runValidators: true
-        }
-    ).select('-password');
+    const { name, email, phone, password, skills, paymentType, hourlyRate, contractRate, notes } = req.body;
+    
+    // Find the worker
+    const worker = await User.findOne({ _id: req.params.id, role: 'worker' });
     
     if (!worker) {
         return next(new AppError('No worker found with that ID', 404));
     }
+
+    // Update basic user info
+    if (name) worker.name = name;
+    if (email) worker.email = email;
+    if (phone) worker.phone = phone;
+    if (password) worker.password = password;
+
+    // Initialize workerProfile if it doesn't exist
+    if (!worker.workerProfile) {
+        worker.workerProfile = {};
+    }
+
+    // Update worker profile fields
+    if (skills !== undefined) worker.workerProfile.skills = skills;
+    if (paymentType) worker.workerProfile.paymentType = paymentType;
+    if (hourlyRate !== undefined) worker.workerProfile.hourlyRate = hourlyRate;
+    if (contractRate !== undefined) worker.workerProfile.contractRate = contractRate;
+    if (notes !== undefined) worker.workerProfile.notes = notes;
+
+    // Save the updated worker
+    const updatedWorker = await worker.save({ validateModifiedOnly: true });
+    
+    // Remove password from response
+    updatedWorker.password = undefined;
     
     res.status(200).json({
         status: 'success',
         data: {
-            worker
+            worker: updatedWorker
         }
     });
 });
 
 exports.deleteWorker = catchAsync(async (req, res, next) => {
+    // Prevent deletion of the current user
+    if (req.user.id === req.params.id) {
+        return next(new AppError('You cannot delete your own account', 400));
+    }
+    
     const worker = await User.findOneAndDelete({ 
         _id: req.params.id, 
         role: 'worker' 
@@ -89,6 +114,12 @@ exports.deleteWorker = catchAsync(async (req, res, next) => {
     if (!worker) {
         return next(new AppError('No worker found with that ID', 404));
     }
+    
+    // Remove worker from any assigned work orders
+    await WorkOrder.updateMany(
+        { 'assignedTo.worker': req.params.id },
+        { $pull: { assignedTo: { worker: req.params.id } } }
+    );
     
     res.status(204).json({
         status: 'success',
