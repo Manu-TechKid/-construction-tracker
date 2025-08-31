@@ -129,6 +129,16 @@ const DashboardLayout = () => {
       });
     }
 
+    // Work Progress
+    if (hasPermission(['read:workorders'])) {
+      items.push({
+        text: 'Work Progress',
+        icon: <WorkIcon />,
+        path: '/work-orders/progress',
+        permission: 'read:workorders'
+      });
+    }
+
     // Workers - not for workers themselves
     if (!isWorker && hasPermission(['read:workers'])) {
       items.push({
@@ -345,6 +355,15 @@ const DashboardLayout = () => {
         </MenuItem>
         <Divider />
         <MenuItem onClick={handleLogout}>
+          <LogoutIcon sx={{ mr: 1 }} />
+          Logout
+        </MenuItem>
+      </Menu>
+    </Box>
+  );
+};
+
+export default DashboardLayout;
           <LogoutIcon sx={{ mr: 1 }} />
           Logout
         </MenuItem>
