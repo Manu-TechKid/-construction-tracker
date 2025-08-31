@@ -51,20 +51,21 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/workers', workerRoutes);
 app.use('/api/v1/schedules', scheduleRoutes);
-app.use('/api/v1', timeTrackingRoutes);
-
-// Error handler middleware
-app.use(errorHandler);
+app.use('/api/v1/time-tracking', timeTrackingRoutes);
 
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {
   // Set static folder
   app.use(express.static(path.join(__dirname, '../client/build')));
-
+  
+  // Handle React routing, return all requests to React app
   app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../client', 'build', 'index.html'));
+    res.sendFile(path.resolve(__dirname, '../client/build', 'index.html'));
   });
 }
+
+// Error handling middleware
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 

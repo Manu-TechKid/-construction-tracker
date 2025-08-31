@@ -1,0 +1,39 @@
+{
+  "name": "construction-tracker",
+  "version": "1.0.0",
+  "description": "A comprehensive construction management application",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "server": "nodemon server/server.js",
+    "client": "cd client && npm start",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "heroku-postbuild": "cd client && npm install --legacy-peer-deps && npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Manu-TechKid/-construction-tracker.git"
+  },
+  "keywords": [
+    "construction",
+    "management",
+    "tracking",
+    "react",
+    "node",
+    "mongodb"
+  ],
+  "author": "Manu-TechKid",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Manu-TechKid/-construction-tracker/issues"
+  },
+  "homepage": "https://github.com/Manu-TechKid/-construction-tracker#readme",
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "nodemon": "^2.0.22"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
