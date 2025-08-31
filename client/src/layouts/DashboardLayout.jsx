@@ -119,8 +119,8 @@ const DashboardLayout = () => {
       });
     }
 
-    // Work Orders
-    if (hasPermission(['read:workorders'])) {
+    // Work Orders - only for non-workers (admin, manager, supervisor)
+    if (!isWorker && hasPermission(['read:workorders'])) {
       items.push({
         text: 'Work Orders',
         icon: <AssignmentIcon />,
@@ -129,8 +129,8 @@ const DashboardLayout = () => {
       });
     }
 
-    // Work Progress
-    if (hasPermission(['read:workorders'])) {
+    // Work Progress - only for non-workers
+    if (!isWorker && hasPermission(['read:workorders'])) {
       items.push({
         text: 'Work Progress',
         icon: <WorkIcon />,
@@ -355,15 +355,6 @@ const DashboardLayout = () => {
         </MenuItem>
         <Divider />
         <MenuItem onClick={handleLogout}>
-          <LogoutIcon sx={{ mr: 1 }} />
-          Logout
-        </MenuItem>
-      </Menu>
-    </Box>
-  );
-};
-
-export default DashboardLayout;
           <LogoutIcon sx={{ mr: 1 }} />
           Logout
         </MenuItem>
