@@ -51,15 +51,11 @@ const workOrderSchema = new mongoose.Schema({
   },
   apartmentNumber: {
     type: String,
-    required: [true, 'Apartment number is required'],
-    trim: true,
-    maxlength: [20, 'Apartment number cannot be longer than 20 characters']
+    length: [20, 'Apartment number cannot be longer than 20 characters']
   },
   block: {
     type: String,
-    required: [true, 'Block is required'],
-    trim: true,
-    maxlength: [50, 'Block cannot be longer than 50 characters']
+    trim: true,er than 50 characters']
   },
   apartmentStatus: {
     type: String,
