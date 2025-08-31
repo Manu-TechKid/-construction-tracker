@@ -184,30 +184,45 @@ exports.updateWorkerApproval = catchAsync(async (req, res, next) => {
 
 // Delete user
 exports.deleteUser = catchAsync(async (req, res, next) => {
-    const user = await User.findById(req.params.id);
-    
-    if (!user) {
-        return next(new AppError('No user found with that ID', 404));
-    }
-    
-    // Check if worker has active assignments
-    if (user.role === 'worker') {
-        const activeAssignments = await WorkOrder.countDocuments({
-            'assignedTo.worker': user._id,
-            'assignedTo.status': { $in: ['pending', 'in_progress'] }
-        });
+    try {
+        const user = await User.findById(req.params.id);
         
-        if (activeAssignments > 0) {
-            return next(new AppError('Cannot delete worker with active assignments', 400));
+        if (!user) {
+            return next(new AppError('No user found with that ID', 404));
         }
+
+        // Prevent deletion of admin users
+        if (user.role === 'admin') {
+            return next(new AppError('Cannot delete admin users', 403));
+        }
+
+        // Prevent self-deletion
+        if (req.user && req.user.id === req.params.id) {
+            return next(new AppError('Cannot delete your own account', 403));
+        }
+
+        // Check for active work order assignments if user is a worker
+        if (user.role === 'worker') {
+            const activeAssignments = await WorkOrder.countDocuments({
+                'assignedTo.worker': req.params.id,
+                status: { $in: ['pending', 'in_progress'] }
+            });
+
+            if (activeAssignments > 0) {
+                return next(new AppError('Cannot delete worker with active assignments', 400));
+            }
+        }
+        
+        await User.findByIdAndDelete(req.params.id);
+        
+        res.status(204).json({
+            status: 'success',
+            data: null
+        });
+    } catch (error) {
+        console.error('Delete user error:', error);
+        return next(new AppError('Failed to delete user', 500));
     }
-    
-    await User.findByIdAndDelete(req.params.id);
-    
-    res.status(204).json({
-        status: 'success',
-        data: null
-    });
 });
 
 // Get worker assignments

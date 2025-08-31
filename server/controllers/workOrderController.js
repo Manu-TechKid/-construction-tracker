@@ -341,16 +341,28 @@ exports.updateWorkOrder = catchAsync(async (req, res, next) => {
 });
 
 exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
-    const workOrder = await WorkOrder.findByIdAndDelete(req.params.id);
-    
-    if (!workOrder) {
-        return next(new AppError('No work order found with that ID', 404));
+    try {
+        const workOrder = await WorkOrder.findById(req.params.id);
+        
+        if (!workOrder) {
+            return next(new AppError('No work order found with that ID', 404));
+        }
+
+        // Check if work order can be deleted (optional business logic)
+        if (workOrder.status === 'in_progress') {
+            return next(new AppError('Cannot delete work order that is currently in progress', 400));
+        }
+
+        await WorkOrder.findByIdAndDelete(req.params.id);
+        
+        res.status(204).json({
+            status: 'success',
+            data: null
+        });
+    } catch (error) {
+        console.error('Delete work order error:', error);
+        return next(new AppError('Failed to delete work order', 500));
     }
-    
-    res.status(204).json({
-        status: 'success',
-        data: null
-    });
 });
 
 // Get form data for creating work orders
