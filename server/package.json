@@ -1,45 +1,43 @@
 ﻿{
-    "name":  "server",
-    "version":  "1.0.1",
-    "main":  "index.js",
-    "keywords":  [
-
-                 ],
-    "author":  "",
-    "license":  "ISC",
-    "description":  "Construction Tracker API Server",
-    "engines":  {
-                    "node":  "\u003e=18.0.0"
-                },
-    "scripts":  {
-                    "start":  "node server.js",
-                    "dev":  "nodemon server.js",
-                    "build:client":  "cd ../client \u0026\u0026 npm install --legacy-peer-deps \u0026\u0026 npm run build",
-                    "migrate:apartments":  "node migrations/20240101_update_apartment_schema.js",
-                    "migrate:apartment-photos":  "node migrations/20240102_add_apartment_photos.js",
-                    "migrate:workers":  "node scripts/run-migration.js",
-                    "migrate:workorders":  "node migrations/20240901_update_workorder_schema.js",
-                    "test":  "echo \"Error: no test specified\" \u0026\u0026 exit 1"
-                },
-    "dependencies":  {
-                         "bcryptjs":  "^2.4.3",
-                         "cloudinary":  "^1.41.3",
-                         "compression":  "^1.7.4",
-                         "cookie-parser":  "^1.4.6",
-                         "cors":  "^2.8.5",
-                         "dotenv":  "^16.0.3",
-                         "express":  "^4.18.2",
-                         "express-mongo-sanitize":  "^2.2.0",
-                         "express-rate-limit":  "^6.7.0",
-                         "express-validator":  "^6.14.2",
-                         "helmet":  "^6.0.1",
-                         "hpp":  "^0.2.3",
-                         "jsonwebtoken":  "^8.5.1",
-                         "mongoose":  "^7.0.3",
-                         "morgan":  "^1.10.0",
-                         "multer":  "^1.4.5-lts.1",
-                         "nodemailer":  "^6.9.13",
-                         "nodemon":  "^2.0.22",
-                         "xss-clean":  "^0.1.1"
-                     }
+    "name": "server",
+    "version": "1.0.1",
+    "main": "index.js",
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "description": "Construction Tracker API Server",
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "scripts": {
+        "start": "node server.js",
+        "dev": "nodemon server.js",
+        "build:client": "cd ../client && npm install --legacy-peer-deps && npm run build",
+        "migrate:apartments": "node migrations/20240101_update_apartment_schema.js",
+        "migrate:apartment-photos": "node migrations/20240102_add_apartment_photos.js",
+        "migrate:workers": "node scripts/run-migration.js",
+        "migrate:workorders": "node migrations/20240901_update_workorder_schema.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "dependencies": {
+        "bcryptjs": "^2.4.3",
+        "cloudinary": "^1.41.3",
+        "compression": "^1.7.4",
+        "cookie-parser": "^1.4.6",
+        "cors": "^2.8.5",
+        "dotenv": "^16.0.3",
+        "express": "^4.18.2",
+        "express-mongo-sanitize": "^2.2.0",
+        "express-rate-limit": "^6.7.0",
+        "express-validator": "^6.14.2",
+        "helmet": "^6.0.1",
+        "hpp": "^0.2.3",
+        "jsonwebtoken": "^8.5.1",
+        "mongoose": "^7.0.3",
+        "morgan": "^1.10.0",
+        "multer": "^1.4.5-lts.1",
+        "nodemailer": "^6.9.13",
+        "nodemon": "^2.0.22",
+        "xss-clean": "^0.1.1"
+    }
 }
