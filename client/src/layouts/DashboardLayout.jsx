@@ -1,175 +1,204 @@
-import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
-import { styled } from '@mui/material/styles';
-import { useTheme } from '@mui/material/styles';
-import useMediaQuery from '@mui/material/useMediaQuery';
-import Box from '@mui/material/Box';
-import CssBaseline from '@mui/material/CssBaseline';
-import AppBar from '@mui/material/AppBar';
-import Toolbar from '@mui/material/Toolbar';
-import Typography from '@mui/material/Typography';
-import IconButton from '@mui/material/IconButton';
-import MenuIcon from '@mui/icons-material/Menu';
-import Drawer from '@mui/material/Drawer';
-import List from '@mui/material/List';
-import Divider from '@mui/material/Divider';
-import ListItem from '@mui/material/ListItem';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import ApartmentIcon from '@mui/icons-material/Apartment';
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import PeopleIcon from '@mui/icons-material/People';
-import PersonIcon from '@mui/icons-material/Person';
-import SettingsIcon from '@mui/icons-material/Settings';
-import LogoutIcon from '@mui/icons-material/Logout';
-import NotificationsIcon from '@mui/icons-material/Notifications';
-import ReceiptIcon from '@mui/icons-material/Receipt';
-import NoteIcon from '@mui/icons-material/Note';
-import EventIcon from '@mui/icons-material/Event';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Drawer,
+  AppBar,
+  Toolbar,
+  List,
+  Typography,
+  Divider,
+  IconButton,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  useTheme,
+  useMediaQuery,
+  Avatar,
+  Menu,
+  MenuItem,
+  Chip,
+} from '@mui/material';
+import {
+  Menu as MenuIcon,
+  Dashboard as DashboardIcon,
+  Business as BusinessIcon,
+  Assignment as AssignmentIcon,
+  People as PeopleIcon,
+  Receipt as ReceiptIcon,
+  NotificationsActive as ReminderIcon,
+  Note as NoteIcon,
+  Schedule as ScheduleIcon,
+  Person as PersonIcon,
+  Settings as SettingsIcon,
+  Logout as LogoutIcon,
+  Work as WorkIcon,
+} from '@mui/icons-material';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { logout } from '../features/auth/authSlice';
-import { useLogoutMutation } from '../features/auth/authApiSlice';
+import { useAuth } from '../hooks/useAuth';
 import BuildingSelector from '../components/common/BuildingSelector';
 
 const drawerWidth = 240;
-const mobileDrawerWidth = 200;
-
-// Styled components
-const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })(
-  ({ theme, open }) => ({
-    flexGrow: 1,
-    padding: theme.spacing(3),
-    transition: theme.transitions.create('margin', {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen,
-    }),
-    marginLeft: 0,
-    [theme.breakpoints.up('sm')]: {
-      marginLeft: `-${drawerWidth}px`,
-      ...(open && {
-        transition: theme.transitions.create('margin', {
-          easing: theme.transitions.easing.easeOut,
-          duration: theme.transitions.duration.enteringScreen,
-        }),
-        marginLeft: 0,
-      }),
-    },
-    [theme.breakpoints.down('sm')]: {
-      padding: theme.spacing(2),
-    },
-  })
-);
-
-const DrawerHeader = styled('div')(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  padding: theme.spacing(0, 2),
-  ...theme.mixins.toolbar,
-  justifyContent: 'flex-start',
-  gap: theme.spacing(1.5),
-  minHeight: theme.mixins.toolbar.minHeight,
-  borderBottom: `1px solid ${theme.palette.divider}`,
-  overflow: 'hidden',
-}));
 
 const DashboardLayout = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
-  const [logoutApi] = useLogoutMutation();
-  const rawLogoUrl = process.env.REACT_APP_DSJ_LOGO_URL;
-  const logoUrl = rawLogoUrl ? rawLogoUrl.replace('/upload/', '/upload/f_auto,q_auto,w_160/') : undefined;
+  const { user, hasPermission, isWorker, canAccessMainDashboard, canAccessWorkerDashboard } = useAuth();
+
+  // Redirect workers to their dashboard if they try to access main dashboard
+  useEffect(() => {
+    if (isWorker && location.pathname === '/dashboard' && !canAccessMainDashboard()) {
+      navigate('/worker-dashboard');
+    }
+  }, [isWorker, location.pathname, canAccessMainDashboard, navigate]);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
 
-  const handleLogout = async () => {
-    try {
-      await logoutApi().unwrap();
-      dispatch(logout());
-      navigate('/login');
-    } catch (err) {
-      console.error('Failed to logout:', err);
+  const handleProfileMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleProfileMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate('/login');
+    handleProfileMenuClose();
+  };
+
+  const handleNavigation = (path) => {
+    navigate(path);
+    if (isMobile) {
+      setMobileOpen(false);
     }
   };
 
-  const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-    { text: 'Buildings', icon: <ApartmentIcon />, path: '/buildings' },
-    { text: 'Work Orders', icon: <AssignmentIcon />, path: '/work-orders' },
-    { text: 'Workers', icon: <PeopleIcon />, path: '/workers' },
-    { text: 'Invoices', icon: <ReceiptIcon />, path: '/invoices' },
-    { text: 'Reminders', icon: <NotificationsIcon />, path: '/reminders' },
-    { text: 'Notes', icon: <NoteIcon />, path: '/notes', permission: 'read:notes' },
-    { text: 'Schedule', icon: <EventIcon />, path: '/schedule', permission: 'read:schedules' },
-    { text: 'Profile', icon: <PersonIcon />, path: '/profile' },
-    { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
-  ];
+  // Define menu items based on user role
+  const getMenuItems = () => {
+    const items = [];
+
+    // Worker Dashboard - only for workers
+    if (isWorker && canAccessWorkerDashboard()) {
+      items.push({
+        text: 'My Assignments',
+        icon: <WorkIcon />,
+        path: '/worker-dashboard',
+        permission: 'view:dashboard:worker'
+      });
+    }
+
+    // Main Dashboard - for non-workers
+    if (canAccessMainDashboard()) {
+      items.push({
+        text: 'Dashboard',
+        icon: <DashboardIcon />,
+        path: '/dashboard',
+        permission: 'read:all'
+      });
+    }
+
+    // Buildings
+    if (hasPermission(['read:buildings'])) {
+      items.push({
+        text: 'Buildings',
+        icon: <BusinessIcon />,
+        path: '/buildings',
+        permission: 'read:buildings'
+      });
+    }
+
+    // Work Orders
+    if (hasPermission(['read:workorders'])) {
+      items.push({
+        text: 'Work Orders',
+        icon: <AssignmentIcon />,
+        path: '/work-orders',
+        permission: 'read:workorders'
+      });
+    }
+
+    // Workers - not for workers themselves
+    if (!isWorker && hasPermission(['read:workers'])) {
+      items.push({
+        text: 'Workers',
+        icon: <PeopleIcon />,
+        path: '/workers',
+        permission: 'read:workers'
+      });
+    }
+
+    // Invoices - not for workers
+    if (!isWorker && hasPermission(['read:invoices'])) {
+      items.push({
+        text: 'Invoices',
+        icon: <ReceiptIcon />,
+        path: '/invoices',
+        permission: 'read:invoices'
+      });
+    }
+
+    // Reminders
+    if (hasPermission(['read:reminders'])) {
+      items.push({
+        text: 'Reminders',
+        icon: <ReminderIcon />,
+        path: '/reminders',
+        permission: 'read:reminders'
+      });
+    }
+
+    // Notes
+    if (hasPermission(['read:notes'])) {
+      items.push({
+        text: 'Notes',
+        icon: <NoteIcon />,
+        path: '/notes',
+        permission: 'read:notes'
+      });
+    }
+
+    // Schedule
+    if (hasPermission(['read:schedules'])) {
+      items.push({
+        text: 'Schedule',
+        icon: <ScheduleIcon />,
+        path: '/schedule',
+        permission: 'read:schedules'
+      });
+    }
+
+    return items;
+  };
+
+  const menuItems = getMenuItems();
 
   const drawer = (
-    <div style={{ width: isMobile ? mobileDrawerWidth : drawerWidth }}>
-      <DrawerHeader>
-        {logoUrl ? (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
-            <img
-              src={logoUrl}
-              alt="Company Logo"
-              style={{ 
-                height: 32, 
-                width: 'auto', 
-                objectFit: 'contain',
-                flexShrink: 0
-              }}
-            />
-            <Typography 
-              variant="subtitle1" 
-              noWrap 
-              sx={{ 
-                fontWeight: 600,
-                flexShrink: 1,
-                minWidth: 0,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}
-            >
-              Construction Tracker
-            </Typography>
-          </Box>
-        ) : (
-          <Typography variant="h6" noWrap>
-            Construction Tracker
-          </Typography>
-        )}
-      </DrawerHeader>
+    <div>
+      <Toolbar>
+        <Typography variant="h6" noWrap component="div">
+          Construction Tracker
+        </Typography>
+      </Toolbar>
       <Divider />
       <List>
         {menuItems.map((item) => (
-          <ListItem 
-            key={item.text} 
-            disablePadding
-            onClick={() => navigate(item.path)}
-          >
-            <ListItemButton 
+          <ListItem key={item.text} disablePadding>
+            <ListItemButton
               selected={location.pathname === item.path}
-              sx={{
-                '&.Mui-selected': {
-                  backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(25, 118, 210, 0.12)',
-                  },
-                },
-              }}
+              onClick={() => handleNavigation(item.path)}
             >
-              <ListItemIcon sx={{ minWidth: 40 }}>
-                {item.icon}
-              </ListItemIcon>
+              <ListItemIcon>{item.icon}</ListItemIcon>
               <ListItemText primary={item.text} />
             </ListItemButton>
           </ListItem>
@@ -178,11 +207,19 @@ const DashboardLayout = () => {
       <Divider />
       <List>
         <ListItem disablePadding>
-          <ListItemButton onClick={handleLogout}>
-            <ListItemIcon sx={{ minWidth: 40 }}>
-              <LogoutIcon />
+          <ListItemButton onClick={() => handleNavigation('/profile')}>
+            <ListItemIcon>
+              <PersonIcon />
             </ListItemIcon>
-            <ListItemText primary="Logout" />
+            <ListItemText primary="Profile" />
+          </ListItemButton>
+        </ListItem>
+        <ListItem disablePadding>
+          <ListItemButton onClick={() => handleNavigation('/settings')}>
+            <ListItemIcon>
+              <SettingsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Settings" />
           </ListItemButton>
         </ListItem>
       </List>
@@ -191,83 +228,116 @@ const DashboardLayout = () => {
 
   return (
     <Box sx={{ display: 'flex' }}>
-      <CssBaseline />
       <AppBar
         position="fixed"
         sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-          zIndex: (theme) => theme.zIndex.drawer + 1,
+          width: { md: `calc(100% - ${drawerWidth}px)` },
+          ml: { md: `${drawerWidth}px` },
         }}
       >
-        <Toolbar sx={{ justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              onClick={handleDrawerToggle}
-              edge="start"
-              sx={{ mr: 2, display: { md: 'none' } }}
-            >
-              <MenuIcon />
-            </IconButton>
-            
+        <Toolbar>
+          <IconButton
+            color="inherit"
+            aria-label="open drawer"
+            edge="start"
+            onClick={handleDrawerToggle}
+            sx={{ mr: 2, display: { md: 'none' } }}
+          >
+            <MenuIcon />
+          </IconButton>
+          
+          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
             <Typography variant="h6" noWrap component="div" sx={{ display: { xs: 'none', sm: 'block' } }}>
-              Construction Tracker
+              {isWorker ? 'Worker Dashboard' : 'Construction Management'}
             </Typography>
+            {!isWorker && <BuildingSelector />}
           </Box>
 
-          {/* Building Selector */}
-          <Box sx={{ minWidth: 300, mx: 2 }}>
-            <BuildingSelector 
-              size="small" 
-              showLabel={false}
-              sx={{ '& .MuiFormControl-root': { minWidth: 200 } }}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Chip
+              label={user?.role?.toUpperCase() || 'USER'}
+              color="secondary"
+              size="small"
+              variant="outlined"
+              sx={{ color: 'white', borderColor: 'white' }}
             />
-          </Box>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="h6" noWrap component="div" sx={{ 
-              flexGrow: 1,
-              fontSize: { xs: '1rem', sm: '1.25rem' },
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}>
-              {menuItems.find((item) => location.pathname.startsWith(item.path))?.text || 'Dashboard'}
-            </Typography>
+            <IconButton
+              size="large"
+              edge="end"
+              aria-label="account of current user"
+              aria-haspopup="true"
+              onClick={handleProfileMenuOpen}
+              color="inherit"
+            >
+              <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
+                {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+              </Avatar>
+            </IconButton>
           </Box>
         </Toolbar>
       </AppBar>
+
       <Box
         component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-        aria-label="mailbox folders"
+        sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }}
       >
         <Drawer
-          variant={isMobile ? 'temporary' : 'permanent'}
+          variant="temporary"
           open={mobileOpen}
           onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true, // Better open performance on mobile.
-          }}
+          ModalProps={{ keepMounted: true }}
           sx={{
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-              pt: 0,
-            },
+            display: { xs: 'block', md: 'none' },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
           }}
         >
           {drawer}
         </Drawer>
+        <Drawer
+          variant="permanent"
+          sx={{
+            display: { xs: 'none', md: 'block' },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+          }}
+          open
+        >
+          {drawer}
+        </Drawer>
       </Box>
-      <Main open={!isMobile}>
-        <DrawerHeader />
-        <Box sx={{ mt: 2, minHeight: 'calc(100vh - 120px)' }}>
-          <Outlet />
-        </Box>
-      </Main>
+
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          p: 3,
+          width: { md: `calc(100% - ${drawerWidth}px)` },
+          mt: '64px',
+        }}
+      >
+        <Outlet />
+      </Box>
+
+      {/* Profile Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleProfileMenuClose}
+        onClick={handleProfileMenuClose}
+      >
+        <MenuItem onClick={() => handleNavigation('/profile')}>
+          <PersonIcon sx={{ mr: 1 }} />
+          Profile
+        </MenuItem>
+        <MenuItem onClick={() => handleNavigation('/settings')}>
+          <SettingsIcon sx={{ mr: 1 }} />
+          Settings
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={handleLogout}>
+          <LogoutIcon sx={{ mr: 1 }} />
+          Logout
+        </MenuItem>
+      </Menu>
     </Box>
   );
 };

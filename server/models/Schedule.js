@@ -21,7 +21,7 @@ const scheduleSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['painting', 'cleaning', 'repairs', 'maintenance', 'inspection'],
+    enum: ['painting', 'cleaning', 'repair', 'maintenance', 'inspection'],
     default: 'painting'
   },
   status: {

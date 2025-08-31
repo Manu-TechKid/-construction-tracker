@@ -60,16 +60,12 @@ const WorkerForm = ({
   });
 
   const availableSkills = [
-    'Painting',
-    'Carpentry',
-    'Electrical',
-    'Plumbing',
-    'Cleaning',
-    'Repair',
-    'Maintenance',
-    'Construction',
-    'Renovation',
-    'Other'
+    'painting',
+    'carpentry',
+    'electrical',
+    'plumbing',
+    'cleaning',
+    'general_labor'
   ];
 
   const statusOptions = [

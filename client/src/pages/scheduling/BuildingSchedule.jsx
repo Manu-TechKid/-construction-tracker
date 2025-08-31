@@ -159,18 +159,23 @@ const BuildingSchedule = () => {
 
     try {
       const scheduleData = {
-        ...formData,
+        title: formData.title,
+        description: formData.description,
+        type: formData.type,
+        status: formData.status,
         building: selectedBuilding?._id,
-        date: selectedDate || formData.startDate || new Date(),
-        startTime: formData.startTime || '09:00',
-        endTime: formData.endTime || '17:00'
+        apartment: formData.apartment,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        estimatedCost: formData.estimatedCost ? parseFloat(formData.estimatedCost) : undefined,
+        notes: formData.notes
       };
 
       console.log('Saving schedule:', scheduleData);
 
       if (editingSchedule) {
         await updateSchedule({ 
-          id: editingSchedule._id || editingSchedule.id, 
+          id: editingSchedule._id, 
           ...scheduleData 
         }).unwrap();
         toast.success('Schedule updated successfully');
@@ -180,7 +185,6 @@ const BuildingSchedule = () => {
       }
 
       handleCloseDialog();
-      // Force refetch of schedules
       refetch();
     } catch (error) {
       console.error('Error saving schedule:', error);

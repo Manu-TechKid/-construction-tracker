@@ -3,6 +3,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -10,6 +12,7 @@ import { store } from './app/store';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { BuildingProvider } from './contexts/BuildingContext';
 import { useSettings } from './contexts/SettingsContext';
+import { useAuth } from './hooks/useAuth';
 import { createAppTheme } from './theme/theme';
 
 // Layout Components
@@ -43,12 +46,34 @@ import Settings from './pages/settings/Settings';
 // New Components
 import NotesSheet from './components/notes/NotesSheet';
 import BuildingSchedule from './pages/scheduling/BuildingSchedule';
-import WorkerDashboard from './pages/workers/WorkerDashboard'; // Added import statement
-import EditWorker from './pages/workers/EditWorker'; // Added import statement
+import WorkerDashboard from './pages/workers/WorkerDashboard';
+import EditWorker from './pages/workers/EditWorker';
 
 // Route Protection
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import PublicRoute from './components/auth/PublicRoute';
+
+// Role-based route wrapper
+const RoleBasedRoute = ({ children, requiredPermissions }) => {
+  const { hasPermission } = useAuth();
+  
+  if (!hasPermission(requiredPermissions)) {
+    return <Navigate to="/unauthorized" replace />;
+  }
+  
+  return children;
+};
+
+// Worker redirect component
+const WorkerRedirect = () => {
+  const { isWorker } = useAuth();
+  
+  if (isWorker) {
+    return <Navigate to="/worker-dashboard" replace />;
+  }
+  
+  return <Navigate to="/dashboard" replace />;
+};
 
 const AppContent = () => {
   const { settings } = useSettings();
@@ -57,92 +82,253 @@ const AppContent = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <BuildingProvider>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={
-            <PublicRoute>
-              <AuthLayout>
-                <Login />
-              </AuthLayout>
-            </PublicRoute>
-          } />
-          <Route path="/register" element={
-            <PublicRoute>
-              <AuthLayout>
-                <Register />
-              </AuthLayout>
-            </PublicRoute>
-          } />
-          <Route path="/forgot-password" element={
-            <PublicRoute>
-              <AuthLayout>
-                <ForgotPassword />
-              </AuthLayout>
-            </PublicRoute>
-          } />
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <BuildingProvider>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={
+              <PublicRoute>
+                <AuthLayout>
+                  <Login />
+                </AuthLayout>
+              </PublicRoute>
+            } />
+            <Route path="/register" element={
+              <PublicRoute>
+                <AuthLayout>
+                  <Register />
+                </AuthLayout>
+              </PublicRoute>
+            } />
+            <Route path="/forgot-password" element={
+              <PublicRoute>
+                <AuthLayout>
+                  <ForgotPassword />
+                </AuthLayout>
+              </PublicRoute>
+            } />
 
-          {/* Protected Routes */}
-          <Route path="/" element={
-            <ProtectedRoute>
-              <DashboardLayout />
-            </ProtectedRoute>
-          }>
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            
-            {/* Buildings */}
-            <Route path="buildings" element={<Buildings />} />
-            <Route path="buildings/create" element={<CreateBuilding />} />
-            <Route path="buildings/:id" element={<BuildingDetails />} />
-            <Route path="buildings/:id/edit" element={<BuildingEdit />} />
-            
-            {/* Work Orders */}
-            <Route path="work-orders" element={<WorkOrders />} />
-            <Route path="work-orders/create" element={<CreateWorkOrder />} />
-            <Route path="work-orders/:id/edit" element={<EditWorkOrder />} />
-            <Route path="work-orders/:id" element={<WorkOrderDetails />} />
-            
-            {/* Workers */}
-            <Route path="workers" element={<Workers />} />
-            <Route path="workers/create" element={<CreateWorker />} />
-            <Route path="workers/:id/edit" element={<EditWorker />} />
-            <Route path="worker-dashboard" element={<WorkerDashboard />} />
-            
-            {/* Reminders */}
-            <Route path="reminders" element={<Reminders />} />
-            <Route path="reminders/create" element={<CreateReminder />} />
-            
-            {/* Invoices */}
-            <Route path="invoices" element={<Invoices />} />
-            <Route path="invoices/create" element={<CreateInvoice />} />
-            
-            {/* New Routes */}
-            <Route path="notes" element={<NotesSheet />} />
-            <Route path="schedule" element={<BuildingSchedule />} />
-            
-            {/* User */}
-            <Route path="profile" element={<Profile />} />
-            <Route path="settings" element={<Settings />} />
-          </Route>
+            {/* Protected Routes */}
+            <Route path="/" element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            }>
+              {/* Default redirect based on role */}
+              <Route index element={<WorkerRedirect />} />
+              
+              {/* Main Dashboard - not for workers */}
+              <Route 
+                path="dashboard" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['read:all', 'read:workorders']}>
+                    <Dashboard />
+                  </RoleBasedRoute>
+                } 
+              />
+              
+              {/* Worker Dashboard - only for workers */}
+              <Route 
+                path="worker-dashboard" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['view:dashboard:worker']}>
+                    <WorkerDashboard />
+                  </RoleBasedRoute>
+                } 
+              />
 
-          {/* Catch all route */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </BuildingProvider>
-      
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme={settings.theme}
-      />
+              {/* Buildings */}
+              <Route 
+                path="buildings" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['read:buildings']}>
+                    <Buildings />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="buildings/create" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['create:buildings']}>
+                    <CreateBuilding />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="buildings/:id/edit" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['update:buildings']}>
+                    <BuildingEdit />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="buildings/:id" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['read:buildings']}>
+                    <BuildingDetails />
+                  </RoleBasedRoute>
+                } 
+              />
+
+              {/* Work Orders */}
+              <Route 
+                path="work-orders" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['read:workorders']}>
+                    <WorkOrders />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="work-orders/create" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['create:workorders']}>
+                    <CreateWorkOrder />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="work-orders/:id/edit" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['update:workorders']}>
+                    <EditWorkOrder />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="work-orders/:id" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['read:workorders']}>
+                    <WorkOrderDetails />
+                  </RoleBasedRoute>
+                } 
+              />
+
+              {/* Workers - not accessible by workers themselves */}
+              <Route 
+                path="workers" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['read:workers']}>
+                    <Workers />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="workers/create" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['create:workers']}>
+                    <CreateWorker />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="workers/:id/edit" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['update:workers']}>
+                    <EditWorker />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="worker-dashboard" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['view:dashboard:worker']}>
+                    <WorkerDashboard />
+                  </RoleBasedRoute>
+                } 
+              />
+
+              {/* Invoices - not for workers */}
+              <Route 
+                path="invoices" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['read:invoices']}>
+                    <Invoices />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="invoices/create" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['create:invoices']}>
+                    <CreateInvoice />
+                  </RoleBasedRoute>
+                } 
+              />
+
+              {/* Reminders */}
+              <Route 
+                path="reminders" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['read:reminders']}>
+                    <Reminders />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="reminders/create" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['create:reminders']}>
+                    <CreateReminder />
+                  </RoleBasedRoute>
+                } 
+              />
+
+              {/* Notes */}
+              <Route 
+                path="notes" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['read:notes']}>
+                    <NotesSheet />
+                  </RoleBasedRoute>
+                } 
+              />
+
+              {/* Schedule */}
+              <Route 
+                path="schedule" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['read:schedules']}>
+                    <BuildingSchedule />
+                  </RoleBasedRoute>
+                } 
+              />
+
+              {/* Profile and Settings - accessible to all */}
+              <Route path="profile" element={<Profile />} />
+              <Route path="settings" element={<Settings />} />
+            </Route>
+
+            {/* Unauthorized page */}
+            <Route 
+              path="/unauthorized" 
+              element={
+                <div style={{ padding: '2rem', textAlign: 'center' }}>
+                  <h2>Access Denied</h2>
+                  <p>You don't have permission to access this page.</p>
+                </div>
+              } 
+            />
+
+            {/* Catch all route */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+          
+          <ToastContainer
+            position="top-right"
+            autoClose={5000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme={settings.theme}
+          />
+        </BuildingProvider>
+      </LocalizationProvider>
     </ThemeProvider>
   );
 };

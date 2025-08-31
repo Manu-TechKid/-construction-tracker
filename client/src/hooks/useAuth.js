@@ -1,73 +1,96 @@
 import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '../features/auth/authSlice';
 
+// Define role-based permissions
+const ROLE_PERMISSIONS = {
+  admin: [
+    'read:all', 'create:all', 'update:all', 'delete:all',
+    'read:buildings', 'create:buildings', 'update:buildings', 'delete:buildings',
+    'read:workorders', 'create:workorders', 'update:workorders', 'delete:workorders',
+    'read:workers', 'create:workers', 'update:workers', 'delete:workers',
+    'read:invoices', 'create:invoices', 'update:invoices', 'delete:invoices',
+    'read:reminders', 'create:reminders', 'update:reminders', 'delete:reminders',
+    'read:schedules', 'create:schedules', 'update:schedules', 'delete:schedules',
+    'read:notes', 'create:notes', 'update:notes', 'delete:notes',
+    'assign:workers', 'manage:users', 'view:costs', 'view:reports'
+  ],
+  manager: [
+    'read:buildings', 'create:buildings', 'update:buildings', 'delete:buildings',
+    'read:workorders', 'create:workorders', 'update:workorders', 'delete:workorders',
+    'read:workers', 'create:workers', 'update:workers', 'delete:workers',
+    'read:invoices', 'create:invoices', 'update:invoices', 'delete:invoices',
+    'read:reminders', 'create:reminders', 'update:reminders', 'delete:reminders',
+    'read:schedules', 'create:schedules', 'update:schedules', 'delete:schedules',
+    'read:notes', 'create:notes', 'update:notes', 'delete:notes',
+    'assign:workers', 'view:costs', 'view:reports'
+  ],
+  supervisor: [
+    'read:buildings', 'read:workorders', 'create:workorders', 'update:workorders',
+    'read:workers', 'update:workers',
+    'read:reminders', 'create:reminders', 'update:reminders',
+    'read:schedules', 'create:schedules', 'update:schedules',
+    'read:notes', 'create:notes', 'update:notes',
+    'assign:workers', 'view:costs'
+  ],
+  worker: [
+    'read:workorders', 'update:workorders:own',
+    'read:schedules:own', 'read:notes:own', 'create:notes:own',
+    'view:dashboard:worker'
+  ]
+};
+
 export const useAuth = () => {
   const user = useSelector(selectCurrentUser);
-  
+
   const hasPermission = (requiredPermissions) => {
-    if (!user || !user.role) return true; // Allow access if no user/role (fallback)
+    if (!user || !user.role) return false;
     
-    // Define role-based permissions
-    const permissions = {
-      admin: [
-        // Complete admin control - can do EVERYTHING
-        'create:work-orders', 'update:work-orders', 'delete:work-orders', 'read:work-orders', 'write:work-orders',
-        'create:buildings', 'update:buildings', 'delete:buildings', 'read:buildings', 'write:buildings',
-        'create:apartments', 'update:apartments', 'delete:apartments', 'read:apartments',
-        'create:reminders', 'update:reminders', 'delete:reminders', 'read:reminders',
-        'create:invoices', 'update:invoices', 'delete:invoices', 'read:invoices',
-        'create:estimates', 'update:estimates', 'delete:estimates', 'read:estimates',
-        'create:notes', 'update:notes', 'delete:notes', 'read:notes',
-        'create:photos', 'update:photos', 'delete:photos', 'read:photos',
-        'manage:users', 'manage:roles', 'manage:permissions',
-        'view:dashboard', 'view:reports', 'view:analytics',
-        'admin:all' // Master permission for admin
-      ],
-      manager: [
-        'create:work-orders', 'update:work-orders', 'delete:work-orders', 'read:work-orders', 'write:work-orders',
-        'create:buildings', 'update:buildings', 'read:buildings', 'write:buildings',
-        'create:apartments', 'update:apartments', 'delete:apartments', 'read:apartments',
-        'create:reminders', 'update:reminders', 'delete:reminders', 'read:reminders',
-        'create:invoices', 'update:invoices', 'delete:invoices', 'read:invoices',
-        'create:estimates', 'update:estimates', 'read:estimates',
-        'create:notes', 'update:notes', 'read:notes',
-        'create:photos', 'update:photos', 'read:photos',
-        'view:dashboard', 'view:reports'
-      ],
-      supervisor: [
-        'create:work-orders', 'update:work-orders', 'read:work-orders', 'write:work-orders',
-        'read:buildings', 'write:buildings',
-        'create:apartments', 'update:apartments', 'read:apartments',
-        'create:reminders', 'update:reminders', 'read:reminders',
-        'create:estimates', 'update:estimates', 'read:estimates',
-        'create:notes', 'update:notes', 'read:notes',
-        'create:photos', 'update:photos', 'read:photos',
-        'view:dashboard'
-      ],
-      worker: [
-        'read:buildings', 'read:work-orders', 'update:work-orders',
-        'read:apartments', 'read:reminders',
-        'create:notes', 'read:notes',
-        'create:photos', 'read:photos'
-      ],
-      client: [
-        'read:buildings', 'read:work-orders', 'read:apartments',
-        'read:invoices', 'read:estimates'
-      ]
-    };
-
-    // Special case: Admin can do ANYTHING
-    if (user?.role === 'admin') {
-      return true; // Admin has unlimited access
-    }
-
-    // Handle array of permissions or single permission
-    const permsToCheck = Array.isArray(requiredPermissions) ? requiredPermissions : [requiredPermissions];
+    // Admin has all permissions
+    if (user.role === 'admin') return true;
     
-    // Check if user's role has any of the required permissions
-    const userPermissions = permissions[user.role] || [];
-    return permsToCheck.some(perm => userPermissions.includes(perm)) || true; // Allow by default for development
+    const userPermissions = ROLE_PERMISSIONS[user.role] || [];
+    
+    // If requiredPermissions is a string, convert to array
+    const permissions = Array.isArray(requiredPermissions) 
+      ? requiredPermissions 
+      : [requiredPermissions];
+    
+    // Check if user has at least one of the required permissions
+    return permissions.some(permission => userPermissions.includes(permission));
   };
 
-  return { user, hasPermission };
+  const canAccessWorkerDashboard = () => {
+    return user?.role === 'worker' || hasPermission(['view:dashboard:worker', 'read:all']);
+  };
+
+  const canAccessMainDashboard = () => {
+    return user?.role !== 'worker' || hasPermission(['read:all']);
+  };
+
+  const canViewCosts = () => {
+    return hasPermission(['view:costs', 'read:all']);
+  };
+
+  const canManageUsers = () => {
+    return hasPermission(['manage:users', 'read:all']);
+  };
+
+  const canAssignWorkers = () => {
+    return hasPermission(['assign:workers', 'read:all']);
+  };
+
+  return {
+    user,
+    isAuthenticated: !!user,
+    hasPermission,
+    canAccessWorkerDashboard,
+    canAccessMainDashboard,
+    canViewCosts,
+    canManageUsers,
+    canAssignWorkers,
+    isAdmin: user?.role === 'admin',
+    isManager: user?.role === 'manager',
+    isSupervisor: user?.role === 'supervisor',
+    isWorker: user?.role === 'worker'
+  };
 };
