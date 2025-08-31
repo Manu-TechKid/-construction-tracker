@@ -2,26 +2,13 @@
     "name": "server",
     "version": "1.0.1",
     "main": "server.js",
-    "keywords": [],
-    "author": "",
-    "license": "ISC",
-    "description": "Construction Tracker API Server",
+    "private": true,
     "engines": {
         "node": ">=18.0.0"
     },
     "scripts": {
         "start": "node server.js",
-        "server": "nodemon server.js",
-        "client": "cd ../client && npm start",
-        "dev": "concurrently \"npm run server\" \"npm run client\"",
-        "client:install": "cd ../client && npm install --legacy-peer-deps",
-        "client:build": "cd ../client && npm run build",
-        "build": "npm run client:build",
-        "heroku-postbuild": "npm run client:install && npm run build",
-        "migrate:apartments": "node migrations/20240101_update_apartment_schema.js",
-        "migrate:apartment-photos": "node migrations/20240102_add_apartment_photos.js",
-        "migrate:workers": "node scripts/run-migration.js",
-        "migrate:workorders": "node migrations/20240901_update_workorder_schema.js",
+        "dev": "nodemon server.js",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "dependencies": {
@@ -46,7 +33,6 @@
         "xss-clean": "^0.1.1"
     },
     "devDependencies": {
-        "concurrently": "^8.2.0",
         "nodemon": "^2.0.22"
     }
 }
