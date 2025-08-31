@@ -31,12 +31,29 @@ router
     workOrderController.deleteWorkOrder
   );
 
-router.patch('/:id/assign', authController.protect, workOrderController.assignWorkers);
-router.patch('/:id/status', authController.protect, workOrderController.updateStatus);
-router.post('/:id/issues', authController.protect, workOrderController.reportIssue);
+// Assign workers to work order
+router
+  .route('/:id/assign')
+  .patch(
+    authController.restrictTo('admin', 'manager', 'supervisor'),
+    workOrderController.assignWorkers
+  );
+
+// Update work order status
+router
+  .route('/:id/status')
+  .patch(
+    authController.restrictTo('admin', 'manager', 'supervisor'),
+    workOrderController.updateStatus
+  );
+
+// Notes endpoints
 router.post('/:id/notes', authController.protect, workOrderController.addNoteToWorkOrder);
 router.patch('/:id/notes/:noteId', authController.protect, workOrderController.updateNoteInWorkOrder);
 router.delete('/:id/notes/:noteId', authController.protect, workOrderController.deleteNoteFromWorkOrder);
+
+// Issues endpoint
+router.post('/:id/issues', authController.protect, workOrderController.reportIssue);
 
 // Photos endpoints
 router.post(
@@ -49,21 +66,5 @@ router.delete(
   authController.restrictTo('admin', 'manager'),
   workOrderController.deletePhotoFromWorkOrder
 );
-
-// Assign workers to work order
-router
-  .route('/:id/assign')
-  .post(
-    authController.restrictTo('admin', 'manager', 'supervisor'),
-    workOrderController.assignWorkers
-  );
-
-// Update work order status
-router
-  .route('/:id/status')
-  .patch(
-    authController.restrictTo('admin', 'manager', 'supervisor'),
-    workOrderController.updateStatus
-  );
 
 module.exports = router;

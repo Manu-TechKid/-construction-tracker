@@ -29,7 +29,9 @@ import {
   Visibility as VisibilityIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Work as WorkOrderIcon
+  Work as WorkOrderIcon,
+  Assignment as AssignmentIcon,
+  Person as PersonIcon
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import { format } from 'date-fns';
@@ -41,6 +43,7 @@ import {
 } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { useAuth } from '../../hooks/useAuth';
+import WorkerAssignmentDialog from '../../components/workOrders/WorkerAssignmentDialog';
 
 // Status options
 const statusOptions = [
@@ -76,6 +79,10 @@ const WorkOrders = () => {
     page: 0,
     pageSize: 10,
   });
+  
+  // Worker assignment dialog state
+  const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
+  const [workOrderToAssign, setWorkOrderToAssign] = useState(null);
 
   // Get work orders data with proper error handling
   const {
@@ -93,13 +100,28 @@ const WorkOrders = () => {
     search: searchTerm,
   });
 
-  const { data: buildings = [], isLoading: buildingsLoading, error: buildingsError } = useGetBuildingsQuery();
+  const { data: buildingsData, isLoading: buildingsLoading, error: buildingsError } = useGetBuildingsQuery();
   const [deleteWorkOrder, { isLoading: isDeleting }] = useDeleteWorkOrderMutation();
 
   console.log('WorkOrders Debug: Raw API response:', workOrdersData);
-  console.log('WorkOrders Debug: Buildings data:', buildings);
+  console.log('WorkOrders Debug: Buildings data:', buildingsData);
   console.log('WorkOrders Debug: Buildings loading:', buildingsLoading);
   console.log('WorkOrders Debug: Buildings error:', buildingsError);
+
+  // Extract buildings from API response
+  const buildings = useMemo(() => {
+    if (!buildingsData) return [];
+    
+    if (buildingsData.data?.buildings && Array.isArray(buildingsData.data.buildings)) {
+      return buildingsData.data.buildings;
+    } else if (Array.isArray(buildingsData.data)) {
+      return buildingsData.data;
+    } else if (Array.isArray(buildingsData)) {
+      return buildingsData;
+    }
+    
+    return [];
+  }, [buildingsData]);
 
   // Extract work orders from API response with proper error handling
   const workOrders = useMemo(() => {
@@ -142,7 +164,8 @@ const WorkOrders = () => {
       estimatedCost: order.estimatedCost || 0,
       photos: order.photos || [],
       createdAt: order.createdAt || new Date().toISOString(),
-      building: order.building || {}
+      building: order.building || {},
+      assignedTo: order.assignedTo || []
     }));
   }, [workOrdersData]);
 
@@ -179,6 +202,17 @@ const WorkOrders = () => {
       }
     }
   }, [deleteWorkOrder]);
+
+  // Worker assignment handlers
+  const handleAssignWorkers = useCallback((workOrder) => {
+    setWorkOrderToAssign(workOrder);
+    setAssignmentDialogOpen(true);
+    handleMenuClose();
+  }, []);
+
+  const handleAssignmentComplete = useCallback(() => {
+    refetch(); // Refresh work orders to show updated assignments
+  }, [refetch]);
 
   // Handle search input change
   const handleSearchChange = (event) => {
@@ -242,6 +276,37 @@ const WorkOrders = () => {
         const apt = row?.apartmentNumber || 'N/A';
         const block = row?.block || 'N/A';
         return `${apt} - ${block}`;
+      }
+    },
+    {
+      field: 'assignedWorkers',
+      headerName: 'Assigned Workers',
+      width: 180,
+      renderCell: (params) => {
+        const assignedWorkers = params.row?.assignedTo || [];
+        const workerCount = assignedWorkers.length;
+        
+        if (workerCount === 0) {
+          return (
+            <Chip
+              label="Unassigned"
+              size="small"
+              color="default"
+              variant="outlined"
+              icon={<PersonIcon />}
+            />
+          );
+        }
+        
+        return (
+          <Chip
+            label={`${workerCount} Worker${workerCount > 1 ? 's' : ''}`}
+            size="small"
+            color="primary"
+            variant="filled"
+            icon={<PersonIcon />}
+          />
+        );
       }
     },
     {
@@ -361,6 +426,14 @@ const WorkOrders = () => {
           </IconButton>
           <IconButton
             size="small"
+            onClick={() => handleAssignWorkers(params.row)}
+            title="Assign Workers"
+            color="primary"
+          >
+            <AssignmentIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            size="small"
             onClick={() => handleDelete(params.row)}
             title="Delete"
             color="error"
@@ -400,6 +473,15 @@ const WorkOrders = () => {
             <EditIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText>Edit</ListItemText>
+        </MenuItem>
+      )}
+
+      {hasPermission('assign:workers') && (
+        <MenuItem onClick={() => handleAssignWorkers(selectedWorkOrder)}>
+          <ListItemIcon>
+            <AssignmentIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Assign Workers</ListItemText>
         </MenuItem>
       )}
       
@@ -555,6 +637,14 @@ const WorkOrders = () => {
       </Paper>
 
       {renderMenu}
+      
+      {/* Worker Assignment Dialog */}
+      <WorkerAssignmentDialog
+        open={assignmentDialogOpen}
+        onClose={() => setAssignmentDialogOpen(false)}
+        workOrder={workOrderToAssign}
+        onAssignmentComplete={handleAssignmentComplete}
+      />
     </Container>
   );
 };

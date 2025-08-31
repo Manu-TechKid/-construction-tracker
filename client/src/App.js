@@ -43,6 +43,8 @@ import Settings from './pages/settings/Settings';
 // New Components
 import NotesSheet from './components/notes/NotesSheet';
 import BuildingSchedule from './pages/scheduling/BuildingSchedule';
+import WorkerDashboard from './pages/workers/WorkerDashboard'; // Added import statement
+import EditWorker from './pages/workers/EditWorker'; // Added import statement
 
 // Route Protection
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -104,6 +106,8 @@ const AppContent = () => {
             {/* Workers */}
             <Route path="workers" element={<Workers />} />
             <Route path="workers/create" element={<CreateWorker />} />
+            <Route path="workers/:id/edit" element={<EditWorker />} />
+            <Route path="worker-dashboard" element={<WorkerDashboard />} />
             
             {/* Reminders */}
             <Route path="reminders" element={<Reminders />} />

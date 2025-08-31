@@ -47,6 +47,17 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ['WorkOrder'],
     }),
+    assignWorkers: builder.mutation({
+      query: ({ id, workers, scheduledDate }) => ({
+        url: `/work-orders/${id}/assign`,
+        method: 'PATCH',
+        body: { workers, scheduledDate },
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'WorkOrder', id },
+        'WorkOrder',
+      ],
+    }),
     // Deprecated: use the addNoteToWorkOrder below which sends full note payload
     addNoteToWorkOrderLegacy: builder.mutation({
       query: ({ id, content }) => ({
@@ -91,16 +102,6 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
         { type: 'WorkOrder', id },
       ],
     }),
-    assignWorkers: builder.mutation({
-      query: ({ id, workers }) => ({
-        url: `/work-orders/${id}/assign`,
-        method: 'POST',
-        body: { workers },
-      }),
-      invalidatesTags: (result, error, { id }) => [
-        { type: 'WorkOrder', id },
-      ],
-    }),
     updateWorkOrderStatus: builder.mutation({
       query: ({ id, status }) => ({
         url: `/work-orders/${id}/status`,
@@ -118,10 +119,10 @@ export const {
   useCreateWorkOrderMutation,
   useUpdateWorkOrderMutation,
   useDeleteWorkOrderMutation,
+  useAssignWorkersMutation,
   useAddNoteToWorkOrderMutation,
   useUpdateNoteInWorkOrderMutation,
   useDeleteNoteFromWorkOrderMutation,
   useReportIssueMutation,
-  useAssignWorkersMutation,
   useUpdateWorkOrderStatusMutation,
 } = workOrdersApiSlice;

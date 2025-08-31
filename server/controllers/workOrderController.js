@@ -406,26 +406,52 @@ exports.reportIssue = catchAsync(async (req, res, next) => {
     });
 });
 
-// Assign workers to a work order
+// Assign workers to work order
 exports.assignWorkers = catchAsync(async (req, res, next) => {
-    const workOrder = await WorkOrder.findById(req.params.id);
-    
-    if (!workOrder) {
-        return next(new AppError('No work order found with that ID', 404));
-    }
-    
-    // Add new assignments
-    const newAssignments = Array.isArray(req.body) ? req.body : [req.body];
-    workOrder.assignedTo.push(...newAssignments);
-    
-    await workOrder.save();
-    
-    res.status(200).json({
-        status: 'success',
-        data: {
-            workOrder
-        }
+  const { workers, scheduledDate } = req.body;
+  
+  if (!workers || !Array.isArray(workers) || workers.length === 0) {
+    return next(new AppError('Workers array is required', 400));
+  }
+  
+  const workOrder = await WorkOrder.findById(req.params.id);
+  
+  if (!workOrder) {
+    return next(new AppError('No work order found with that ID', 404));
+  }
+  
+  // Clear existing assignments
+  workOrder.assignedTo = [];
+  
+  // Add new assignments with proper structure matching WorkOrder model
+  workers.forEach(assignment => {
+    workOrder.assignedTo.push({
+      worker: assignment.worker,
+      assignedAt: new Date(),
+      assignedBy: req.user.id,
+      status: assignment.status || 'pending',
+      notes: assignment.notes || '',
+      completedAt: null
     });
+  });
+  
+  // Set scheduled date if provided
+  if (scheduledDate) {
+    workOrder.scheduledDate = new Date(scheduledDate);
+  }
+  
+  await workOrder.save();
+  
+  // Populate worker details for response
+  await workOrder.populate('assignedTo.worker', 'name email phone skills');
+  await workOrder.populate('building', 'name address');
+  
+  res.status(200).json({
+    status: 'success',
+    data: {
+      workOrder
+    }
+  });
 });
 
 // Update work order status

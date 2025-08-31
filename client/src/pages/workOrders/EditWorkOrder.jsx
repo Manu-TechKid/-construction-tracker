@@ -9,12 +9,15 @@ import { toast } from 'react-toastify';
 const EditWorkOrder = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { data: workOrder, isLoading, error } = useGetWorkOrderQuery(id);
+  const { data: workOrderData, isLoading, error } = useGetWorkOrderQuery(id);
   const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
   const [initialValues, setInitialValues] = useState(null);
 
   useEffect(() => {
-    if (workOrder) {
+    if (workOrderData) {
+      // Extract work order from API response
+      const workOrder = workOrderData.data || workOrderData;
+      
       setInitialValues({
         building: workOrder.building?._id || workOrder.building,
         apartmentNumber: workOrder.apartmentNumber || '',
@@ -24,11 +27,12 @@ const EditWorkOrder = () => {
         workSubType: workOrder.workSubType || '',
         description: workOrder.description || '',
         priority: workOrder.priority || 'medium',
-        estimatedCost: workOrder.estimatedCost || '',
-        notes: workOrder.notes || ''
+        status: workOrder.status || 'pending',
+        estimatedCost: workOrder.estimatedCost || 0,
+        assignedTo: workOrder.assignedTo || []
       });
     }
-  }, [workOrder]);
+  }, [workOrderData]);
 
   const handleSubmit = async (formData) => {
     try {
@@ -39,10 +43,15 @@ const EditWorkOrder = () => {
       console.error('Failed to update work order:', error);
       const errorMessage = error?.data?.message || error?.message || 'Failed to update work order';
       toast.error(errorMessage);
+      throw error; // Re-throw to let form handle it
     }
   };
 
   const handleCancel = () => {
+    navigate('/work-orders');
+  };
+
+  const handleBack = () => {
     navigate('/work-orders');
   };
 
@@ -80,7 +89,7 @@ const EditWorkOrder = () => {
     <Container maxWidth="lg" sx={{ mt: { xs: 2, md: 4 }, mb: 4, px: { xs: 1, sm: 2 } }}>
       <Button
         startIcon={<ArrowBackIcon />}
-        onClick={() => navigate('/work-orders')}
+        onClick={handleBack}
         sx={{ mb: 2 }}
         variant="outlined"
       >

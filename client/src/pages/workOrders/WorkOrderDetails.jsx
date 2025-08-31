@@ -72,7 +72,7 @@ const WorkOrderInfoTab = ({ workOrder, buildings, workers, onUpdateWorkOrder }) 
     title: workOrder?.title || '',
     description: workOrder?.description || '',
     building: workOrder?.building?._id || '',
-    assignedTo: workOrder?.assignedTo?.map(user => user._id) || [],
+    assignedTo: workOrder?.assignedTo?.map(assignment => assignment.worker?._id || assignment) || [],
     priority: workOrder?.priority || 'medium',
     status: workOrder?.status || 'pending',
     dueDate: workOrder?.dueDate ? format(parseISO(workOrder.dueDate), 'yyyy-MM-dd') : '',
@@ -428,29 +428,58 @@ const WorkOrderInfoTab = ({ workOrder, buildings, workers, onUpdateWorkOrder }) 
           
           {workOrder.assignedTo?.length > 0 ? (
             <List dense>
-              {workOrder.assignedTo.map((user) => (
-                <ListItem key={user._id}>
-                  <ListItemAvatar>
-                    <Avatar src={user.avatar}>
-                      {user.name?.charAt(0) || '?'}
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText 
-                    primary={user.name} 
-                    secondary={user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Worker'} 
-                  />
-                </ListItem>
-              ))}
+              {workOrder.assignedTo.map((assignment, index) => {
+                // Handle both old structure (direct user) and new structure (assignment object)
+                const worker = assignment.worker || assignment;
+                const workerId = worker._id || worker;
+                const workerName = worker.name || 'Unknown Worker';
+                const assignmentStatus = assignment.status || 'pending';
+                const assignedAt = assignment.assignedAt || assignment.createdAt;
+                
+                return (
+                  <ListItem key={workerId || index}>
+                    <ListItemAvatar>
+                      <Avatar src={worker.avatar}>
+                        {workerName?.charAt(0) || '?'}
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText 
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body2">
+                            {workerName}
+                          </Typography>
+                          <Chip
+                            label={assignmentStatus.replace('_', ' ').toUpperCase()}
+                            size="small"
+                            color={
+                              assignmentStatus === 'completed' ? 'success' :
+                              assignmentStatus === 'in_progress' ? 'info' :
+                              assignmentStatus === 'on_hold' ? 'default' : 'warning'
+                            }
+                            variant="outlined"
+                          />
+                        </Box>
+                      }
+                      secondary={
+                        assignedAt ? `Assigned ${timeAgo(assignedAt)}` : 'Worker'
+                      }
+                    />
+                  </ListItem>
+                );
+              })}
             </List>
           ) : (
             <Box sx={{ display: 'flex', alignItems: 'center', p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
               <PersonIcon color="action" sx={{ mr: 1 }} />
               <Typography variant="body2" color="text.secondary">
-                No one is assigned to this work order
+                No workers assigned to this work order
               </Typography>
             </Box>
           )}
-          
+        </Grid>
+        
+        <Grid item xs={12} md={6}>
           <Box sx={{ mt: 3 }}>
             <Typography variant="subtitle2" color="text.secondary" gutterBottom>
               ESTIMATED HOURS

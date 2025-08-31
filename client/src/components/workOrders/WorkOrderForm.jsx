@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import {
@@ -38,152 +38,240 @@ const WorkOrderForm = ({
   const { t } = useTranslation();
   const { data: buildingsData, isLoading: buildingsLoading, error: buildingsError } = useGetBuildingsQuery();
   const { data: workersData, isLoading: workersLoading, error: workersError } = useGetWorkersQuery();
-  const buildings = buildingsData?.data?.buildings || [];
-  const workers = workersData?.data?.workers || [];
+  
+  // Extract buildings and workers from API response
+  const buildings = useMemo(() => {
+    if (!buildingsData) return [];
+    if (buildingsData.data?.buildings && Array.isArray(buildingsData.data.buildings)) {
+      return buildingsData.data.buildings;
+    } else if (Array.isArray(buildingsData.data)) {
+      return buildingsData.data;
+    } else if (Array.isArray(buildingsData)) {
+      return buildingsData;
+    }
+    return [];
+  }, [buildingsData]);
+
+  const workers = useMemo(() => {
+    if (!workersData) return [];
+    if (workersData.data?.workers && Array.isArray(workersData.data.workers)) {
+      return workersData.data.workers;
+    } else if (Array.isArray(workersData.data)) {
+      return workersData.data;
+    } else if (Array.isArray(workersData)) {
+      return workersData;
+    }
+    return [];
+  }, [workersData]);
+
   const [photos, setPhotos] = useState([]);
   const [submitError, setSubmitError] = useState([]);
   const [availableBlocks, setAvailableBlocks] = useState([]);
 
+  // Work type options matching database model
+  const workTypeOptions = [
+    { value: 'painting', label: 'Painting' },
+    { value: 'cleaning', label: 'Cleaning' },
+    { value: 'repairs', label: 'Repairs' },
+    { value: 'maintenance', label: 'Maintenance' },
+    { value: 'inspection', label: 'Inspection' },
+    { value: 'plumbing', label: 'Plumbing' },
+    { value: 'electrical', label: 'Electrical' },
+    { value: 'hvac', label: 'HVAC' },
+    { value: 'flooring', label: 'Flooring' },
+    { value: 'roofing', label: 'Roofing' },
+    { value: 'carpentry', label: 'Carpentry' },
+    { value: 'other', label: 'Other' },
+  ];
+
+  // Work sub-type options based on work type
+  const workSubTypeOptions = {
+    cleaning: [
+      '1 Bedroom Cleaning',
+      '2 Bedroom Cleaning',
+      '3 Bedroom Cleaning',
+      'Studio Cleaning',
+      'Deep Cleaning',
+      'Move-in Cleaning',
+      'Move-out Cleaning',
+    ],
+    painting: [
+      'Interior Painting',
+      'Exterior Painting',
+      'Touch-up Painting',
+      'Full Apartment Paint',
+      'Ceiling Painting',
+      'Trim Painting',
+    ],
+    repairs: [
+      'Plumbing Repair',
+      'Electrical Repair',
+      'Drywall Repair',
+      'Door Repair',
+      'Window Repair',
+      'Appliance Repair',
+    ],
+    maintenance: [
+      'HVAC Maintenance',
+      'Appliance Maintenance',
+      'General Maintenance',
+      'Preventive Maintenance',
+    ],
+    inspection: [
+      'Move-in Inspection',
+      'Move-out Inspection',
+      'Routine Inspection',
+      'Safety Inspection',
+    ],
+    other: ['Custom Work', 'Emergency Repair', 'Consultation'],
+  };
+
+  // Priority options
+  const priorityOptions = [
+    { value: 'low', label: 'Low', color: 'success' },
+    { value: 'medium', label: 'Medium', color: 'warning' },
+    { value: 'high', label: 'High', color: 'error' },
+    { value: 'urgent', label: 'Urgent', color: 'error' },
+  ];
+
+  // Status options
+  const statusOptions = [
+    { value: 'pending', label: 'Pending' },
+    { value: 'in_progress', label: 'In Progress' },
+    { value: 'on_hold', label: 'On Hold' },
+    { value: 'completed', label: 'Completed' },
+    { value: 'cancelled', label: 'Cancelled' },
+  ];
+
+  // Apartment status options
+  const apartmentStatusOptions = [
+    { value: 'vacant', label: 'Vacant' },
+    { value: 'occupied', label: 'Occupied' },
+    { value: 'under_renovation', label: 'Under Renovation' },
+    { value: 'reserved', label: 'Reserved' },
+  ];
+
   const validationSchema = Yup.object({
-    building: Yup.string().required(t('validation.required')),
-    apartmentNumber: Yup.string()
-      .required(t('validation.required'))
-      .max(20, t('validation.max', { max: 20 })),
-    block: Yup.string()
-      .required(t('validation.required'))
-      .max(50, t('validation.max', { max: 50 })),
-    apartmentStatus: Yup.string()
-      .required(t('validation.required'))
-      .oneOf(['vacant', 'occupied', 'under_renovation', 'reserved'], t('validation.invalid')),
-    workType: Yup.string()
-      .required(t('validation.required'))
-      .oneOf(['painting', 'cleaning', 'repairs', 'maintenance', 'inspection', 'other', 'plumbing', 'electrical', 'hvac', 'flooring', 'roofing', 'carpentry'], t('validation.invalid')),
-    workSubType: Yup.string()
-      .required(t('validation.required'))
-      .max(100, t('validation.max', { max: 100 })),
-    description: Yup.string().required(t('validation.required')),
-    priority: Yup.string()
-      .required(t('validation.required'))
-      .oneOf(['low', 'medium', 'high', 'urgent'], t('validation.invalid')),
-    estimatedCost: Yup.number()
-      .min(0, t('validation.min', { min: 0 }))
-      .nullable(),
-    notes: Yup.string(),
+    building: Yup.string().required('Building is required'),
+    apartmentNumber: Yup.string().required('Apartment number is required'),
+    block: Yup.string().required('Block is required'),
+    apartmentStatus: Yup.string().required('Apartment status is required'),
+    workType: Yup.string().required('Work type is required'),
+    workSubType: Yup.string().required('Work sub-type is required'),
+    description: Yup.string().required('Description is required'),
+    priority: Yup.string().required('Priority is required'),
+    status: Yup.string().required('Status is required'),
+    estimatedCost: Yup.number().min(0, 'Cost must be positive'),
   });
 
   const initialValues = {
-    building: initialValuesProp?.building || '',
-    apartmentNumber: initialValuesProp?.apartmentNumber || '',
-    block: initialValuesProp?.block || '',
-    apartmentStatus: initialValuesProp?.apartmentStatus || 'vacant',
-    workType: initialValuesProp?.workType || '',
-    workSubType: initialValuesProp?.workSubType || '',
-    description: initialValuesProp?.description || '',
-    priority: initialValuesProp?.priority || 'medium',
-    startDate: initialValuesProp?.startDate || new Date(),
-    estimatedCost: initialValuesProp?.estimatedCost || '',
-    notes: initialValuesProp?.notes || '',
+    building: '',
+    apartmentNumber: '',
+    block: '',
+    apartmentStatus: 'vacant',
+    workType: '',
+    workSubType: '',
+    description: '',
+    priority: 'medium',
+    status: 'pending',
+    estimatedCost: 0,
+    assignedTo: [],
     ...initialValuesProp,
   };
-
-  const workTypes = [
-    { value: 'painting', label: t('workOrders.types.painting') },
-    { value: 'cleaning', label: t('workOrders.types.cleaning') },
-    { value: 'repairs', label: t('workOrders.types.repairs') },
-    { value: 'maintenance', label: t('workOrders.types.maintenance') },
-    { value: 'inspection', label: t('workOrders.types.inspection') },
-    { value: 'plumbing', label: t('workOrders.types.plumbing') },
-    { value: 'electrical', label: t('workOrders.types.electrical') },
-    { value: 'hvac', label: t('workOrders.types.hvac') },
-    { value: 'flooring', label: t('workOrders.types.flooring') },
-    { value: 'roofing', label: t('workOrders.types.roofing') },
-    { value: 'carpentry', label: t('workOrders.types.carpentry') },
-    { value: 'other', label: t('workOrders.types.other') }
-  ];
-
-  const apartmentStatuses = [
-    { value: 'vacant', label: t('workOrders.statuses.vacant') },
-    { value: 'occupied', label: t('workOrders.statuses.occupied') },
-    { value: 'under_renovation', label: t('workOrders.statuses.under_renovation') },
-    { value: 'reserved', label: t('workOrders.statuses.reserved') }
-  ];
-
-  const priorities = [
-    { value: 'low', label: t('workOrders.priorities.low') },
-    { value: 'medium', label: t('workOrders.priorities.medium') },
-    { value: 'high', label: t('workOrders.priorities.high') },
-    { value: 'urgent', label: t('workOrders.priorities.urgent') },
-  ];
 
   const formik = useFormik({
     initialValues,
     validationSchema,
-    enableReinitialize: true,
-    onSubmit: async (values, { setSubmitting }) => {
+    onSubmit: async (values) => {
       try {
         setSubmitError('');
-        setSubmitting(true);
-        
-        const workOrderData = {
+        const formData = {
           ...values,
-          photos: photos.map(photo => photo.file || photo),
-          estimatedCost: values.estimatedCost ? parseFloat(values.estimatedCost) : undefined,
+          photos,
+          assignedTo: values.assignedTo.map(worker => ({
+            worker: worker._id || worker,
+            assignedAt: new Date(),
+            status: 'pending'
+          }))
         };
-        
-        await onSubmit(workOrderData);
+        await onSubmit(formData);
       } catch (error) {
         console.error('Form submission error:', error);
-        const errorMessage = error?.data?.message || error?.message || t('workOrders.messages.error');
-        setSubmitError(errorMessage);
-        toast.error(errorMessage);
-      } finally {
-        setSubmitting(false);
+        setSubmitError(error?.data?.message || 'Failed to submit form');
+        toast.error(error?.data?.message || 'Failed to submit form');
       }
     },
   });
 
+  // Update available blocks when building changes
+  useEffect(() => {
+    if (formik.values.building) {
+      const selectedBuilding = buildings.find(b => b._id === formik.values.building);
+      if (selectedBuilding?.apartments) {
+        const blocks = [...new Set(selectedBuilding.apartments.map(apt => apt.block))];
+        setAvailableBlocks(blocks);
+      }
+    }
+  }, [formik.values.building, buildings]);
+
+  // Get available sub-types based on work type
+  const availableSubTypes = workSubTypeOptions[formik.values.workType] || [];
+
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+    }
+  };
+
+  if (buildingsLoading || workersLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   if (buildingsError || workersError) {
     return (
-      <Alert severity="error" sx={{ mb: 2 }}>
-        {t('errors.general')}
+      <Alert severity="error">
+        Error loading form data: {buildingsError?.message || workersError?.message}
       </Alert>
     );
   }
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box component="form" onSubmit={formik.handleSubmit}>
-        {submitError && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {submitError}
-          </Alert>
-        )}
-        
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              {t('workOrders.details')}
-            </Typography>
-            
-            <Grid container spacing={2}>
+      <Card>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            Work Order Details
+          </Typography>
+
+          {submitError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {submitError}
+            </Alert>
+          )}
+
+          <Box component="form" onSubmit={formik.handleSubmit}>
+            <Grid container spacing={3}>
+              {/* Building Selection */}
               <Grid item xs={12} md={6}>
                 <FormControl 
                   fullWidth 
                   error={formik.touched.building && Boolean(formik.errors.building)}
-                  disabled={buildingsLoading}
                 >
-                  <InputLabel>{t('workOrders.building')}</InputLabel>
+                  <InputLabel>Building *</InputLabel>
                   <Select
                     name="building"
                     value={formik.values.building}
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
-                    label={t('workOrders.building')}
-                    disabled={buildingsLoading}
+                    label="Building *"
                   >
                     {buildings.map((building) => (
                       <MenuItem key={building._id} value={building._id}>
-                        {building.name} - [{building.administratorName || 'No Administrator'}]
+                        {building.name}
                       </MenuItem>
                     ))}
                   </Select>
@@ -193,11 +281,12 @@ const WorkOrderForm = ({
                 </FormControl>
               </Grid>
 
+              {/* Apartment Number */}
               <Grid item xs={12} md={3}>
                 <TextField
                   fullWidth
                   name="apartmentNumber"
-                  label={t('apartments.number')}
+                  label="Apartment Number *"
                   value={formik.values.apartmentNumber}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
@@ -206,11 +295,12 @@ const WorkOrderForm = ({
                 />
               </Grid>
 
+              {/* Block */}
               <Grid item xs={12} md={3}>
                 <TextField
                   fullWidth
                   name="block"
-                  label="Block"
+                  label="Block *"
                   value={formik.values.block}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
@@ -219,11 +309,11 @@ const WorkOrderForm = ({
                 />
               </Grid>
 
+              {/* Apartment Status */}
               <Grid item xs={12} md={6}>
                 <FormControl 
                   fullWidth 
                   error={formik.touched.apartmentStatus && Boolean(formik.errors.apartmentStatus)}
-                  required
                 >
                   <InputLabel>Apartment Status *</InputLabel>
                   <Select
@@ -233,9 +323,9 @@ const WorkOrderForm = ({
                     onBlur={formik.handleBlur}
                     label="Apartment Status *"
                   >
-                    {apartmentStatuses.map((status) => (
-                      <MenuItem key={status.value} value={status.value}>
-                        {status.label}
+                    {apartmentStatusOptions.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
                       </MenuItem>
                     ))}
                   </Select>
@@ -245,22 +335,27 @@ const WorkOrderForm = ({
                 </FormControl>
               </Grid>
 
+              {/* Work Type */}
               <Grid item xs={12} md={6}>
                 <FormControl 
                   fullWidth 
                   error={formik.touched.workType && Boolean(formik.errors.workType)}
                 >
-                  <InputLabel>{t('workOrders.type')}</InputLabel>
+                  <InputLabel>Work Type *</InputLabel>
                   <Select
                     name="workType"
                     value={formik.values.workType}
-                    onChange={formik.handleChange}
+                    onChange={(e) => {
+                      formik.handleChange(e);
+                      // Reset workSubType when workType changes
+                      formik.setFieldValue('workSubType', '');
+                    }}
                     onBlur={formik.handleBlur}
-                    label={t('workOrders.type')}
+                    label="Work Type *"
                   >
-                    {workTypes.map((type) => (
-                      <MenuItem key={type.value} value={type.value}>
-                        {type.label}
+                    {workTypeOptions.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
                       </MenuItem>
                     ))}
                   </Select>
@@ -270,50 +365,50 @@ const WorkOrderForm = ({
                 </FormControl>
               </Grid>
 
+              {/* Work Sub-Type */}
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  name="workSubType"
-                  label={t('workOrders.service')}
-                  value={formik.values.workSubType}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
+                <FormControl 
+                  fullWidth 
                   error={formik.touched.workSubType && Boolean(formik.errors.workSubType)}
-                  helperText={formik.touched.workSubType && formik.errors.workSubType}
-                />
+                  disabled={!formik.values.workType}
+                >
+                  <InputLabel>Service *</InputLabel>
+                  <Select
+                    name="workSubType"
+                    value={formik.values.workSubType}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    label="Service *"
+                  >
+                    {availableSubTypes.map((subType) => (
+                      <MenuItem key={subType} value={subType}>
+                        {subType}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {formik.touched.workSubType && formik.errors.workSubType && (
+                    <FormHelperText>{formik.errors.workSubType}</FormHelperText>
+                  )}
+                </FormControl>
               </Grid>
 
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={3}
-                  name="description"
-                  label={t('common.description')}
-                  value={formik.values.description}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  error={formik.touched.description && Boolean(formik.errors.description)}
-                  helperText={formik.touched.description && formik.errors.description}
-                />
-              </Grid>
-
+              {/* Priority */}
               <Grid item xs={12} md={6}>
                 <FormControl 
                   fullWidth 
                   error={formik.touched.priority && Boolean(formik.errors.priority)}
                 >
-                  <InputLabel>{t('workOrders.priority')}</InputLabel>
+                  <InputLabel>Priority *</InputLabel>
                   <Select
                     name="priority"
                     value={formik.values.priority}
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
-                    label={t('workOrders.priority')}
+                    label="Priority *"
                   >
-                    {priorities.map((priority) => (
-                      <MenuItem key={priority.value} value={priority.value}>
-                        {priority.label}
+                    {priorityOptions.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
                       </MenuItem>
                     ))}
                   </Select>
@@ -323,31 +418,85 @@ const WorkOrderForm = ({
                 </FormControl>
               </Grid>
 
+              {/* Status */}
               <Grid item xs={12} md={6}>
-                <DatePicker
-                  label={t('workOrders.dueDate')}
-                  value={formik.values.startDate}
-                  onChange={(date) => formik.setFieldValue('startDate', date)}
-                  enableAccessibleFieldDOMStructure={false}
-                  slots={{
-                    textField: TextField
+                <FormControl 
+                  fullWidth 
+                  error={formik.touched.status && Boolean(formik.errors.status)}
+                >
+                  <InputLabel>Work Status *</InputLabel>
+                  <Select
+                    name="status"
+                    value={formik.values.status}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    label="Work Status *"
+                  >
+                    {statusOptions.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {formik.touched.status && formik.errors.status && (
+                    <FormHelperText>{formik.errors.status}</FormHelperText>
+                  )}
+                </FormControl>
+              </Grid>
+
+              {/* Assigned Workers */}
+              <Grid item xs={12}>
+                <Autocomplete
+                  multiple
+                  options={workers}
+                  getOptionLabel={(option) => option.name || ''}
+                  value={formik.values.assignedTo}
+                  onChange={(event, newValue) => {
+                    formik.setFieldValue('assignedTo', newValue);
                   }}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      error: formik.touched.startDate && Boolean(formik.errors.startDate),
-                      helperText: formik.touched.startDate && formik.errors.startDate
-                    }
-                  }}
+                  renderTags={(value, getTagProps) =>
+                    value.map((option, index) => (
+                      <Chip
+                        variant="outlined"
+                        label={option.name}
+                        {...getTagProps({ index })}
+                        key={option._id}
+                      />
+                    ))
+                  }
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Assign Workers"
+                      placeholder="Select workers to assign"
+                    />
+                  )}
                 />
               </Grid>
 
+              {/* Description */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  name="description"
+                  label="Description *"
+                  value={formik.values.description}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={formik.touched.description && Boolean(formik.errors.description)}
+                  helperText={formik.touched.description && formik.errors.description}
+                />
+              </Grid>
+
+              {/* Estimated Cost */}
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
-                  name="estimatedCost"
-                  label={t('workOrders.cost')}
                   type="number"
+                  name="estimatedCost"
+                  label="Estimated Cost"
                   value={formik.values.estimatedCost}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
@@ -359,57 +508,42 @@ const WorkOrderForm = ({
                 />
               </Grid>
 
+              {/* Photos */}
               <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={3}
-                  name="notes"
-                  label={t('workOrders.notes')}
-                  value={formik.values.notes}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  error={formik.touched.notes && Boolean(formik.errors.notes)}
-                  helperText={formik.touched.notes && formik.errors.notes}
+                <Typography variant="h6" gutterBottom>
+                  Photos
+                </Typography>
+                <PhotoUpload
+                  photos={photos}
+                  onPhotosChange={setPhotos}
+                  maxPhotos={10}
                 />
               </Grid>
+
+              {/* Action Buttons */}
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                  <Button
+                    variant="outlined"
+                    onClick={handleCancel}
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={isSubmitting}
+                    startIcon={isSubmitting && <CircularProgress size={20} />}
+                  >
+                    {isSubmitting ? 'Saving...' : 'Save Work Order'}
+                  </Button>
+                </Box>
+              </Grid>
             </Grid>
-          </CardContent>
-        </Card>
-
-        <Card sx={{ mb: 3 }}>
-          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-            <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1.1rem', md: '1.25rem' } }}>
-              Photos
-            </Typography>
-            <PhotoUpload
-              photos={photos}
-              onPhotosChange={setPhotos}
-              maxPhotos={5}
-            />
-          </CardContent>
-        </Card>
-
-        <Box display="flex" justifyContent="flex-end" gap={2} sx={{ mt: 3 }}>
-          <Button
-            variant="outlined"
-            onClick={onCancel}
-            disabled={isSubmitting}
-            size="large"
-          >
-            {t('common.cancel')}
-          </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={isSubmitting}
-            startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
-            size="large"
-          >
-            {isSubmitting ? t('common.saving') : t('common.save')}
-          </Button>
-        </Box>
-      </Box>
+          </Box>
+        </CardContent>
+      </Card>
     </LocalizationProvider>
   );
 };
