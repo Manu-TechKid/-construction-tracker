@@ -36,8 +36,11 @@ const Dashboard = () => {
     completedWorkOrders: 0,
     inProgressWorkOrders: 0,
     pendingWorkOrders: 0,
+    onHoldWorkOrders: 0,
+    cancelledWorkOrders: 0,
     totalBuildings: 0,
     totalWorkers: 0,
+    availableWorkers: 0,
   });
 
   // Fetch data with error handling - skip failing endpoints gracefully
@@ -47,28 +50,49 @@ const Dashboard = () => {
 
   // Process data when loaded - handle missing endpoints gracefully
   useEffect(() => {
+    // Handle work orders data with proper status counting
+    if (workOrdersData?.data) {
+      const workOrders = workOrdersData.data.workOrders || workOrdersData.data || [];
+      
+      const workOrderStats = {
+        totalWorkOrders: workOrders.length,
+        completedWorkOrders: workOrders.filter(wo => wo.status === 'completed').length,
+        inProgressWorkOrders: workOrders.filter(wo => wo.status === 'in_progress').length,
+        pendingWorkOrders: workOrders.filter(wo => wo.status === 'pending').length,
+        onHoldWorkOrders: workOrders.filter(wo => wo.status === 'on_hold').length,
+        cancelledWorkOrders: workOrders.filter(wo => wo.status === 'cancelled').length
+      };
+
+      setStats(prevStats => ({
+        ...prevStats,
+        ...workOrderStats
+      }));
+    }
+
     // Handle buildings data
-    const buildings = buildingsData?.data?.buildings || [];
-    
-    // Handle work orders data (may not exist yet)
-    const workOrders = workOrdersData?.data?.workOrders || [];
-    
-    // Handle workers data (may not exist yet)  
-    const workers = workersData?.data?.workers || [];
+    if (buildingsData?.data) {
+      const buildings = buildingsData.data.buildings || buildingsData.data || [];
+      setStats(prevStats => ({
+        ...prevStats,
+        totalBuildings: buildings.length
+      }));
+    }
 
-    // Calculate work order stats
-    const completed = workOrders.filter(wo => wo.status === 'completed').length;
-    const inProgress = workOrders.filter(wo => wo.status === 'in_progress').length;
-    const pending = workOrders.filter(wo => wo.status === 'pending').length;
-
-    setStats({
-      totalWorkOrders: workOrders.length,
-      completedWorkOrders: completed,
-      inProgressWorkOrders: inProgress,
-      pendingWorkOrders: pending,
-      totalBuildings: buildings.length,
-      totalWorkers: workers.length,
-    });
+    // Handle workers data - count only workers, not admin/manager/supervisor
+    if (workersData?.data) {
+      const allUsers = workersData.data.workers || workersData.data || [];
+      const workers = allUsers.filter(user => user.role === 'worker');
+      const availableWorkers = workers.filter(worker => 
+        worker.workerProfile?.status === 'available' || 
+        worker.status === 'available'
+      );
+      
+      setStats(prevStats => ({
+        ...prevStats,
+        totalWorkers: workers.length,
+        availableWorkers: availableWorkers.length
+      }));
+    }
   }, [workOrdersData, buildingsData, workersData]);
 
   // Auto-refresh data every 30 seconds for real-time updates
@@ -165,6 +189,22 @@ const Dashboard = () => {
           <StatCard
             title="Pending"
             value={stats.pendingWorkOrders}
+            icon={<ErrorIcon />}
+            color={theme.palette.error.main}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard
+            title="On Hold"
+            value={stats.onHoldWorkOrders}
+            icon={<InfoIcon />}
+            color={theme.palette.info.main}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard
+            title="Cancelled"
+            value={stats.cancelledWorkOrders}
             icon={<ErrorIcon />}
             color={theme.palette.error.main}
           />

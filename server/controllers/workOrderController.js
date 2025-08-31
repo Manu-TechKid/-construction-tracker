@@ -26,6 +26,11 @@ exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
   if (req.query.status) filter.status = req.query.status;
   if (req.query.priority) filter.priority = req.query.priority;
   if (req.query.workType) filter.workType = req.query.workType;
+  
+  // Filter by assigned worker
+  if (req.query.assignedTo) {
+    filter['assignedTo.worker'] = req.query.assignedTo;
+  }
 
   // Search functionality
   if (req.query.search) {

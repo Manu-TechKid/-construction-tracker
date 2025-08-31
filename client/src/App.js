@@ -34,6 +34,7 @@ import WorkOrders from './pages/workOrders/WorkOrders';
 import CreateWorkOrder from './pages/workOrders/CreateWorkOrder';
 import WorkOrderDetails from './pages/workOrders/WorkOrderDetails';
 import EditWorkOrder from './pages/workOrders/EditWorkOrder';
+import WorkProgress from './pages/workOrders/WorkProgress';
 import Workers from './pages/workers/Workers';
 import CreateWorker from './pages/workers/CreateWorker';
 import Reminders from './pages/reminders/Reminders';
@@ -202,6 +203,14 @@ const AppContent = () => {
                 element={
                   <RoleBasedRoute requiredPermissions={['read:workorders']}>
                     <WorkOrderDetails />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="work-orders/progress" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['read:workorders']}>
+                    <WorkProgress />
                   </RoleBasedRoute>
                 } 
               />

@@ -41,27 +41,13 @@ const WorkOrderForm = ({
   
   // Extract buildings and workers from API response
   const buildings = useMemo(() => {
-    if (!buildingsData) return [];
-    if (buildingsData.data?.buildings && Array.isArray(buildingsData.data.buildings)) {
-      return buildingsData.data.buildings;
-    } else if (Array.isArray(buildingsData.data)) {
-      return buildingsData.data;
-    } else if (Array.isArray(buildingsData)) {
-      return buildingsData;
-    }
-    return [];
+    return buildingsData?.data?.buildings || buildingsData?.data || [];
   }, [buildingsData]);
 
   const workers = useMemo(() => {
-    if (!workersData) return [];
-    if (workersData.data?.workers && Array.isArray(workersData.data.workers)) {
-      return workersData.data.workers;
-    } else if (Array.isArray(workersData.data)) {
-      return workersData.data;
-    } else if (Array.isArray(workersData)) {
-      return workersData;
-    }
-    return [];
+    const allWorkers = workersData?.data?.workers || workersData?.data || [];
+    // Filter to show only workers (exclude admin, manager, supervisor)
+    return allWorkers.filter(worker => worker.role === 'worker');
   }, [workersData]);
 
   const [photos, setPhotos] = useState([]);
