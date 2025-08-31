@@ -7,6 +7,11 @@ const AppError = require('../utils/appError');
 // Client will POST the file to https://api.cloudinary.com/v1_1/<cloud_name>/auto/upload
 // with: file, api_key, timestamp, folder, signature
 exports.getUploadSignature = catchAsync(async (req, res, next) => {
+  // Check if cloudinary is available
+  if (!cloudinary) {
+    return next(new AppError('Photo upload service is not available', 503));
+  }
+
   if (!process.env.CLOUDINARY_API_SECRET || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_CLOUD_NAME) {
     return next(new AppError('Cloudinary is not configured', 500));
   }
