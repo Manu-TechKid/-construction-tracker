@@ -62,7 +62,7 @@ const WORKER_SKILLS = [
 
 const Workers = () => {
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
+  const { hasPermission, currentUser } = useAuth();
   
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedWorker, setSelectedWorker] = useState(null);
@@ -107,8 +107,13 @@ const Workers = () => {
   const rejectedWorkers = rejectedWorkersData?.data?.workers || [];
 
   const handleMenuClick = (event, worker) => {
-    setAnchorEl(event.currentTarget);
-    setSelectedWorker(worker);
+    // Ensure worker has valid _id before setting
+    if (worker && worker._id) {
+      setAnchorEl(event.currentTarget);
+      setSelectedWorker(worker);
+    } else {
+      toast.error('Invalid worker data - cannot perform action');
+    }
   };
 
   const handleMenuClose = () => {
@@ -117,29 +122,39 @@ const Workers = () => {
   };
 
   const handleDelete = async () => {
-    if (selectedWorker && selectedWorker._id) {
-      // Prevent deletion of admin users
-      if (selectedWorker.role === 'admin') {
-        toast.error('Cannot delete admin users - they control the system');
-        setDeleteDialogOpen(false);
-        handleMenuClose();
-        return;
-      }
-
-      try {
-        await deleteWorker(selectedWorker._id).unwrap();
-        toast.success('Worker deleted successfully');
-        setDeleteDialogOpen(false);
-        handleMenuClose();
-        refetch();
-      } catch (error) {
-        console.error('Error deleting worker:', error);
-        toast.error(error?.data?.message || 'Failed to delete worker');
-      }
-    } else {
+    // Comprehensive validation
+    if (!selectedWorker || !selectedWorker._id) {
       toast.error('Cannot delete worker - invalid worker data');
       setDeleteDialogOpen(false);
       handleMenuClose();
+      return;
+    }
+
+    // Prevent deletion of admin users
+    if (selectedWorker.role === 'admin') {
+      toast.error('Cannot delete admin users - they control the system');
+      setDeleteDialogOpen(false);
+      handleMenuClose();
+      return;
+    }
+
+    // Prevent admin from deleting themselves
+    if (currentUser && selectedWorker._id === currentUser._id) {
+      toast.error('Cannot delete your own account - use profile settings instead');
+      setDeleteDialogOpen(false);
+      handleMenuClose();
+      return;
+    }
+
+    try {
+      await deleteWorker(selectedWorker._id).unwrap();
+      toast.success('Worker deleted successfully');
+      setDeleteDialogOpen(false);
+      handleMenuClose();
+      refetch();
+    } catch (error) {
+      console.error('Error deleting worker:', error);
+      toast.error(error?.data?.message || 'Failed to delete worker');
     }
   };
 
@@ -609,11 +624,14 @@ const Workers = () => {
             Edit
           </MenuItem>
         )}
-        {hasPermission(['delete:workers']) && selectedWorker?.role !== 'admin' && (
+        {hasPermission(['delete:workers']) && 
+         selectedWorker?.role !== 'admin' && 
+         selectedWorker?._id && 
+         selectedWorker._id !== currentUser?._id && (
           <MenuItem 
             onClick={() => {
-              setDeleteDialogOpen(true);
               handleMenuClose();
+              setDeleteDialogOpen(true);
             }}
             sx={{ color: 'error.main' }}
           >
