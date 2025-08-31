@@ -8,12 +8,13 @@
     "client"
   ],
   "scripts": {
-    "start": "cd server && npm start",
+    "start": "cd server && node server.js",
     "server": "cd server && npm run dev",
     "client": "cd client && npm start",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "build": "cd client && npm install --legacy-peer-deps && npm run build",
-    "heroku-postbuild": "npm run build"
+    "build": "npm install --legacy-peer-deps && npm run build",
+    "heroku-postbuild": "npm run build",
+    "render-build": "npm install --legacy-peer-deps && npm run build"
   },
   "repository": {
     "type": "git",
