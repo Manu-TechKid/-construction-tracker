@@ -101,18 +101,53 @@ exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
 
 exports.getWorkOrder = catchAsync(async (req, res, next) => {
     const workOrder = await WorkOrder.findById(req.params.id)
-        .populate({ path: 'building', select: 'name address' })
-        .populate({ path: 'createdBy', select: 'name email' });
+        .populate({ 
+            path: 'building', 
+            select: 'name address city administrator administratorName' 
+        })
+        .populate({ 
+            path: 'assignedTo.worker', 
+            select: 'name email phone workerProfile.skills workerProfile.status' 
+        })
+        .populate({ 
+            path: 'createdBy', 
+            select: 'name email' 
+        })
+        .populate({ 
+            path: 'updatedBy', 
+            select: 'name email' 
+        })
+        .populate({ 
+            path: 'completedBy', 
+            select: 'name email' 
+        });
     
     if (!workOrder) {
         return next(new AppError('No work order found with that ID', 404));
     }
     
+    // Clean and format the response data
+    const cleanedWorkOrder = {
+        ...workOrder.toObject(),
+        // Ensure all dates are properly formatted or null
+        scheduledDate: workOrder.scheduledDate ? workOrder.scheduledDate.toISOString() : null,
+        estimatedCompletionDate: workOrder.estimatedCompletionDate ? workOrder.estimatedCompletionDate.toISOString() : null,
+        actualCompletionDate: workOrder.actualCompletionDate ? workOrder.actualCompletionDate.toISOString() : null,
+        createdAt: workOrder.createdAt ? workOrder.createdAt.toISOString() : new Date().toISOString(),
+        updatedAt: workOrder.updatedAt ? workOrder.updatedAt.toISOString() : new Date().toISOString(),
+        // Ensure assignedTo is always an array
+        assignedTo: Array.isArray(workOrder.assignedTo) ? workOrder.assignedTo : [],
+        // Ensure photos array exists
+        photos: Array.isArray(workOrder.photos) ? workOrder.photos : [],
+        // Ensure notes array exists
+        notes: Array.isArray(workOrder.notes) ? workOrder.notes : [],
+        // Ensure tasks array exists
+        tasks: Array.isArray(workOrder.tasks) ? workOrder.tasks : []
+    };
+    
     res.status(200).json({
         status: 'success',
-        data: {
-            workOrder
-        }
+        data: cleanedWorkOrder
     });
 });
 

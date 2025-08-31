@@ -48,118 +48,95 @@ import { useAuth } from '../../hooks/useAuth';
 
 const WorkerDashboard = () => {
   const { user } = useAuth();
-  const [statusUpdateDialog, setStatusUpdateDialog] = useState(false);
-  const [selectedAssignment, setSelectedAssignment] = useState(null);
-  const [statusUpdate, setStatusUpdate] = useState({
-    status: '',
-    notes: ''
-  });
-
-  // Get work orders assigned to this worker
-  const {
-    data: workOrdersData,
-    isLoading,
-    isError,
-    error,
-    refetch
-  } = useGetWorkOrdersQuery({}, {
-    pollingInterval: 30000, // Poll every 30 seconds for real-time updates
-  });
-
-  const [updateWorkOrder, { isLoading: updatingStatus }] = useUpdateWorkOrderMutation();
-
-  // Filter work orders assigned to current worker
-  const assignments = (workOrdersData?.data?.workOrders || []).filter(workOrder => 
-    workOrder.assignedTo?.some(assignment => assignment.worker?._id === user?._id)
-  );
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [noteDialog, setNoteDialog] = useState({ open: false, workOrderId: null, note: '' });
   
-  // Group assignments by worker's assignment status
-  const groupedAssignments = {
-    pending: assignments.filter(wo => {
-      const workerAssignment = wo.assignedTo?.find(at => at.worker?._id === user?._id);
-      return workerAssignment?.status === 'pending';
-    }),
-    in_progress: assignments.filter(wo => {
-      const workerAssignment = wo.assignedTo?.find(at => at.worker?._id === user?._id);
-      return workerAssignment?.status === 'in_progress';
-    }),
-    completed: assignments.filter(wo => {
-      const workerAssignment = wo.assignedTo?.find(at => at.worker?._id === user?._id);
-      return workerAssignment?.status === 'completed';
-    }),
-  };
-
-  const totalPending = groupedAssignments.pending.length;
-  const totalInProgress = groupedAssignments.in_progress.length;
-  const totalCompleted = groupedAssignments.completed.length;
-
-  // Handle status updates
-  const handleStatusUpdate = async () => {
-    if (!selectedAssignment || !statusUpdate.status) {
-      toast.error('Please select a status');
-      return;
-    }
-
+  // Fetch work orders assigned to this worker
+  const { data: workOrdersData, isLoading, error, refetch } = useGetWorkOrdersQuery({
+    assignedTo: user?.id,
+    status: selectedStatus !== 'all' ? selectedStatus : undefined
+  });
+  
+  const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
+  
+  // Extract work orders from API response
+  const workOrders = workOrdersData?.data?.workOrders || workOrdersData?.data || [];
+  
+  const handleStatusUpdate = async (workOrderId, newStatus) => {
     try {
-      // Update the worker's assignment status within the work order
-      const updatedAssignedTo = selectedAssignment.assignedTo.map(assignment => {
-        if (assignment.worker._id === user._id) {
-          return {
-            ...assignment,
-            status: statusUpdate.status,
-            notes: statusUpdate.notes,
-            completedAt: statusUpdate.status === 'completed' ? new Date() : assignment.completedAt
-          };
-        }
-        return assignment;
-      });
-
       await updateWorkOrder({
-        id: selectedAssignment._id,
-        assignedTo: updatedAssignedTo
+        id: workOrderId,
+        status: newStatus,
+        updatedBy: user.id,
+        ...(newStatus === 'completed' && { 
+          completedBy: user.id, 
+          actualCompletionDate: new Date().toISOString() 
+        })
       }).unwrap();
-
-      toast.success('Status updated successfully');
-      setStatusUpdateDialog(false);
-      setSelectedAssignment(null);
-      setStatusUpdate({ status: '', notes: '' });
+      
+      toast.success(`Work order ${newStatus === 'completed' ? 'completed' : 'updated'} successfully`);
       refetch();
     } catch (error) {
-      console.error('Status update failed:', error);
-      toast.error(error?.data?.message || 'Failed to update status');
+      console.error('Failed to update work order:', error);
+      toast.error(error?.data?.message || 'Failed to update work order');
     }
   };
-
-  const openStatusDialog = (assignment) => {
-    setSelectedAssignment(assignment);
-    const workerAssignment = assignment.assignedTo?.find(at => at.worker._id === user._id);
-    const currentStatus = workerAssignment?.status || 'pending';
-    setStatusUpdate({ status: currentStatus, notes: workerAssignment?.notes || '' });
-    setStatusUpdateDialog(true);
+  
+  const handleAddNote = async () => {
+    if (!noteDialog.note.trim()) {
+      toast.error('Please enter a note');
+      return;
+    }
+    
+    try {
+      const workOrder = workOrders.find(wo => wo._id === noteDialog.workOrderId);
+      const updatedNotes = [
+        ...(workOrder?.notes || []),
+        {
+          content: noteDialog.note,
+          createdBy: user.id,
+          isPrivate: false,
+          createdAt: new Date().toISOString()
+        }
+      ];
+      
+      await updateWorkOrder({
+        id: noteDialog.workOrderId,
+        notes: updatedNotes
+      }).unwrap();
+      
+      toast.success('Note added successfully');
+      setNoteDialog({ open: false, workOrderId: null, note: '' });
+      refetch();
+    } catch (error) {
+      console.error('Failed to add note:', error);
+      toast.error('Failed to add note');
+    }
   };
-
+  
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'pending': return 'warning';
-      case 'in_progress': return 'info';
-      case 'completed': return 'success';
-      case 'on_hold': return 'default';
-      default: return 'default';
-    }
+    const colors = {
+      pending: 'warning',
+      in_progress: 'info',
+      on_hold: 'default',
+      completed: 'success',
+      cancelled: 'error'
+    };
+    return colors[status] || 'default';
   };
-
+  
   const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'urgent': return 'error';
-      case 'high': return 'error';
-      case 'medium': return 'warning';
-      case 'low': return 'success';
-      default: return 'default';
-    }
+    const colors = {
+      low: 'success',
+      medium: 'warning',
+      high: 'error',
+      urgent: 'error'
+    };
+    return colors[priority] || 'default';
   };
-
+  
   const formatDate = (dateString) => {
-    if (!dateString) return 'No date set';
+    if (!dateString) return 'Not scheduled';
     
     const date = new Date(dateString);
     if (isToday(date)) return 'Today';
@@ -169,18 +146,13 @@ const WorkerDashboard = () => {
   };
 
   const renderAssignmentCard = (assignment) => {
-    const workerAssignment = assignment.assignedTo?.find(at => at.worker._id === user._id);
-    const status = workerAssignment?.status || 'pending';
-    const assignedDate = workerAssignment?.assignedAt;
-    const otherWorkers = assignment.assignedTo?.filter(at => at.worker._id !== user._id) || [];
-
     return (
       <Card 
         key={assignment._id}
         sx={{ 
           mb: 2,
-          border: status === 'in_progress' ? 2 : 1,
-          borderColor: status === 'in_progress' ? 'primary.main' : 'divider',
+          border: assignment.status === 'in_progress' ? 2 : 1,
+          borderColor: assignment.status === 'in_progress' ? 'primary.main' : 'divider',
           '&:hover': {
             boxShadow: 3
           }
@@ -195,8 +167,8 @@ const WorkerDashboard = () => {
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
                 <Chip
-                  label={status.replace('_', ' ').toUpperCase()}
-                  color={getStatusColor(status)}
+                  label={assignment.status.replace('_', ' ').toUpperCase()}
+                  color={getStatusColor(assignment.status)}
                   size="small"
                   variant="filled"
                 />
@@ -209,7 +181,7 @@ const WorkerDashboard = () => {
               </Box>
             </Box>
             <IconButton
-              onClick={() => openStatusDialog(assignment)}
+              onClick={() => setNoteDialog({ open: true, workOrderId: assignment._id, note: '' })}
               color="primary"
               size="small"
             >
@@ -231,7 +203,7 @@ const WorkerDashboard = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
             <ScheduleIcon color="action" sx={{ mr: 1, fontSize: 20 }} />
             <Typography variant="body2" color="text.secondary">
-              Assigned: {formatDate(assignedDate)}
+              Scheduled: {formatDate(assignment.scheduledDate)}
             </Typography>
           </Box>
 
@@ -241,58 +213,29 @@ const WorkerDashboard = () => {
               "{assignment.description}"
             </Typography>
           )}
-
-          {/* Other assigned workers */}
-          {otherWorkers.length > 0 && (
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                Working with:
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                {otherWorkers.map(aw => (
-                  <Chip
-                    key={aw.worker._id}
-                    avatar={<Avatar sx={{ width: 24, height: 24 }}><PersonIcon /></Avatar>}
-                    label={aw.worker.name}
-                    size="small"
-                    variant="outlined"
-                    color="primary"
-                  />
-                ))}
-              </Box>
-            </Box>
-          )}
         </CardContent>
 
         <CardActions sx={{ pt: 0, px: 2, pb: 2 }}>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', width: '100%' }}>
-            {status === 'pending' && (
+            {assignment.status === 'pending' && (
               <Button
                 size="small"
                 variant="contained"
                 startIcon={<StartIcon />}
-                onClick={() => {
-                  setSelectedAssignment(assignment);
-                  setStatusUpdate({ status: 'in_progress', notes: 'Started working on this task' });
-                  handleStatusUpdate();
-                }}
+                onClick={() => handleStatusUpdate(assignment._id, 'in_progress')}
                 sx={{ flex: 1, minWidth: 120 }}
               >
                 Start Work
               </Button>
             )}
             
-            {status === 'in_progress' && (
+            {assignment.status === 'in_progress' && (
               <>
                 <Button
                   size="small"
                   variant="outlined"
                   startIcon={<PauseIcon />}
-                  onClick={() => {
-                    setSelectedAssignment(assignment);
-                    setStatusUpdate({ status: 'on_hold', notes: 'Work paused' });
-                    handleStatusUpdate();
-                  }}
+                  onClick={() => handleStatusUpdate(assignment._id, 'on_hold')}
                   sx={{ flex: 1, minWidth: 100 }}
                 >
                   Pause
@@ -302,27 +245,13 @@ const WorkerDashboard = () => {
                   variant="contained"
                   color="success"
                   startIcon={<CheckCircleIcon />}
-                  onClick={() => {
-                    setSelectedAssignment(assignment);
-                    setStatusUpdate({ status: 'completed', notes: 'Work completed successfully' });
-                    handleStatusUpdate();
-                  }}
+                  onClick={() => handleStatusUpdate(assignment._id, 'completed')}
                   sx={{ flex: 1, minWidth: 120 }}
                 >
                   Complete
                 </Button>
               </>
             )}
-            
-            <Button
-              size="small"
-              variant="text"
-              startIcon={<NotesIcon />}
-              onClick={() => openStatusDialog(assignment)}
-              sx={{ minWidth: 100 }}
-            >
-              Update
-            </Button>
           </Box>
         </CardActions>
       </Card>
@@ -339,7 +268,7 @@ const WorkerDashboard = () => {
     );
   }
 
-  if (isError) {
+  if (error) {
     return (
       <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
         <Alert severity="error">
@@ -370,7 +299,7 @@ const WorkerDashboard = () => {
         <Grid container spacing={2} sx={{ mt: 1 }}>
           <Grid item xs={4}>
             <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Badge badgeContent={totalPending} color="warning" max={99}>
+              <Badge badgeContent={workOrders.filter(wo => wo.status === 'pending').length} color="warning" max={99}>
                 <AssignmentIcon color="action" />
               </Badge>
               <Typography variant="body2" sx={{ mt: 1 }}>
@@ -380,7 +309,7 @@ const WorkerDashboard = () => {
           </Grid>
           <Grid item xs={4}>
             <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Badge badgeContent={totalInProgress} color="primary" max={99}>
+              <Badge badgeContent={workOrders.filter(wo => wo.status === 'in_progress').length} color="primary" max={99}>
                 <WorkIcon color="action" />
               </Badge>
               <Typography variant="body2" sx={{ mt: 1 }}>
@@ -390,7 +319,7 @@ const WorkerDashboard = () => {
           </Grid>
           <Grid item xs={4}>
             <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Badge badgeContent={totalCompleted} color="success" max={99}>
+              <Badge badgeContent={workOrders.filter(wo => wo.status === 'completed').length} color="success" max={99}>
                 <CheckCircleIcon color="action" />
               </Badge>
               <Typography variant="body2" sx={{ mt: 1 }}>
@@ -402,37 +331,37 @@ const WorkerDashboard = () => {
       </Box>
 
       {/* Assignments sections */}
-      {totalPending > 0 && (
+      {workOrders.filter(wo => wo.status === 'pending').length > 0 && (
         <Box sx={{ mb: 4 }}>
           <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <AssignmentIcon />
-            Pending Tasks ({totalPending})
+            Pending Tasks ({workOrders.filter(wo => wo.status === 'pending').length})
           </Typography>
-          {groupedAssignments.pending.map(renderAssignmentCard)}
+          {workOrders.filter(wo => wo.status === 'pending').map(renderAssignmentCard)}
         </Box>
       )}
 
-      {totalInProgress > 0 && (
+      {workOrders.filter(wo => wo.status === 'in_progress').length > 0 && (
         <Box sx={{ mb: 4 }}>
           <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <WorkIcon />
-            In Progress ({totalInProgress})
+            In Progress ({workOrders.filter(wo => wo.status === 'in_progress').length})
           </Typography>
-          {groupedAssignments.in_progress.map(renderAssignmentCard)}
+          {workOrders.filter(wo => wo.status === 'in_progress').map(renderAssignmentCard)}
         </Box>
       )}
 
-      {totalCompleted > 0 && (
+      {workOrders.filter(wo => wo.status === 'completed').length > 0 && (
         <Box sx={{ mb: 4 }}>
           <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <CheckCircleIcon />
-            Recently Completed ({totalCompleted})
+            Recently Completed ({workOrders.filter(wo => wo.status === 'completed').length})
           </Typography>
-          {groupedAssignments.completed.slice(0, 5).map(renderAssignmentCard)}
+          {workOrders.filter(wo => wo.status === 'completed').slice(0, 5).map(renderAssignmentCard)}
         </Box>
       )}
 
-      {assignments.length === 0 && (
+      {workOrders.length === 0 && (
         <Alert severity="info" sx={{ mt: 4 }}>
           <Typography variant="h6" gutterBottom>
             No assignments yet
@@ -445,56 +374,33 @@ const WorkerDashboard = () => {
 
       {/* Status Update Dialog */}
       <Dialog
-        open={statusUpdateDialog}
-        onClose={() => setStatusUpdateDialog(false)}
+        open={noteDialog.open}
+        onClose={() => setNoteDialog({ open: false, workOrderId: null, note: '' })}
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Update Assignment Status</DialogTitle>
+        <DialogTitle>Add Note</DialogTitle>
         <DialogContent>
-          {selectedAssignment && (
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" color="text.secondary">
-                {selectedAssignment.workType?.toUpperCase()} - {selectedAssignment.workSubType}
-                {selectedAssignment.building?.name && ` at ${selectedAssignment.building.name}`}
-              </Typography>
-            </Box>
-          )}
-          
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Status</InputLabel>
-            <Select
-              value={statusUpdate.status}
-              label="Status"
-              onChange={(e) => setStatusUpdate(prev => ({ ...prev, status: e.target.value }))}
-            >
-              <MenuItem value="pending">Pending</MenuItem>
-              <MenuItem value="in_progress">In Progress</MenuItem>
-              <MenuItem value="on_hold">On Hold</MenuItem>
-              <MenuItem value="completed">Completed</MenuItem>
-            </Select>
-          </FormControl>
-
           <TextField
             fullWidth
-            label="Notes"
+            label="Note"
             multiline
             rows={3}
-            value={statusUpdate.notes}
-            onChange={(e) => setStatusUpdate(prev => ({ ...prev, notes: e.target.value }))}
-            placeholder="Add notes about the status update..."
+            value={noteDialog.note}
+            onChange={(e) => setNoteDialog(prev => ({ ...prev, note: e.target.value }))}
+            placeholder="Add a note..."
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setStatusUpdateDialog(false)}>
+          <Button onClick={() => setNoteDialog({ open: false, workOrderId: null, note: '' })}>
             Cancel
           </Button>
           <Button
             variant="contained"
-            onClick={handleStatusUpdate}
-            disabled={updatingStatus || !statusUpdate.status}
+            onClick={handleAddNote}
+            disabled={isUpdating || !noteDialog.note.trim()}
           >
-            {updatingStatus ? 'Updating...' : 'Update Status'}
+            {isUpdating ? 'Adding...' : 'Add Note'}
           </Button>
         </DialogActions>
       </Dialog>

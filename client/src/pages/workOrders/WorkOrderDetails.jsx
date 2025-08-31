@@ -49,19 +49,16 @@ import {
   AssignmentLate as AssignmentLateIcon,
   AssignmentTurnedIn as AssignmentTurnedInIcon,
   AssignmentReturned as AssignmentReturnedIcon,
-  Comment as CommentIcon,
-  Add as AddIcon,
-  AttachFile as AttachFileIcon,
-  MoreVert as MoreVertIcon,
-  Delete as DeleteIcon,
+  Cancel as CancelIcon,
+  Save as SaveIcon,
 } from '@mui/icons-material';
 import { format, parseISO, isBefore } from 'date-fns';
-import { useGetWorkOrderQuery, useUpdateWorkOrderMutation, useAddNoteToWorkOrderMutation, useUpdateNoteInWorkOrderMutation, useDeleteNoteFromWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
+import { toast } from 'react-toastify';
+
+import { useGetWorkOrderQuery, useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
-import { useGetWorkersQuery } from '../../features/workers/workersApiSlice';
 import { useAuth } from '../../hooks/useAuth';
-import { formatDate, timeAgo } from '../../utils/dateUtils';
-import ProgressTracker from '../../components/workOrders/ProgressTracker';
+import PhotoUpload from '../../components/common/PhotoUpload';
 
 // Tab components
 const WorkOrderInfoTab = ({ workOrder, buildings, workers, onUpdateWorkOrder }) => {
@@ -583,129 +580,95 @@ const WorkOrderNotesTab = ({ workOrder, onAddNote }) => {
 const WorkOrderDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
-  const [activeTab, setActiveTab] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [workOrder, setWorkOrder] = useState(null);
-  const [buildings, setBuildings] = useState([]);
-  const [workers, setWorkers] = useState([]);
+  const theme = useTheme();
+  const { user, hasPermission } = useAuth();
   
-  // Fetch work order data
-  const { data: workOrderData, isLoading: isLoadingWorkOrder } = useGetWorkOrderQuery(id);
+  const [tabValue, setTabValue] = useState(0);
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({});
   
-  // Fetch buildings and workers for the form
+  const { data: workOrderData, isLoading, error, refetch } = useGetWorkOrderQuery(id);
   const { data: buildingsData } = useGetBuildingsQuery();
-  const { data: workersData } = useGetWorkersQuery();
+  const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
   
-  // Update work order mutation
-  const [updateWorkOrder] = useUpdateWorkOrderMutation();
-  const [addNote] = useAddNoteToWorkOrderMutation();
-  const [updateNote] = useUpdateNoteInWorkOrderMutation();
-  const [deleteNote] = useDeleteNoteFromWorkOrderMutation();
-  
-  // Handle tab change
-  const handleTabChange = (event, newValue) => {
-    setActiveTab(newValue);
-  };
-  
-  // Handle update work order
-  const handleUpdateWorkOrder = async (data) => {
-    try {
-      const updatedWorkOrder = await updateWorkOrder({
-        id,
-        ...data
-      }).unwrap();
-      
-      setWorkOrder(updatedWorkOrder.data);
-      return updatedWorkOrder;
-    } catch (error) {
-      console.error('Error updating work order:', error);
-      throw error;
-    }
-  };
-  
-  // Handle progress tracker actions
-  const handleAddNote = async (noteData) => {
-    try {
-      await addNote({ id, note: noteData }).unwrap();
-    } catch (error) {
-      console.error('Error adding note:', error);
-    }
-  };
+  // Extract work order from API response - handle both nested and direct data
+  const workOrder = workOrderData?.data?.workOrder || workOrderData?.data || workOrderData;
+  const buildings = buildingsData?.data?.buildings || buildingsData?.data || [];
 
-  const handleUpdateNote = async (noteId, noteData) => {
-    try {
-      await updateNote({ id, noteId, note: noteData }).unwrap();
-    } catch (error) {
-      console.error('Error updating note:', error);
-    }
-  };
-
-  const handleDeleteNote = async (noteId) => {
-    try {
-      await deleteNote({ id, noteId }).unwrap();
-    } catch (error) {
-      console.error('Error deleting note:', error);
-    }
-  };
-  
-  // Handle edit work order
-  const handleEdit = () => {
-    navigate(`/work-orders/${id}/edit`, { 
-      state: { 
-        workOrder: workOrder,
-        returnPath: `/work-orders/${id}` 
-      } 
-    });
-  };
-  
-  // Set data when loaded
   useEffect(() => {
-    if (workOrderData) {
-      setWorkOrder(workOrderData.data);
+    if (workOrder) {
+      setFormData({
+        building: workOrder.building?._id || workOrder.building,
+        apartmentNumber: workOrder.apartmentNumber || '',
+        block: workOrder.block || '',
+        apartmentStatus: workOrder.apartmentStatus || 'vacant',
+        workType: workOrder.workType || '',
+        workSubType: workOrder.workSubType || '',
+        description: workOrder.description || '',
+        priority: workOrder.priority || 'medium',
+        status: workOrder.status || 'pending',
+        estimatedCost: workOrder.estimatedCost || 0,
+        actualCost: workOrder.actualCost || 0,
+        scheduledDate: workOrder.scheduledDate ? new Date(workOrder.scheduledDate) : null,
+        estimatedCompletionDate: workOrder.estimatedCompletionDate ? new Date(workOrder.estimatedCompletionDate) : null,
+        assignedTo: Array.isArray(workOrder.assignedTo) ? workOrder.assignedTo.map(assignment => assignment.worker || assignment) : [],
+        photos: Array.isArray(workOrder.photos) ? workOrder.photos : [],
+        notes: Array.isArray(workOrder.notes) ? workOrder.notes : [],
+        tasks: Array.isArray(workOrder.tasks) ? workOrder.tasks : []
+      });
     }
-    
-    if (buildingsData) {
-      setBuildings(buildingsData.data || []);
+  }, [workOrder]);
+
+  const handleBack = () => {
+    navigate('/work-orders');
+  };
+
+  const handleEdit = () => {
+    navigate(`/work-orders/${id}/edit`);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    // Reset form data to original values
+    if (workOrder) {
+      setFormData({
+        building: workOrder.building?._id || workOrder.building,
+        apartmentNumber: workOrder.apartmentNumber || '',
+        block: workOrder.block || '',
+        apartmentStatus: workOrder.apartmentStatus || 'vacant',
+        workType: workOrder.workType || '',
+        workSubType: workOrder.workSubType || '',
+        description: workOrder.description || '',
+        priority: workOrder.priority || 'medium',
+        status: workOrder.status || 'pending',
+        estimatedCost: workOrder.estimatedCost || 0,
+        actualCost: workOrder.actualCost || 0,
+        scheduledDate: workOrder.scheduledDate ? new Date(workOrder.scheduledDate) : null,
+        estimatedCompletionDate: workOrder.estimatedCompletionDate ? new Date(workOrder.estimatedCompletionDate) : null,
+        assignedTo: Array.isArray(workOrder.assignedTo) ? workOrder.assignedTo.map(assignment => assignment.worker || assignment) : [],
+        photos: Array.isArray(workOrder.photos) ? workOrder.photos : [],
+        notes: Array.isArray(workOrder.notes) ? workOrder.notes : [],
+        tasks: Array.isArray(workOrder.tasks) ? workOrder.tasks : []
+      });
     }
-    
-    if (workersData) {
-      setWorkers(workersData.data || []);
+  };
+
+  const handleSave = async () => {
+    try {
+      await updateWorkOrder({ id, ...formData }).unwrap();
+      toast.success('Work order updated successfully');
+      setIsEditing(false);
+      refetch();
+    } catch (error) {
+      console.error('Failed to update work order:', error);
+      toast.error(error?.data?.message || 'Failed to update work order');
     }
-    
-    if (workOrderData && buildingsData && workersData) {
-      setIsLoading(false);
-    }
-  }, [workOrderData, buildingsData, workersData]);
-  
-  // Tabs
-  const tabs = [
-    { label: 'Overview', component: (
-      <WorkOrderInfoTab 
-        workOrder={workOrder} 
-        buildings={buildings}
-        workers={workers}
-        onUpdateWorkOrder={handleUpdateWorkOrder}
-      />
-    ) },
-    { label: 'Progress & Incidents', component: (
-      <ProgressTracker
-        workOrderId={id}
-        notes={workOrder?.notes || []}
-        onAddNote={handleAddNote}
-        onUpdateNote={handleUpdateNote}
-        onDeleteNote={handleDeleteNote}
-      />
-    ) },
-    { label: 'Notes', component: (
-      <WorkOrderNotesTab 
-        workOrder={workOrder} 
-        onAddNote={handleAddNote} 
-      />
-    ) },
-    { label: 'Attachments', component: <div>Attachments will be displayed here</div> },
-  ];
-  
+  };
+
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
+
   // Loading state
   if (isLoading) {
     return (
@@ -760,7 +723,7 @@ const WorkOrderDetails = () => {
         <Card variant="outlined">
           <CardContent sx={{ p: 0 }}>
             <Tabs
-              value={activeTab}
+              value={tabValue}
               onChange={handleTabChange}
               variant="scrollable"
               scrollButtons="auto"
@@ -773,17 +736,45 @@ const WorkOrderDetails = () => {
                 },
               }}
             >
-              {tabs.map((tab, index) => (
-                <Tab 
-                  key={index} 
-                  label={tab.label} 
-                  sx={{ textTransform: 'none', fontWeight: 500 }}
-                />
-              ))}
+              <Tab 
+                label="Overview" 
+                sx={{ textTransform: 'none', fontWeight: 500 }}
+              />
+              <Tab 
+                label="Progress & Incidents" 
+                sx={{ textTransform: 'none', fontWeight: 500 }}
+              />
+              <Tab 
+                label="Notes" 
+                sx={{ textTransform: 'none', fontWeight: 500 }}
+              />
+              <Tab 
+                label="Attachments" 
+                sx={{ textTransform: 'none', fontWeight: 500 }}
+              />
             </Tabs>
             
             <Box sx={{ p: 3 }}>
-              {tabs[activeTab].component}
+              {tabValue === 0 && (
+                <WorkOrderInfoTab 
+                  workOrder={workOrder} 
+                  buildings={buildings}
+                  workers={[]}
+                  onUpdateWorkOrder={handleSave}
+                />
+              )}
+              {tabValue === 1 && (
+                <div>Progress & Incidents will be displayed here</div>
+              )}
+              {tabValue === 2 && (
+                <WorkOrderNotesTab 
+                  workOrder={workOrder} 
+                  onAddNote={() => {}}
+                />
+              )}
+              {tabValue === 3 && (
+                <div>Attachments will be displayed here</div>
+              )}
             </Box>
           </CardContent>
         </Card>

@@ -8,6 +8,7 @@ import {
   Grid,
   Chip,
   Avatar,
+  IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -22,11 +23,13 @@ import {
   TableHead,
   TableRow,
   Paper,
-  IconButton,
   Tooltip,
   Badge,
-  Tabs,
-  Tab
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon
 } from '@mui/material';
 import {
   CheckCircle as ApproveIcon,
@@ -36,139 +39,145 @@ import {
   Phone as PhoneIcon,
   Work as WorkIcon,
   Schedule as ScheduleIcon,
-  Visibility as ViewIcon
+  Visibility as ViewIcon,
+  FilterList as FilterIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
-import { format } from 'date-fns';
 import { toast } from 'react-toastify';
+import { format } from 'date-fns';
 
-import { useGetWorkersQuery, useUpdateWorkerApprovalMutation } from '../../features/workers/workersApiSlice';
+import { useGetWorkersQuery, useUpdateWorkerMutation } from '../../features/workers/workersApiSlice';
 import { useAuth } from '../../hooks/useAuth';
 
 const WorkerApproval = () => {
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [selectedWorker, setSelectedWorker] = useState(null);
-  const [approvalDialog, setApprovalDialog] = useState(false);
-  const [approvalAction, setApprovalAction] = useState('');
-  const [approvalNotes, setApprovalNotes] = useState('');
-  const [tabValue, setTabValue] = useState(0);
+  const [approvalDialog, setApprovalDialog] = useState({ open: false, action: '', worker: null });
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [filter, setFilter] = useState('pending');
 
-  // Get workers with different approval statuses
-  const { data: pendingWorkersData, isLoading: loadingPending } = useGetWorkersQuery({ approvalStatus: 'pending' });
-  const { data: approvedWorkersData, isLoading: loadingApproved } = useGetWorkersQuery({ approvalStatus: 'approved' });
-  const { data: rejectedWorkersData, isLoading: loadingRejected } = useGetWorkersQuery({ approvalStatus: 'rejected' });
+  const { data: workersData, isLoading, error, refetch } = useGetWorkersQuery({
+    approvalStatus: filter !== 'all' ? filter : undefined
+  });
+  
+  const [updateWorker, { isLoading: isUpdating }] = useUpdateWorkerMutation();
 
-  const [updateWorkerApproval, { isLoading: updating }] = useUpdateWorkerApprovalMutation();
+  // Extract workers from API response
+  const workers = workersData?.data?.workers || workersData?.data || [];
+  
+  // Filter workers based on approval status
+  const filteredWorkers = workers.filter(worker => {
+    if (filter === 'all') return true;
+    return worker.workerProfile?.approvalStatus === filter;
+  });
 
-  const pendingWorkers = pendingWorkersData?.data?.workers || [];
-  const approvedWorkers = approvedWorkersData?.data?.workers || [];
-  const rejectedWorkers = rejectedWorkersData?.data?.workers || [];
-
-  const handleApprovalAction = (worker, action) => {
-    setSelectedWorker(worker);
-    setApprovalAction(action);
-    setApprovalNotes('');
-    setApprovalDialog(true);
-  };
-
-  const handleApprovalSubmit = async () => {
-    if (!selectedWorker || !approvalAction) return;
-
+  const handleApproval = async (workerId, action, reason = '') => {
     try {
-      await updateWorkerApproval({
-        id: selectedWorker._id,
-        approvalStatus: approvalAction,
-        notes: approvalNotes
-      }).unwrap();
+      const updateData = {
+        'workerProfile.approvalStatus': action,
+        'workerProfile.approvedBy': user.id,
+        'workerProfile.approvedAt': new Date().toISOString()
+      };
 
-      toast.success(`Worker ${approvalAction === 'approved' ? 'approved' : 'rejected'} successfully`);
-      setApprovalDialog(false);
-      setSelectedWorker(null);
-      setApprovalAction('');
-      setApprovalNotes('');
+      if (action === 'rejected' && reason) {
+        updateData['workerProfile.rejectionReason'] = reason;
+      }
+
+      await updateWorker({ id: workerId, ...updateData }).unwrap();
+      
+      toast.success(`Worker ${action} successfully`);
+      setApprovalDialog({ open: false, action: '', worker: null });
+      setRejectionReason('');
+      refetch();
     } catch (error) {
-      console.error('Approval failed:', error);
-      toast.error(error?.data?.message || 'Failed to update worker approval');
+      console.error('Failed to update worker approval:', error);
+      toast.error(error?.data?.message || `Failed to ${action} worker`);
     }
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'pending': return 'warning';
-      case 'approved': return 'success';
-      case 'rejected': return 'error';
-      default: return 'default';
-    }
+    const colors = {
+      pending: 'warning',
+      approved: 'success',
+      rejected: 'error'
+    };
+    return colors[status] || 'default';
+  };
+
+  const formatSkills = (skills) => {
+    if (!Array.isArray(skills) || skills.length === 0) return 'No skills listed';
+    return skills.map(skill => skill.replace('_', ' ')).join(', ');
   };
 
   const renderWorkerCard = (worker) => (
-    <Card key={worker._id} sx={{ mb: 2 }}>
+    <Card key={worker._id} sx={{ mb: 2, border: 1, borderColor: 'divider' }}>
       <CardContent>
         <Grid container spacing={2} alignItems="center">
-          <Grid item>
-            <Avatar sx={{ bgcolor: 'primary.main' }}>
-              <PersonIcon />
-            </Avatar>
-          </Grid>
-          <Grid item xs>
-            <Typography variant="h6" gutterBottom>
-              {worker.name}
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <EmailIcon fontSize="small" color="action" />
+          <Grid item xs={12} sm={8}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
+                <PersonIcon />
+              </Avatar>
+              <Box>
+                <Typography variant="h6" component="div">
+                  {worker.name}
+                </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {worker.email}
+                  Registered: {format(new Date(worker.createdAt), 'MMM dd, yyyy')}
                 </Typography>
               </Box>
-              {worker.phone && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <PhoneIcon fontSize="small" color="action" />
-                  <Typography variant="body2" color="text.secondary">
-                    {worker.phone}
-                  </Typography>
-                </Box>
-              )}
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+              <Chip
+                icon={<EmailIcon />}
+                label={worker.email}
+                variant="outlined"
+                size="small"
+              />
+              {worker.phone && (
+                <Chip
+                  icon={<PhoneIcon />}
+                  label={worker.phone}
+                  variant="outlined"
+                  size="small"
+                />
+              )}
               <Chip
                 label={worker.workerProfile?.approvalStatus?.toUpperCase() || 'PENDING'}
                 color={getStatusColor(worker.workerProfile?.approvalStatus)}
                 size="small"
               />
-              <Typography variant="caption" color="text.secondary">
-                Registered: {format(new Date(worker.createdAt), 'MMM dd, yyyy')}
-              </Typography>
             </Box>
-            {worker.workerProfile?.skills?.length > 0 && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
-                <WorkIcon fontSize="small" color="action" />
-                {worker.workerProfile.skills.map((skill, index) => (
-                  <Chip
-                    key={index}
-                    label={skill.replace('_', ' ').toUpperCase()}
-                    size="small"
-                    variant="outlined"
-                    color="primary"
-                  />
-                ))}
-              </Box>
-            )}
-            {worker.workerProfile?.notes && (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }}>
-                "{worker.workerProfile.notes}"
+
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              <WorkIcon sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} />
+              Skills: {formatSkills(worker.workerProfile?.skills)}
+            </Typography>
+            
+            {worker.workerProfile?.hourlyRate && (
+              <Typography variant="body2" color="text.secondary">
+                <ScheduleIcon sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} />
+                Rate: ${worker.workerProfile.hourlyRate}/hour
               </Typography>
             )}
           </Grid>
-          <Grid item>
+          
+          <Grid item xs={12} sm={4}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {worker.workerProfile?.approvalStatus === 'pending' && (
+              {worker.workerProfile?.approvalStatus === 'pending' && hasPermission(['approve:workers']) && (
                 <>
                   <Button
                     variant="contained"
                     color="success"
                     startIcon={<ApproveIcon />}
-                    onClick={() => handleApprovalAction(worker, 'approved')}
-                    size="small"
+                    onClick={() => setApprovalDialog({ 
+                      open: true, 
+                      action: 'approved', 
+                      worker 
+                    })}
+                    disabled={isUpdating}
+                    fullWidth
                   >
                     Approve
                   </Button>
@@ -176,35 +185,27 @@ const WorkerApproval = () => {
                     variant="outlined"
                     color="error"
                     startIcon={<RejectIcon />}
-                    onClick={() => handleApprovalAction(worker, 'rejected')}
-                    size="small"
+                    onClick={() => setApprovalDialog({ 
+                      open: true, 
+                      action: 'rejected', 
+                      worker 
+                    })}
+                    disabled={isUpdating}
+                    fullWidth
                   >
                     Reject
                   </Button>
                 </>
               )}
-              {worker.workerProfile?.approvalStatus === 'approved' && (
-                <Button
-                  variant="outlined"
-                  color="error"
-                  startIcon={<RejectIcon />}
-                  onClick={() => handleApprovalAction(worker, 'rejected')}
-                  size="small"
-                >
-                  Revoke
-                </Button>
-              )}
-              {worker.workerProfile?.approvalStatus === 'rejected' && (
-                <Button
-                  variant="contained"
-                  color="success"
-                  startIcon={<ApproveIcon />}
-                  onClick={() => handleApprovalAction(worker, 'approved')}
-                  size="small"
-                >
-                  Approve
-                </Button>
-              )}
+              
+              <Button
+                variant="outlined"
+                startIcon={<ViewIcon />}
+                onClick={() => setSelectedWorker(worker)}
+                fullWidth
+              >
+                View Details
+              </Button>
             </Box>
           </Grid>
         </Grid>
@@ -290,13 +291,18 @@ const WorkerApproval = () => {
                 {showActions && (
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
-                      {worker.workerProfile?.approvalStatus === 'pending' && (
+                      {worker.workerProfile?.approvalStatus === 'pending' && hasPermission(['approve:workers']) && (
                         <>
                           <Tooltip title="Approve">
                             <IconButton
                               size="small"
                               color="success"
-                              onClick={() => handleApprovalAction(worker, 'approved')}
+                              onClick={() => setApprovalDialog({ 
+                                open: true, 
+                                action: 'approved', 
+                                worker 
+                              })}
+                              disabled={isUpdating}
                             >
                               <ApproveIcon />
                             </IconButton>
@@ -305,35 +311,26 @@ const WorkerApproval = () => {
                             <IconButton
                               size="small"
                               color="error"
-                              onClick={() => handleApprovalAction(worker, 'rejected')}
+                              onClick={() => setApprovalDialog({ 
+                                open: true, 
+                                action: 'rejected', 
+                                worker 
+                              })}
+                              disabled={isUpdating}
                             >
                               <RejectIcon />
                             </IconButton>
                           </Tooltip>
                         </>
                       )}
-                      {worker.workerProfile?.approvalStatus === 'approved' && (
-                        <Tooltip title="Revoke Approval">
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => handleApprovalAction(worker, 'rejected')}
-                          >
-                            <RejectIcon />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      {worker.workerProfile?.approvalStatus === 'rejected' && (
-                        <Tooltip title="Approve">
-                          <IconButton
-                            size="small"
-                            color="success"
-                            onClick={() => handleApprovalAction(worker, 'approved')}
-                          >
-                            <ApproveIcon />
-                          </IconButton>
-                        </Tooltip>
-                      )}
+                      <Tooltip title="View Details">
+                        <IconButton
+                          size="small"
+                          onClick={() => setSelectedWorker(worker)}
+                        >
+                          <ViewIcon />
+                        </IconButton>
+                      </Tooltip>
                     </Box>
                   </TableCell>
                 )}
@@ -365,168 +362,258 @@ const WorkerApproval = () => {
         Review and approve worker registrations. Self-registered workers require approval before they can access the system.
       </Typography>
 
-      {/* Summary Cards */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Badge badgeContent={pendingWorkers.length} color="warning">
-                  <Avatar sx={{ bgcolor: 'warning.main' }}>
-                    <ScheduleIcon />
-                  </Avatar>
-                </Badge>
-                <Box>
-                  <Typography variant="h6">{pendingWorkers.length}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Pending Approval
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar sx={{ bgcolor: 'success.main' }}>
-                  <ApproveIcon />
-                </Avatar>
-                <Box>
-                  <Typography variant="h6">{approvedWorkers.length}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Approved Workers
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar sx={{ bgcolor: 'error.main' }}>
-                  <RejectIcon />
-                </Avatar>
-                <Box>
-                  <Typography variant="h6">{rejectedWorkers.length}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Rejected Workers
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Tabs for different worker statuses */}
-      <Card>
-        <Tabs
-          value={tabValue}
-          onChange={(e, newValue) => setTabValue(newValue)}
-          sx={{ borderBottom: 1, borderColor: 'divider' }}
+      {/* Filter and Refresh */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+        <Button
+          variant="outlined"
+          startIcon={<FilterIcon />}
+          onClick={() => setFilter('pending')}
+          disabled={filter === 'pending'}
         >
-          <Tab 
-            label={
-              <Badge badgeContent={pendingWorkers.length} color="warning">
-                Pending ({pendingWorkers.length})
-              </Badge>
-            } 
-          />
-          <Tab label={`Approved (${approvedWorkers.length})`} />
-          <Tab label={`Rejected (${rejectedWorkers.length})`} />
-        </Tabs>
+          Pending
+        </Button>
+        <Button
+          variant="outlined"
+          startIcon={<FilterIcon />}
+          onClick={() => setFilter('approved')}
+          disabled={filter === 'approved'}
+        >
+          Approved
+        </Button>
+        <Button
+          variant="outlined"
+          startIcon={<FilterIcon />}
+          onClick={() => setFilter('rejected')}
+          disabled={filter === 'rejected'}
+        >
+          Rejected
+        </Button>
+        <Button
+          variant="outlined"
+          startIcon={<FilterIcon />}
+          onClick={() => setFilter('all')}
+          disabled={filter === 'all'}
+        >
+          All
+        </Button>
+        <Button
+          variant="outlined"
+          startIcon={<RefreshIcon />}
+          onClick={refetch}
+        >
+          Refresh
+        </Button>
+      </Box>
 
-        <Box sx={{ p: 3 }}>
-          {tabValue === 0 && (
-            <Box>
-              {loadingPending ? (
-                <Box display="flex" justifyContent="center" py={4}>
-                  <CircularProgress />
-                </Box>
-              ) : pendingWorkers.length > 0 ? (
-                <>
-                  <Alert severity="info" sx={{ mb: 2 }}>
-                    {pendingWorkers.length} worker{pendingWorkers.length !== 1 ? 's' : ''} waiting for approval
-                  </Alert>
-                  {renderWorkerTable(pendingWorkers)}
-                </>
-              ) : (
-                <Alert severity="success">
-                  No pending worker approvals! All workers have been reviewed.
-                </Alert>
-              )}
-            </Box>
-          )}
-
-          {tabValue === 1 && (
-            <Box>
-              {loadingApproved ? (
-                <Box display="flex" justifyContent="center" py={4}>
-                  <CircularProgress />
-                </Box>
-              ) : (
-                renderWorkerTable(approvedWorkers)
-              )}
-            </Box>
-          )}
-
-          {tabValue === 2 && (
-            <Box>
-              {loadingRejected ? (
-                <Box display="flex" justifyContent="center" py={4}>
-                  <CircularProgress />
-                </Box>
-              ) : (
-                renderWorkerTable(rejectedWorkers)
-              )}
-            </Box>
-          )}
+      {/* Worker List */}
+      {isLoading ? (
+        <Box display="flex" justifyContent="center" py={4}>
+          <CircularProgress />
         </Box>
-      </Card>
+      ) : (
+        renderWorkerTable(filteredWorkers)
+      )}
 
       {/* Approval Dialog */}
-      <Dialog open={approvalDialog} onClose={() => setApprovalDialog(false)} maxWidth="sm" fullWidth>
+      <Dialog open={approvalDialog.open} onClose={() => setApprovalDialog({ open: false, action: '', worker: null })} maxWidth="sm" fullWidth>
         <DialogTitle>
-          {approvalAction === 'approved' ? 'Approve Worker' : 'Reject Worker'}
+          {approvalDialog.action === 'approved' ? 'Approve Worker' : 'Reject Worker'}
         </DialogTitle>
         <DialogContent>
-          {selectedWorker && (
+          {approvalDialog.worker && (
             <Box sx={{ mb: 2 }}>
               <Typography variant="body1" gutterBottom>
-                <strong>{selectedWorker.name}</strong> ({selectedWorker.email})
+                <strong>{approvalDialog.worker.name}</strong> ({approvalDialog.worker.email})
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Are you sure you want to {approvalAction === 'approved' ? 'approve' : 'reject'} this worker?
+                Are you sure you want to {approvalDialog.action === 'approved' ? 'approve' : 'reject'} this worker?
               </Typography>
             </Box>
           )}
-          <TextField
-            fullWidth
-            multiline
-            rows={3}
-            label="Notes (optional)"
-            value={approvalNotes}
-            onChange={(e) => setApprovalNotes(e.target.value)}
-            placeholder={`Add a note about this ${approvalAction === 'approved' ? 'approval' : 'rejection'}...`}
-            sx={{ mt: 2 }}
-          />
+          {approvalDialog.action === 'rejected' && (
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              label="Rejection Reason"
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Enter a reason for rejecting this worker..."
+              sx={{ mt: 2 }}
+            />
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setApprovalDialog(false)} disabled={updating}>
+          <Button onClick={() => setApprovalDialog({ open: false, action: '', worker: null })} disabled={isUpdating}>
             Cancel
           </Button>
           <Button
-            onClick={handleApprovalSubmit}
+            onClick={() => handleApproval(approvalDialog.worker._id, approvalDialog.action, rejectionReason)}
             variant="contained"
-            color={approvalAction === 'approved' ? 'success' : 'error'}
-            disabled={updating}
+            color={approvalDialog.action === 'approved' ? 'success' : 'error'}
+            disabled={isUpdating}
           >
-            {updating ? 'Processing...' : (approvalAction === 'approved' ? 'Approve' : 'Reject')}
+            {isUpdating ? 'Processing...' : (approvalDialog.action === 'approved' ? 'Approve' : 'Reject')}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Worker Details Dialog */}
+      <Dialog 
+        open={!!selectedWorker} 
+        onClose={() => setSelectedWorker(null)} 
+        maxWidth="md" 
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Avatar sx={{ bgcolor: 'primary.main' }}>
+              <PersonIcon />
+            </Avatar>
+            <Box>
+              <Typography variant="h6">{selectedWorker?.name}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Worker Details
+              </Typography>
+            </Box>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {selectedWorker && (
+            <Box>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
+                    Contact Information
+                  </Typography>
+                  <List dense>
+                    <ListItem>
+                      <ListItemIcon>
+                        <EmailIcon />
+                      </ListItemIcon>
+                      <ListItemText primary={selectedWorker.email} secondary="Email" />
+                    </ListItem>
+                    {selectedWorker.phone && (
+                      <ListItem>
+                        <ListItemIcon>
+                          <PhoneIcon />
+                        </ListItemIcon>
+                        <ListItemText primary={selectedWorker.phone} secondary="Phone" />
+                      </ListItem>
+                    )}
+                  </List>
+                </Grid>
+                
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
+                    Worker Profile
+                  </Typography>
+                  <List dense>
+                    <ListItem>
+                      <ListItemIcon>
+                        <WorkIcon />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary={formatSkills(selectedWorker.workerProfile?.skills)} 
+                        secondary="Skills" 
+                      />
+                    </ListItem>
+                    {selectedWorker.workerProfile?.hourlyRate && (
+                      <ListItem>
+                        <ListItemIcon>
+                          <ScheduleIcon />
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={`$${selectedWorker.workerProfile.hourlyRate}/hour`} 
+                          secondary="Hourly Rate" 
+                        />
+                      </ListItem>
+                    )}
+                  </List>
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <Divider sx={{ my: 2 }} />
+                  <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
+                    Status Information
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
+                    <Chip
+                      label={selectedWorker.workerProfile?.approvalStatus?.toUpperCase() || 'PENDING'}
+                      color={getStatusColor(selectedWorker.workerProfile?.approvalStatus)}
+                    />
+                    <Chip
+                      label={`Registered: ${format(new Date(selectedWorker.createdAt), 'MMM dd, yyyy')}`}
+                      variant="outlined"
+                    />
+                  </Box>
+                  
+                  {selectedWorker.workerProfile?.approvedAt && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      Approved: {format(new Date(selectedWorker.workerProfile.approvedAt), 'MMM dd, yyyy')}
+                    </Typography>
+                  )}
+                  
+                  {selectedWorker.workerProfile?.rejectionReason && (
+                    <Alert severity="error" sx={{ mt: 2 }}>
+                      <Typography variant="body2">
+                        <strong>Rejection Reason:</strong> {selectedWorker.workerProfile.rejectionReason}
+                      </Typography>
+                    </Alert>
+                  )}
+                  
+                  {selectedWorker.workerProfile?.notes && (
+                    <Alert severity="info" sx={{ mt: 2 }}>
+                      <Typography variant="body2">
+                        <strong>Notes:</strong> {selectedWorker.workerProfile.notes}
+                      </Typography>
+                    </Alert>
+                  )}
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSelectedWorker(null)}>
+            Close
+          </Button>
+          {selectedWorker?.workerProfile?.approvalStatus === 'pending' && hasPermission(['approve:workers']) && (
+            <>
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<ApproveIcon />}
+                onClick={() => {
+                  setApprovalDialog({ 
+                    open: true, 
+                    action: 'approved', 
+                    worker: selectedWorker 
+                  });
+                  setSelectedWorker(null);
+                }}
+                disabled={isUpdating}
+              >
+                Approve
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<RejectIcon />}
+                onClick={() => {
+                  setApprovalDialog({ 
+                    open: true, 
+                    action: 'rejected', 
+                    worker: selectedWorker 
+                  });
+                  setSelectedWorker(null);
+                }}
+                disabled={isUpdating}
+              >
+                Reject
+              </Button>
+            </>
+          )}
         </DialogActions>
       </Dialog>
     </Box>
