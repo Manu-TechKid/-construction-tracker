@@ -1,10 +1,14 @@
-const Worker = require('../models/Worker');
+const User = require('../models/User');
 const WorkOrder = require('../models/WorkOrder');
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
 
 exports.getAllWorkers = catchAsync(async (req, res, next) => {
-    const workers = await Worker.find();
+    const workers = await User.find({ role: 'worker' })
+        .select('-password')
+        .populate('workerProfile.createdBy', 'name email')
+        .populate('workerProfile.approvedBy', 'name email')
+        .sort('-createdAt');
     
     res.status(200).json({
         status: 'success',
@@ -16,9 +20,12 @@ exports.getAllWorkers = catchAsync(async (req, res, next) => {
 });
 
 exports.getWorker = catchAsync(async (req, res, next) => {
-    const worker = await Worker.findById(req.params.id);
+    const worker = await User.findById(req.params.id)
+        .select('-password')
+        .populate('workerProfile.createdBy', 'name email')
+        .populate('workerProfile.approvedBy', 'name email');
     
-    if (!worker) {
+    if (!worker || worker.role !== 'worker') {
         return next(new AppError('No worker found with that ID', 404));
     }
     
@@ -31,7 +38,17 @@ exports.getWorker = catchAsync(async (req, res, next) => {
 });
 
 exports.createWorker = catchAsync(async (req, res, next) => {
-    const newWorker = await Worker.create(req.body);
+    const workerData = {
+        ...req.body,
+        role: 'worker',
+        workerProfile: {
+            ...req.body.workerProfile,
+            createdBy: req.user.id,
+            approvalStatus: 'approved'
+        }
+    };
+    
+    const newWorker = await User.create(workerData);
     
     res.status(201).json({
         status: 'success',
@@ -42,14 +59,14 @@ exports.createWorker = catchAsync(async (req, res, next) => {
 });
 
 exports.updateWorker = catchAsync(async (req, res, next) => {
-    const worker = await Worker.findByIdAndUpdate(
-        req.params.id,
+    const worker = await User.findOneAndUpdate(
+        { _id: req.params.id, role: 'worker' },
         req.body,
         {
             new: true,
             runValidators: true
         }
-    );
+    ).select('-password');
     
     if (!worker) {
         return next(new AppError('No worker found with that ID', 404));
@@ -64,7 +81,10 @@ exports.updateWorker = catchAsync(async (req, res, next) => {
 });
 
 exports.deleteWorker = catchAsync(async (req, res, next) => {
-    const worker = await Worker.findByIdAndDelete(req.params.id);
+    const worker = await User.findOneAndDelete({ 
+        _id: req.params.id, 
+        role: 'worker' 
+    });
     
     if (!worker) {
         return next(new AppError('No worker found with that ID', 404));
@@ -102,14 +122,14 @@ exports.updateWorkerSkills = catchAsync(async (req, res, next) => {
         return next(new AppError('Skills must be an array', 400));
     }
     
-    const worker = await Worker.findByIdAndUpdate(
-        req.params.id,
-        { skills },
+    const worker = await User.findOneAndUpdate(
+        { _id: req.params.id, role: 'worker' },
+        { 'workerProfile.skills': skills },
         {
             new: true,
             runValidators: true
         }
-    );
+    ).select('-password');
     
     if (!worker) {
         return next(new AppError('No worker found with that ID', 404));
@@ -131,14 +151,14 @@ exports.updateWorkerStatus = catchAsync(async (req, res, next) => {
         return next(new AppError('Invalid status value', 400));
     }
     
-    const worker = await Worker.findByIdAndUpdate(
-        req.params.id,
-        { status },
+    const worker = await User.findOneAndUpdate(
+        { _id: req.params.id, role: 'worker' },
+        { 'workerProfile.status': status },
         {
             new: true,
             runValidators: true
         }
-    );
+    ).select('-password');
     
     if (!worker) {
         return next(new AppError('No worker found with that ID', 404));
