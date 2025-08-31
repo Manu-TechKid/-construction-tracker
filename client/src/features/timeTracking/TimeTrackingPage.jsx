@@ -18,7 +18,7 @@ import {
 } from '@mui/icons-material';
 import { useParams } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import WorkerTimeTracker from './WorkerTimeTracker';
 import LocationHistoryMap from './LocationHistoryMap';
 import { useGetWorkerLocationsQuery } from '../schedule/scheduleApiSlice';
