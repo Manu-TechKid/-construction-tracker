@@ -40,6 +40,7 @@ import {
   useUpdateScheduleMutation,
   useDeleteScheduleMutation
 } from '../../features/schedules/schedulesApiSlice';
+import { useGetWorkersQuery } from '../../features/workers/workersApiSlice';
 import { toast } from 'react-toastify';
 
 const BuildingSchedule = () => {
@@ -55,10 +56,12 @@ const BuildingSchedule = () => {
     type: 'painting',
     building: '',
     apartment: '',
+    assignedWorkers: [],
     startDate: new Date(),
     endDate: new Date(),
     status: 'planned',
     estimatedCost: '',
+    estimatedHours: '',
     notes: ''
   });
 
@@ -76,6 +79,9 @@ const BuildingSchedule = () => {
     },
     { skip: !selectedBuilding }
   );
+
+  const { data: workersData } = useGetWorkersQuery();
+  const workers = workersData?.data?.users?.filter(user => user.role === 'worker') || [];
 
   const [createSchedule, { isLoading: creating }] = useCreateScheduleMutation();
   const [updateSchedule, { isLoading: updating }] = useUpdateScheduleMutation();
@@ -136,10 +142,12 @@ const BuildingSchedule = () => {
         type: 'painting',
         building: selectedBuilding?._id || '',
         apartment: '',
+        assignedWorkers: [],
         startDate: defaultDate,
         endDate: defaultDate,
         status: 'planned',
         estimatedCost: '',
+        estimatedHours: '',
         notes: ''
       });
     }
@@ -151,27 +159,17 @@ const BuildingSchedule = () => {
     setEditingSchedule(null);
   };
 
-  const handleSaveSchedule = async () => {
-    if (!formData.title || !formData.type) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-
+  const handleSubmit = async () => {
     try {
       const scheduleData = {
-        title: formData.title,
-        description: formData.description,
-        type: formData.type,
-        status: formData.status,
-        building: selectedBuilding?._id,
-        apartment: formData.apartment,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        estimatedCost: formData.estimatedCost ? parseFloat(formData.estimatedCost) : undefined,
-        notes: formData.notes
+        ...formData,
+        building: selectedBuilding._id,
+        createdBy: user.id,
+        estimatedCost: parseFloat(formData.estimatedCost) || 0,
+        estimatedHours: parseFloat(formData.estimatedHours) || 0,
+        startDate: formData.startDate.toISOString(),
+        endDate: formData.endDate.toISOString()
       };
-
-      console.log('Saving schedule:', scheduleData);
 
       if (editingSchedule) {
         await updateSchedule({ 
@@ -517,6 +515,24 @@ const BuildingSchedule = () => {
               </Grid>
               
               <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel>Assigned Workers</InputLabel>
+                  <Select
+                    multiple
+                    value={formData.assignedWorkers}
+                    label="Assigned Workers"
+                    onChange={(e) => setFormData({ ...formData, assignedWorkers: e.target.value })}
+                  >
+                    {workers.map((worker) => (
+                      <MenuItem key={worker._id} value={worker._id}>
+                        {worker.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12}>
                 <TextField
                   fullWidth
                   multiline
@@ -532,7 +548,7 @@ const BuildingSchedule = () => {
             <Button onClick={handleCloseDialog}>
               Cancel
             </Button>
-            <Button onClick={handleSaveSchedule} variant="contained">
+            <Button onClick={handleSubmit} variant="contained">
               {editingSchedule ? 'Update' : 'Save'} Schedule
             </Button>
             {editingSchedule && hasPermission(['delete:schedules']) && (

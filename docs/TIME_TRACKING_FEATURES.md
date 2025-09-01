@@ -1,279 +1,244 @@
-# Time Tracking and Location Features
+# Time Tracking Features - New Implementation
+
+This document outlines the requirements for implementing a comprehensive time tracking system for the Construction Tracker application.
 
 ## Overview
-The Construction Tracker app includes comprehensive time tracking and location monitoring features that allow supervisors to track worker attendance, work hours, and location history. This document provides an overview of the features, implementation details, and usage guidelines.
 
-## Features
+The time tracking system will allow workers to clock in/out, track work progress, and provide real-time location verification for construction sites. This system will integrate seamlessly with existing work orders and worker management.
 
-### 1. Worker Check-In/Check-Out
-- Workers can check in and out of work shifts with location verification
-- Automatic timestamp and location recording
-- Device information capture for audit purposes
-- Support for scheduled and unscheduled work
+## Core Features
 
-### 2. Location Tracking
-- Real-time location updates during work hours
-- Historical location tracking with timestamps
-- Geofencing support for work sites
-- Location accuracy and battery optimization
+### 1. Clock In/Out System
+- **Digital Time Clock**: Workers can clock in/out using mobile devices
+- **Location Verification**: GPS validation to ensure workers are at correct job sites
+- **Photo Verification**: Optional photo capture during clock in/out for verification
+- **Offline Support**: Cache clock events when offline, sync when connection restored
 
-### 3. Time Tracking
-- Accurate work hour calculation
-- Break tracking (optional)
-- Overtime calculation
-- Timesheet generation
+### 2. Work Order Integration
+- **Automatic Association**: Clock events automatically linked to active work orders
+- **Task-Level Tracking**: Track time spent on specific tasks within work orders
+- **Progress Updates**: Workers can update work progress during active sessions
+- **Break Management**: Track breaks and lunch periods separately
 
-### 4. Reporting and Analytics
-- Work hours summary
-- Location history visualization
-- Attendance reports
-- Export functionality
+### 3. Real-Time Monitoring
+- **Live Dashboard**: Supervisors can see who's currently working and where
+- **Geofencing**: Automatic alerts when workers leave designated work areas
+- **Status Updates**: Real-time work status and progress notifications
+- **Team Coordination**: See other team members working on same projects
 
-## Technical Implementation
+### 4. Mobile-First Design
+- **Progressive Web App**: Works on all mobile devices without app store installation
+- **Touch-Friendly Interface**: Large buttons and simple navigation for field use
+- **Quick Actions**: One-tap clock in/out and status updates
+- **Offline Capability**: Full functionality without internet connection
+
+## Technical Requirements
 
 ### Backend API Endpoints
 
-#### Worker Check-In
+#### Time Tracking Routes
 ```
-POST /api/workers/:id/check-in
+POST /api/v1/time-tracking/clock-in
+POST /api/v1/time-tracking/clock-out
+GET /api/v1/time-tracking/status/:workerId
+GET /api/v1/time-tracking/sessions
+PUT /api/v1/time-tracking/sessions/:sessionId
+DELETE /api/v1/time-tracking/sessions/:sessionId
 ```
 
-**Request Body:**
-```json
+#### Location Tracking Routes
+```
+POST /api/v1/location/update
+GET /api/v1/location/worker/:workerId
+GET /api/v1/location/workorder/:workOrderId
+POST /api/v1/location/geofence/check
+```
+
+### Database Schema
+
+#### TimeSession Model
+```javascript
 {
-  "latitude": 40.7128,
-  "longitude": -74.0060,
-  "accuracy": 15,
-  "scheduleId": "schedule123",
-  "notes": "Starting morning shift"
+  _id: ObjectId,
+  worker: ObjectId, // Reference to User
+  workOrder: ObjectId, // Reference to WorkOrder
+  building: ObjectId, // Reference to Building
+  clockInTime: Date,
+  clockOutTime: Date,
+  totalHours: Number,
+  breakTime: Number, // Minutes
+  status: String, // 'active', 'completed', 'paused'
+  location: {
+    clockIn: {
+      latitude: Number,
+      longitude: Number,
+      accuracy: Number,
+      timestamp: Date
+    },
+    clockOut: {
+      latitude: Number,
+      longitude: Number,
+      accuracy: Number,
+      timestamp: Date
+    }
+  },
+  photos: [{
+    url: String,
+    type: String, // 'clock-in', 'clock-out', 'progress'
+    timestamp: Date
+  }],
+  notes: String,
+  progressUpdates: [{
+    timestamp: Date,
+    progress: Number, // Percentage
+    notes: String
+  }],
+  createdAt: Date,
+  updatedAt: Date
 }
 ```
 
-#### Worker Check-Out
-```
-POST /api/workers/:id/check-out
-```
-
-**Request Body:**
-```json
+#### LocationLog Model
+```javascript
 {
-  "latitude": 40.7128,
-  "longitude": -74.0060,
-  "accuracy": 15,
-  "notes": "Ending shift"
+  _id: ObjectId,
+  worker: ObjectId,
+  timeSession: ObjectId,
+  location: {
+    latitude: Number,
+    longitude: Number,
+    accuracy: Number
+  },
+  timestamp: Date,
+  isWithinGeofence: Boolean,
+  geofenceRadius: Number // meters
 }
-```
-
-#### Record Location
-```
-POST /api/workers/:id/location
-```
-
-**Request Body:**
-```json
-{
-  "latitude": 40.7128,
-  "longitude": -74.0060,
-  "accuracy": 15,
-  "activity": "working",
-  "batteryLevel": 0.85
-}
-```
-
-#### Get Location History
-```
-GET /api/workers/:id/location-history?startDate=2023-01-01&endDate=2023-01-31&limit=1000
-```
-
-#### Get Worker Status
-```
-GET /api/workers/:id/status
 ```
 
 ### Frontend Components
 
-#### TimeTrackingPage
-Main container component that manages the time tracking interface with tabs for different views.
+#### Worker Mobile Interface
+- `TimeTrackingDashboard.jsx` - Main worker interface
+- `ClockInOutButton.jsx` - Primary clock in/out control
+- `LocationPermissionRequest.jsx` - Handle location permissions
+- `OfflineIndicator.jsx` - Show offline status
+- `ProgressUpdateForm.jsx` - Update work progress
+- `PhotoCapture.jsx` - Camera integration for verification
 
-#### WorkerTimeTracker
-Handles the check-in/check-out functionality and displays current session information.
+#### Supervisor Dashboard
+- `LiveTrackingDashboard.jsx` - Real-time worker monitoring
+- `WorkerLocationMap.jsx` - Map view of worker locations
+- `TimeReports.jsx` - Time tracking reports and analytics
+- `GeofenceManager.jsx` - Manage work site boundaries
 
-#### LocationHistoryMap
-Interactive map that visualizes the worker's location history with filtering capabilities.
+## User Experience Flow
 
-### Data Models
+### Worker Flow
+1. **Morning Check-in**
+   - Open app on mobile device
+   - Select work order for the day
+   - Allow location access
+   - Take optional photo
+   - Tap "Clock In"
 
-#### Worker Model Extensions
-```javascript
-{
-  // ... existing fields ...
-  timeTracking: {
-    currentSession: {
-      startTime: Date,
-      endTime: Date,
-      startLocation: {
-        type: { type: String, enum: ['Point'], default: 'Point' },
-        coordinates: [Number], // [longitude, latitude]
-        address: String,
-        accuracy: Number,
-        timestamp: Date
-      },
-      endLocation: {
-        type: { type: String, enum: ['Point'], default: 'Point' },
-        coordinates: [Number],
-        address: String,
-        accuracy: Number,
-        timestamp: Date
-      },
-      deviceInfo: {
-        userAgent: String,
-        platform: String,
-        os: String,
-        browser: String,
-        ipAddress: String
-      },
-      notes: String,
-      status: { type: String, enum: ['checked-in', 'checked-out'], default: 'checked-in' },
-      lastActive: Date
-    },
-    locationHistory: [{
-      timestamp: { type: Date, default: Date.now },
-      location: {
-        type: { type: String, enum: ['Point'], default: 'Point' },
-        coordinates: [Number] // [longitude, latitude]
-      },
-      accuracy: Number,
-      altitude: Number,
-      altitudeAccuracy: Number,
-      heading: Number,
-      speed: Number,
-      activity: {
-        type: String,
-        enum: ['check-in', 'check-out', 'tracking', 'manual', 'other'],
-        default: 'tracking'
-      },
-      address: String,
-      deviceInfo: {
-        userAgent: String,
-        platform: String,
-        os: String,
-        browser: String,
-        ipAddress: String,
-        batteryLevel: Number
-      },
-      metadata: {}
-    }],
-    preferences: {
-      trackingInterval: { type: Number, default: 300 }, // seconds
-      geofence: {
-        center: {
-          type: { type: String, enum: ['Point'], default: 'Point' },
-          coordinates: [Number] // [longitude, latitude]
-        },
-        radius: Number, // meters
-        alerts: Boolean
-      },
-      offlineMode: { type: Boolean, default: false },
-      lowBatteryThreshold: { type: Number, default: 0.2 } // 20%
-    },
-    stats: {
-      totalHoursWorked: { type: Number, default: 0 },
-      jobsCompleted: { type: Number, default: 0 },
-      lastActive: Date,
-      currentStatus: {
-        type: String,
-        enum: ['online', 'offline', 'on-break', 'inactive'],
-        default: 'offline'
-      }
-    }
-  }
-}
-```
+2. **During Work**
+   - App runs in background tracking location
+   - Update progress as work progresses
+   - Take break (pause timer)
+   - Resume work (restart timer)
 
-## Setup and Configuration
+3. **End of Day**
+   - Tap "Clock Out"
+   - Confirm location
+   - Take optional completion photo
+   - Add final notes
+   - Submit timesheet
 
-### Environment Variables
-```
-# Leaflet Tile Layer URL (for map visualization)
-REACT_APP_LEAFLET_TILE_LAYER=https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
+### Supervisor Flow
+1. **Morning Overview**
+   - View dashboard showing all workers
+   - See who has clocked in
+   - Check work order assignments
+   - Monitor location compliance
 
-# API Base URL
-REACT_APP_API_URL=/api
+2. **Real-Time Monitoring**
+   - Track worker locations on map
+   - Receive geofence alerts
+   - Monitor work progress updates
+   - Communicate with field teams
 
-# Location Tracking Settings
-REACT_APP_LOCATION_TRACKING_INTERVAL=300000 // 5 minutes
-REACT_APP_LOCATION_ACCURACY_THRESHOLD=100 // meters
-REACT_APP_GEOFENCE_RADIUS=200 // meters
-```
+3. **End of Day Review**
+   - Review all timesheets
+   - Approve/reject time entries
+   - Generate reports
+   - Plan next day assignments
 
-### Dependencies
-- React 17+
-- Redux Toolkit
-- Leaflet
-- date-fns
-- Material-UI
-- Notistack (for notifications)
+## Security & Privacy
 
-## Usage Guide
-
-### For Workers
-1. Open the app and navigate to the Time Tracking section
-2. Tap "Check In" to start your shift
-3. Allow location access when prompted
-4. Work as usual - your location will be tracked automatically
-5. Tap "Check Out" when your shift ends
-
-### For Supervisors
-1. Navigate to the Worker Management section
-2. Select a worker to view their time tracking and location history
-3. Use the date range picker to filter historical data
-4. Export reports as needed
-
-## Best Practices
-
-### For Workers
-- Ensure location services are enabled on your device
-- Keep the app running in the background during work hours
-- Connect to WiFi when possible to save mobile data
-- Charge your device regularly to ensure continuous tracking
-
-### For Supervisors
-- Set up geofences for work sites
-- Review location history regularly for accuracy
-- Address any privacy concerns with your team
-- Train workers on proper check-in/check-out procedures
-
-## Troubleshooting
-
-### Common Issues
-1. **Location not updating**
-   - Check if location services are enabled
-   - Ensure the app has location permissions
-   - Restart the app if needed
-
-2. **Battery drain**
-   - Reduce location update frequency in settings
-   - Enable battery optimization
-   - Keep the device charged
-
-3. **Inaccurate location**
-   - Move to an open area with better GPS signal
-   - Enable high accuracy mode in device settings
-   - Check for interference from buildings or other structures
-
-## Security and Privacy
-
-### Data Collection
-- Location data is only collected during work hours
-- Workers can view their own location history
-- Supervisors can only access data for their team members
-
-### Data Retention
-- Location data is retained for 90 days by default
-- Aggregated reports are kept for 3 years
-- Workers can request data deletion upon termination
+### Data Protection
+- **Location Encryption**: All GPS data encrypted at rest and in transit
+- **Access Control**: Role-based permissions for viewing location data
+- **Data Retention**: Automatic deletion of location logs after 90 days
+- **Privacy Settings**: Workers can view their own tracking data
 
 ### Compliance
-- GDPR compliant data handling
-- CCPA compliant for California residents
-- Regular security audits and updates
+- **GDPR Compliance**: Full data portability and deletion rights
+- **Labor Law Compliance**: Accurate time tracking for wage calculations
+- **Audit Trail**: Complete history of all time tracking events
+
+## Performance Requirements
+
+### Mobile Performance
+- **Battery Optimization**: Minimal battery drain during tracking
+- **Data Usage**: Efficient sync to minimize cellular data usage
+- **Response Time**: < 2 seconds for all user interactions
+- **Offline Storage**: 30 days of offline time tracking data
+
+### Server Performance
+- **Real-Time Updates**: WebSocket connections for live updates
+- **Scalability**: Support 500+ concurrent workers
+- **Data Processing**: Real-time geofence calculations
+- **Backup**: Hourly backups of all time tracking data
+
+## Implementation Phases
+
+### Phase 1: Basic Time Tracking (Week 1-2)
+- Clock in/out functionality
+- Basic location capture
+- Simple mobile interface
+- Database schema setup
+
+### Phase 2: Work Order Integration (Week 3)
+- Link time sessions to work orders
+- Progress tracking
+- Break management
+- Supervisor dashboard
+
+### Phase 3: Advanced Features (Week 4-5)
+- Geofencing and alerts
+- Photo verification
+- Offline support
+- Real-time monitoring
+
+### Phase 4: Analytics & Reporting (Week 6)
+- Time tracking reports
+- Performance analytics
+- Export capabilities
+- Mobile app optimization
+
+## Success Metrics
+
+### Worker Adoption
+- 90%+ daily clock-in rate
+- < 5% manual time corrections needed
+- Positive user feedback scores
+
+### Operational Efficiency
+- 25% reduction in timesheet processing time
+- 15% improvement in project time estimates
+- Real-time visibility into all active work
+
+### Compliance & Accuracy
+- 99.9% accurate time tracking
+- Full audit trail for all entries
+- Automated compliance reporting

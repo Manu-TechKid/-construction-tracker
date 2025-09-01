@@ -1,18 +1,24 @@
 ﻿# Render Configuration File
-# This file configures how your application is built and run on Render
+# Clean deployment configuration for Construction Tracker
 
 services:
   - type: web
     name: construction-tracker
     env: node
-    buildCommand: cd client && npm install && npm run build
-    startCommand: cd server && npm install && npm start
+    plan: starter
+    buildCommand: npm run render-build
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: NPM_CONFIG_PRODUCTION
         value: false
-      - key: REACT_APP_LEAFLET_TILE_LAYER
-        value: https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
-      - key: REACT_APP_API_URL
-        value: https://construction-tracker-api.onrender.com/api
+    healthCheckPath: /api/v1/health
+
+# Build optimizations
+build:
+  commands:
+    - echo "Starting clean build process..."
+    - npm ci --only=production
+    - cd client && npm ci && npm run build
+    - echo "Build completed successfully"

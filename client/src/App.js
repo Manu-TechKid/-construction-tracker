@@ -7,8 +7,6 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import 'leaflet/dist/leaflet.css';
-import './features/timeTracking/mapStyles.css';
 
 import { store } from './app/store';
 import { SettingsProvider } from './contexts/SettingsContext';
@@ -45,7 +43,6 @@ import Invoices from './pages/invoices/Invoices';
 import CreateInvoice from './pages/invoices/CreateInvoice';
 import Profile from './pages/profile/Profile';
 import Settings from './pages/settings/Settings';
-import TimeTrackingPage from './features/timeTracking/TimeTrackingPage';
 
 // New Components
 import NotesSheet from './components/notes/NotesSheet';
@@ -304,16 +301,6 @@ const AppContent = () => {
                 element={
                   <RoleBasedRoute requiredPermissions={['read:schedules']}>
                     <BuildingSchedule />
-                  </RoleBasedRoute>
-                } 
-              />
-
-              {/* Time Tracking */}
-              <Route 
-                path="time-tracking" 
-                element={
-                  <RoleBasedRoute requiredPermissions={['read:time-tracking']}>
-                    <TimeTrackingPage />
                   </RoleBasedRoute>
                 } 
               />

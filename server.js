@@ -5,7 +5,6 @@ const morgan = require('morgan');
 const { errorHandler } = require('./middleware/error');
 const connectDB = require('./config/db');
 const { getDeviceInfo } = require('./utils/deviceInfo');
-const { locationTrackingMiddleware } = require('./middleware/locationTracking');
 
 // Load env vars
 require('dotenv').config();
@@ -18,7 +17,6 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const workerRoutes = require('./routes/workers');
 const scheduleRoutes = require('./routes/schedules');
-const timeTrackingRoutes = require('./routes/timeTrackingRoutes');
 
 const app = express();
 
@@ -43,15 +41,11 @@ app.use((req, res, next) => {
   next();
 });
 
-// Location tracking middleware for workers
-app.use(locationTrackingMiddleware());
-
 // Mount routers
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/workers', workerRoutes);
 app.use('/api/v1/schedules', scheduleRoutes);
-app.use('/api/v1/time-tracking', timeTrackingRoutes);
 
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {

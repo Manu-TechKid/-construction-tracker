@@ -443,7 +443,7 @@ const WorkOrdersTab = ({ buildingId }) => {
   const workOrders = workOrdersData?.data || [];
   
   const handleCreateWorkOrder = () => {
-    navigate(`/work-orders/new?building=${buildingId}`);
+    navigate(`/work-orders/create?building=${buildingId}`);
   };
   
   const columns = [
