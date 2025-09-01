@@ -15,7 +15,7 @@
     "build": "cd client && npm install && npm run build",
     "install:all": "npm install --legacy-peer-deps && cd client && npm install && cd ../server && npm install",
     "heroku-postbuild": "npm run build",
-    "render-build": "npm run install:all && npm run build"
+    "render-build": "cd server && npm run build:client"
   },
   "repository": {
     "type": "git",
