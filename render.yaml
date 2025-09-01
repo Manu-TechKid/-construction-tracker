@@ -1,12 +1,18 @@
-﻿services:
+﻿# Render Configuration File
+# This file configures how your application is built and run on Render
+
+services:
   - type: web
     name: construction-tracker
     env: node
-    buildCommand: |
-      cd client
-      npm install --legacy-peer-deps
-      npm install -g cross-env
-      npm run build
-      cd ../server
-      npm install
-    startCommand: cd server && npm start
+    buildCommand: cd client && npm install && npm run build
+    startCommand: cd server && npm install && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NPM_CONFIG_PRODUCTION
+        value: false
+      - key: REACT_APP_LEAFLET_TILE_LAYER
+        value: https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
+      - key: REACT_APP_API_URL
+        value: https://construction-tracker-api.onrender.com/api
