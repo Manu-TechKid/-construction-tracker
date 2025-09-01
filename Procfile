@@ -1,2 +1,2 @@
-web: npm run start
+web: npm start
 build: npm run render-build
