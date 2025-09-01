@@ -1,16 +1,12 @@
-﻿# Render Configuration File
-# Clean deployment configuration for Construction Tracker
-
 services:
   - type: web
     name: construction-tracker
     env: node
     plan: starter
-    buildCommand: npm run render-build
-    startCommand: npm start
+    buildCommand: npm install && cd client && npm install --legacy-peer-deps && npm run build && cd ../server && npm install
+    startCommand: node server/server.js
     envVars:
       - key: NODE_ENV
         value: production
       - key: NPM_CONFIG_PRODUCTION
         value: false
-    healthCheckPath: /api/v1/health
