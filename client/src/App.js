@@ -240,14 +240,6 @@ const AppContent = () => {
                   </RoleBasedRoute>
                 } 
               />
-              <Route 
-                path="worker-dashboard" 
-                element={
-                  <RoleBasedRoute requiredPermissions={['view:dashboard:worker']}>
-                    <WorkerDashboard />
-                  </RoleBasedRoute>
-                } 
-              />
 
               {/* Invoices - not for workers */}
               <Route 

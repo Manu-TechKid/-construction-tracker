@@ -3,10 +3,6 @@
   "version": "1.0.0",
   "description": "A comprehensive construction management application",
   "private": true,
-  "workspaces": [
-    "server",
-    "client"
-  ],
   "scripts": {
     "start": "node server/server.js",
     "server": "cd server && npm run dev",

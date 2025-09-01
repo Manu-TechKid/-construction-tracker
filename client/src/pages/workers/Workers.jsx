@@ -66,6 +66,17 @@ const Workers = () => {
   
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedWorker, setSelectedWorker] = useState(null);
+
+  // Menu handlers
+  const handleMenuClick = (event, worker) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedWorker(worker);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedWorker(null);
+  };
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [workerDialogOpen, setWorkerDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);

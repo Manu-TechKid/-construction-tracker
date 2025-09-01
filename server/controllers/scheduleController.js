@@ -422,18 +422,17 @@ exports.getWorkOrderSchedule = catchAsync(async (req, res, next) => {
 });
 
 module.exports = {
-  getAllSchedules,
-  getSchedule,
-  createSchedule,
-  updateSchedule,
-  deleteSchedule,
-  getBuildingSchedules,
-  createScheduleItem,
-  getSchedule,
-  updateScheduleItem,
-  deleteScheduleItem,
-  checkInWorker,
-  checkOutWorker,
-  getWorkerSchedule,
-  getWorkOrderSchedule
+  getAllSchedules: exports.getAllSchedules,
+  getSchedule: exports.getSchedule,
+  createSchedule: exports.createSchedule,
+  updateSchedule: exports.updateSchedule,
+  deleteSchedule: exports.deleteSchedule,
+  getBuildingSchedules: exports.getBuildingSchedules,
+  createScheduleItem: exports.createScheduleItem,
+  updateScheduleItem: exports.updateScheduleItem,
+  deleteScheduleItem: exports.deleteScheduleItem,
+  checkInWorker: exports.checkInWorker,
+  checkOutWorker: exports.checkOutWorker,
+  getWorkerSchedule: exports.getWorkerSchedule,
+  getWorkOrderSchedule: exports.getWorkOrderSchedule
 };

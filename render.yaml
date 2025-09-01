@@ -14,11 +14,3 @@ services:
       - key: NPM_CONFIG_PRODUCTION
         value: false
     healthCheckPath: /api/v1/health
-
-# Build optimizations
-build:
-  commands:
-    - echo "Starting clean build process..."
-    - npm ci --only=production
-    - cd client && npm ci && npm run build
-    - echo "Build completed successfully"
