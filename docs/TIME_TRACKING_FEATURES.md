@@ -194,8 +194,8 @@ Interactive map that visualizes the worker's location history with filtering cap
 
 ### Environment Variables
 ```
-# Mapbox Access Token (for map visualization)
-REACT_APP_MAPBOX_TOKEN=your_mapbox_token_here
+# Leaflet Tile Layer URL (for map visualization)
+REACT_APP_LEAFLET_TILE_LAYER=https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
 
 # API Base URL
 REACT_APP_API_URL=/api
@@ -209,7 +209,7 @@ REACT_APP_GEOFENCE_RADIUS=200 // meters
 ### Dependencies
 - React 17+
 - Redux Toolkit
-- Mapbox GL JS
+- Leaflet
 - date-fns
 - Material-UI
 - Notistack (for notifications)
