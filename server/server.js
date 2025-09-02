@@ -172,39 +172,9 @@ app.get('/api/v1', (req, res) => {
 
 // Serve client build in production
 if (process.env.NODE_ENV === 'production') {
-  // Try multiple possible client build paths
-  const possiblePaths = [
-    path.resolve(__dirname, '../client/build'),
-    path.resolve(__dirname, '../../client/build'),
-    path.resolve(process.cwd(), 'client/build'),
-    path.resolve(__dirname, '../build'),
-    path.resolve(process.cwd(), 'build')
-  ];
+  const clientBuildPath = path.resolve(__dirname, '../client/build');
   
-  let clientBuildPath = null;
-  for (const buildPath of possiblePaths) {
-    console.log('Checking build path:', buildPath);
-    if (fs.existsSync(buildPath)) {
-      clientBuildPath = buildPath;
-      console.log('Found client build at:', clientBuildPath);
-      break;
-    }
-  }
-  
-  if (!clientBuildPath) {
-    console.log('Available directories from server root:');
-    try {
-      const serverRoot = path.resolve(__dirname, '..');
-      console.log('Server root contents:', fs.readdirSync(serverRoot));
-      if (fs.existsSync(path.resolve(serverRoot, 'client'))) {
-        console.log('Client directory contents:', fs.readdirSync(path.resolve(serverRoot, 'client')));
-      }
-    } catch (err) {
-      console.log('Error listing directories:', err.message);
-    }
-  }
-  
-  if (clientBuildPath && fs.existsSync(clientBuildPath)) {
+  if (fs.existsSync(clientBuildPath)) {
     // Serve static files from the React app with proper headers
     app.use(express.static(clientBuildPath, {
       maxAge: '1d',
