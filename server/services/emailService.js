@@ -142,9 +142,9 @@ const initEmailService = async () => {
   await exports.verifyEmailConnection();
 };
 
-// Auto-initialize in development
-if (process.env.NODE_ENV === 'development') {
-  initEmailService().catch(console.error);
-}
+// Auto-initialize in development (disabled for local testing)
+// if (process.env.NODE_ENV === 'development') {
+//   initEmailService().catch(console.error);
+// }
 
 module.exports = exports;

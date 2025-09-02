@@ -26,7 +26,8 @@ import {
 import {
   ArrowBack as ArrowBackIcon,
   Save as SaveIcon,
-  Work as WorkIcon
+  Work as WorkIcon,
+  Add as AddIcon
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';

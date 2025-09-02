@@ -279,12 +279,15 @@ const connectDB = async () => {
 
 // Start server after DB connection
 const startServer = async () => {
-  const dbConnected = await connectDB();
-  
-  if (!dbConnected) {
-    console.error('Failed to connect to database. Exiting...');
-    process.exit(1);
-  }
+  // Connect to database (allow server to start even if DB connection fails in development)
+  connectDB().catch(err => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Database connection failed in development mode. Server will continue without DB.');
+    } else {
+      console.error('Database connection failed:', err);
+      process.exit(1);
+    }
+  });
   
   const server = app.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
