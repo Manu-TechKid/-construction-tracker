@@ -114,7 +114,7 @@ router.get(
 router.post(
   '/',
   authController.restrictTo('admin', 'manager', 'supervisor'),
-  upload.array('photos', 10), // Max 10 photos
+  uploadMultiple('work-orders', 'photos', 10), // Max 10 photos
   validateWorkOrder,
   workOrderController.createWorkOrder
 );
@@ -141,7 +141,7 @@ router.get(
  */
 router.patch(
   '/:id',
-  upload.array('photos', 10), // Max 10 photos
+  uploadMultiple('work-orders', 'photos', 10), // Max 10 photos
   [
     param('id').isMongoId(),
     ...validateWorkOrder
