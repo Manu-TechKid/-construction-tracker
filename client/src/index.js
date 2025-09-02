@@ -9,6 +9,7 @@ import { SnackbarProvider } from 'notistack';
 import { Provider } from 'react-redux';
 import { store } from './app/store';
 import App from './App';
+import ErrorBoundary from './components/ErrorBoundary';
 import './index.css';
 import reportWebVitals from './reportWebVitals';
 
@@ -20,26 +21,28 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 
 root.render(
   <React.StrictMode>
-    <Provider store={store}>
-      <LocalizationProvider 
-        dateAdapter={AdapterDateFns} 
-        adapterLocale={localeMap['en']} // Default to English
-      >
-        <CssBaseline />
-        <SnackbarProvider
-          maxSnack={3}
-          anchorOrigin={{
-            vertical: 'top',
-            horizontal: 'right',
-          }}
-          autoHideDuration={5000}
+    <ErrorBoundary>
+      <Provider store={store}>
+        <LocalizationProvider 
+          dateAdapter={AdapterDateFns} 
+          adapterLocale={localeMap['en']} // Default to English
         >
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
-        </SnackbarProvider>
-      </LocalizationProvider>
-    </Provider>
+          <CssBaseline />
+          <SnackbarProvider
+            maxSnack={3}
+            anchorOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+            autoHideDuration={5000}
+          >
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </SnackbarProvider>
+        </LocalizationProvider>
+      </Provider>
+    </ErrorBoundary>
   </React.StrictMode>
 );
 
