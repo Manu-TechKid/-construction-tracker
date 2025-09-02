@@ -236,6 +236,22 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Handle 404 for API routes only
+// Health check endpoint for Render
+app.get('/health', (req, res) => {
+  const status = mongoose.connection.readyState === 1 ? 'healthy' : 'unhealthy';
+  res.status(200).json({
+    status: 'success',
+    data: {
+      server: 'running',
+      database: status,
+      timestamp: new Date().toISOString(),
+      nodeVersion: process.version,
+      environment: process.env.NODE_ENV || 'development'
+    }
+  });
+});
+
+// 404 handler for all other API routes
 app.all('/api/*', (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
@@ -246,61 +262,84 @@ app.use(globalErrorHandler);
 // 4) START SERVER
 const PORT = process.env.PORT || 5000;
 
-// Database connection with retry logic
-const connectDB = async () => {
-  const maxRetries = 3;
-  let retryCount = 0;
-  
-  while (retryCount < maxRetries) {
-    try {
-      await mongoose.connect(process.env.MONGO_URI, {
-        serverSelectionTimeoutMS: 30000,
-        socketTimeoutMS: 45000,
-        connectTimeoutMS: 30000,
-        retryWrites: true,
-        w: 'majority'
-      });
-      console.log('MongoDB connected successfully');
-      return true;
-    } catch (err) {
-      retryCount++;
-      console.error(`MongoDB connection error (attempt ${retryCount}/${maxRetries}):`, err.message);
-      
-      if (retryCount === maxRetries) {
-        console.error('Max retries reached. Could not connect to MongoDB.');
-        return false;
-      }
-      
-      // Wait before retrying
-      await new Promise(resolve => setTimeout(resolve, 2000 * retryCount));
-    }
-  }
-};
-
-// Start server after DB connection
+// Improved server startup with better error handling
 const startServer = async () => {
-  // Connect to database (allow server to start even if DB connection fails in development)
-  connectDB().catch(err => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Database connection failed in development mode. Server will continue without DB.');
-    } else {
-      console.error('Database connection failed:', err);
-      process.exit(1);
-    }
-  });
-  
-  const server = app.listen(PORT, () => {
-    console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
-  });
-  
-  // Handle unhandled promise rejections
-  process.on('unhandledRejection', (err) => {
-    console.error('UNHANDLED REJECTION! Shutting down...');
-    console.error(err.name, err.message);
-    server.close(() => {
-      process.exit(1);
+  try {
+    // Connect to database first
+    console.log('Connecting to MongoDB...');
+    await connectDB();
+    console.log('Database connection established');
+    
+    // Start the server only after DB connection is successful
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+      
+      // Signal to Render that the app is ready
+      if (process.env.NODE_ENV === 'production') {
+        console.log('Server is ready to accept connections');
+      }
     });
-  });
+    
+    // Handle server errors
+    server.on('error', (error) => {
+      if (error.syscall !== 'listen') throw error;
+      
+      const bind = typeof PORT === 'string' ? 'Pipe ' + PORT : 'Port ' + PORT;
+      
+      // Handle specific listen errors with friendly messages
+      switch (error.code) {
+        case 'EACCES':
+          console.error(bind + ' requires elevated privileges');
+          process.exit(1);
+          break;
+        case 'EADDRINUSE':
+          console.error(bind + ' is already in use');
+          process.exit(1);
+          break;
+        default:
+          throw error;
+      }
+    });
+    
+    // Handle graceful shutdown
+    const shutdown = async () => {
+      console.log('Shutting down gracefully...');
+      server.close(async () => {
+        console.log('Server closed');
+        if (mongoose.connection.readyState === 1) {
+          await mongoose.connection.close(false);
+          console.log('MongoDB connection closed');
+        }
+        process.exit(0);
+      });
+      
+      // Force close server after 5 seconds
+      setTimeout(() => {
+        console.error('Could not close connections in time, forcefully shutting down');
+        process.exit(1);
+      }, 5000);
+    };
+    
+    // Listen for termination signals
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
+    
+    return server;
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    
+    // In development, allow server to start without DB for UI testing
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Starting in development mode without database...');
+      return app.listen(PORT, () => {
+        console.log(`Server running in development mode (without DB) on port ${PORT}`);
+      });
+    }
+    
+    // In production, exit if we can't connect to DB
+    console.error('Exiting due to database connection failure');
+    process.exit(1);
+  }
   
   // Handle uncaught exceptions
   process.on('uncaughtException', (err) => {

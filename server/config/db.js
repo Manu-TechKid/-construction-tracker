@@ -8,26 +8,44 @@ const connectDB = async () => {
     return null;
   }
 
-  const maxRetries = 3;
+  const maxRetries = 2; // Reduced from 3 to 2 for faster failure
   let retryCount = 0;
+
+  const options = {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 3000, // Reduced from 5000ms
+    socketTimeoutMS: 30000, // Reduced from 45000ms
+    maxPoolSize: 10, // Added connection pooling
+    minPoolSize: 1,
+    maxIdleTimeMS: 10000,
+    retryWrites: true,
+    w: 'majority'
+  };
 
   while (retryCount < maxRetries) {
     try {
-      const conn = await mongoose.connect(process.env.MONGO_URI, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-        serverSelectionTimeoutMS: 5000,
-        socketTimeoutMS: 45000,
+      console.log(`Attempting to connect to MongoDB (attempt ${retryCount + 1}/${maxRetries})...`);
+      
+      const conn = await mongoose.connect(process.env.MONGO_URI, options);
+      
+      // Connection events for better debugging
+      mongoose.connection.on('connected', () => {
+        console.log('MongoDB connected successfully');
+      });
+      
+      mongoose.connection.on('error', (err) => {
+        console.error('MongoDB connection error:', err);
       });
 
       console.log(`MongoDB Connected: ${conn.connection.host}`.cyan.underline.bold);
       return conn;
     } catch (error) {
       retryCount++;
-      console.log(`MongoDB connection error (attempt ${retryCount}/${maxRetries}):`, error.message);
+      console.error(`MongoDB connection error (attempt ${retryCount}/${maxRetries}):`, error.message);
       
       if (retryCount === maxRetries) {
-        console.log('Max retries reached. Could not connect to MongoDB.');
+        console.error('Max retries reached. Could not connect to MongoDB.');
         
         // In development, continue without DB for UI testing
         if (process.env.NODE_ENV === 'development') {
