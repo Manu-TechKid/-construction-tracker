@@ -612,12 +612,19 @@ const WorkOrderDetails = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({});
   
-  const { data: workOrderData, isLoading, error, refetch } = useGetWorkOrderQuery(id);
-  const { data: buildingsData } = useGetBuildingsQuery();
+  const { data: workOrderResponse, isLoading, error, refetch } = useGetWorkOrderQuery(id, {
+    refetchOnMountOrArgChange: true,
+    skip: !id,
+  });
+  
+  const { data: buildingsData } = useGetBuildingsQuery(undefined, {
+    skip: !id || !workOrderResponse?.data,
+  });
+  
   const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
   
   // Extract work order from API response - handle both nested and direct data
-  const workOrder = workOrderData?.data?.workOrder || workOrderData?.data || workOrderData;
+  const workOrder = workOrderResponse?.data?.workOrder || workOrderResponse?.data || workOrderResponse;
   const buildings = buildingsData?.data?.buildings || buildingsData?.data || [];
 
   useEffect(() => {
@@ -694,16 +701,7 @@ const WorkOrderDetails = () => {
     setTabValue(newValue);
   };
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-  
-  // Error state
+  // If workOrder is not available, show not found
   if (!workOrder) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -714,7 +712,38 @@ const WorkOrderDetails = () => {
           <Button 
             variant="outlined" 
             color="primary" 
-            onClick={() => navigate(-1)}
+            onClick={handleBack}
+            startIcon={<ArrowBackIcon />}
+            sx={{ mt: 2 }}
+          >
+            Back to Work Orders
+          </Button>
+        </Paper>
+      </Container>
+    );
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Paper sx={{ p: 3, textAlign: 'center' }}>
+          <Typography color="error" gutterBottom>
+            {error?.data?.message || 'Failed to load work order details'}
+          </Typography>
+          <Button 
+            variant="outlined" 
+            color="primary" 
+            onClick={handleBack}
             startIcon={<ArrowBackIcon />}
             sx={{ mt: 2 }}
           >

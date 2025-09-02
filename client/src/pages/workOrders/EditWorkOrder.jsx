@@ -23,15 +23,16 @@ const EditWorkOrder = () => {
         apartmentNumber: workOrder.apartmentNumber || '',
         block: workOrder.block || '',
         apartmentStatus: workOrder.apartmentStatus || 'vacant',
-        workType: workOrder.workType || '',
-        workSubType: workOrder.workSubType || '',
         description: workOrder.description || '',
         priority: workOrder.priority || 'medium',
         status: workOrder.status || 'pending',
         estimatedCost: workOrder.estimatedCost || 0,
         actualCost: workOrder.actualCost || 0,
+        startDate: workOrder.startDate ? new Date(workOrder.startDate) : null,
+        endDate: workOrder.endDate ? new Date(workOrder.endDate) : null,
         scheduledDate: workOrder.scheduledDate ? new Date(workOrder.scheduledDate) : null,
         estimatedCompletionDate: workOrder.estimatedCompletionDate ? new Date(workOrder.estimatedCompletionDate) : null,
+        services: workOrder.services || [],
         assignedTo: workOrder.assignedTo?.map(assignment => assignment.worker) || [],
         photos: workOrder.photos || []
       });

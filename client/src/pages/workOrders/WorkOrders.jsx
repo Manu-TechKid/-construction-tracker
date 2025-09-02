@@ -260,7 +260,7 @@ const WorkOrders = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Work Type</TableCell>
+                <TableCell>Service Type</TableCell>
                 <TableCell>Building</TableCell>
                 <TableCell>Apartment</TableCell>
                 <TableCell>Assigned Workers</TableCell>
@@ -268,7 +268,7 @@ const WorkOrders = () => {
                 <TableCell>Priority</TableCell>
                 <TableCell>Description</TableCell>
                 {!isWorker && <TableCell>Est. Cost</TableCell>}
-                <TableCell>Created</TableCell>
+                <TableCell>Scheduled</TableCell>
                 <TableCell>Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -304,10 +304,10 @@ const WorkOrders = () => {
                   <TableRow key={workOrder._id} hover>
                     <TableCell>
                       <Typography variant="body2" fontWeight="medium">
-                        {workOrder.workType?.toUpperCase()}
+                        {workOrder.services?.[0]?.type?.toUpperCase() || 'N/A'}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {workOrder.workSubType}
+                        {workOrder.services?.[0]?.description || 'No description'}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -350,7 +350,7 @@ const WorkOrders = () => {
                       </TableCell>
                     )}
                     <TableCell>
-                      {format(new Date(workOrder.createdAt), 'MMM dd, yyyy')}
+                      {workOrder.scheduledDate ? format(new Date(workOrder.scheduledDate), 'MMM dd, yyyy') : 'Not scheduled'}
                     </TableCell>
                     <TableCell>
                       <IconButton

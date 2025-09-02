@@ -37,37 +37,37 @@ import { useCreateWorkOrderMutation } from '../../features/workOrders/workOrders
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { useAuth } from '../../hooks/useAuth';
 
-// Validation schema
+// Validation schema - Updated to match WorkOrder database model
 const validationSchema = Yup.object({
-  workType: Yup.string().required('Work type is required'),
-  workSubType: Yup.string().required('Service type is required'),
   building: Yup.string().required('Building is required'),
   apartmentNumber: Yup.string(),
   block: Yup.string(),
+  apartmentStatus: Yup.string().required('Apartment status is required'),
   description: Yup.string().required('Description is required'),
   priority: Yup.string().required('Priority is required'),
   estimatedCost: Yup.number().min(0, 'Cost must be positive'),
-  apartmentStatus: Yup.string().required('Apartment status is required')
+  startDate: Yup.date().required('Start date is required'),
+  endDate: Yup.date().required('End date is required').min(Yup.ref('startDate'), 'End date must be after start date'),
+  scheduledDate: Yup.date().required('Scheduled date is required'),
+  services: Yup.array().min(1, 'At least one service is required')
 });
 
-// Work type options matching backend
-const workTypeOptions = [
+// Service type options matching WorkOrder.services schema
+const serviceTypeOptions = [
   { value: 'painting', label: 'Painting' },
   { value: 'cleaning', label: 'Cleaning' },
-  { value: 'repairs', label: 'Repairs' },
-  { value: 'maintenance', label: 'Maintenance' },
+  { value: 'repair', label: 'Repair' },
   { value: 'plumbing', label: 'Plumbing' },
   { value: 'electrical', label: 'Electrical' },
   { value: 'hvac', label: 'HVAC' },
   { value: 'flooring', label: 'Flooring' },
   { value: 'roofing', label: 'Roofing' },
   { value: 'carpentry', label: 'Carpentry' },
-  { value: 'inspection', label: 'Inspection' },
   { value: 'other', label: 'Other' }
 ];
 
-// Service subtypes based on work type
-const serviceSubTypes = {
+// Service descriptions based on service type
+const serviceDescriptions = {
   painting: [
     'Apartment Painting - 1 Room',
     'Apartment Painting - 2 Rooms', 
@@ -92,7 +92,7 @@ const serviceSubTypes = {
     'Deep Cleaning',
     'Move-out Cleaning'
   ],
-  repairs: [
+  repair: [
     'Air Conditioning Repair',
     'Door Repair',
     'Ceiling Repair',
@@ -101,13 +101,6 @@ const serviceSubTypes = {
     'Window Repair',
     'Appliance Repair',
     'General Maintenance Repair'
-  ],
-  maintenance: [
-    'Preventive Maintenance',
-    'Emergency Maintenance',
-    'Routine Inspection',
-    'Equipment Maintenance',
-    'Safety Check'
   ],
   plumbing: [
     'Leak Repair',
@@ -151,13 +144,6 @@ const serviceSubTypes = {
     'Custom Carpentry',
     'Furniture Repair'
   ],
-  inspection: [
-    'Safety Inspection',
-    'Quality Inspection',
-    'Compliance Check',
-    'Pre-move Inspection',
-    'Damage Assessment'
-  ],
   other: [
     'Custom Service',
     'Special Request',
@@ -189,28 +175,51 @@ const CreateWorkOrder = () => {
   // Extract buildings from API response
   const buildings = buildingsData?.data?.buildings || buildingsData?.data || [];
 
+  // State for services array
+  const [services, setServices] = useState([{
+    type: '',
+    description: '',
+    laborCost: 0,
+    materialCost: 0
+  }]);
+
   const formik = useFormik({
     initialValues: {
-      workType: '',
-      workSubType: '',
       building: '',
       apartmentNumber: '',
       block: '',
+      apartmentStatus: 'vacant',
       description: '',
       priority: 'medium',
       estimatedCost: '',
-      apartmentStatus: 'vacant',
+      startDate: null,
+      endDate: null,
       scheduledDate: null,
-      photos: []
+      estimatedCompletionDate: null
     },
     validationSchema,
     onSubmit: async (values) => {
       try {
+        // Validate services
+        if (services.length === 0 || services.some(s => !s.type || !s.description)) {
+          toast.error('Please add at least one complete service');
+          return;
+        }
+
         const workOrderData = {
           ...values,
+          services: services.map(service => ({
+            type: service.type,
+            description: service.description,
+            laborCost: parseFloat(service.laborCost) || 0,
+            materialCost: parseFloat(service.materialCost) || 0
+          })),
           createdBy: user?.id,
           estimatedCost: values.estimatedCost ? parseFloat(values.estimatedCost) : 0,
-          scheduledDate: values.scheduledDate ? values.scheduledDate.toISOString() : null
+          startDate: values.startDate ? values.startDate.toISOString() : null,
+          endDate: values.endDate ? values.endDate.toISOString() : null,
+          scheduledDate: values.scheduledDate ? values.scheduledDate.toISOString() : null,
+          estimatedCompletionDate: values.estimatedCompletionDate ? values.estimatedCompletionDate.toISOString() : null
         };
 
         const result = await createWorkOrder(workOrderData).unwrap();
@@ -227,7 +236,29 @@ const CreateWorkOrder = () => {
     navigate('/work-orders');
   };
 
-  const availableSubTypes = formik.values.workType ? serviceSubTypes[formik.values.workType] || [] : [];
+  // Service management functions
+  const addService = () => {
+    setServices([...services, { type: '', description: '', laborCost: 0, materialCost: 0 }]);
+  };
+
+  const removeService = (index) => {
+    if (services.length > 1) {
+      setServices(services.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateService = (index, field, value) => {
+    const updatedServices = [...services];
+    updatedServices[index][field] = value;
+    if (field === 'type') {
+      updatedServices[index].description = ''; // Reset description when type changes
+    }
+    setServices(updatedServices);
+  };
+
+  const getAvailableDescriptions = (serviceType) => {
+    return serviceType ? serviceDescriptions[serviceType] || [] : [];
+  };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -260,59 +291,86 @@ const CreateWorkOrder = () => {
                     <Divider sx={{ mb: 2 }} />
                     
                     <Grid container spacing={2}>
-                      <Grid item xs={12} md={6}>
-                        <FormControl 
-                          fullWidth 
-                          error={formik.touched.workType && Boolean(formik.errors.workType)}
+                      {/* Services Section */}
+                      <Grid item xs={12}>
+                        <Typography variant="h6" gutterBottom>
+                          Services
+                        </Typography>
+                        {services.map((service, index) => (
+                          <Card key={index} variant="outlined" sx={{ mb: 2, p: 2 }}>
+                            <Grid container spacing={2} alignItems="center">
+                              <Grid item xs={12} md={3}>
+                                <FormControl fullWidth>
+                                  <InputLabel>Service Type</InputLabel>
+                                  <Select
+                                    value={service.type}
+                                    onChange={(e) => updateService(index, 'type', e.target.value)}
+                                    label="Service Type"
+                                  >
+                                    {serviceTypeOptions.map((option) => (
+                                      <MenuItem key={option.value} value={option.value}>
+                                        {option.label}
+                                      </MenuItem>
+                                    ))}
+                                  </Select>
+                                </FormControl>
+                              </Grid>
+                              <Grid item xs={12} md={4}>
+                                <FormControl fullWidth disabled={!service.type}>
+                                  <InputLabel>Description</InputLabel>
+                                  <Select
+                                    value={service.description}
+                                    onChange={(e) => updateService(index, 'description', e.target.value)}
+                                    label="Description"
+                                  >
+                                    {getAvailableDescriptions(service.type).map((desc) => (
+                                      <MenuItem key={desc} value={desc}>
+                                        {desc}
+                                      </MenuItem>
+                                    ))}
+                                  </Select>
+                                </FormControl>
+                              </Grid>
+                              <Grid item xs={6} md={2}>
+                                <TextField
+                                  fullWidth
+                                  label="Labor Cost ($)"
+                                  type="number"
+                                  value={service.laborCost}
+                                  onChange={(e) => updateService(index, 'laborCost', e.target.value)}
+                                  inputProps={{ min: 0, step: 0.01 }}
+                                />
+                              </Grid>
+                              <Grid item xs={6} md={2}>
+                                <TextField
+                                  fullWidth
+                                  label="Material Cost ($)"
+                                  type="number"
+                                  value={service.materialCost}
+                                  onChange={(e) => updateService(index, 'materialCost', e.target.value)}
+                                  inputProps={{ min: 0, step: 0.01 }}
+                                />
+                              </Grid>
+                              <Grid item xs={12} md={1}>
+                                <Button
+                                  color="error"
+                                  onClick={() => removeService(index)}
+                                  disabled={services.length === 1}
+                                >
+                                  Remove
+                                </Button>
+                              </Grid>
+                            </Grid>
+                          </Card>
+                        ))}
+                        <Button
+                          variant="outlined"
+                          onClick={addService}
+                          startIcon={<AddIcon />}
+                          sx={{ mt: 1 }}
                         >
-                          <InputLabel>Work Type</InputLabel>
-                          <Select
-                            name="workType"
-                            value={formik.values.workType}
-                            onChange={(e) => {
-                              formik.handleChange(e);
-                              // Reset subtype when work type changes
-                              formik.setFieldValue('workSubType', '');
-                            }}
-                            onBlur={formik.handleBlur}
-                            label="Work Type"
-                          >
-                            {workTypeOptions.map((option) => (
-                              <MenuItem key={option.value} value={option.value}>
-                                {option.label}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                          <FormHelperText>
-                            {formik.touched.workType && formik.errors.workType}
-                          </FormHelperText>
-                        </FormControl>
-                      </Grid>
-
-                      <Grid item xs={12} md={6}>
-                        <FormControl 
-                          fullWidth 
-                          error={formik.touched.workSubType && Boolean(formik.errors.workSubType)}
-                          disabled={!formik.values.workType}
-                        >
-                          <InputLabel>Service Type</InputLabel>
-                          <Select
-                            name="workSubType"
-                            value={formik.values.workSubType}
-                            onChange={formik.handleChange}
-                            onBlur={formik.handleBlur}
-                            label="Service Type"
-                          >
-                            {availableSubTypes.map((subType) => (
-                              <MenuItem key={subType} value={subType}>
-                                {subType}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                          <FormHelperText>
-                            {formik.touched.workSubType && formik.errors.workSubType}
-                          </FormHelperText>
-                        </FormControl>
+                          Add Service
+                        </Button>
                       </Grid>
 
                       <Grid item xs={12}>
@@ -472,7 +530,7 @@ const CreateWorkOrder = () => {
                         <TextField
                           fullWidth
                           name="estimatedCost"
-                          label="Estimated Cost ($)"
+                          label="Total Estimated Cost ($)"
                           type="number"
                           value={formik.values.estimatedCost}
                           onChange={formik.handleChange}
@@ -483,7 +541,37 @@ const CreateWorkOrder = () => {
                         />
                       </Grid>
 
-                      <Grid item xs={12} md={4}>
+                      <Grid item xs={12} md={3}>
+                        <DatePicker
+                          label="Start Date"
+                          value={formik.values.startDate}
+                          onChange={(date) => formik.setFieldValue('startDate', date)}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              fullWidth
+                              error={formik.touched.startDate && Boolean(formik.errors.startDate)}
+                              helperText={formik.touched.startDate && formik.errors.startDate}
+                            />
+                          )}
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={3}>
+                        <DatePicker
+                          label="End Date"
+                          value={formik.values.endDate}
+                          onChange={(date) => formik.setFieldValue('endDate', date)}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              fullWidth
+                              error={formik.touched.endDate && Boolean(formik.errors.endDate)}
+                              helperText={formik.touched.endDate && formik.errors.endDate}
+                            />
+                          )}
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={3}>
                         <DatePicker
                           label="Scheduled Date"
                           value={formik.values.scheduledDate}
@@ -494,6 +582,19 @@ const CreateWorkOrder = () => {
                               fullWidth
                               error={formik.touched.scheduledDate && Boolean(formik.errors.scheduledDate)}
                               helperText={formik.touched.scheduledDate && formik.errors.scheduledDate}
+                            />
+                          )}
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={3}>
+                        <DatePicker
+                          label="Est. Completion Date"
+                          value={formik.values.estimatedCompletionDate}
+                          onChange={(date) => formik.setFieldValue('estimatedCompletionDate', date)}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              fullWidth
                             />
                           )}
                         />
