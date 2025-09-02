@@ -3,7 +3,7 @@ services:
     name: construction-tracker
     env: node
     plan: starter
-    buildCommand: npm install && cd client && npm install && npm run build && cd .. && cd server && npm install
+    buildCommand: npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
