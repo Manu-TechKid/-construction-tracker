@@ -3,7 +3,22 @@ services:
     name: construction-tracker
     env: node
     plan: starter
-    buildCommand: cd client && npm install && npm run build && cd ../server && npm install
+    buildCommand: |
+      echo "=== Starting build process ==="
+      echo "Current directory: $(pwd)"
+      echo "Directory contents:"
+      ls -la
+      echo "=== Installing client dependencies ==="
+      cd client
+      npm install
+      echo "=== Building client ==="
+      npm run build
+      echo "=== Client build completed ==="
+      ls -la build/
+      echo "=== Installing server dependencies ==="
+      cd ../server
+      npm install
+      echo "=== Build process complete ==="
     startCommand: cd server && npm start
     envVars:
       - key: NODE_ENV
