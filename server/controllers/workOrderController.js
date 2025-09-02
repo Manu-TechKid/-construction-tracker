@@ -167,10 +167,26 @@ exports.getWorkOrder = catchAsync(async (req, res, next) => {
  */
 exports.createWorkOrder = catchAsync(async (req, res, next) => {
   try {
-    // 1) Validate required fields
+    // 1) Parse JSON fields if they are strings (happens with FormData)
+    if (typeof req.body.services === 'string') {
+      try {
+        req.body.services = JSON.parse(req.body.services);
+      } catch (e) {
+        return next(new AppError('Invalid services format', 400));
+      }
+    }
+    
+    if (req.body.assignedTo && typeof req.body.assignedTo === 'string') {
+      try {
+        req.body.assignedTo = JSON.parse(req.body.assignedTo);
+      } catch (e) {
+        return next(new AppError('Invalid assignedTo format', 400));
+      }
+    }
+    
+    // 2) Validate required fields
     const requiredFields = ['building', 'description', 'services'];
     const missingFields = requiredFields.filter(field => {
-      // Check if field is missing or (if array) empty
       return !req.body[field] || (Array.isArray(req.body[field]) && req.body[field].length === 0);
     });
     
@@ -178,32 +194,49 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       return next(new AppError(`Missing required fields: ${missingFields.join(', ')}`, 400));
     }
     
-    // 2) Validate services array
+    // 3) Validate services array
     if (!Array.isArray(req.body.services) || req.body.services.length === 0) {
       return next(new AppError('At least one service is required', 400));
     }
     
-    // 2) Process services and assignments
+    // 4) Process services with validation
     const processedServices = processServices(req.body.services);
+    
+    // 5) Process worker assignments
     const workerAssignments = processAssignments(req.body.assignedTo || [], req.user);
     
-    // 3) Create work order data
+    // 6) Create work order data with proper field mapping
     const newWorkOrderData = {
-      ...req.body,
+      building: req.body.building,
+      apartmentNumber: req.body.apartmentNumber,
+      block: req.body.block,
+      description: req.body.description,
+      priority: req.body.priority || 'medium',
+      status: req.body.status || 'pending',
       services: processedServices,
       assignedTo: workerAssignments,
       createdBy: req.user._id,
-      status: req.body.status || 'pending',
-      priority: req.body.priority || 'medium',
-      apartmentStatus: req.body.apartmentStatus || 'occupied'
+      scheduledDate: req.body.scheduledDate,
+      estimatedCompletionDate: req.body.estimatedCompletionDate,
+      notes: req.body.notes || [],
+      apartmentStatus: req.body.apartmentStatus || 'occupied',
+      isEmergency: req.body.isEmergency === 'true' || req.body.isEmergency === true
     };
     
-    // 4) Handle file uploads if any
-    if (req.files && req.files.photos) {
-      const uploadPromises = req.files.photos.map(file => 
-        uploadToCloudinary(file, 'work-orders')
-      );
-      newWorkOrderData.photos = await Promise.all(uploadPromises);
+    // 7) Handle file uploads if any
+    if (req.files && req.files.length > 0) {
+      try {
+        const uploadPromises = req.files.map(file => 
+          uploadToCloudinary(file, 'work-orders')
+        );
+        const uploadedPhotos = await Promise.all(uploadPromises);
+        newWorkOrderData.photos = (req.body.existingPhotos || []).concat(uploadedPhotos);
+      } catch (error) {
+        console.error('Error uploading files:', error);
+        return next(new AppError('Error uploading one or more files', 500));
+      }
+    } else if (req.body.existingPhotos) {
+      newWorkOrderData.photos = req.body.existingPhotos;
     }
     
     // 5) Create work order
@@ -387,66 +420,107 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
 /**
  * @desc    Update a work order
  * @route   PATCH /api/v1/work-orders/:id
- * @access  Private
+ * @access  Private (admin, manager, supervisor, assigned worker)
  */
 exports.updateWorkOrder = catchAsync(async (req, res, next) => {
   try {
-    // 1) Find the work order
+    // 1) Find work order and check if it exists
     let workOrder = await WorkOrder.findById(req.params.id);
-    
     if (!workOrder) {
       return next(new AppError('No work order found with that ID', 404));
     }
     
-    // 2) Check if user has permission to update
-    if (workOrder.createdBy.toString() !== req.user._id.toString() && 
-        !req.user.roles.includes('admin')) {
-      return next(
-        new AppError('You do not have permission to update this work order', 403)
-      );
+    // 2) Parse JSON fields if they are strings (happens with FormData)
+    if (req.body.services && typeof req.body.services === 'string') {
+      try {
+        req.body.services = JSON.parse(req.body.services);
+      } catch (e) {
+        return next(new AppError('Invalid services format', 400));
+      }
     }
     
-    // 3) Process updates
-    const updates = { ...req.body };
+    if (req.body.assignedTo && typeof req.body.assignedTo === 'string') {
+      try {
+        req.body.assignedTo = JSON.parse(req.body.assignedTo);
+      } catch (e) {
+        return next(new AppError('Invalid assignedTo format', 400));
+      }
+    }
+    
+    // 3) Check if user has permission to update
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'manager';
+    const isAssignedWorker = workOrder.assignedTo.some(
+      assignment => assignment.worker.toString() === req.user._id.toString()
+    );
+    
+    if (!isAdmin && !isAssignedWorker) {
+      return next(new AppError('You do not have permission to update this work order', 403));
+    }
+    
+    // 4) Process updates with proper field mapping
+    const updateData = {};
+    
+    // Map allowed fields that can be updated
+    const allowedFields = [
+      'apartmentNumber', 'block', 'description', 'priority', 'status',
+      'scheduledDate', 'estimatedCompletionDate', 'notes', 'apartmentStatus',
+      'isEmergency'
+    ];
+    
+    // Copy allowed fields from request body to updateData
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        updateData[field] = req.body[field];
+      }
+    });
     
     // Process services if provided
     if (req.body.services) {
-      updates.services = processServices(req.body.services);
+      if (!Array.isArray(req.body.services) || req.body.services.length === 0) {
+        return next(new AppError('At least one service is required', 400));
+      }
+      updateData.services = processServices(req.body.services);
     }
     
-    // Process assignments if provided
-    if (req.body.assignedTo) {
-      const newAssignments = processAssignments(req.body.assignedTo, req.user);
-      
-      // Merge with existing assignments, preserving any existing data
-      updates.assignedTo = [
-        ...workOrder.assignedTo.filter(existing => 
-          !req.body.assignedTo.includes(existing.worker.toString())
-        ),
-        ...newAssignments
-      ];
+    // Process assignments if provided (only for admins/managers)
+    if (req.body.assignedTo && (isAdmin || req.user.role === 'supervisor')) {
+      updateData.assignedTo = processAssignments(
+        req.body.assignedTo, 
+        req.user
+      );
     }
     
     // Handle file uploads if any
-    if (req.files && req.files.photos) {
-      const uploadPromises = req.files.photos.map(file => 
-        uploadToCloudinary(file, 'work-orders')
-      );
-      const newPhotos = await Promise.all(uploadPromises);
-      updates.photos = [...(workOrder.photos || []), ...newPhotos];
+    if (req.files && req.files.length > 0) {
+      try {
+        const uploadPromises = req.files.map(file => 
+          uploadToCloudinary(file, 'work-orders')
+        );
+        const existingPhotos = req.body.existingPhotos 
+          ? JSON.parse(req.body.existingPhotos) 
+          : workOrder.photos || [];
+        const newPhotos = await Promise.all(uploadPromises);
+        updateData.photos = [...existingPhotos, ...newPhotos];
+      } catch (error) {
+        console.error('Error uploading files:', error);
+        return next(new AppError('Error uploading one or more files', 500));
+      }
+    } else if (req.body.existingPhotos) {
+      updateData.photos = JSON.parse(req.body.existingPhotos);
     }
     
-    // 4) Update work order
-    workOrder = await WorkOrder.findByIdAndUpdate(
+    // 5) Update work order
+    const updatedWorkOrder = await WorkOrder.findByIdAndUpdate(
       req.params.id,
-      updates,
+      updateData,
       {
         new: true,
         runValidators: true
       }
-    );
+    ).populate('building', 'name address')
+     .populate('assignedTo.worker', 'name email phone');
     
-    // 5) Check if new workers were assigned and notify them
+    // 6) Check if new workers were assigned and notify them
     if (req.body.assignedTo) {
       const newWorkerIds = req.body.assignedTo.map(id => id.toString());
       const existingWorkerIds = workOrder.assignedTo
@@ -456,11 +530,11 @@ exports.updateWorkOrder = catchAsync(async (req, res, next) => {
         !existingWorkerIds.includes(id)
       );
       
-      if (newlyAssigned.length > 0) {
+      if (newlyAssigned.length > 0 && (isAdmin || req.user.role === 'supervisor')) {
         try {
           await Promise.all(
             newlyAssigned.map(workerId => 
-              sendWorkOrderAssignedEmail(workerId, workOrder, req.user)
+              sendWorkOrderAssignedEmail(workerId, updatedWorkOrder, req.user)
             )
           );
         } catch (emailError) {
@@ -470,11 +544,11 @@ exports.updateWorkOrder = catchAsync(async (req, res, next) => {
       }
     }
     
-    // 6) Send response
+    // 6) Send response with updated work order data
     res.status(200).json({
       status: 'success',
       data: {
-        workOrder
+        workOrder: updatedWorkOrder
       }
     });
   } catch (error) {
@@ -660,6 +734,86 @@ exports.updateTaskStatus = catchAsync(async (req, res, next) => {
   } catch (error) {
     console.error('Error in updateTaskStatus:', error);
     next(new AppError('Error updating task status', 500));
+  }
+});
+
+/**
+ * @desc    Report an issue with a work order
+ * @route   POST /api/v1/work-orders/:id/issues
+ * @access  Private (assigned worker, admin, manager, supervisor)
+ */
+exports.reportIssue = catchAsync(async (req, res, next) => {
+  try {
+    // 1) Find the work order
+    const workOrder = await WorkOrder.findById(req.params.id);
+    
+    if (!workOrder) {
+      return next(new AppError('No work order found with that ID', 404));
+    }
+    
+    // 2) Check if user has permission to report issues
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'manager';
+    const isAssignedWorker = workOrder.assignedTo.some(
+      assignment => assignment.worker.toString() === req.user._id.toString()
+    );
+    
+    if (!isAdmin && !isAssignedWorker) {
+      return next(new AppError('You do not have permission to report issues for this work order', 403));
+    }
+    
+    // 3) Handle file uploads if any
+    let photos = [];
+    if (req.files && req.files.length > 0) {
+      try {
+        const uploadPromises = req.files.map(file => 
+          uploadToCloudinary(file, 'work-order-issues')
+        );
+        photos = await Promise.all(uploadPromises);
+      } catch (error) {
+        console.error('Error uploading issue photos:', error);
+        return next(new AppError('Error uploading one or more photos', 500));
+      }
+    }
+    
+    // 4) Create issue object
+    const issue = {
+      description: req.body.description,
+      reportedBy: req.user._id,
+      reportedAt: new Date(),
+      photos: photos,
+      severity: req.body.severity || 'medium',
+      status: 'open'
+    };
+    
+    // 5) Add issue to work order
+    if (!workOrder.issues) {
+      workOrder.issues = [];
+    }
+    workOrder.issues.push(issue);
+    
+    // 6) Update work order status if needed
+    if (workOrder.status === 'completed') {
+      workOrder.status = 'issue_reported';
+    }
+    
+    await workOrder.save();
+    
+    // 7) Send response
+    res.status(201).json({
+      status: 'success',
+      data: {
+        issue: workOrder.issues[workOrder.issues.length - 1]
+      }
+    });
+  } catch (error) {
+    console.error('Error reporting issue:', error);
+    
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(val => val.message);
+      return next(new AppError(`Validation error: ${messages.join('. ')}`, 400));
+    }
+    
+    next(new AppError('An error occurred while reporting the issue', 500));
   }
 });
 

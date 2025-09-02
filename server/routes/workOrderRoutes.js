@@ -6,6 +6,9 @@ const { hidePricesFromWorkers } = require('../middleware/roleMiddleware');
 const validateRequest = require('../middleware/validateRequest');
 const { uploadMultiple } = require('../utils/multer');
 
+// Configure upload middleware for work orders
+const uploadWorkOrderPhotos = uploadMultiple('work-orders', 'photos', 10);
+
 const router = express.Router();
 
 // Protect all routes after this middleware
@@ -114,8 +117,16 @@ router.get(
 router.post(
   '/',
   authController.restrictTo('admin', 'manager', 'supervisor'),
-  uploadMultiple('work-orders', 'photos', 10), // Max 10 photos
-  validateWorkOrder,
+  uploadWorkOrderPhotos, // Max 10 photos
+  [
+    ...validateWorkOrder,
+    body('services').isArray({ min: 1 }),
+    body('services.*.type').isIn([
+      'cleaning', 'maintenance', 'inspection', 'renovation', 'delivery',
+      'move_in', 'move_out', 'other'
+    ]),
+    validateRequest
+  ],
   workOrderController.createWorkOrder
 );
 
@@ -201,10 +212,13 @@ router.patch(
  * @desc    Report an issue with a work order
  * @access  Private (assigned worker, admin, manager, supervisor)
  */
+// Configure upload middleware for work order issues
+const uploadIssuePhotos = uploadMultiple('work-order-issues', 'photos', 5);
+
 router.post(
   '/:id/issues',
   [param('id').isMongoId(), ...validateIssue],
-  upload.array('photos', 5), // Max 5 photos for issues
+  uploadIssuePhotos, // Max 5 photos for issues
   workOrderController.reportIssue
 );
 

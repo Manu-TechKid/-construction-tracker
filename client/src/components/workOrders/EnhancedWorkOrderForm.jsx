@@ -40,14 +40,47 @@ import { useSnackbar } from 'notistack';
 import { useNavigate } from 'react-router-dom';
 
 const validationSchema = Yup.object({
-  building: Yup.string().required('Building is required'),
-  apartmentNumber: Yup.string().required('Apartment number is required'),
-  description: Yup.string().required('Description is required'),
-  priority: Yup.string().required('Priority is required'),
-  assignedTo: Yup.array().min(1, 'At least one worker must be assigned'),
-  services: Yup.array().of(
-    Yup.object().shape({
-      type: Yup.string().required('Service type is required'),
+  building: Yup.string()
+    .required('Building is required')
+    .matches(/^[0-9a-fA-F]{24}$/, 'Invalid building ID format'),
+  apartmentNumber: Yup.string()
+    .required('Apartment/Unit number is required')
+    .max(20, 'Apartment number cannot be longer than 20 characters'),
+  block: Yup.string()
+    .max(20, 'Block number cannot be longer than 20 characters'),
+  description: Yup.string()
+    .required('Description is required')
+    .min(10, 'Description must be at least 10 characters')
+    .max(1000, 'Description cannot be longer than 1000 characters'),
+  priority: Yup.string()
+    .required('Priority is required')
+    .oneOf(['low', 'medium', 'high', 'urgent'], 'Invalid priority level'),
+  status: Yup.string()
+    .oneOf(
+      [
+        'pending', 'in_progress', 'on_hold', 
+        'completed', 'cancelled', 'pending_review', 'issue_reported'
+      ], 
+      'Invalid status'
+    )
+    .default('pending'),
+  assignedTo: Yup.array()
+    .of(Yup.string().matches(/^[0-9a-fA-F]{24}$/, 'Invalid worker ID format'))
+    .min(1, 'At least one worker must be assigned'),
+  services: Yup.array()
+    .min(1, 'At least one service is required')
+    .of(
+      Yup.object().shape({
+        type: Yup.string()
+          .required('Service type is required')
+          .oneOf(
+            [
+              'painting', 'cleaning', 'repair', 'maintenance', 
+              'inspection', 'other', 'plumbing', 'electrical', 
+              'hvac', 'flooring', 'roofing', 'carpentry'
+            ],
+            'Invalid service type'
+          ),
       description: Yup.string().required('Description is required'),
       laborCost: Yup.number().min(0, 'Must be 0 or more').required('Required'),
       materialCost: Yup.number().min(0, 'Must be 0 or more').required('Required'),
@@ -70,68 +103,114 @@ const serviceTypes = [
 ];
 
 const EnhancedWorkOrderForm = ({ workOrder, onCancel }) => {
-  const { selectedBuilding } = useBuildingContext();
-  const [createWorkOrder, { isLoading: isCreating }] = useCreateWorkOrderMutation();
-  const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
-  const { data: workersData } = useGetWorkersQuery();
   const { enqueueSnackbar } = useSnackbar();
   const navigate = useNavigate();
+  const { buildings } = useBuildingContext();
+  const [createWorkOrder, { isLoading: isCreating }] = useCreateWorkOrderMutation();
+  const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
+  const { data: workers = [], isLoading: isLoadingWorkers } = useGetWorkersQuery();
   
-  const [services, setServices] = useState(
-    workOrder?.services?.length > 0 
-      ? workOrder.services 
-      : [{ type: 'painting', description: '', laborCost: 0, materialCost: 0, status: 'pending' }]
-  );
-
+  const [files, setFiles] = useState([]);
+  const [filePreviews, setFilePreviews] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const isEditMode = !!workOrder?._id;
+  
   const formik = useFormik({
     initialValues: {
-      building: workOrder?.building?._id || selectedBuilding?._id || '',
+      building: workOrder?.building?._id || '',
       apartmentNumber: workOrder?.apartmentNumber || '',
       block: workOrder?.block || '',
-      apartmentStatus: workOrder?.apartmentStatus || 'occupied',
       description: workOrder?.description || '',
       priority: workOrder?.priority || 'medium',
-      assignedTo: workOrder?.assignedTo?.map(a => a.worker._id) || [],
-      scheduledDate: workOrder?.scheduledDate || new Date(),
-      requiresInspection: workOrder?.requiresInspection || false,
-      inspectionNotes: workOrder?.inspectionNotes || ''
-    },
-    enableReinitialize: true,
-    validationSchema,
-    onSubmit: async (values) => {
-      try {
-        const workOrderData = {
-          ...values,
-          services: services.map(svc => ({
-            type: svc.type,
-            description: svc.description,
-            laborCost: parseFloat(svc.laborCost) || 0,
-            materialCost: parseFloat(svc.materialCost) || 0,
-            status: svc.status || 'pending'
+      status: workOrder?.status || 'pending',
+      assignedTo: workOrder?.assignedTo?.map(a => a.worker?._id || a.worker) || [],
+      services: workOrder?.services?.length > 0 
+        ? workOrder.services.map(s => ({
+            type: s.type,
+            description: s.description,
+            laborCost: s.laborCost,
+            materialCost: s.materialCost,
+            status: s.status || 'pending'
           }))
-        };
-
-        if (workOrder?._id) {
-          await updateWorkOrder({ id: workOrder._id, ...workOrderData }).unwrap();
-          enqueueSnackbar('Work order updated successfully', { variant: 'success' });
+        : [{ type: '', description: '', laborCost: 0, materialCost: 0, status: 'pending' }],
+    },
+    validationSchema,
+    enableReinitialize: true,
+    onSubmit: async (values, { setSubmitting, setStatus, setErrors }) => {
+      try {
+        setIsSubmitting(true);
+        
+        // Prepare form data for file uploads
+        const formData = new FormData();
+        
+        // Add files if any
+        files.forEach(file => {
+          formData.append('photos', file);
+        });
+        
+        // Add other form data
+        Object.keys(values).forEach(key => {
+          if (key === 'services' || key === 'assignedTo') {
+            formData.append(key, JSON.stringify(values[key]));
+          } else if (values[key] !== undefined && values[key] !== null) {
+            formData.append(key, values[key]);
+          }
+        });
+        
+        let response;
+        if (isEditMode) {
+          response = await updateWorkOrder({
+            id: workOrder._id,
+            data: formData,
+            headers: { 'Content-Type': 'multipart/form-data' }
+          }).unwrap();
         } else {
-          await createWorkOrder(workOrderData).unwrap();
-          enqueueSnackbar('Work order created successfully', { variant: 'success' });
+          response = await createWorkOrder({
+            data: formData,
+            headers: { 'Content-Type': 'multipart/form-data' }
+          }).unwrap();
         }
-
-        navigate('/work-orders');
-      } catch (error) {
-        console.error('Error:', error);
+        
         enqueueSnackbar(
-          error?.data?.message || 'Error creating or updating work order', 
-          { variant: 'error' }
+          isEditMode ? 'Work order updated successfully' : 'Work order created successfully',
+          { variant: 'success' }
         );
+        
+        // Redirect to work order details or list
+        if (!isEditMode) {
+          navigate(`/work-orders/${response.data._id}`);
+        } else if (onCancel) {
+          onCancel();
+        }
+        
+      } catch (error) {
+        console.error('Error submitting work order:', error);
+        
+        // Handle validation errors
+        if (error.status === 400 && error.data?.errors) {
+          const formErrors = {};
+          error.data.errors.forEach(err => {
+            formErrors[err.path] = err.msg;
+          });
+          setErrors(formErrors);
+          enqueueSnackbar('Please fix the form errors', { variant: 'error' });
+        } else {
+          enqueueSnackbar(
+            error.data?.message || 'An error occurred while saving the work order',
+            { variant: 'error' }
+          );
+        }
+      } finally {
+        setIsSubmitting(false);
+        setSubmitting(false);
       }
     }
   });
 
   const addService = () => {
-    setServices([...services, { 
+    const currentServices = formik.values.services;
+    formik.setFieldValue('services', [...currentServices, { 
       type: 'painting', 
       description: '', 
       laborCost: 0, 
@@ -141,22 +220,24 @@ const EnhancedWorkOrderForm = ({ workOrder, onCancel }) => {
   };
 
   const removeService = (index) => {
-    if (services.length > 1) {
-      const updatedServices = [...services];
+    const currentServices = formik.values.services;
+    if (currentServices.length > 1) {
+      const updatedServices = [...currentServices];
       updatedServices.splice(index, 1);
-      setServices(updatedServices);
+      formik.setFieldValue('services', updatedServices);
     }
   };
 
   const updateService = (index, field, value) => {
-    const updatedServices = [...services];
+    const currentServices = formik.values.services;
+    const updatedServices = [...currentServices];
     updatedServices[index] = {
       ...updatedServices[index],
       [field]: field === 'laborCost' || field === 'materialCost' 
         ? parseFloat(value) || 0 
         : value
     };
-    setServices(updatedServices);
+    formik.setFieldValue('services', updatedServices);
   };
 
   return (
@@ -169,7 +250,7 @@ const EnhancedWorkOrderForm = ({ workOrder, onCancel }) => {
                 Services
               </Typography>
               
-              {services.map((service, index) => (
+              {formik.values.services.map((service, index) => (
                 <Box key={index} mb={3} sx={{ border: '1px solid #eee', p: 2, borderRadius: 1 }}>
                   <Grid container spacing={2} alignItems="center">
                     <Grid item xs={12} md={3}>
@@ -239,7 +320,7 @@ const EnhancedWorkOrderForm = ({ workOrder, onCancel }) => {
                     <Grid item xs={1} md={1} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                       <IconButton 
                         onClick={() => removeService(index)}
-                        disabled={services.length <= 1}
+                        disabled={formik.values.services.length <= 1}
                         color="error"
                       >
                         <DeleteIcon />
