@@ -942,6 +942,228 @@ exports.updateAssignmentStatus = catchAsync(async (req, res, next) => {
 });
 
 /**
+ * @desc    Get form data for work order creation/editing
+ * @route   GET /api/v1/work-orders/form-data
+ * @access  Private (admin, manager, supervisor)
+ */
+exports.getWorkOrderFormData = catchAsync(async (req, res, next) => {
+  try {
+    // Get buildings
+    const buildings = await Building.find({ isActive: true })
+      .select('name address city state zipCode')
+      .sort('name');
+
+    // Get workers
+    const workers = await User.find({ 
+      role: { $in: ['worker', 'supervisor'] },
+      isActive: true 
+    })
+      .select('name email phone role')
+      .sort('name');
+
+    // Service types
+    const serviceTypes = [
+      { value: 'painting', label: 'Painting' },
+      { value: 'cleaning', label: 'Cleaning' },
+      { value: 'repair', label: 'Repair' },
+      { value: 'maintenance', label: 'Maintenance' },
+      { value: 'inspection', label: 'Inspection' },
+      { value: 'plumbing', label: 'Plumbing' },
+      { value: 'electrical', label: 'Electrical' },
+      { value: 'hvac', label: 'HVAC' },
+      { value: 'flooring', label: 'Flooring' },
+      { value: 'roofing', label: 'Roofing' },
+      { value: 'carpentry', label: 'Carpentry' },
+      { value: 'other', label: 'Other' }
+    ];
+
+    // Priority levels
+    const priorityLevels = [
+      { value: 'low', label: 'Low' },
+      { value: 'medium', label: 'Medium' },
+      { value: 'high', label: 'High' },
+      { value: 'urgent', label: 'Urgent' }
+    ];
+
+    // Status options
+    const statusOptions = [
+      { value: 'pending', label: 'Pending' },
+      { value: 'in_progress', label: 'In Progress' },
+      { value: 'on_hold', label: 'On Hold' },
+      { value: 'completed', label: 'Completed' },
+      { value: 'cancelled', label: 'Cancelled' },
+      { value: 'pending_review', label: 'Pending Review' },
+      { value: 'issue_reported', label: 'Issue Reported' }
+    ];
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        buildings,
+        workers,
+        serviceTypes,
+        priorityLevels,
+        statusOptions
+      }
+    });
+  } catch (error) {
+    console.error('Error getting work order form data:', error);
+    next(new AppError('Error retrieving form data', 500));
+  }
+});
+
+/**
+ * @desc    Add a note to a work order
+ * @route   POST /api/v1/work-orders/:id/notes
+ * @access  Private (admin, manager, supervisor, assigned worker)
+ */
+exports.addNoteToWorkOrder = catchAsync(async (req, res, next) => {
+  try {
+    const { content, isPrivate = false } = req.body;
+    
+    // Find the work order
+    const workOrder = await WorkOrder.findById(req.params.id);
+    if (!workOrder) {
+      return next(new AppError('No work order found with that ID', 404));
+    }
+    
+    // Check permissions
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'manager';
+    const isAssignedWorker = workOrder.assignedTo.some(
+      assignment => assignment.worker.toString() === req.user._id.toString()
+    );
+    
+    if (!isAdmin && !isAssignedWorker) {
+      return next(new AppError('You do not have permission to add notes to this work order', 403));
+    }
+    
+    // Create note
+    const note = {
+      content,
+      author: req.user._id,
+      isPrivate,
+      createdAt: new Date()
+    };
+    
+    // Add note to work order
+    if (!workOrder.notes) {
+      workOrder.notes = [];
+    }
+    workOrder.notes.push(note);
+    
+    await workOrder.save();
+    await workOrder.populate('notes.author', 'name email');
+    
+    res.status(201).json({
+      status: 'success',
+      data: {
+        note: workOrder.notes[workOrder.notes.length - 1]
+      }
+    });
+  } catch (error) {
+    console.error('Error adding note to work order:', error);
+    next(new AppError('Error adding note to work order', 500));
+  }
+});
+
+/**
+ * @desc    Update a note in a work order
+ * @route   PATCH /api/v1/work-orders/:id/notes/:noteId
+ * @access  Private (admin, manager, supervisor, note author)
+ */
+exports.updateNoteInWorkOrder = catchAsync(async (req, res, next) => {
+  try {
+    const { content, isPrivate } = req.body;
+    const { id: workOrderId, noteId } = req.params;
+    
+    // Find the work order
+    const workOrder = await WorkOrder.findById(workOrderId);
+    if (!workOrder) {
+      return next(new AppError('No work order found with that ID', 404));
+    }
+    
+    // Find the note
+    const noteIndex = workOrder.notes.findIndex(note => note._id.toString() === noteId);
+    if (noteIndex === -1) {
+      return next(new AppError('Note not found', 404));
+    }
+    
+    const note = workOrder.notes[noteIndex];
+    
+    // Check permissions
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'manager';
+    const isNoteAuthor = note.author.toString() === req.user._id.toString();
+    
+    if (!isAdmin && !isNoteAuthor) {
+      return next(new AppError('You do not have permission to update this note', 403));
+    }
+    
+    // Update note
+    if (content !== undefined) note.content = content;
+    if (isPrivate !== undefined) note.isPrivate = isPrivate;
+    note.updatedAt = new Date();
+    
+    await workOrder.save();
+    await workOrder.populate('notes.author', 'name email');
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        note: workOrder.notes[noteIndex]
+      }
+    });
+  } catch (error) {
+    console.error('Error updating note in work order:', error);
+    next(new AppError('Error updating note in work order', 500));
+  }
+});
+
+/**
+ * @desc    Delete a note from a work order
+ * @route   DELETE /api/v1/work-orders/:id/notes/:noteId
+ * @access  Private (admin, manager, supervisor, note author)
+ */
+exports.deleteNoteFromWorkOrder = catchAsync(async (req, res, next) => {
+  try {
+    const { id: workOrderId, noteId } = req.params;
+    
+    // Find the work order
+    const workOrder = await WorkOrder.findById(workOrderId);
+    if (!workOrder) {
+      return next(new AppError('No work order found with that ID', 404));
+    }
+    
+    // Find the note
+    const noteIndex = workOrder.notes.findIndex(note => note._id.toString() === noteId);
+    if (noteIndex === -1) {
+      return next(new AppError('Note not found', 404));
+    }
+    
+    const note = workOrder.notes[noteIndex];
+    
+    // Check permissions
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'manager';
+    const isNoteAuthor = note.author.toString() === req.user._id.toString();
+    
+    if (!isAdmin && !isNoteAuthor) {
+      return next(new AppError('You do not have permission to delete this note', 403));
+    }
+    
+    // Remove note
+    workOrder.notes.splice(noteIndex, 1);
+    await workOrder.save();
+    
+    res.status(204).json({
+      status: 'success',
+      data: null
+    });
+  } catch (error) {
+    console.error('Error deleting note from work order:', error);
+    next(new AppError('Error deleting note from work order', 500));
+  }
+});
+
+/**
  * @desc    Assign workers to a work order
  * @route   PATCH /api/v1/work-orders/:id/assign
  * @access  Private (admin, manager, supervisor)
