@@ -9,53 +9,52 @@ const router = express.Router();
 // Protect all routes after this middleware
 router.use(authController.protect);
 
-// Schedule item routes
+// Get all schedules
+router.get('/', scheduleController.getAllSchedules);
+
+// Get building schedules
+router.get('/building/:buildingId', scheduleController.getBuildingSchedules);
+
+// Create schedule
 router.post(
   '/',
   [
     authController.restrictTo('admin', 'manager', 'supervisor'),
-    body('workOrder').isMongoId(),
-    body('worker').isMongoId(),
-    body('date').isISO8601(),
-    body('startTime').matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/),
-    body('endTime').matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/),
-    body('location').isObject(),
-    body('location.longitude').isFloat({ min: -180, max: 180 }),
-    body('location.latitude').isFloat({ min: -90, max: 90 }),
-    body('location.address').optional().isString(),
-    body('notes').optional().isString(),
+    body('title').notEmpty().withMessage('Title is required'),
+    body('building').isMongoId().withMessage('Valid building ID is required'),
+    body('startDate').isISO8601().withMessage('Valid start date is required'),
+    body('endDate').isISO8601().withMessage('Valid end date is required'),
+    body('type').optional().isIn(['painting', 'cleaning', 'repair', 'inspection', 'maintenance']),
+    body('status').optional().isIn(['planned', 'in_progress', 'completed', 'cancelled']),
+    body('assignedWorkers').optional().isArray(),
+    body('assignedWorkers.*').optional().isMongoId(),
     validateRequest
   ],
-  scheduleController.createScheduleItem
+  scheduleController.createSchedule
 );
 
-router.get(
-  '/',
-  [
-    query('startDate').optional().isISO8601(),
-    query('endDate').optional().isISO8601(),
-    query('worker').optional().isMongoId(),
-    query('status').optional().isIn(['scheduled', 'in_progress', 'completed', 'cancelled']),
-    validateRequest
-  ],
-  scheduleController.getSchedule
-);
+// Get single schedule
+router.get('/:id', scheduleController.getSchedule);
 
+// Update schedule
 router.patch(
   '/:id',
   [
     authController.restrictTo('admin', 'manager', 'supervisor'),
     param('id').isMongoId(),
-    body('date').optional().isISO8601(),
-    body('startTime').optional().matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/),
-    body('endTime').optional().matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/),
-    body('status').optional().isIn(['scheduled', 'in_progress', 'completed', 'cancelled']),
-    body('notes').optional().isString(),
+    body('title').optional().notEmpty(),
+    body('startDate').optional().isISO8601(),
+    body('endDate').optional().isISO8601(),
+    body('type').optional().isIn(['painting', 'cleaning', 'repair', 'inspection', 'maintenance']),
+    body('status').optional().isIn(['planned', 'in_progress', 'completed', 'cancelled']),
+    body('assignedWorkers').optional().isArray(),
+    body('assignedWorkers.*').optional().isMongoId(),
     validateRequest
   ],
-  scheduleController.updateScheduleItem
+  scheduleController.updateSchedule
 );
 
+// Delete schedule
 router.delete(
   '/:id',
   [
@@ -63,59 +62,7 @@ router.delete(
     param('id').isMongoId(),
     validateRequest
   ],
-  scheduleController.deleteScheduleItem
-);
-
-// Worker check-in/check-out routes
-router.post(
-  '/:id/check-in',
-  [
-    param('id').isMongoId(),
-    body('location').isObject(),
-    body('location.longitude').isFloat({ min: -180, max: 180 }),
-    body('location.latitude').isFloat({ min: -90, max: 90 }),
-    body('location.address').optional().isString(),
-    body('notes').optional().isString(),
-    validateRequest
-  ],
-  scheduleController.checkInWorker
-);
-
-router.post(
-  '/:id/check-out',
-  [
-    param('id').isMongoId(),
-    body('location').isObject(),
-    body('location.longitude').isFloat({ min: -180, max: 180 }),
-    body('location.latitude').isFloat({ min: -90, max: 90 }),
-    body('location.address').optional().isString(),
-    body('notes').optional().isString(),
-    validateRequest
-  ],
-  scheduleController.checkOutWorker
-);
-
-// Worker schedule routes
-router.get(
-  '/worker/:workerId?',
-  [
-    param('workerId').optional().isMongoId(),
-    query('startDate').optional().isISO8601(),
-    query('endDate').optional().isISO8601(),
-    query('status').optional().isIn(['scheduled', 'in_progress', 'completed', 'cancelled']),
-    validateRequest
-  ],
-  scheduleController.getWorkerSchedule
-);
-
-// Work order schedule routes
-router.get(
-  '/work-order/:workOrderId',
-  [
-    param('workOrderId').isMongoId(),
-    validateRequest
-  ],
-  scheduleController.getWorkOrderSchedule
+  scheduleController.deleteSchedule
 );
 
 module.exports = router;

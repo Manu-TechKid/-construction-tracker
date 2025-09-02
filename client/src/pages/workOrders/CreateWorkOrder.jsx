@@ -43,14 +43,20 @@ const validationSchema = Yup.object({
   building: Yup.string().required('Building is required'),
   apartmentNumber: Yup.string(),
   block: Yup.string(),
-  apartmentStatus: Yup.string().required('Apartment status is required'),
+  apartmentStatus: Yup.string().required('Apartment status is required').oneOf(['vacant', 'occupied', 'under_renovation', 'reserved']),
   description: Yup.string().required('Description is required'),
-  priority: Yup.string().required('Priority is required'),
-  estimatedCost: Yup.number().min(0, 'Cost must be positive'),
+  priority: Yup.string().required('Priority is required').oneOf(['low', 'medium', 'high', 'urgent']),
   startDate: Yup.date().required('Start date is required'),
   endDate: Yup.date().required('End date is required').min(Yup.ref('startDate'), 'End date must be after start date'),
   scheduledDate: Yup.date().required('Scheduled date is required'),
-  services: Yup.array().min(1, 'At least one service is required')
+  services: Yup.array().min(1, 'At least one service is required').of(
+    Yup.object({
+      type: Yup.string().required('Service type is required'),
+      description: Yup.string().required('Service description is required'),
+      laborCost: Yup.number().min(0, 'Labor cost must be positive').required('Labor cost is required'),
+      materialCost: Yup.number().min(0, 'Material cost must be positive').required('Material cost is required')
+    })
+  )
 });
 
 // Service type options matching WorkOrder.services schema
@@ -192,11 +198,17 @@ const CreateWorkOrder = () => {
       apartmentStatus: 'vacant',
       description: '',
       priority: 'medium',
-      estimatedCost: '',
-      startDate: null,
-      endDate: null,
-      scheduledDate: null,
-      estimatedCompletionDate: null
+      startDate: new Date(),
+      endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+      scheduledDate: new Date(),
+      assignedTo: [],
+      services: [{
+        type: 'painting',
+        description: 'Apartment Painting - 1 Room',
+        laborCost: 0,
+        materialCost: 0,
+        status: 'pending'
+      }]
     },
     validationSchema,
     onSubmit: async (values) => {
@@ -208,19 +220,23 @@ const CreateWorkOrder = () => {
         }
 
         const workOrderData = {
-          ...values,
+          building: values.building,
+          apartmentNumber: values.apartmentNumber || '',
+          block: values.block || '',
+          apartmentStatus: values.apartmentStatus,
+          description: values.description,
+          priority: values.priority,
+          startDate: values.startDate,
+          endDate: values.endDate,
+          scheduledDate: values.scheduledDate,
+          assignedTo: values.assignedTo,
           services: services.map(service => ({
             type: service.type,
             description: service.description,
             laborCost: parseFloat(service.laborCost) || 0,
-            materialCost: parseFloat(service.materialCost) || 0
-          })),
-          createdBy: user?.id,
-          estimatedCost: values.estimatedCost ? parseFloat(values.estimatedCost) : 0,
-          startDate: values.startDate ? values.startDate.toISOString() : null,
-          endDate: values.endDate ? values.endDate.toISOString() : null,
-          scheduledDate: values.scheduledDate ? values.scheduledDate.toISOString() : null,
-          estimatedCompletionDate: values.estimatedCompletionDate ? values.estimatedCompletionDate.toISOString() : null
+            materialCost: parseFloat(service.materialCost) || 0,
+            status: 'pending'
+          }))
         };
 
         const result = await createWorkOrder(workOrderData).unwrap();

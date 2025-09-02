@@ -43,7 +43,7 @@ const EditWorkOrder = () => {
     try {
       const result = await updateWorkOrder({ id, ...formData }).unwrap();
       toast.success('Work order updated successfully');
-      navigate('/work-orders');
+      navigate(`/work-orders/${id}`);
     } catch (error) {
       console.error('Failed to update work order:', error);
       const errorMessage = error?.data?.message || error?.message || 'Failed to update work order';
@@ -53,7 +53,7 @@ const EditWorkOrder = () => {
   };
 
   const handleCancel = () => {
-    navigate('/work-orders');
+    navigate(`/work-orders/${id}`);
   };
 
   const handleBack = () => {

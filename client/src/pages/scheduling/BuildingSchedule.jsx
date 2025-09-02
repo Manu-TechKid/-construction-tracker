@@ -248,30 +248,8 @@ const BuildingSchedule = () => {
     );
   }
 
-  if (!schedules.length) {
-    return (
-      <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{ p: 3, textAlign: 'center' }}>
-          <EventIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-          No schedules found for this building
-        </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Start by creating your first schedule for {selectedBuilding?.name}
-          </Typography>
-          {hasPermission(['create:schedules']) && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => handleOpenDialog()}
-            >
-              Create First Schedule
-            </Button>
-          )}
-      </Box>
-      </LocalizationProvider>
-    );
-  }
+  // Always show the calendar interface, even if no schedules exist
+  const showEmptyState = !schedules.length && !isLoading && !error;
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
