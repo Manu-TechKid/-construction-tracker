@@ -253,7 +253,7 @@ const connectDB = async () => {
   
   while (retryCount < maxRetries) {
     try {
-      await mongoose.connect(process.env.MONGODB_URI, {
+      await mongoose.connect(process.env.MONGO_URI, {
         serverSelectionTimeoutMS: 30000,
         socketTimeoutMS: 45000,
         connectTimeoutMS: 30000,
