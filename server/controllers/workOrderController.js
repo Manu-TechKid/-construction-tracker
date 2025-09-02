@@ -880,6 +880,68 @@ exports.getWorkerAssignments = catchAsync(async (req, res, next) => {
 });
 
 /**
+ * @desc    Update worker assignment status
+ * @route   PATCH /api/v1/work-orders/:id/assignments/:workerId
+ * @access  Private (admin, manager, supervisor, assigned worker)
+ */
+exports.updateAssignmentStatus = catchAsync(async (req, res, next) => {
+  try {
+    const { id: workOrderId, workerId } = req.params;
+    const { status, notes, timeSpent } = req.body;
+    
+    // 1) Find the work order
+    const workOrder = await WorkOrder.findById(workOrderId);
+    if (!workOrder) {
+      return next(new AppError('No work order found with that ID', 404));
+    }
+    
+    // 2) Find the assignment
+    const assignmentIndex = workOrder.assignedTo.findIndex(
+      assignment => assignment.worker.toString() === workerId
+    );
+    
+    if (assignmentIndex === -1) {
+      return next(new AppError('Worker is not assigned to this work order', 404));
+    }
+    
+    // 3) Check permissions
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'manager';
+    const isAssignedWorker = req.user._id.toString() === workerId;
+    
+    if (!isAdmin && !isAssignedWorker) {
+      return next(new AppError('You do not have permission to update this assignment', 403));
+    }
+    
+    // 4) Update assignment
+    const assignment = workOrder.assignedTo[assignmentIndex];
+    if (status) assignment.status = status;
+    if (notes) assignment.notes = notes;
+    if (timeSpent) {
+      assignment.timeSpent = {
+        hours: timeSpent.hours || 0,
+        minutes: timeSpent.minutes || 0
+      };
+    }
+    assignment.updatedAt = new Date();
+    
+    await workOrder.save();
+    
+    // 5) Populate and return updated assignment
+    await workOrder.populate('assignedTo.worker', 'name email phone');
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        assignment: workOrder.assignedTo[assignmentIndex]
+      }
+    });
+  } catch (error) {
+    console.error('Error updating assignment status:', error);
+    next(new AppError('Error updating assignment status', 500));
+  }
+});
+
+/**
  * @desc    Assign workers to a work order
  * @route   PATCH /api/v1/work-orders/:id/assign
  * @access  Private (admin, manager, supervisor)
