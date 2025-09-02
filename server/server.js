@@ -172,7 +172,9 @@ app.get('/api/v1', (req, res) => {
 
 // Serve client build in production
 if (process.env.NODE_ENV === 'production') {
-  const clientBuildPath = path.resolve(__dirname, '../client/build');
+  const clientBuildPath = path.resolve(process.cwd(), 'client/build');
+  console.log('Looking for client build at:', clientBuildPath);
+  console.log('Client build exists:', fs.existsSync(clientBuildPath));
   
   if (fs.existsSync(clientBuildPath)) {
     // Serve static files from the React app with proper headers
