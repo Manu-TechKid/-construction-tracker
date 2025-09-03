@@ -18,12 +18,12 @@ router.use(hidePricesFromWorkers);
 // Validation middleware
 const validateWorkOrder = [
   body('title').optional().trim().isLength({ min: 3, max: 100 }),
-  body('description').trim().isLength({ min: 10 }),
-  body('building').isMongoId(),
+  body('description').optional().trim().isLength({ min: 10 }),
+  body('building').optional().isMongoId(),
   body('apartmentNumber').optional().trim(),
   body('block').optional().trim(),
   body('apartmentStatus').optional().isIn(['vacant', 'occupied', 'under_renovation', 'reserved']),
-  body('priority').isIn(['low', 'medium', 'high', 'urgent']),
+  body('priority').optional().isIn(['low', 'medium', 'high', 'urgent']),
   body('status').optional().isIn([
     'pending', 'in_progress', 'on_hold', 'completed', 
     'cancelled', 'pending_review', 'issue_reported'

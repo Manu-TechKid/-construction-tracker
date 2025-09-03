@@ -462,15 +462,23 @@ exports.updateWorkOrder = catchAsync(async (req, res, next) => {
     
     // Map allowed fields that can be updated
     const allowedFields = [
-      'apartmentNumber', 'block', 'description', 'priority', 'status',
+      'title', 'apartmentNumber', 'block', 'description', 'priority', 'status',
       'scheduledDate', 'estimatedCompletionDate', 'notes', 'apartmentStatus',
-      'isEmergency'
+      'isEmergency', 'building'
     ];
     
     // Copy allowed fields from request body to updateData
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
         updateData[field] = req.body[field];
+      }
+    });
+    
+    // Ensure we're not updating with empty objects/arrays
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === '' || updateData[key] === null || 
+          (Array.isArray(updateData[key]) && updateData[key].length === 0)) {
+        delete updateData[key];
       }
     });
     
