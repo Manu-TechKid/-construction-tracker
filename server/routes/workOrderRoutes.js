@@ -370,8 +370,9 @@ router.patch(
   uploadMultiple('work-orders', 'photos', 10), // Max 10 photos
   [
     param('id').isMongoId(),
-    ...validateWorkOrder
+    ...validateCreateWorkOrder
   ],
+  validateRequest,
   workOrderController.updateWorkOrder
 );
 
