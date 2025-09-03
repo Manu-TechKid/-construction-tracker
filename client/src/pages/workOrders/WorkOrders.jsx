@@ -66,10 +66,23 @@ const WorkOrders = () => {
   });
 
   // API calls
-  const { data: workOrdersData, isLoading, error, refetch } = useGetWorkOrdersQuery(filters);
   const { data: buildingsData } = useGetBuildingsQuery();
   const [deleteWorkOrder, { isLoading: isDeleting }] = useDeleteWorkOrderMutation();
 
+  // Clean up the filters object before sending to the API
+  const cleanFilters = React.useMemo(() => {
+    const clean = { ...filters };
+    Object.keys(clean).forEach(key => {
+      if (clean[key] === '' || clean[key] === null || clean[key] === undefined) {
+        delete clean[key];
+      }
+    });
+    return clean;
+  }, [filters]);
+
+  // API call with cleaned filters
+  const { data: workOrdersData, isLoading, error, refetch } = useGetWorkOrdersQuery(cleanFilters);
+  
   const workOrders = workOrdersData?.data?.workOrders || [];
   const buildings = buildingsData?.data?.buildings || [];
 
@@ -80,9 +93,10 @@ const WorkOrders = () => {
 
   // Update building filter when selectedBuilding changes
   useEffect(() => {
-    if (selectedBuilding) {
-      setFilters(prev => ({ ...prev, building: selectedBuilding._id }));
-    }
+    setFilters(prev => ({
+      ...prev,
+      building: selectedBuilding?._id || ''
+    }));
   }, [selectedBuilding]);
 
   const handleMenuClick = (event, workOrder) => {

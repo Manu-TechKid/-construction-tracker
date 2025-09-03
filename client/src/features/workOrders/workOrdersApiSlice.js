@@ -3,10 +3,20 @@ import { apiSlice } from '../../app/api/apiSlice';
 export const workOrdersApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getWorkOrders: builder.query({
-      query: (params = {}) => ({
-        url: '/work-orders',
-        params,
-      }),
+      query: (params = {}) => {
+        // Create a clean params object, removing any falsy values
+        const cleanParams = {};
+        Object.keys(params).forEach(key => {
+          if (params[key] !== '' && params[key] !== null && params[key] !== undefined) {
+            cleanParams[key] = params[key];
+          }
+        });
+        
+        return {
+          url: '/work-orders',
+          params: cleanParams,
+        };
+      },
       providesTags: (result = {}, error, arg) => {
         if (result?.data?.workOrders) {
           return [
