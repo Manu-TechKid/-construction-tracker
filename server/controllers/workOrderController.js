@@ -816,10 +816,26 @@ exports.getWorkOrder = catchAsync(async (req, res, next) => {
     const workOrder = await WorkOrder.findById(req.params.id)
       .populate('building', 'name address')
       .populate('createdBy', 'name email')
-      .populate('assignedTo.worker', 'name email role')
-      .populate('services.completedBy', 'name email')
-      .populate('checklist.completedBy', 'name email')
-      .populate('notes.createdBy', 'name email');
+      .populate({
+        path: 'assignedTo.worker',
+        select: 'name email role',
+        options: { allowEmptyArray: true }
+      })
+      .populate({
+        path: 'services.completedBy',
+        select: 'name email',
+        options: { allowEmptyArray: true }
+      })
+      .populate({
+        path: 'tasks.completedBy',
+        select: 'name email',
+        options: { allowEmptyArray: true }
+      })
+      .populate({
+        path: 'notes.createdBy',
+        select: 'name email',
+        options: { allowEmptyArray: true }
+      });
 
     if (!workOrder) {
       return next(new AppError('No work order found with that ID', 404));

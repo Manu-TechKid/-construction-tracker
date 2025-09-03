@@ -366,18 +366,26 @@ const CreateWorkOrder = () => {
   }]);
 
   const addService = () => {
-    setServices([...services, { 
-      type: '', 
-      description: '', 
+    const newService = { 
+      type: 'painting', 
+      description: 'Apartment Painting - 1 Room', 
       laborCost: 0, 
       materialCost: 0, 
       estimatedHours: 1,
       status: 'pending' 
-    }]);
+    };
+    const updatedServices = [...services, newService];
+    setServices(updatedServices);
+    formik.setFieldValue('services', updatedServices);
   };
 
   const removeService = (index) => {
-    const newServices = services.filter((_, i) => i !== index);
+    if (services.length <= 1) {
+      toast.error('At least one service is required');
+      return;
+    }
+    const newServices = [...services];
+    newServices.splice(index, 1);
     setServices(newServices);
     formik.setFieldValue('services', newServices);
   };
@@ -436,7 +444,7 @@ const CreateWorkOrder = () => {
       }]
     },
     validationSchema,
-    onSubmit: async (values) => {
+    onSubmit: async (values, { setSubmitting, resetForm }) => {
       try {
         // Validate services
         if (services.length === 0 || services.some(s => !s.type || !s.description)) {
@@ -444,24 +452,55 @@ const CreateWorkOrder = () => {
           return;
         }
 
-        // Create work order
-        const workOrder = {
-          ...values,
-          services: services.map((service, index) => ({
-            type: service.type,
-            description: service.description,
-            laborCost: service.laborCost,
-            materialCost: service.materialCost,
-            estimatedHours: service.estimatedHours,
-            status: service.status
-          }))
+        // Ensure services array is properly formatted
+        const formattedServices = services.map(service => ({
+          type: service.type,
+          description: service.description,
+          laborCost: Number(service.laborCost) || 0,
+          materialCost: Number(service.materialCost) || 0,
+          estimatedHours: Number(service.estimatedHours) || 1,
+          status: service.status || 'pending'
+        }));
+
+        // Create work order data
+        const workOrderData = {
+          title: values.title || `Work Order - ${new Date().toLocaleDateString()}`,
+          building: values.building,
+          apartmentNumber: values.apartmentNumber || '',
+          block: values.block || '',
+          apartmentStatus: values.apartmentStatus,
+          description: values.description,
+          priority: values.priority,
+          status: values.status || 'pending',
+          scheduledDate: values.scheduledDate,
+          estimatedCompletionDate: values.estimatedCompletionDate,
+          assignedTo: values.assignedTo || [],
+          services: formattedServices,
+          createdBy: user._id,
+          updatedBy: user._id
         };
 
-        await createWorkOrder(workOrder);
-        toast.success('Work order created successfully!');
+        // Submit the work order
+        await createWorkOrder(workOrderData).unwrap();
+        
+        // Show success message and reset form
+        toast.success('Work order created successfully');
+        resetForm();
+        setServices([{
+          type: 'painting',
+          description: 'Apartment Painting - 1 Room',
+          laborCost: 0,
+          materialCost: 0,
+          estimatedHours: 1,
+          status: 'pending'
+        }]);
+        setAssignedWorkers([]);
         navigate('/work-orders');
-      } catch (error) {
-        toast.error('Error creating work order');
+      } catch (err) {
+        console.error('Error creating work order:', err);
+        toast.error(err?.data?.message || 'Failed to create work order');
+      } finally {
+        setSubmitting(false);
       }
     }
   });

@@ -43,6 +43,13 @@ const commonTheme = {
     borderRadius: 8,
   },
   components: {
+    MuiModal: {
+      defaultProps: {
+        disableAutoFocus: true,
+        disableEnforceFocus: true,
+        disableEscapeKeyDown: true,
+      },
+    },
     MuiButton: {
       styleOverrides: {
         root: {
