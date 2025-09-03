@@ -334,7 +334,7 @@ router.post(
   authController.restrictTo('admin', 'manager', 'supervisor'),
   uploadWorkOrderPhotos, // Max 10 photos
   [
-    ...validateWorkOrder,
+    ...validateCreateWorkOrder,
     body('services').isArray({ min: 1 }),
     body('services.*.type').isIn([
       'cleaning', 'maintenance', 'inspection', 'renovation', 'delivery',
