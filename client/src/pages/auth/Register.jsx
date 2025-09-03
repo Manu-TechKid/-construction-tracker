@@ -44,7 +44,7 @@ const Register = () => {
       .min(6, 'Password must be at least 6 characters')
       .required('Password is required'),
     passwordConfirm: Yup.string()
-      .oneOf([Yup.ref('password'), null], 'Passwords must match')
+      .oneOf([Yup.ref('password')], 'Passwords must match')
       .required('Please confirm your password'),
     role: Yup.string()
       .oneOf(roles.map(role => role.value), 'Invalid role')
