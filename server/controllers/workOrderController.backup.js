@@ -6,7 +6,6 @@ const Building = require('../models/Building');
 const User = require('../models/User');
 const { uploadToCloudinary } = require('../utils/cloudinary');
 const { sendWorkOrderAssignedEmail } = require('../services/emailService');
-
 /**
  * @desc    Create a new work order
  * @route   POST /api/v1/work-orders
@@ -40,7 +39,6 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
     
     // Set default scheduledDate if not provided
     const workOrderScheduledDate = scheduledDate ? new Date(scheduledDate) : new Date();
-
     // Validate required fields
     const requiredFields = ['title', 'priority', 'status'];
     const missingFields = requiredFields.filter(field => !req.body[field]);
@@ -51,29 +49,24 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
         400
       ));
     }
-
     // Validate services array
     if (!Array.isArray(services) || services.length === 0) {
       return next(new AppError('At least one service is required', 400));
     }
-
     // Validate each service
     const invalidServices = services.filter(service => {
       return !service.type || !service.description || 
              service.laborCost === undefined || 
              service.materialCost === undefined;
     });
-
     if (invalidServices.length > 0) {
       return next(new AppError(
         'Each service must have type, description, laborCost, and materialCost',
         400
       ));
     }
-
     // Get the authenticated user's ID
     const createdBy = req.user._id;
-
     // Process any uploaded photos
     let photos = [];
     if (req.files && req.files.length > 0) {
@@ -85,7 +78,6 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
         uploadedAt: new Date()
       }));
     }
-
     // Process assigned workers
     const processedAssignedTo = Array.isArray(assignedTo) ? assignedTo.map(workerId => ({
       worker: workerId,
@@ -93,7 +85,6 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       assignedAt: new Date(),
       assignedBy: createdBy
     })) : [];
-
     // Process services with defaults
     const processedServices = services.map(service => ({
       type: service.type || 'other',
@@ -104,7 +95,6 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       status: service.status || 'pending',
       notes: service.notes || ''
     }));
-
     // Process notes
     const processedNotes = (Array.isArray(notes) ? notes : []).map(note => ({
       content: note.content || '',
@@ -112,7 +102,6 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       isPrivate: Boolean(note.isPrivate),
       createdAt: new Date()
     }));
-
     // Create the work order with processed data
     const workOrder = await WorkOrder.create({
       title: title.trim(),
@@ -134,14 +123,12 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       createdAt: new Date(),
       updatedAt: new Date()
     });
-
     // Populate the work order with related data for the response
     const populatedWorkOrder = await WorkOrder.findById(workOrder._id)
       .populate('building', 'name address city state zipCode')
       .populate('assignedTo.worker', 'name email phone')
       .populate('createdBy', 'name email role')
       .populate('updatedBy', 'name email role');
-
     try {
       // Send notifications to assigned workers
       if (processedAssignedTo.length > 0) {
@@ -153,12 +140,10 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
           // You might want to implement a retry mechanism for failed emails
         }
       }
-
       // Calculate total cost for the work order
       const totalCost = populatedWorkOrder.services.reduce((sum, service) => {
         return sum + (service.laborCost || 0) + (service.materialCost || 0);
       }, 0);
-
       // Prepare response data
       const responseData = {
         ...populatedWorkOrder.toObject(),
@@ -166,7 +151,6 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
         serviceCount: populatedWorkOrder.services.length,
         assignedWorkerCount: populatedWorkOrder.assignedTo.length
       };
-
       res.status(201).json({
         status: 'success',
         message: 'Work order created successfully',
@@ -179,7 +163,6 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
     handleWorkOrderError(error, next);
   }
 });
-
 // Delete a note from a work order
 exports.deleteNoteFromWorkOrder = catchAsync(async (req, res, next) => {
   try {
@@ -224,7 +207,6 @@ exports.deleteNoteFromWorkOrder = catchAsync(async (req, res, next) => {
     handleWorkOrderError(error, next);
   }
 });
-
 // Update a note in a work order
 exports.updateNoteInWorkOrder = catchAsync(async (req, res, next) => {
   try {
@@ -292,11 +274,6 @@ exports.updateNoteInWorkOrder = catchAsync(async (req, res, next) => {
         note: updatedNote
       }
     });
-  } catch (error) {
-    handleWorkOrderError(error, next);
-  }
-});
-
 // Add a note to a work order
 exports.addNoteToWorkOrder = catchAsync(async (req, res, next) => {
   try {
@@ -354,7 +331,6 @@ exports.addNoteToWorkOrder = catchAsync(async (req, res, next) => {
     handleWorkOrderError(error, next);
   }
 });
-
 // Get form data for work order creation/editing
 exports.getWorkOrderFormData = catchAsync(async (req, res, next) => {
   try {
@@ -447,7 +423,6 @@ exports.getWorkOrderFormData = catchAsync(async (req, res, next) => {
     handleWorkOrderError(error, next);
   }
 });
-
 // Assign workers to a work order
 exports.assignWorkers = catchAsync(async (req, res, next) => {
   try {
@@ -524,7 +499,6 @@ exports.assignWorkers = catchAsync(async (req, res, next) => {
     handleWorkOrderError(error, next);
   }
 });
-
 // Update worker assignment status
 exports.updateAssignmentStatus = catchAsync(async (req, res, next) => {
   try {
@@ -613,7 +587,6 @@ exports.updateAssignmentStatus = catchAsync(async (req, res, next) => {
     handleWorkOrderError(error, next);
   }
 });
-
 // Get worker assignments for a work order
 exports.getWorkerAssignments = catchAsync(async (req, res, next) => {
   try {
@@ -661,7 +634,6 @@ exports.getWorkerAssignments = catchAsync(async (req, res, next) => {
     handleWorkOrderError(error, next);
   }
 });
-
 // Report an issue with a work order
 exports.reportIssue = catchAsync(async (req, res, next) => {
   try {
@@ -740,7 +712,6 @@ exports.reportIssue = catchAsync(async (req, res, next) => {
     handleWorkOrderError(error, next);
   }
 });
-
 // Update task status in work order checklist
 exports.updateTaskStatus = catchAsync(async (req, res, next) => {
   try {
@@ -815,7 +786,6 @@ exports.updateTaskStatus = catchAsync(async (req, res, next) => {
     handleWorkOrderError(error, next);
   }
 });
-
 // Add a task to work order checklist
 exports.addTaskToChecklist = catchAsync(async (req, res, next) => {
   try {
@@ -865,7 +835,6 @@ exports.addTaskToChecklist = catchAsync(async (req, res, next) => {
     handleWorkOrderError(error, next);
   }
 });
-
 // @desc    Get a single work order by ID
 // @route   GET /api/v1/work-orders/:id
 // @access  Private
@@ -878,16 +847,13 @@ exports.getWorkOrder = catchAsync(async (req, res, next) => {
       .populate('updatedBy', 'name email role')
       .populate('services.completedBy', 'name email')
       .populate('notes.createdBy', 'name email role');
-
     if (!workOrder) {
       return next(new AppError('No work order found with that ID', 404));
     }
-
     // Calculate total cost
     const totalCost = workOrder.services.reduce((sum, service) => {
       return sum + (service.laborCost || 0) + (service.materialCost || 0);
     }, 0);
-
     // Calculate completion percentage
     const totalTasks = workOrder.services.length;
     const completedTasks = workOrder.services.filter(
@@ -896,7 +862,6 @@ exports.getWorkOrder = catchAsync(async (req, res, next) => {
     const completionPercentage = totalTasks > 0 
       ? Math.round((completedTasks / totalTasks) * 100) 
       : 0;
-
     // Prepare response data
     const responseData = {
       ...workOrder.toObject(),
@@ -905,7 +870,6 @@ exports.getWorkOrder = catchAsync(async (req, res, next) => {
       totalTasks,
       completedTasks
     };
-
     res.status(200).json({
       status: 'success',
       data: {
@@ -939,22 +903,18 @@ exports.getWorkOrder = catchAsync(async (req, res, next) => {
         select: 'name email',
         options: { allowEmptyArray: true }
       });
-
     if (!workOrder) {
       return next(new AppError('No work order found with that ID', 404));
     }
-
     // Check if user has permission to view this work order
     const isAdmin = req.user.role === 'admin' || req.user.role === 'manager';
     const isSupervisor = req.user.role === 'supervisor';
     const isAssigned = workOrder.assignedTo.some(
       assignment => assignment.worker._id.toString() === req.user._id.toString()
     );
-
     if (!isAdmin && !isSupervisor && !isAssigned) {
       return next(new AppError('You do not have permission to view this work order', 403));
     }
-
     res.status(200).json({
       status: 'success',
       data: {
@@ -965,24 +925,20 @@ exports.getWorkOrder = catchAsync(async (req, res, next) => {
     handleWorkOrderError(error, next);
   }
 });
-
 // Get work order statistics for a building
 exports.getWorkOrderStats = catchAsync(async (req, res, next) => {
   try {
     const { buildingId } = req.params;
     const { startDate, endDate } = req.query;
-
     // 1) Build date filter if dates provided
     const dateFilter = {};
     if (startDate) dateFilter.$gte = new Date(startDate);
     if (endDate) dateFilter.$lte = new Date(endDate);
-
     // 2) Build the main query
     const query = { building: buildingId };
     if (Object.keys(dateFilter).length > 0) {
       query.createdAt = dateFilter;
     }
-
     // 3) Get counts by status
     const stats = await WorkOrder.aggregate([
       { $match: query },
@@ -1005,10 +961,8 @@ exports.getWorkOrderStats = catchAsync(async (req, res, next) => {
       },
       { $sort: { status: 1 } }
     ]);
-
     // 4) Get total work orders
     const totalWorkOrders = await WorkOrder.countDocuments(query);
-
     // 5) Get average completion time for completed work orders
     const completedWorkOrders = await WorkOrder.aggregate([
       {
@@ -1022,7 +976,6 @@ exports.getWorkOrderStats = catchAsync(async (req, res, next) => {
         }
       }
     ]);
-
     // 6) Format the response
     const result = {
       status: 'success',
@@ -1033,13 +986,11 @@ exports.getWorkOrderStats = catchAsync(async (req, res, next) => {
         totalCost: completedWorkOrders[0]?.totalCost || 0
       }
     };
-
     res.status(200).json(result);
   } catch (error) {
     handleWorkOrderError(error, next);
   }
 });
-
 // Helper function to handle common error cases
 const handleWorkOrderError = (error, next) => {
   console.error('Work Order Error:', error);
@@ -1067,7 +1018,6 @@ const handleWorkOrderError = (error, next) => {
   
   return next(new AppError(`An unexpected error occurred: ${error.message}`, 500));
 };
-
 // Get all work orders with filtering, sorting, and pagination
 exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
   try {
@@ -1075,7 +1025,6 @@ exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
     const queryObj = { ...req.query };
     const excludedFields = ['page', 'sort', 'limit', 'fields'];
     excludedFields.forEach(el => delete queryObj[el]);
-
     // 2) Advanced filtering (gt, gte, lt, lte)
     let queryStr = JSON.stringify(queryObj);
     queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, match => `$${match}`);
@@ -1084,7 +1033,6 @@ exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
       .populate('building', 'name address')
       .populate('createdBy', 'name email')
       .populate('assignedTo.worker', 'name email role');
-
     // 3) Sorting
     if (req.query.sort) {
       const sortBy = req.query.sort.split(',').join(' ');
@@ -1092,7 +1040,6 @@ exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
     } else {
       query = query.sort('-createdAt');
     }
-
     // 4) Field limiting
     if (req.query.fields) {
       const fields = req.query.fields.split(',').join(' ');
@@ -1100,18 +1047,14 @@ exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
     } else {
       query = query.select('-__v');
     }
-
     // 5) Pagination
     const page = req.query.page * 1 || 1;
     const limit = req.query.limit * 1 || 100;
     const skip = (page - 1) * limit;
-
     query = query.skip(skip).limit(limit);
-
     // Execute query
     const workOrders = await query;
     const total = await WorkOrder.countDocuments(JSON.parse(queryStr));
-
     // Send response
     res.status(200).json({
       status: 'success',
@@ -1129,7 +1072,6 @@ exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
     handleWorkOrderError(error, next);
   }
 });
-
 // Update work order with improved error handling
 exports.updateWorkOrder = catchAsync(async (req, res, next) => {
   try {
@@ -1138,32 +1080,27 @@ exports.updateWorkOrder = catchAsync(async (req, res, next) => {
     if (!workOrder) {
       return next(new AppError('No work order found with that ID', 404));
     }
-
     // 2) Check permissions
     const isAdmin = req.user.role === 'admin' || req.user.role === 'manager';
     const isSupervisor = req.user.role === 'supervisor';
     const isAssignedWorker = workOrder.assignedTo.some(
       assignment => assignment.worker.toString() === req.user._id.toString()
     );
-
     if (!isAdmin && !isSupervisor && !isAssignedWorker) {
       return next(new AppError('You do not have permission to update this work order', 403));
     }
-
     // 3) Define allowed fields and prepare update data
     const allowedFields = [
       'title', 'apartmentNumber', 'block', 'description', 'priority', 
       'status', 'scheduledDate', 'estimatedCompletionDate', 'notes', 
       'apartmentStatus', 'isEmergency', 'building'
     ];
-
     const updateData = {};
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
         updateData[field] = req.body[field];
       }
     });
-
     // 4) Process file uploads if any
     if (req.files && req.files.length > 0) {
       try {
@@ -1180,7 +1117,6 @@ exports.updateWorkOrder = catchAsync(async (req, res, next) => {
         return next(new AppError('Error uploading one or more files', 500));
       }
     }
-
     // 5) Process services if provided
     if (req.body.services) {
       if (!Array.isArray(req.body.services) || req.body.services.length === 0) {
@@ -1188,12 +1124,10 @@ exports.updateWorkOrder = catchAsync(async (req, res, next) => {
       }
       updateData.services = processServices(req.body.services);
     }
-
     // 6) Process worker assignments if provided
     if (req.body.assignedTo && (isAdmin || isSupervisor)) {
       updateData.assignedTo = processAssignments(req.body.assignedTo, req.user);
     }
-
     // 7) Update the work order
     const updatedWorkOrder = await WorkOrder.findByIdAndUpdate(
       req.params.id,
@@ -1203,11 +1137,9 @@ exports.updateWorkOrder = catchAsync(async (req, res, next) => {
     .populate('building', 'name address')
     .populate('createdBy', 'name email')
     .populate('assignedTo.worker', 'name email role');
-
     if (!updatedWorkOrder) {
       return next(new AppError('No work order found with that ID', 404));
     }
-
     // 8) Send notifications if workers were assigned
     if (req.body.assignedTo && updatedWorkOrder.assignedTo.length > 0) {
       try {
@@ -1218,7 +1150,6 @@ exports.updateWorkOrder = catchAsync(async (req, res, next) => {
             )
           )
           .map(assignment => assignment.worker._id);
-
         if (newlyAssigned.length > 0 && (isAdmin || isSupervisor)) {
           await Promise.all(
             newlyAssigned.map(workerId => 
@@ -1231,7 +1162,6 @@ exports.updateWorkOrder = catchAsync(async (req, res, next) => {
         // Don't fail the request if email sending fails
       }
     }
-
     // 9) Send success response
     res.status(200).json({
       status: 'success',
@@ -1243,7 +1173,6 @@ exports.updateWorkOrder = catchAsync(async (req, res, next) => {
     handleWorkOrderError(error, next);
   }
 });
-
 // @desc    Delete a work order
 // @route   DELETE /api/v1/work-orders/:id
 // @access  Private/Admin/Manager
@@ -1254,7 +1183,6 @@ exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
     if (!workOrder) {
       return next(new AppError('No work order found with that ID', 404));
     }
-
     // 2) Check if the user has permission to delete
     // Only admins and managers can delete work orders
     if (req.user.role !== 'admin' && req.user.role !== 'manager') {
@@ -1262,7 +1190,6 @@ exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
         new AppError('You do not have permission to delete work orders', 403)
       );
     }
-
     // 3) Check if the work order can be deleted
     // Prevent deletion if the work order is in progress or completed
     if (workOrder.status === 'in_progress' || workOrder.status === 'completed') {
@@ -1273,7 +1200,6 @@ exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
         )
       );
     }
-
     // 4) Delete associated files (photos, documents, etc.)
     if (workOrder.photos && workOrder.photos.length > 0) {
       try {
@@ -1292,10 +1218,8 @@ exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
         // Continue with deletion even if file deletion fails
       }
     }
-
     // 5) Delete the work order
     await WorkOrder.findByIdAndDelete(req.params.id);
-
     // 6) Clean up any related data
     await Promise.all([
       // Remove work order reference from assigned workers
@@ -1309,10 +1233,8 @@ exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
         { $pull: { workOrders: req.params.id } }
       )
     ]);
-
     // 7) Log the deletion
     console.log(`Work order ${req.params.id} deleted by user ${req.user.id}`);
-
     // 8) Send success response
     res.status(204).json({
       status: 'success',
@@ -1322,3 +1244,5 @@ exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
     handleWorkOrderError(error, next);
   }
 });
+
+
