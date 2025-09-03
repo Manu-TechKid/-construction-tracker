@@ -1252,26 +1252,28 @@ exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
     // 1) Find the work order and check if it exists
     const workOrder = await WorkOrder.findById(req.params.id);
     if (!workOrder) {
-      return next(new AppError('No work order found with that ID', 404));
+      return res.status(404).json({
+        status: 'error',
+        message: 'No work order found with that ID'
+      });
     }
 
     // 2) Check if the user has permission to delete
     // Only admins and managers can delete work orders
     if (req.user.role !== 'admin' && req.user.role !== 'manager') {
-      return next(
-        new AppError('You do not have permission to delete work orders', 403)
-      );
+      return res.status(403).json({
+        status: 'error',
+        message: 'You do not have permission to delete work orders'
+      });
     }
 
     // 3) Check if the work order can be deleted
     // Prevent deletion if the work order is in progress or completed
     if (workOrder.status === 'in_progress' || workOrder.status === 'completed') {
-      return next(
-        new AppError(
-          'Cannot delete a work order that is in progress or completed. Please cancel it first.',
-          400
-        )
-      );
+      return res.status(400).json({
+        status: 'error',
+        message: 'Cannot delete a work order that is in progress or completed. Please cancel it first.'
+      });
     }
 
     // 4) Delete associated files (photos, documents, etc.)
@@ -1313,12 +1315,17 @@ exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
     // 7) Log the deletion
     console.log(`Work order ${req.params.id} deleted by user ${req.user.id}`);
 
-    // 8) Send success response
-    res.status(204).json({
+    // 8) Send success response with 200 status code and success message
+    res.status(200).json({
       status: 'success',
+      message: 'Work order deleted successfully',
       data: null
     });
   } catch (error) {
-    handleWorkOrderError(error, next);
+    console.error('Error in deleteWorkOrder:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error.message || 'An error occurred while deleting the work order'
+    });
   }
 });

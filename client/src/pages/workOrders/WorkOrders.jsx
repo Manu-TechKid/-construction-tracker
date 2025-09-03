@@ -110,17 +110,26 @@ const WorkOrders = () => {
   };
 
   const handleDelete = async () => {
-    if (selectedWorkOrder) {
-      try {
-        await deleteWorkOrder(selectedWorkOrder._id).unwrap();
+    if (!selectedWorkOrder) return;
+    
+    try {
+      const result = await deleteWorkOrder(selectedWorkOrder._id).unwrap();
+      
+      if (result?.status === 'success' || result?.success) {
         toast.success('Work order deleted successfully');
         setDeleteDialogOpen(false);
         handleMenuClose();
         refetch();
-      } catch (error) {
-        console.error('Error deleting work order:', error);
-        toast.error(error?.data?.message || 'Failed to delete work order');
+      } else {
+        throw new Error(result?.message || 'Failed to delete work order');
       }
+    } catch (error) {
+      console.error('Error deleting work order:', error);
+      toast.error(
+        error?.data?.message || 
+        error?.message || 
+        'Failed to delete work order. Please try again.'
+      );
     }
   };
 
