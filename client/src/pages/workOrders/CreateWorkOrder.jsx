@@ -352,7 +352,6 @@ const CreateWorkOrder = () => {
   // Extract buildings from API response
   const buildings = buildingsData?.data?.buildings || buildingsData?.data || [];
 
-  // State for services array
   // State for worker assignment dialog
   const [workerDialogOpen, setWorkerDialogOpen] = useState(false);
   const [assignedWorkers, setAssignedWorkers] = useState([]);
@@ -366,6 +365,40 @@ const CreateWorkOrder = () => {
     estimatedHours: 1,
     status: 'pending'
   }]);
+
+  // Initialize formik
+  const formik = useFormik({
+    initialValues: {
+      title: '',
+      building: '',
+      apartmentNumber: '',
+      block: '',
+      apartmentStatus: 'vacant',
+      workType: '',
+      workSubType: '',
+      description: '',
+      priority: 'medium',
+      status: 'pending',
+      scheduledDate: new Date(),
+      estimatedCompletionDate: null,
+      assignedTo: [],
+      services: [...services],
+      notes: ''
+    },
+    validationSchema,
+    onSubmit: async (values, { setSubmitting, setFieldError }) => {
+      try {
+        await createWorkOrder(values).unwrap();
+        toast.success('Work order created successfully');
+        navigate('/work-orders');
+      } catch (err) {
+        console.error('Failed to create work order:', err);
+        toast.error(err?.data?.message || 'Failed to create work order');
+      } finally {
+        setSubmitting(false);
+      }
+    }
+  });
 
   // Add a new service
   const addService = () => {
@@ -394,6 +427,29 @@ const CreateWorkOrder = () => {
     formik.setFieldValue('services', newServices);
   };
 
+  // Update a service field
+  const updateService = (index, field, value) => {
+    const updatedServices = [...services];
+    updatedServices[index] = {
+      ...updatedServices[index],
+      [field]: value
+    };
+    setServices(updatedServices);
+    formik.setFieldValue('services', updatedServices);
+  };
+
+  // Get available descriptions for a service type
+  const getAvailableDescriptions = (type) => {
+    return serviceDescriptions[type] || [];
+  };
+
+  // Get assigned workers text
+  const getAssignedWorkersText = () => {
+    if (!assignedWorkers.length) return 'No workers assigned';
+    if (assignedWorkers.length === 1) return `1 worker assigned`;
+    return `${assignedWorkers.length} workers assigned`;
+  };
+
   // Handle worker assignment
   const handleOpenWorkerDialog = () => {
     setWorkerDialogOpen(true);
@@ -401,6 +457,20 @@ const CreateWorkOrder = () => {
 
   const handleCloseWorkerDialog = () => {
     setWorkerDialogOpen(false);
+  };
+
+  // Handle saving worker assignments
+  const handleSaveWorkers = (selectedWorkers) => {
+    setAssignedWorkers(selectedWorkers);
+    formik.setFieldValue('assignedTo', selectedWorkers);
+    setWorkerDialogOpen(false);
+  };
+
+  // Handle form cancel
+  const handleCancel = () => {
+    if (window.confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
+      navigate('/work-orders');
+    }
   };
 
 
