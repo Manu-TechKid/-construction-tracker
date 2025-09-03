@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -21,141 +21,309 @@ import {
   Alert,
   Card,
   CardContent,
-  Divider
+  Divider,
+  Autocomplete,
+  Checkbox,
+  ListItemText,
+  InputAdornment,
+  FormLabel,
+  FormGroup,
+  FormControlLabel,
+  Switch,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
   Save as SaveIcon,
   Work as WorkIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  PersonAdd as PersonAddIcon,
+  PhotoCamera as PhotoCameraIcon,
+  Delete as DeleteIcon,
+  Info as InfoIcon
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { format } from 'date-fns';
 import { toast } from 'react-toastify';
+import { useDropzone } from 'react-dropzone';
 
 import { useCreateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
+import { useGetWorkersQuery } from '../../features/workers/workersApiSlice';
 import { useAuth } from '../../hooks/useAuth';
+import { useBuildingContext } from '../../contexts/BuildingContext';
+import WorkerSelectionDialog from '../../components/workOrders/WorkerSelectionDialog';
 
-// Validation schema - Updated to match WorkOrder database model
+// Extended validation schema to match all WorkOrder model fields
 const validationSchema = Yup.object({
+  title: Yup.string().required('Title is required').max(100, 'Title cannot exceed 100 characters'),
   building: Yup.string().required('Building is required'),
-  apartmentNumber: Yup.string(),
-  block: Yup.string(),
-  apartmentStatus: Yup.string().required('Apartment status is required').oneOf(['vacant', 'occupied', 'under_renovation', 'reserved']),
+  apartmentNumber: Yup.string().max(20, 'Apartment number cannot exceed 20 characters'),
+  block: Yup.string().max(50, 'Block cannot exceed 50 characters'),
+  apartmentStatus: Yup.string()
+    .required('Apartment status is required')
+    .oneOf(['vacant', 'occupied', 'under_renovation', 'reserved'], 'Invalid status'),
   description: Yup.string().required('Description is required'),
-  priority: Yup.string().required('Priority is required').oneOf(['low', 'medium', 'high', 'urgent']),
-  startDate: Yup.date().required('Start date is required'),
-  endDate: Yup.date().required('End date is required').min(Yup.ref('startDate'), 'End date must be after start date'),
-  scheduledDate: Yup.date().required('Scheduled date is required'),
-  services: Yup.array().min(1, 'At least one service is required').of(
+  priority: Yup.string()
+    .required('Priority is required')
+    .oneOf(['low', 'medium', 'high', 'urgent'], 'Invalid priority'),
+  status: Yup.string()
+    .required('Status is required')
+    .oneOf(['pending', 'in_progress', 'on_hold', 'completed', 'cancelled'], 'Invalid status'),
+  scheduledDate: Yup.date()
+    .required('Scheduled date is required')
+    .min(new Date(), 'Scheduled date cannot be in the past'),
+  estimatedCompletionDate: Yup.date()
+    .min(Yup.ref('scheduledDate'), 'Completion date must be after scheduled date')
+    .nullable(),
+  assignedTo: Yup.array().of(
     Yup.object({
-      type: Yup.string().required('Service type is required'),
-      description: Yup.string().required('Service description is required'),
-      laborCost: Yup.number().min(0, 'Labor cost must be positive').required('Labor cost is required'),
-      materialCost: Yup.number().min(0, 'Material cost must be positive').required('Material cost is required')
+      worker: Yup.string().required('Worker ID is required'),
+      status: Yup.string().oneOf(['pending', 'in_progress', 'completed', 'rejected']),
+      notes: Yup.string(),
+      timeSpent: Yup.object({
+        hours: Yup.number().min(0, 'Hours cannot be negative'),
+        minutes: Yup.number().min(0, 'Minutes cannot be negative').max(59, 'Minutes must be less than 60')
+      })
     })
-  )
+  ),
+  services: Yup.array()
+    .min(1, 'At least one service is required')
+    .of(
+      Yup.object({
+        type: Yup.string()
+          .required('Service type is required')
+          .oneOf(
+            [
+              'painting', 'cleaning', 'repair', 'plumbing', 'electrical', 
+              'hvac', 'flooring', 'roofing', 'carpentry', 'other'
+            ],
+            'Invalid service type'
+          ),
+        description: Yup.string().required('Service description is required'),
+        laborCost: Yup.number()
+          .min(0, 'Labor cost must be positive')
+          .required('Labor cost is required'),
+        materialCost: Yup.number()
+          .min(0, 'Material cost must be positive')
+          .required('Material cost is required'),
+        status: Yup.string()
+          .oneOf(
+            ['pending', 'in_progress', 'completed', 'on_hold', 'cancelled'],
+            'Invalid status'
+          )
+      })
+    ),
+  notes: Yup.array().of(
+    Yup.object({
+      content: Yup.string().required('Note content is required'),
+      isPrivate: Yup.boolean()
+    })
+  ),
+  photos: Yup.array().of(
+    Yup.object({
+      url: Yup.string().required('Photo URL is required'),
+      filename: Yup.string(),
+      originalname: Yup.string()
+    })
+  ),
+  isBilled: Yup.boolean(),
+  isPaid: Yup.boolean(),
+  requiresFollowUp: Yup.boolean()
 });
 
-// Service type options matching WorkOrder.services schema
+// Service type options with categories
 const serviceTypeOptions = [
-  { value: 'painting', label: 'Painting' },
-  { value: 'cleaning', label: 'Cleaning' },
-  { value: 'repair', label: 'Repair' },
-  { value: 'plumbing', label: 'Plumbing' },
-  { value: 'electrical', label: 'Electrical' },
-  { value: 'hvac', label: 'HVAC' },
-  { value: 'flooring', label: 'Flooring' },
-  { value: 'roofing', label: 'Roofing' },
-  { value: 'carpentry', label: 'Carpentry' },
-  { value: 'other', label: 'Other' }
+  { value: 'painting', label: 'Painting', category: 'Interior' },
+  { value: 'cleaning', label: 'Cleaning', category: 'Maintenance' },
+  { value: 'repair', label: 'Repair', category: 'Maintenance' },
+  { value: 'plumbing', label: 'Plumbing', category: 'Maintenance' },
+  { value: 'electrical', label: 'Electrical', category: 'Maintenance' },
+  { value: 'hvac', label: 'HVAC', category: 'Maintenance' },
+  { value: 'flooring', label: 'Flooring', category: 'Interior' },
+  { value: 'roofing', label: 'Roofing', category: 'Exterior' },
+  { value: 'carpentry', label: 'Carpentry', category: 'Interior' },
+  { value: 'landscaping', label: 'Landscaping', category: 'Exterior' },
+  { value: 'appliance', label: 'Appliance', category: 'Maintenance' },
+  { value: 'pest_control', label: 'Pest Control', category: 'Maintenance' },
+  { value: 'safety', label: 'Safety Inspection', category: 'Inspection' },
+  { value: 'move_in', label: 'Move-in', category: 'Inspection' },
+  { value: 'move_out', label: 'Move-out', category: 'Inspection' },
+  { value: 'other', label: 'Other', category: 'Miscellaneous' }
 ];
 
-// Service descriptions based on service type
+// Service descriptions based on service type with estimated times
 const serviceDescriptions = {
   painting: [
-    'Apartment Painting - 1 Room',
-    'Apartment Painting - 2 Rooms', 
-    'Apartment Painting - 3 Rooms',
-    'Door Painting',
-    'Ceiling Painting',
-    'Cabinet Painting',
-    'Hallway Painting',
-    'Paint Touch-ups',
-    'Full Interior Painting',
-    'Exterior Painting'
+    { label: 'Apartment Painting - 1 Room', estimatedHours: 4 },
+    { label: 'Apartment Painting - 2 Rooms', estimatedHours: 6 },
+    { label: 'Apartment Painting - 3+ Rooms', estimatedHours: 8 },
+    { label: 'Door Painting', estimatedHours: 1 },
+    { label: 'Ceiling Painting', estimatedHours: 3 },
+    { label: 'Cabinet Painting', estimatedHours: 5 },
+    { label: 'Hallway Painting', estimatedHours: 2 },
+    { label: 'Paint Touch-ups', estimatedHours: 1 },
+    { label: 'Full Interior Painting', estimatedHours: 16 },
+    { label: 'Exterior Painting', estimatedHours: 24 }
   ],
   cleaning: [
-    '1 Bedroom Cleaning',
-    '2 Bedroom Cleaning',
-    '3 Bedroom Cleaning',
-    'Touch-up Cleaning',
-    'Heavy Cleaning',
-    'Carpet Cleaning',
-    'Gutter Cleaning',
-    'Window Cleaning',
-    'Deep Cleaning',
-    'Move-out Cleaning'
+    { label: '1 Bedroom Cleaning', estimatedHours: 2 },
+    { label: '2 Bedroom Cleaning', estimatedHours: 3 },
+    { label: '3+ Bedroom Cleaning', estimatedHours: 4 },
+    { label: 'Touch-up Cleaning', estimatedHours: 1 },
+    { label: 'Heavy Cleaning', estimatedHours: 6 },
+    { label: 'Carpet Cleaning', estimatedHours: 3 },
+    { label: 'Gutter Cleaning', estimatedHours: 2 },
+    { label: 'Window Cleaning', estimatedHours: 2 },
+    { label: 'Deep Cleaning', estimatedHours: 8 },
+    { label: 'Move-out Cleaning', estimatedHours: 6 }
   ],
   repair: [
-    'Air Conditioning Repair',
-    'Door Repair',
-    'Ceiling Repair',
-    'Floor Repair',
-    'Wall Repair',
-    'Window Repair',
-    'Appliance Repair',
-    'General Maintenance Repair'
+    { label: 'Air Conditioning Repair', estimatedHours: 2 },
+    { label: 'Door Repair', estimatedHours: 1 },
+    { label: 'Ceiling Repair', estimatedHours: 3 },
+    { label: 'Floor Repair', estimatedHours: 2 },
+    { label: 'Wall Repair', estimatedHours: 2 },
+    { label: 'Window Repair', estimatedHours: 2 },
+    { label: 'Appliance Repair', estimatedHours: 2 },
+    { label: 'General Maintenance Repair', estimatedHours: 4 },
+    { label: 'Carpentry Repair', estimatedHours: 3 },
+    { label: 'Roof Repair', estimatedHours: 6 },
+    { label: 'Plumbing Fixture Repair', estimatedHours: 2 },
+    { label: 'Electrical Outlet Repair', estimatedHours: 1.5 }
   ],
   plumbing: [
-    'Leak Repair',
-    'Pipe Installation',
-    'Drain Cleaning',
-    'Fixture Installation',
-    'Water Heater Service'
+    { label: 'Leak Repair', estimatedHours: 1.5 },
+    { label: 'Pipe Installation', estimatedHours: 3 },
+    { label: 'Drain Cleaning', estimatedHours: 1 },
+    { label: 'Fixture Installation', estimatedHours: 2 },
+    { label: 'Water Heater Service', estimatedHours: 2 },
+    { label: 'Toilet Repair', estimatedHours: 1.5 },
+    { label: 'Faucet Replacement', estimatedHours: 1 },
+    { label: 'Shower Valve Repair', estimatedHours: 2 },
+    { label: 'Sewer Line Inspection', estimatedHours: 3 },
+    { label: 'Sump Pump Installation', estimatedHours: 4 }
   ],
   electrical: [
-    'Outlet Installation',
-    'Light Fixture Installation',
-    'Wiring Repair',
-    'Circuit Breaker Service',
-    'Electrical Inspection'
+    { label: 'Outlet Installation', estimatedHours: 1 },
+    { label: 'Light Fixture Installation', estimatedHours: 1.5 },
+    { label: 'Circuit Breaker Replacement', estimatedHours: 2 },
+    { label: 'GFCI Outlet Installation', estimatedHours: 1.5 },
+    { label: 'Ceiling Fan Installation', estimatedHours: 2 },
+    { label: 'Electrical Panel Upgrade', estimatedHours: 6 },
+    { label: 'Wiring Inspection', estimatedHours: 2 },
+    { label: 'Smoke Detector Installation', estimatedHours: 1 },
+    { label: 'Generator Installation', estimatedHours: 8 },
+    { label: 'Emergency Electrical Repair', estimatedHours: 4 },
+    { label: 'Wiring Repair', estimatedHours: 3 },
+    { label: 'Circuit Breaker Service', estimatedHours: 1.5 },
+    { label: 'Electrical Inspection', estimatedHours: 2 },
+    { label: 'Surge Protector Installation', estimatedHours: 1.5 },
+    { label: 'Landscape Lighting Installation', estimatedHours: 4 }
   ],
   hvac: [
-    'AC Installation',
-    'Heating Repair',
-    'Vent Cleaning',
-    'Filter Replacement',
-    'System Maintenance'
+    { label: 'AC Installation', estimatedHours: 6 },
+    { label: 'Heating Repair', estimatedHours: 3 },
+    { label: 'Vent Cleaning', estimatedHours: 2 },
+    { label: 'Filter Replacement', estimatedHours: 0.5 },
+    { label: 'System Maintenance', estimatedHours: 2 },
+    { label: 'Thermostat Installation', estimatedHours: 1.5 },
+    { label: 'Ductwork Repair', estimatedHours: 4 },
+    { label: 'Heat Pump Service', estimatedHours: 2.5 },
+    { label: 'Air Handler Replacement', estimatedHours: 5 },
+    { label: 'Emergency HVAC Repair', estimatedHours: 4 }
   ],
   flooring: [
-    'Carpet Installation',
-    'Hardwood Installation',
-    'Tile Installation',
-    'Floor Repair',
-    'Floor Refinishing'
+    { label: 'Carpet Installation', estimatedHours: 8 },
+    { label: 'Hardwood Installation', estimatedHours: 12 },
+    { label: 'Tile Installation', estimatedHours: 16 },
+    { label: 'Floor Refinishing', estimatedHours: 24 },
+    { label: 'Laminate Installation', estimatedHours: 10 },
+    { label: 'Vinyl Plank Installation', estimatedHours: 10 },
+    { label: 'Subfloor Repair', estimatedHours: 6 },
+    { label: 'Baseboard Installation', estimatedHours: 4 },
+    { label: 'Stair Tread Replacement', estimatedHours: 6 },
+    { label: 'Radiant Floor Heating', estimatedHours: 16 }
   ],
   roofing: [
-    'Roof Repair',
-    'Roof Inspection',
-    'Gutter Repair',
-    'Leak Repair',
-    'Roof Replacement'
+    { label: 'Shingle Replacement', estimatedHours: 8 },
+    { label: 'Roof Inspection', estimatedHours: 2 },
+    { label: 'Leak Repair', estimatedHours: 4 },
+    { label: 'Gutter Installation', estimatedHours: 6 },
+    { label: 'Roof Coating', estimatedHours: 12 },
+    { label: 'Flashing Repair', estimatedHours: 3 },
+    { label: 'Roof Vent Installation', estimatedHours: 2 },
+    { label: 'Skylight Installation', estimatedHours: 6 },
+    { label: 'Ice Dam Removal', estimatedHours: 4 },
+    { label: 'Emergency Tarp Installation', estimatedHours: 3 }
   ],
   carpentry: [
-    'Cabinet Installation',
-    'Door Installation',
-    'Trim Work',
-    'Custom Carpentry',
-    'Furniture Repair'
+    { label: 'Cabinet Installation', estimatedHours: 8 },
+    { label: 'Trim Work', estimatedHours: 6 },
+    { label: 'Deck Building', estimatedHours: 24 },
+    { label: 'Door Installation', estimatedHours: 3 },
+    { label: 'Custom Shelving', estimatedHours: 5 },
+    { label: 'Crown Molding', estimatedHours: 4 },
+    { label: 'Wainscoting', estimatedHours: 8 },
+    { label: 'Built-in Furniture', estimatedHours: 12 },
+    { label: 'Window Trim', estimatedHours: 3 },
+    { label: 'Stair Railing', estimatedHours: 6 },
+    { label: 'Furniture Repair', estimatedHours: 4 }
+  ],
+  landscaping: [
+    { label: 'Lawn Mowing', estimatedHours: 2 },
+    { label: 'Yard Cleanup', estimatedHours: 4 },
+    { label: 'Garden Bed Maintenance', estimatedHours: 3 },
+    { label: 'Tree Trimming', estimatedHours: 6 },
+    { label: 'Shrub Pruning', estimatedHours: 4 },
+    { label: 'Flower Bed Installation', estimatedHours: 8 },
+    { label: 'Patio Installation', estimatedHours: 12 },
+    { label: 'Retaining Wall Installation', estimatedHours: 16 },
+    { label: 'Irrigation System Installation', estimatedHours: 10 },
+    { label: 'Outdoor Lighting Installation', estimatedHours: 8 }
+  ],
+  appliance: [
+    { label: 'Refrigerator Installation', estimatedHours: 2 },
+    { label: 'Dishwasher Installation', estimatedHours: 2 },
+    { label: 'Washing Machine Installation', estimatedHours: 2 },
+    { label: 'Dryer Installation', estimatedHours: 2 },
+    { label: 'Oven Installation', estimatedHours: 3 },
+    { label: 'Microwave Installation', estimatedHours: 1.5 },
+    { label: 'Garbage Disposal Installation', estimatedHours: 1.5 },
+    { label: 'Range Hood Installation', estimatedHours: 2 },
+    { label: 'Appliance Repair', estimatedHours: 2 }
+  ],
+  pest_control: [
+    { label: 'Ant Control', estimatedHours: 1 },
+    { label: 'Bed Bug Treatment', estimatedHours: 4 },
+    { label: 'Cockroach Control', estimatedHours: 2 },
+    { label: 'Rodent Control', estimatedHours: 3 },
+    { label: 'Termite Treatment', estimatedHours: 6 },
+    { label: 'Flea and Tick Control', estimatedHours: 2 },
+    { label: 'Mosquito Control', estimatedHours: 3 },
+    { label: 'Spider Control', estimatedHours: 1.5 },
+    { label: 'Wildlife Removal', estimatedHours: 4 }
+  ],
+  safety: [
+    { label: 'Smoke Detector Check', estimatedHours: 1 },
+    { label: 'Carbon Monoxide Testing', estimatedHours: 1 },
+    { label: 'Fire Extinguisher Inspection', estimatedHours: 0.5 },
+    { label: 'Emergency Exit Check', estimatedHours: 1 },
+    { label: 'Safety Equipment Audit', estimatedHours: 2 },
+    { label: 'Fire Alarm Testing', estimatedHours: 2 },
+    { label: 'Elevator Safety Inspection', estimatedHours: 3 },
+    { label: 'Handrail Inspection', estimatedHours: 1 },
+    { label: 'Lighting Safety Check', estimatedHours: 1.5 },
+    { label: 'Emergency Lighting Test', estimatedHours: 1 }
   ],
   other: [
-    'Custom Service',
-    'Special Request',
-    'Consultation',
-    'Emergency Service'
+    { label: 'Custom Service', estimatedHours: 4 },
+    { label: 'Special Request', estimatedHours: 4 },
+    { label: 'Consultation', estimatedHours: 2 },
+    { label: 'Emergency Service', estimatedHours: 4 }
   ]
 };
 
@@ -183,12 +351,69 @@ const CreateWorkOrder = () => {
   const buildings = buildingsData?.data?.buildings || buildingsData?.data || [];
 
   // State for services array
+  // State for worker assignment dialog
+  const [workerDialogOpen, setWorkerDialogOpen] = useState(false);
+  const [assignedWorkers, setAssignedWorkers] = useState([]);
+  
+  // State for services array
   const [services, setServices] = useState([{
     type: '',
     description: '',
     laborCost: 0,
-    materialCost: 0
+    materialCost: 0,
+    estimatedHours: 1,
+    status: 'pending'
   }]);
+
+  const addService = () => {
+    setServices([...services, { 
+      type: '', 
+      description: '', 
+      laborCost: 0, 
+      materialCost: 0, 
+      estimatedHours: 1,
+      status: 'pending' 
+    }]);
+  };
+
+  const removeService = (index) => {
+    const newServices = services.filter((_, i) => i !== index);
+    setServices(newServices);
+    formik.setFieldValue('services', newServices);
+  };
+
+  const handleCancel = () => {
+    if (window.confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
+      navigate('/work-orders');
+    }
+  };
+
+  // Handle worker assignment
+  const handleOpenWorkerDialog = () => {
+    setWorkerDialogOpen(true);
+  };
+
+  const handleCloseWorkerDialog = () => {
+    setWorkerDialogOpen(false);
+  };
+
+  const handleSaveWorkers = (assignments) => {
+    setAssignedWorkers(assignments);
+    formik.setFieldValue('assignedTo', assignments);
+  };
+
+  // Format assigned workers for display
+  const getAssignedWorkersText = () => {
+    if (assignedWorkers.length === 0) return 'No workers assigned';
+    return assignedWorkers
+      .map(assignment => {
+        const worker = assignment.worker?.name || 'Unknown Worker';
+        return assignment.notes 
+          ? `${worker} (${assignment.notes})` 
+          : worker;
+      })
+      .join(', ');
+  };
 
   const formik = useFormik({
     initialValues: {
@@ -219,66 +444,93 @@ const CreateWorkOrder = () => {
           return;
         }
 
-        const workOrderData = {
-          building: values.building,
-          apartmentNumber: values.apartmentNumber || '',
-          block: values.block || '',
-          apartmentStatus: values.apartmentStatus,
-          description: values.description,
-          priority: values.priority,
-          startDate: values.startDate,
-          endDate: values.endDate,
-          scheduledDate: values.scheduledDate,
-          assignedTo: values.assignedTo,
-          services: services.map(service => ({
+        // Create work order
+        const workOrder = {
+          ...values,
+          services: services.map((service, index) => ({
             type: service.type,
             description: service.description,
-            laborCost: parseFloat(service.laborCost) || 0,
-            materialCost: parseFloat(service.materialCost) || 0,
-            status: 'pending'
+            laborCost: service.laborCost,
+            materialCost: service.materialCost,
+            estimatedHours: service.estimatedHours,
+            status: service.status
           }))
         };
 
-        const result = await createWorkOrder(workOrderData).unwrap();
-        toast.success('Work order created successfully');
-        navigate(`/work-orders/${result.data.workOrder._id}`);
+        await createWorkOrder(workOrder);
+        toast.success('Work order created successfully!');
+        navigate('/work-orders');
       } catch (error) {
-        console.error('Failed to create work order:', error);
-        toast.error(error?.data?.message || 'Failed to create work order');
+        toast.error('Error creating work order');
       }
     }
   });
 
-  const handleCancel = () => {
-    navigate('/work-orders');
-  };
-
-  // Service management functions
-  const addService = () => {
-    setServices([...services, { type: '', description: '', laborCost: 0, materialCost: 0 }]);
-  };
-
-  const removeService = (index) => {
-    if (services.length > 1) {
-      setServices(services.filter((_, i) => i !== index));
-    }
-  };
-
   const updateService = (index, field, value) => {
     const updatedServices = [...services];
-    updatedServices[index][field] = value;
-    if (field === 'type') {
-      updatedServices[index].description = ''; // Reset description when type changes
+    
+    // If description changes and it's from our predefined list, update estimated hours
+    if (field === 'description' && value) {
+      const currentService = updatedServices[index];
+      if (currentService.type) {
+        const descriptions = serviceDescriptions[currentService.type] || [];
+        const selectedDesc = descriptions.find(d => d.label === value);
+        if (selectedDesc) {
+          updatedServices[index] = {
+            ...currentService,
+            description: value,
+            estimatedHours: selectedDesc.estimatedHours
+          };
+          setServices(updatedServices);
+          formik.setFieldValue('services', updatedServices);
+          return;
+        }
+      }
     }
+    
+    // Handle service type change
+    if (field === 'type' && value) {
+      const serviceType = serviceTypeOptions.find(opt => opt.value === value);
+      if (serviceType) {
+        const descriptions = serviceDescriptions[value] || [];
+        updatedServices[index] = {
+          ...updatedServices[index],
+          type: value,
+          description: descriptions[0]?.label || '',
+          estimatedHours: descriptions[0]?.estimatedHours || 1
+        };
+        setServices(updatedServices);
+        formik.setFieldValue('services', updatedServices);
+        return;
+      }
+    }
+    
+    // Default update for other fields
+    updatedServices[index] = { 
+      ...updatedServices[index], 
+      [field]: field === 'laborCost' || field === 'materialCost' ? Number(value) : value 
+    };
+    
     setServices(updatedServices);
+    formik.setFieldValue('services', updatedServices);
   };
 
   const getAvailableDescriptions = (serviceType) => {
-    return serviceType ? serviceDescriptions[serviceType] || [] : [];
+    if (!serviceType) return [];
+    const descriptions = serviceDescriptions[serviceType] || [];
+    return descriptions.map(desc => desc.label);
   };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
+      {/* Worker Selection Dialog */}
+      <WorkerSelectionDialog
+        open={workerDialogOpen}
+        onClose={handleCloseWorkerDialog}
+        onSave={handleSaveWorkers}
+        assignedWorkers={assignedWorkers}
+        maxAssignments={5}
+      />
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Button
           startIcon={<ArrowBackIcon />}
@@ -340,11 +592,14 @@ const CreateWorkOrder = () => {
                                     onChange={(e) => updateService(index, 'description', e.target.value)}
                                     label="Description"
                                   >
-                                    {getAvailableDescriptions(service.type).map((desc) => (
-                                      <MenuItem key={desc} value={desc}>
-                                        {desc}
-                                      </MenuItem>
-                                    ))}
+                                    {getAvailableDescriptions(service.type).map((desc) => {
+                                      const descValue = typeof desc === 'string' ? desc : desc.label;
+                                      return (
+                                        <MenuItem key={descValue} value={descValue}>
+                                          {descValue}
+                                        </MenuItem>
+                                      );
+                                    })}
                                   </Select>
                                 </FormControl>
                               </Grid>
@@ -621,9 +876,51 @@ const CreateWorkOrder = () => {
                 </Card>
               </Grid>
 
+              {/* Worker Assignment Section */}
+              <Grid item xs={12}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      Worker Assignment
+                    </Typography>
+                    <Divider sx={{ mb: 2 }} />
+                    <Grid container spacing={2} alignItems="center">
+                      <Grid item xs={12} md={9}>
+                        <TextField
+                          fullWidth
+                          label="Assigned Workers"
+                          value={getAssignedWorkersText()}
+                          InputProps={{
+                            readOnly: true,
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <PersonAddIcon />
+                              </InputAdornment>
+                            ),
+                          }}
+                          variant="outlined"
+                          helperText={formik.touched.assignedTo && formik.errors.assignedTo}
+                          error={formik.touched.assignedTo && Boolean(formik.errors.assignedTo)}
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={3}>
+                        <Button
+                          fullWidth
+                          variant="outlined"
+                          onClick={handleOpenWorkerDialog}
+                          startIcon={<PersonAddIcon />}
+                        >
+                          Assign Workers
+                        </Button>
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                </Card>
+              </Grid>
+
               {/* Action Buttons */}
               <Grid item xs={12}>
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
                   <Button
                     variant="outlined"
                     onClick={handleCancel}
@@ -631,14 +928,24 @@ const CreateWorkOrder = () => {
                   >
                     Cancel
                   </Button>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    disabled={isCreating}
-                    startIcon={isCreating ? <CircularProgress size={20} /> : <SaveIcon />}
-                  >
-                    {isCreating ? 'Creating...' : 'Create Work Order'}
-                  </Button>
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button
+                      type="button"
+                      variant="outlined"
+                      onClick={() => formik.resetForm()}
+                      disabled={isCreating}
+                    >
+                      Reset Form
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={isCreating}
+                      startIcon={isCreating ? <CircularProgress size={20} /> : <SaveIcon />}
+                    >
+                      {isCreating ? 'Creating...' : 'Create Work Order'}
+                    </Button>
+                  </Box>
                 </Box>
               </Grid>
             </Grid>
