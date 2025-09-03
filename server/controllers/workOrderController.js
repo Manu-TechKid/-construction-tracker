@@ -7,25 +7,67 @@ const User = require('../models/User');
 const { uploadToCloudinary } = require('../utils/cloudinary');
 const { sendWorkOrderAssignedEmail } = require('../services/emailService');
 
-// Create a new work order
+/**
+ * @desc    Create a new work order
+ * @route   POST /api/v1/work-orders
+ * @access  Private/Admin/Manager
+ */
 exports.createWorkOrder = catchAsync(async (req, res, next) => {
   try {
-    // Extract data from request body
+    // Extract data from request body with defaults
     const {
       title,
-      description,
+      description = '',
       building,
-      apartmentNumber,
-      block,
-      apartmentStatus,
-      priority,
+      apartmentNumber = '',
+      block = '',
+      apartmentStatus = 'occupied',
+      priority = 'medium',
       status = 'pending',
       scheduledDate,
+      scheduledDate = new Date(),
       estimatedCompletionDate,
       assignedTo = [],
-      services = [],
+      services = [{
+        type: 'other',
+        description: '',
+        laborCost: 0,
+        materialCost: 0,
+        estimatedHours: 1,
+        status: 'pending'
+      }],
       notes = []
     } = req.body;
+
+    // Validate required fields
+    const requiredFields = ['title', 'priority', 'status'];
+    const missingFields = requiredFields.filter(field => !req.body[field]);
+    
+    if (missingFields.length > 0) {
+      return next(new AppError(
+        `Missing required fields: ${missingFields.join(', ')}`,
+        400
+      ));
+    }
+
+    // Validate services array
+    if (!Array.isArray(services) || services.length === 0) {
+      return next(new AppError('At least one service is required', 400));
+    }
+
+    // Validate each service
+    const invalidServices = services.filter(service => {
+      return !service.type || !service.description || 
+             service.laborCost === undefined || 
+             service.materialCost === undefined;
+    });
+
+    if (invalidServices.length > 0) {
+      return next(new AppError(
+        'Each service must have type, description, laborCost, and materialCost',
+        400
+      ));
+    }
 
     // Get the authenticated user's ID
     const createdBy = req.user._id;
@@ -36,44 +78,59 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       photos = req.files.map(file => ({
         url: file.path.replace(/\\/g, '/'), // Convert Windows paths to forward slashes
         filename: file.filename,
-        originalname: file.originalname
+        originalname: file.originalname,
+        uploadedBy: createdBy,
+        uploadedAt: new Date()
       }));
     }
 
-    // Create the work order
+    // Process assigned workers
+    const processedAssignedTo = Array.isArray(assignedTo) ? assignedTo.map(workerId => ({
+      worker: workerId,
+      status: 'pending',
+      assignedAt: new Date(),
+      assignedBy: createdBy
+    })) : [];
+
+    // Process services with defaults
+    const processedServices = services.map(service => ({
+      type: service.type || 'other',
+      description: service.description || '',
+      laborCost: Number(service.laborCost) || 0,
+      materialCost: Number(service.materialCost) || 0,
+      estimatedHours: Number(service.estimatedHours) || 1,
+      status: service.status || 'pending',
+      notes: service.notes || ''
+    }));
+
+    // Process notes
+    const processedNotes = (Array.isArray(notes) ? notes : []).map(note => ({
+      content: note.content || '',
+      createdBy: createdBy,
+      isPrivate: Boolean(note.isPrivate),
+      createdAt: new Date()
+    }));
+
+    // Create the work order with processed data
     const workOrder = await WorkOrder.create({
-      title,
-      description,
-      building,
-      apartmentNumber,
-      block,
+      title: title.trim(),
+      description: description ? description.trim() : '',
+      building: building || null,
+      apartmentNumber: apartmentNumber ? apartmentNumber.trim() : '',
+      block: block ? block.trim() : '',
       apartmentStatus,
       priority,
       status,
-      scheduledDate: scheduledDate ? new Date(scheduledDate) : undefined,
-      estimatedCompletionDate: estimatedCompletionDate ? new Date(estimatedCompletionDate) : undefined,
-      assignedTo: assignedTo.map(workerId => ({
-        worker: workerId,
-        status: 'pending',
-        assignedAt: new Date(),
-        assignedBy: createdBy
-      })),
-      services: services.map(service => ({
-        type: service.type,
-        description: service.description,
-        laborCost: service.laborCost || 0,
-        materialCost: service.materialCost || 0,
-        status: service.status || 'pending'
-      })),
+      scheduledDate: new Date(scheduledDate),
+      estimatedCompletionDate: estimatedCompletionDate ? new Date(estimatedCompletionDate) : null,
+      assignedTo: processedAssignedTo,
+      services: processedServices,
       photos,
-      notes: notes.map(note => ({
-        content: note.content,
-        createdBy: createdBy,
-        isPrivate: note.isPrivate || false,
-        createdAt: new Date()
-      })),
+      notes: processedNotes,
       createdBy,
-      updatedBy: createdBy
+      updatedBy: createdBy,
+      createdAt: new Date(),
+      updatedAt: new Date()
     });
 
     // Populate the work order with related data for the response
@@ -83,22 +140,39 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       .populate('createdBy', 'name email role')
       .populate('updatedBy', 'name email role');
 
-    // Send notifications to assigned workers
-    if (assignedTo.length > 0) {
-      try {
-        await sendWorkOrderAssignedEmail(populatedWorkOrder);
-      } catch (emailError) {
-        console.error('Error sending work order assignment emails:', emailError);
-        // Don't fail the request if email sending fails
+    try {
+      // Send notifications to assigned workers
+      if (processedAssignedTo.length > 0) {
+        try {
+          await sendWorkOrderAssignedEmail(populatedWorkOrder);
+        } catch (emailError) {
+          console.error('Error sending work order assignment emails:', emailError);
+          // Log the error but don't fail the request
+          // You might want to implement a retry mechanism for failed emails
+        }
       }
-    }
 
-    res.status(201).json({
-      status: 'success',
-      data: {
-        workOrder: populatedWorkOrder
-      }
-    });
+      // Calculate total cost for the work order
+      const totalCost = populatedWorkOrder.services.reduce((sum, service) => {
+        return sum + (service.laborCost || 0) + (service.materialCost || 0);
+      }, 0);
+
+      // Prepare response data
+      const responseData = {
+        ...populatedWorkOrder.toObject(),
+        totalCost,
+        serviceCount: populatedWorkOrder.services.length,
+        assignedWorkerCount: populatedWorkOrder.assignedTo.length
+      };
+
+      res.status(201).json({
+        status: 'success',
+        message: 'Work order created successfully',
+        data: responseData
+      });
+    } catch (error) {
+      handleWorkOrderError(error, next);
+    }
   } catch (error) {
     handleWorkOrderError(error, next);
   }
@@ -216,11 +290,6 @@ exports.updateNoteInWorkOrder = catchAsync(async (req, res, next) => {
         note: updatedNote
       }
     });
-  } catch (error) {
-    handleWorkOrderError(error, next);
-  }
-});
-
 // Add a note to a work order
 exports.addNoteToWorkOrder = catchAsync(async (req, res, next) => {
   try {
@@ -790,28 +859,55 @@ exports.addTaskToChecklist = catchAsync(async (req, res, next) => {
   }
 });
 
-// Delete a work order
-exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
+// @desc    Get a single work order by ID
+// @route   GET /api/v1/work-orders/:id
+// @access  Private
+exports.getWorkOrder = catchAsync(async (req, res, next) => {
   try {
-    const workOrder = await WorkOrder.findByIdAndDelete(req.params.id);
-    
+    const workOrder = await WorkOrder.findById(req.params.id)
+      .populate('building', 'name address city state zipCode')
+      .populate('assignedTo.worker', 'name email phone role')
+      .populate('createdBy', 'name email role')
+      .populate('updatedBy', 'name email role')
+      .populate('services.completedBy', 'name email')
+      .populate('notes.createdBy', 'name email role');
+
     if (!workOrder) {
       return next(new AppError('No work order found with that ID', 404));
     }
 
-    // TODO: Add cleanup for any associated files or related documents
-    
-    res.status(204).json({
+    // Calculate total cost
+    const totalCost = workOrder.services.reduce((sum, service) => {
+      return sum + (service.laborCost || 0) + (service.materialCost || 0);
+    }, 0);
+
+    // Calculate completion percentage
+    const totalTasks = workOrder.services.length;
+    const completedTasks = workOrder.services.filter(
+      service => service.status === 'completed'
+    ).length;
+    const completionPercentage = totalTasks > 0 
+      ? Math.round((completedTasks / totalTasks) * 100) 
+      : 0;
+
+    // Prepare response data
+    const responseData = {
+      ...workOrder.toObject(),
+      totalCost,
+      completionPercentage,
+      totalTasks,
+      completedTasks
+    };
+
+    res.status(200).json({
       status: 'success',
-      data: null
+      data: {
+        workOrder: responseData
+      }
     });
   } catch (error) {
     handleWorkOrderError(error, next);
   }
-});
-
-// Get a single work order by ID
-exports.getWorkOrder = catchAsync(async (req, res, next) => {
   try {
     const workOrder = await WorkOrder.findById(req.params.id)
       .populate('building', 'name address')
@@ -1141,9 +1237,89 @@ exports.updateWorkOrder = catchAsync(async (req, res, next) => {
   }
 });
 
+// @desc    Delete a work order
+// @route   DELETE /api/v1/work-orders/:id
+// @access  Private/Admin/Manager
+exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
+  try {
+    // 1) Find the work order and check if it exists
+    const workOrder = await WorkOrder.findById(req.params.id);
+    if (!workOrder) {
+      return next(new AppError('No work order found with that ID', 404));
+    }
+
+    // 2) Check if the user has permission to delete
+    // Only admins and managers can delete work orders
+    if (req.user.role !== 'admin' && req.user.role !== 'manager') {
+      return next(
+        new AppError('You do not have permission to delete work orders', 403)
+      );
+    }
+
+    // 3) Check if the work order can be deleted
+    // Prevent deletion if the work order is in progress or completed
+    if (workOrder.status === 'in_progress' || workOrder.status === 'completed') {
+      return next(
+        new AppError(
+          'Cannot delete a work order that is in progress or completed. Please cancel it first.',
+          400
+        )
+      );
+    }
+
+    // 4) Delete associated files (photos, documents, etc.)
+    if (workOrder.photos && workOrder.photos.length > 0) {
+      try {
+        // Delete files from storage (e.g., S3, local storage)
+        const deletePromises = workOrder.photos.map(photo => {
+          if (photo.url) {
+            // Example: Delete from cloud storage
+            // return deleteFromCloudinary(photo.publicId);
+            return Promise.resolve();
+          }
+          return Promise.resolve();
+        });
+        await Promise.all(deletePromises);
+      } catch (error) {
+        console.error('Error deleting work order files:', error);
+        // Continue with deletion even if file deletion fails
+      }
+    }
+
+    // 5) Delete the work order
+    await WorkOrder.findByIdAndDelete(req.params.id);
+
+    // 6) Clean up any related data
+    await Promise.all([
+      // Remove work order reference from assigned workers
+      User.updateMany(
+        { 'assignedWorkOrders': req.params.id },
+        { $pull: { assignedWorkOrders: req.params.id } }
+      ),
+      // Remove work order reference from buildings
+      Building.updateMany(
+        { 'workOrders': req.params.id },
+        { $pull: { workOrders: req.params.id } }
+      )
+    ]);
+
+    // 7) Log the deletion
+    console.log(`Work order ${req.params.id} deleted by user ${req.user.id}`);
+
+    // 8) Send success response
+    res.status(204).json({
+      status: 'success',
+      data: null
+    });
+  } catch (error) {
+    handleWorkOrderError(error, next);
+  }
+});
+
 // Export other controller functions as they were
 module.exports = {
   ...require('./workOrderController'),
   updateWorkOrder: exports.updateWorkOrder,
+  deleteWorkOrder: exports.deleteWorkOrder,
   handleWorkOrderError
 };

@@ -15,43 +15,258 @@ const router = express.Router();
 router.use(authController.protect);
 router.use(hidePricesFromWorkers);
 
-// Validation middleware
-const validateWorkOrder = [
-  body('title').optional().trim().isLength({ min: 3, max: 100 }),
-  body('description').optional().trim().isLength({ min: 10 }),
-  body('building').optional().isMongoId(),
-  body('apartmentNumber').optional().trim(),
-  body('block').optional().trim(),
-  body('apartmentStatus').optional().isIn(['vacant', 'occupied', 'under_renovation', 'reserved']),
-  body('priority').optional().isIn(['low', 'medium', 'high', 'urgent']),
-  body('status').optional().isIn([
-    'pending', 'in_progress', 'on_hold', 'completed', 
-    'cancelled', 'pending_review', 'issue_reported'
-  ]),
-  body('scheduledDate').optional().isISO8601(),
-  body('estimatedCompletionDate').optional().isISO8601(),
-  body('assignedTo').optional().isArray(),
-  body('assignedTo.*').optional().isMongoId(),
-  body('services').optional().isArray(),
-  body('services.*.type').optional().isString().trim(),
-  body('services.*.description').optional().isString().trim(),
-  body('services.*.laborCost').optional().isFloat({ min: 0 }),
-  body('services.*.materialCost').optional().isFloat({ min: 0 }),
-  body('services.*.status').optional().isString().trim(),
-  body('photos').optional().isArray(),
-  body('photos.*').optional().isString().trim(),
-  body('notes').optional().isArray(),
-  body('notes.*.content').optional().trim(),
-  body('notes.*.isPrivate').optional().isBoolean(),
+// Validation middleware for creating work orders
+const validateCreateWorkOrder = [
+  body('title')
+    .trim()
+    .notEmpty().withMessage('Title is required')
+    .isLength({ min: 3, max: 100 }).withMessage('Title must be between 3 and 100 characters'),
+    
+  body('description')
+    .optional()
+    .trim()
+    .isLength({ min: 10 }).withMessage('Description must be at least 10 characters'),
+    
+  body('building')
+    .optional()
+    .isMongoId().withMessage('Invalid building ID format'),
+    
+  body('apartmentNumber')
+    .optional()
+    .trim()
+    .isLength({ max: 20 }).withMessage('Apartment number must be less than 20 characters'),
+    
+  body('block')
+    .optional()
+    .trim()
+    .isLength({ max: 20 }).withMessage('Block must be less than 20 characters'),
+    
+  body('apartmentStatus')
+    .optional()
+    .isIn(['vacant', 'occupied', 'under_renovation', 'reserved'])
+    .withMessage('Invalid apartment status'),
+    
+  body('priority')
+    .isIn(['low', 'medium', 'high', 'urgent'])
+    .withMessage('Invalid priority level'),
+    
+  body('status')
+    .optional()
+    .isIn([
+      'pending', 'in_progress', 'on_hold', 'completed', 
+      'cancelled', 'pending_review', 'issue_reported'
+    ])
+    .withMessage('Invalid status'),
+    
+  body('scheduledDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Invalid scheduled date format. Use ISO8601 format (e.g., YYYY-MM-DD)'),
+    
+  body('estimatedCompletionDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Invalid completion date format. Use ISO8601 format (e.g., YYYY-MM-DD)'),
+    
+  body('assignedTo')
+    .optional()
+    .isArray()
+    .withMessage('Assigned workers must be an array'),
+    
+  body('assignedTo.*')
+    .isMongoId()
+    .withMessage('Invalid worker ID format'),
+    
+  body('services')
+    .isArray({ min: 1 })
+    .withMessage('At least one service is required'),
+    
+  body('services.*.type')
+    .notEmpty()
+    .withMessage('Service type is required')
+    .isString()
+    .trim(),
+    
+  body('services.*.description')
+    .notEmpty()
+    .withMessage('Service description is required')
+    .isString()
+    .trim(),
+    
+  body('services.*.laborCost')
+    .default(0)
+    .isFloat({ min: 0 })
+    .withMessage('Labor cost must be a positive number'),
+    
+  body('services.*.materialCost')
+    .default(0)
+    .isFloat({ min: 0 })
+    .withMessage('Material cost must be a positive number'),
+    
+  body('services.*.estimatedHours')
+    .default(1)
+    .isFloat({ min: 0 })
+    .withMessage('Estimated hours must be a positive number'),
+    
+  body('services.*.status')
+    .optional()
+    .isIn(['pending', 'in_progress', 'completed', 'cancelled'])
+    .withMessage('Invalid service status'),
+    
+  body('photos')
+    .optional()
+    .isArray()
+    .withMessage('Photos must be an array'),
+    
+  body('photos.*')
+    .isString()
+    .trim()
+    .withMessage('Invalid photo URL format'),
+    
+  body('notes')
+    .optional()
+    .isArray()
+    .withMessage('Notes must be an array'),
+    
+  body('notes.*.content')
+    .if(body('notes').exists())
+    .notEmpty()
+    .withMessage('Note content is required')
+    .isString()
+    .trim(),
+    
+  body('notes.*.isPrivate')
+    .optional()
+    .isBoolean()
+    .withMessage('isPrivate must be a boolean'),
+    
   validateRequest
 ];
 
-const validateTask = [
-  body('name').trim().notEmpty().withMessage('Task name is required'),
-  body('description').optional().trim(),
-  body('dueDate').optional().isISO8601(),
+// Validation for work order updates (more lenient than create)
+const validateUpdateWorkOrder = [
+  body('title')
+    .optional()
+    .trim()
+    .isLength({ min: 3, max: 100 })
+    .withMessage('Title must be between 3 and 100 characters'),
+    
+  body('description')
+    .optional()
+    .trim()
+    .isLength({ min: 10 })
+    .withMessage('Description must be at least 10 characters'),
+    
+  body('priority')
+    .optional()
+    .isIn(['low', 'medium', 'high', 'urgent'])
+    .withMessage('Invalid priority level'),
+    
+  body('status')
+    .optional()
+    .isIn([
+      'pending', 'in_progress', 'on_hold', 'completed', 
+      'cancelled', 'pending_review', 'issue_reported'
+    ])
+    .withMessage('Invalid status'),
+    
+  body('services')
+    .optional()
+    .isArray({ min: 1 })
+    .withMessage('At least one service is required'),
+    
   validateRequest
 ];
+
+// Validation for work order tasks
+const validateTask = [
+  body('name')
+    .trim()
+    .notEmpty()
+    .withMessage('Task name is required')
+    .isLength({ max: 100 })
+    .withMessage('Task name must be less than 100 characters'),
+    
+  body('description')
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('Description must be less than 500 characters'),
+    
+  body('dueDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Invalid date format. Use ISO8601 format (e.g., YYYY-MM-DD)'),
+    
+  body('status')
+    .optional()
+    .isIn(['pending', 'in_progress', 'completed', 'blocked'])
+    .withMessage('Invalid task status'),
+    
+  validateRequest
+];
+
+// Work Order Routes
+// ================
+
+// Create a new work order
+router.post(
+  '/',
+  uploadWorkOrderPhotos,
+  validateCreateWorkOrder,
+  workOrderController.createWorkOrder
+);
+
+// Get all work orders with filtering and pagination
+router.get(
+  '/',
+  [
+    query('status').optional().isIn([
+      'pending', 'in_progress', 'on_hold', 'completed', 
+      'cancelled', 'pending_review', 'issue_reported'
+    ]),
+    query('priority').optional().isIn(['low', 'medium', 'high', 'urgent']),
+    query('building').optional().isMongoId(),
+    query('assignedTo').optional().isMongoId(),
+    query('startDate').optional().isISO8601(),
+    query('endDate').optional().isISO8601(),
+    query('page').optional().isInt({ min: 1 }),
+    query('limit').optional().isInt({ min: 1, max: 100 }),
+    validateRequest
+  ],
+  workOrderController.getAllWorkOrders
+);
+
+// Get a single work order by ID
+router.get(
+  '/:id',
+  [
+    param('id').isMongoId().withMessage('Invalid work order ID'),
+    validateRequest
+  ],
+  workOrderController.getWorkOrder
+);
+
+// Update a work order
+router.patch(
+  '/:id',
+  [
+    uploadWorkOrderPhotos,
+    param('id').isMongoId().withMessage('Invalid work order ID'),
+    ...validateUpdateWorkOrder
+  ],
+  workOrderController.updateWorkOrder
+);
+
+// Delete a work order
+router.delete(
+  '/:id',
+  [
+    param('id').isMongoId().withMessage('Invalid work order ID'),
+    validateRequest
+  ],
+  workOrderController.deleteWorkOrder
+);
 
 const validateTaskUpdate = [
   body('completed').optional().isBoolean(),
