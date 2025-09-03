@@ -26,6 +26,7 @@ const uploadRoutes = require('./routes/uploadRoutes');
 const AppError = require('./utils/appError');
 const globalErrorHandler = require('./controllers/errorController');
 const routes = require('./routes');
+const connectDB = require('./config/db');
 
 // Initialize Express app
 const app = express();
