@@ -110,26 +110,69 @@ const WorkOrders = () => {
   };
 
   const handleDelete = async () => {
-    if (!selectedWorkOrder) return;
+    if (!selectedWorkOrder) {
+      console.error('No work order selected for deletion');
+      toast.error('No work order selected');
+      return;
+    }
+    
+    const workOrderId = selectedWorkOrder._id;
+    console.log('Attempting to delete work order ID:', workOrderId);
+    
+    if (!workOrderId) {
+      console.error('Invalid work order ID');
+      toast.error('Invalid work order ID');
+      return;
+    }
     
     try {
-      const result = await deleteWorkOrder(selectedWorkOrder._id).unwrap();
+      console.log('Sending delete request for work order:', workOrderId);
+      
+      // Get the current auth token for debugging
+      const token = localStorage.getItem('token');
+      console.log('Current auth token exists:', !!token);
+      
+      const result = await deleteWorkOrder(workOrderId).unwrap();
+      console.log('Delete API response:', result);
       
       if (result?.status === 'success' || result?.success) {
+        console.log('Work order deleted successfully');
         toast.success('Work order deleted successfully');
         setDeleteDialogOpen(false);
         handleMenuClose();
-        refetch();
+        
+        // Force refetch work orders with a small delay to ensure the backend has processed the deletion
+        setTimeout(() => {
+          console.log('Refreshing work orders list...');
+          refetch();
+        }, 500);
       } else {
-        throw new Error(result?.message || 'Failed to delete work order');
+        const errorMsg = result?.message || 'Failed to delete work order';
+        console.error('Delete operation failed:', errorMsg);
+        throw new Error(errorMsg);
       }
     } catch (error) {
-      console.error('Error deleting work order:', error);
-      toast.error(
-        error?.data?.message || 
-        error?.message || 
-        'Failed to delete work order. Please try again.'
-      );
+      console.error('Error in handleDelete:', {
+        name: error.name,
+        message: error.message,
+        status: error.status,
+        data: error.data,
+        stack: error.stack
+      });
+      
+      let errorMessage = 'Failed to delete work order. Please try again.';
+      
+      if (error.status === 401) {
+        errorMessage = 'Session expired. Please log in again.';
+      } else if (error.status === 403) {
+        errorMessage = 'You do not have permission to delete this work order.';
+      } else if (error.status === 404) {
+        errorMessage = 'Work order not found. It may have already been deleted.';
+      } else if (error.data?.message) {
+        errorMessage = error.data.message;
+      }
+      
+      toast.error(errorMessage);
     }
   };
 

@@ -1248,10 +1248,19 @@ exports.updateWorkOrder = catchAsync(async (req, res, next) => {
 // @route   DELETE /api/v1/work-orders/:id
 // @access  Private/Admin/Manager
 exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
+  console.log('Delete work order request received:', {
+    workOrderId: req.params.id,
+    userId: req.user?.id,
+    userRole: req.user?.role
+  });
+
   try {
     // 1) Find the work order and check if it exists
     const workOrder = await WorkOrder.findById(req.params.id);
+    console.log('Found work order:', workOrder ? workOrder._id : 'Not found');
+    
     if (!workOrder) {
+      console.log('Work order not found:', req.params.id);
       return res.status(404).json({
         status: 'error',
         message: 'No work order found with that ID'
@@ -1261,6 +1270,10 @@ exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
     // 2) Check if the user has permission to delete
     // Only admins and managers can delete work orders
     if (req.user.role !== 'admin' && req.user.role !== 'manager') {
+      console.log('User does not have permission to delete work orders:', {
+        userId: req.user.id,
+        role: req.user.role
+      });
       return res.status(403).json({
         status: 'error',
         message: 'You do not have permission to delete work orders'
@@ -1270,6 +1283,7 @@ exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
     // 3) Check if the work order can be deleted
     // Prevent deletion if the work order is in progress or completed
     if (workOrder.status === 'in_progress' || workOrder.status === 'completed') {
+      console.log('Cannot delete work order with status:', workOrder.status);
       return res.status(400).json({
         status: 'error',
         message: 'Cannot delete a work order that is in progress or completed. Please cancel it first.'
@@ -1278,10 +1292,12 @@ exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
 
     // 4) Delete associated files (photos, documents, etc.)
     if (workOrder.photos && workOrder.photos.length > 0) {
+      console.log('Deleting associated files for work order:', workOrder._id);
       try {
         // Delete files from storage (e.g., S3, local storage)
         const deletePromises = workOrder.photos.map(photo => {
           if (photo.url) {
+            console.log('Would delete file:', photo.url);
             // Example: Delete from cloud storage
             // return deleteFromCloudinary(photo.publicId);
             return Promise.resolve();
@@ -1290,30 +1306,46 @@ exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
         });
         await Promise.all(deletePromises);
       } catch (error) {
-        console.error('Error deleting work order files:', error);
+        console.error('Error deleting work order files - continuing with deletion:', error);
         // Continue with deletion even if file deletion fails
       }
     }
 
     // 5) Delete the work order
-    await WorkOrder.findByIdAndDelete(req.params.id);
+    console.log('Deleting work order from database:', workOrder._id);
+    const deletedWorkOrder = await WorkOrder.findByIdAndDelete(req.params.id);
+    
+    if (!deletedWorkOrder) {
+      console.error('Failed to delete work order - not found:', req.params.id);
+      return res.status(404).json({
+        status: 'error',
+        message: 'Work order not found or already deleted'
+      });
+    }
 
     // 6) Clean up any related data
-    await Promise.all([
-      // Remove work order reference from assigned workers
-      User.updateMany(
-        { 'assignedWorkOrders': req.params.id },
-        { $pull: { assignedWorkOrders: req.params.id } }
-      ),
-      // Remove work order reference from buildings
-      Building.updateMany(
-        { 'workOrders': req.params.id },
-        { $pull: { workOrders: req.params.id } }
-      )
-    ]);
+    console.log('Cleaning up related data for work order:', workOrder._id);
+    try {
+      await Promise.all([
+        // Remove work order reference from assigned workers
+        User.updateMany(
+          { 'assignedWorkOrders': req.params.id },
+          { $pull: { assignedWorkOrders: req.params.id } }
+        ),
+        // Remove work order reference from buildings
+        Building.updateMany(
+          { 'workOrders': req.params.id },
+          { $pull: { workOrders: req.params.id } }
+        )
+      ]);
+      console.log('Successfully cleaned up related data');
+    } catch (cleanupError) {
+      console.error('Error during cleanup - work order was deleted but cleanup failed:', cleanupError);
+      // Continue with response even if cleanup fails
+    }
 
     // 7) Log the deletion
-    console.log(`Work order ${req.params.id} deleted by user ${req.user.id}`);
+    console.log(`Work order ${req.params.id} successfully deleted by user ${req.user.id}`);
 
     // 8) Send success response with 200 status code and success message
     res.status(200).json({
@@ -1322,10 +1354,18 @@ exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
       data: null
     });
   } catch (error) {
-    console.error('Error in deleteWorkOrder:', error);
+    console.error('Error in deleteWorkOrder:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      code: error.code,
+      keyValue: error.keyValue
+    });
+    
     res.status(500).json({
       status: 'error',
-      message: error.message || 'An error occurred while deleting the work order'
+      message: error.message || 'An error occurred while deleting the work order',
+      ...(process.env.NODE_ENV === 'development' && { error: error.message })
     });
   }
 });
