@@ -54,12 +54,8 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
       query: (id) => {
         console.log('Preparing DELETE request for work order:', id);
         return {
-          url: `/api/v1/work-orders/${id}`,
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
+          url: `/work-orders/${id}`,
+          method: 'DELETE'
         };
       },
       async onQueryStarted(arg, { queryFulfilled, dispatch }) {

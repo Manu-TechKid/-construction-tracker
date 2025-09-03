@@ -67,9 +67,8 @@ const Register = () => {
     onSubmit: async (values) => {
       try {
         setFormErrors(null);
-        // Remove passwordConfirm from the submitted data
-        const { passwordConfirm, ...userData } = values;
-        await register(userData).unwrap();
+        // Send all form values including passwordConfirm
+        await register(values).unwrap();
         // Redirect to login page after successful registration
         navigate('/login', { state: { from: '/dashboard' }, replace: true });
       } catch (err) {
