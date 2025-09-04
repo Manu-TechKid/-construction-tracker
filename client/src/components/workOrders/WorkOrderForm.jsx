@@ -57,6 +57,20 @@ const WorkOrderForm = ({
   const [assignedWorkers, setAssignedWorkers] = useState([]);
   const [availableBlocks, setAvailableBlocks] = useState([]);
   const [workerNotes, setWorkerNotes] = useState({});
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [formError, setFormError] = useState(null);
+
+  // Effect to handle form errors
+  useEffect(() => {
+    if (formik.status?.error) {
+      setFormError(formik.status.error);
+    }
+  }, [formik.status]);
+
+  // Helper function to get field error
+  const getFieldError = (fieldName) => {
+    return formik.touched[fieldName] && formik.errors[fieldName];
+  };
 
   // Work type options matching database model
   const workTypeOptions = [
@@ -142,37 +156,60 @@ const WorkOrderForm = ({
   ];
 
   // Base validation schema for create mode
-  const createValidationSchema = Yup.object({
+  const createValidationSchema = Yup.object().shape({
     title: Yup.string()
       .required('Title is required')
       .min(5, 'Title must be at least 5 characters')
       .max(100, 'Title must be less than 100 characters'),
+      
     building: Yup.mixed().required('Building is required'),
+    
     apartmentNumber: Yup.string()
       .required('Apartment number is required')
-      .max(20, 'Apartment number must be less than 20 characters'),
+      .max(20, 'Apartment number is too long'),
+      
     block: Yup.string()
       .required('Block is required')
       .max(20, 'Block must be less than 20 characters'),
+      
     apartmentStatus: Yup.string()
       .required('Apartment status is required')
-      .oneOf(['vacant', 'occupied', 'under_renovation', 'reserved'], 'Invalid status'),
+      .oneOf(['vacant', 'occupied', 'under_renovation', 'reserved'], 'Invalid apartment status'),
+      
     workType: Yup.string()
       .required('Work type is required')
-      .oneOf(workTypeOptions.map(opt => opt.value), 'Invalid work type'),
-    workSubType: Yup.string().required('Work sub-type is required'),
-    description: Yup.string().required('Description is required'),
-    priority: Yup.string().required('Priority is required'),
-    status: Yup.string().required('Status is required'),
-    estimatedCost: Yup.number()
-      .min(0, 'Cost must be positive')
-      .typeError('Must be a number'),
-    actualCost: Yup.number()
-      .min(0, 'Actual cost must be positive')
-      .typeError('Must be a number'),
+      .oneOf(
+        workTypeOptions.map(opt => opt.value),
+        'Invalid work type selected'
+      ),
+      
+    workSubType: Yup.string()
+      .required('Work sub-type is required'),
+      
+    priority: Yup.string()
+      .required('Priority is required')
+      .oneOf(
+        ['low', 'medium', 'high'],
+        'Invalid priority level'
+      ),
+      
+    status: Yup.string()
+      .required('Status is required')
+      .oneOf(
+        ['pending', 'in_progress', 'completed', 'cancelled'],
+        'Invalid status'
+      ),
+      
+    description: Yup.string()
+      .required('Description is required')
+      .min(10, 'Description should be at least 10 characters')
+      .max(2000, 'Description is too long'),
+      
     scheduledDate: Yup.date()
-      .nullable()
-      .typeError('Invalid date format'),
+      .typeError('Invalid date')
+      .required('Scheduled date is required')
+      .min(new Date(), 'Scheduled date cannot be in the past'),
+      
     estimatedCompletionDate: Yup.date()
       .nullable()
       .min(
@@ -180,16 +217,49 @@ const WorkOrderForm = ({
         'Completion date must be after scheduled date'
       )
       .typeError('Invalid date format'),
-    assignedTo: Yup.array().of(
-      Yup.object({
+      
+    estimatedCost: Yup.number()
+      .typeError('Must be a valid number')
+      .min(0, 'Cost cannot be negative')
+      .nullable(),
+      
+    actualCost: Yup.number()
+      .min(0, 'Actual cost must be positive')
+      .nullable()
+      .typeError('Must be a valid number'),
+      
+    assignedTo: Yup.array()
+      .of(Yup.string())
+      .test(
+        'at-least-one-worker',
+        'At least one worker must be assigned',
+        (value) => value && value.length > 0
+      ),
+      
+    notes: Yup.string()
+      .max(5000, 'Notes must be less than 5000 characters'),
+      
+    services: Yup.array().of(
+      Yup.object().shape({
+        type: Yup.string().required('Service type is required'),
+        description: Yup.string().required('Service description is required'),
+        status: Yup.string().required('Service status is required'),
+        cost: Yup.number().min(0, 'Cost cannot be negative').required('Service cost is required'),
+        estimatedHours: Yup.number().min(0, 'Hours must be positive').required('Estimated hours are required')
+      })
+    ),
+    
+    assignedWorkers: Yup.array().of(
+      Yup.object().shape({
         worker: Yup.string().required('Worker is required'),
         status: Yup.string(),
         assignedAt: Yup.date(),
         assignedBy: Yup.string()
       })
     ),
+    
     photos: Yup.array().of(
-      Yup.object({
+      Yup.object().shape({
         url: Yup.string().required('Photo URL is required'),
         description: Yup.string(),
         type: Yup.string(),
@@ -209,18 +279,25 @@ const WorkOrderForm = ({
     apartmentNumber: '',
     block: '',
     apartmentStatus: 'vacant',
-    workType: '',
+    workType: 'repair', // Default work type
     workSubType: '',
     description: '',
     priority: 'medium',
     status: 'pending',
     estimatedCost: 0,
     actualCost: 0,
-    scheduledDate: null,
+    scheduledDate: new Date(), // Default to current date
     estimatedCompletionDate: null,
     assignedTo: [],
     photos: [],
     notes: '',
+    services: [{
+      type: 'other',
+      description: '',
+      laborCost: 0,
+      materialCost: 0,
+      status: 'pending'
+    }],
     ...initialValuesProp,
   };
 
@@ -231,18 +308,52 @@ const WorkOrderForm = ({
     validateOnMount: true,
     validateOnChange: true,
     validateOnBlur: true,
+    validate: (values) => {
+      const errors = {};
+      
+      // Additional custom validation if needed
+      if (values.scheduledDate && values.estimatedCompletionDate) {
+        const start = new Date(values.scheduledDate);
+        const end = new Date(values.estimatedCompletionDate);
+        if (end < start) {
+          errors.estimatedCompletionDate = 'Completion date must be after scheduled date';
+        }
+      }
+      
+      return errors;
+    },
     onSubmit: async (values, { setSubmitting, setFieldError, setStatus, resetForm }) => {
+      // Prevent default form submission
+      if (typeof window !== 'undefined' && window.event) {
+        window.event.preventDefault();
+      }
+      
       try {
         setStatus({ isSubmitting: true, error: null });
+        
+        // Validate required fields
+        const requiredFields = [
+          'title', 'building', 'apartmentNumber', 'block', 
+          'apartmentStatus', 'workType', 'priority', 'status', 'description'
+        ];
+        
+        const missingFields = requiredFields.filter(field => !values[field]);
+        if (missingFields.length > 0) {
+          missingFields.forEach(field => {
+            setFieldError(field, 'This field is required');
+          });
+          throw new Error('Please fill in all required fields');
+        }
         
         // Convert building object to ID if needed
         if (values.building && typeof values.building === 'object') {
           values.building = values.building._id || values.building;
         }
         
-        // Ensure assignedTo is an array
-        if (!Array.isArray(values.assignedTo)) {
-          values.assignedTo = [];
+        // Ensure assignedTo is an array and has at least one worker
+        if (!Array.isArray(values.assignedTo) || values.assignedTo.length === 0) {
+          setFieldError('assignedTo', 'At least one worker must be assigned');
+          throw new Error('At least one worker must be assigned');
         }
         
         // Format dates to ISO strings
@@ -257,7 +368,7 @@ const WorkOrderForm = ({
           }
         };
         
-        // Format assigned workers with notes
+        // Format assigned workers
         const formatWorker = (worker) => {
           if (!worker) return null;
           if (typeof worker === 'string') return { 
@@ -279,26 +390,22 @@ const WorkOrderForm = ({
         // Process photos - convert to proper format for backend
         const processedPhotos = Array.isArray(photos) 
           ? photos
-              .filter(photo => photo) // Remove null/undefined
+              .filter(photo => photo && (photo.url || (typeof photo === 'string' && photo.trim() !== '')))
               .map(photo => ({
-                url: photo.url || photo,
+                url: typeof photo === 'string' ? photo : (photo.url || ''),
                 description: photo.description || photo.caption || '',
                 type: photo.type || 'other',
                 uploadedAt: photo.uploadedAt || new Date().toISOString()
               }))
           : [];
 
-        console.log('Form values being submitted:', values);
-
         // Prepare submission data
         const submissionData = {
           ...values,
           building: values.building?._id || values.building,
-          assignedTo: Array.isArray(values.assignedTo) 
-            ? values.assignedTo.map(formatWorker).filter(Boolean) // Remove any null values
-            : [],
+          assignedTo: values.assignedTo.map(formatWorker).filter(Boolean),
           photos: processedPhotos,
-          scheduledDate: formatDate(values.scheduledDate),
+          scheduledDate: formatDate(values.scheduledDate) || new Date().toISOString(),
           estimatedCompletionDate: formatDate(values.estimatedCompletionDate),
           updatedAt: new Date().toISOString()
         };
@@ -310,104 +417,269 @@ const WorkOrderForm = ({
           }
         });
         
-        console.log('Submitting work order data:', submissionData);
-        
         // For edit mode, include the _id if it exists
         if (mode === 'edit' && values._id) {
           submissionData._id = values._id;
         }
         
         // Call the onSubmit prop with the formatted data
-        const result = await onSubmit(submissionData, { setStatus, setFieldError });
-        
-        if (result?.success) {
-          // Show success message
-          toast.success(
-            mode === 'edit' 
-              ? 'Work order updated successfully!'
-              : 'Work order created successfully!',
-            { autoClose: 3000 }
-          );
+        try {
+          const result = await onSubmit(submissionData, { setStatus, setFieldError });
           
-          // If we have a successful result, reset the form if this is a create operation
-          if (mode === 'create') {
-            resetForm();
+          if (result?.success) {
+            // Show success message
+            toast.success(
+              mode === 'edit' 
+                ? 'Work order updated successfully!'
+                : 'Work order created successfully!',
+              { 
+                position: 'top-center',
+                autoClose: 3000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true
+              }
+            );
+            
+            // If we have a successful result, reset the form if this is a create operation
+            if (mode === 'create') {
+              resetForm();
+              // Reset photos after successful submission
+              setPhotos([]);
+            }
+            
+            return result;
           }
           
-          return result;
+          // Handle API errors that don't throw exceptions
+          if (result?.error) {
+            throw new Error(result.error);
+          }
+          
+          return result || { success: false };
+          
+        } catch (error) {
+          console.error('Error in form submission:', error);
+          
+          // Handle API validation errors
+          let hasFieldErrors = false;
+          
+          // Handle field-specific validation errors from fieldErrors
+          if (error?.data?.fieldErrors) {
+            Object.entries(error.data.fieldErrors).forEach(([apiField, messages]) => {
+              const fieldParts = apiField.split('.');
+              const formField = fieldParts[0];
+              
+              // Handle array fields like assignedTo[0].worker
+              const arrayMatch = formField.match(/(\w+)\[(\d+)\]/);
+              if (arrayMatch) {
+                const arrayField = arrayMatch[1];
+                const index = parseInt(arrayMatch[2], 10);
+                const subField = fieldParts[1];
+                
+                if (Array.isArray(formik.values[arrayField]) && formik.values[arrayField][index]) {
+                  const errorMessage = Array.isArray(messages) ? messages[0] : messages;
+                  setFieldError(`${arrayField}[${index}].${subField}`, errorMessage);
+                  hasFieldErrors = true;
+                }
+              } else if (formik.values[formField] !== undefined) {
+                // Handle regular fields
+                const errorMessage = Array.isArray(messages) ? messages[0] : messages;
+                setFieldError(formField, errorMessage);
+                hasFieldErrors = true;
+              }
+            });
+          }
+          
+          // Handle legacy errors format
+          if (error?.data?.errors && !hasFieldErrors) {
+            Object.entries(error.data.errors).forEach(([apiField, messages]) => {
+              const errorMessage = Array.isArray(messages) ? messages[0] : messages;
+              if (formik.values[apiField] !== undefined) {
+                setFieldError(apiField, errorMessage);
+                hasFieldErrors = true;
+              }
+            });
+          }
+          
+          // Set status and show error message
+          const errorMessage = error?.data?.message || 
+                             error?.errors?.[0]?.msg || 
+                             error?.message || 
+                             'An error occurred while submitting the form';
+          
+          // Update form status with error
+          setStatus(prev => ({
+            ...prev,
+            isSubmitting: false,
+            error: hasFieldErrors ? 'Please fix the validation errors below' : errorMessage,
+            serverError: !hasFieldErrors ? errorMessage : null
+          }));
+          
+          // Show error toast if no field-specific errors
+          if (!hasFieldErrors) {
+            toast.error(errorMessage, { 
+              autoClose: 5000,
+              position: 'top-center',
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true
+            });
+          }
+          
+          // Scroll to the first error or top of form
+          setTimeout(() => {
+            const firstError = document.querySelector('.Mui-error, [data-error="true"]');
+            if (firstError) {
+              firstError.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center',
+                inline: 'nearest'
+              });
+            }
+          }, 100);
+          
+          // Re-throw the error to be caught by the outer catch block
+          throw error;
         }
         
-        return result || { success: false };
       } catch (error) {
         console.error('Error in form submission:', error);
         
-        // Handle API validation errors
-        let hasFieldErrors = false;
-        
-        // Handle field-specific validation errors from fieldErrors
-        if (error?.data?.fieldErrors) {
-          Object.entries(error.data.fieldErrors).forEach(([apiField, messages]) => {
-            const fieldParts = apiField.split('.');
-            const formField = fieldParts[0];
-            
-            // Handle array fields like assignedTo[0].worker
-            const arrayMatch = formField.match(/(\w+)\[(\d+)\]/);
-            if (arrayMatch) {
-              const arrayField = arrayMatch[1];
-              const index = parseInt(arrayMatch[2], 10);
-              const subField = fieldParts[1];
-              
-              if (Array.isArray(formik.values[arrayField]) && formik.values[arrayField][index]) {
-                const errorMessage = Array.isArray(messages) ? messages[0] : messages;
-                setFieldError(`${arrayField}[${index}].${subField}`, errorMessage);
-                hasFieldErrors = true;
-              }
-            } else if (formik.values[formField] !== undefined) {
-              // Handle regular fields
-              const errorMessage = Array.isArray(messages) ? messages[0] : messages;
-              setFieldError(formField, errorMessage);
-              hasFieldErrors = true;
-            }
-          });
-        }
-        
-        // Handle legacy errors format
-        if (error?.data?.errors && !hasFieldErrors) {
-          Object.entries(error.data.errors).forEach(([apiField, messages]) => {
-            const errorMessage = Array.isArray(messages) ? messages[0] : messages;
-            if (formik.values[apiField] !== undefined) {
-              setFieldError(apiField, errorMessage);
-              hasFieldErrors = true;
-            }
-          });
-        }
-        
-        // Handle general error message
-        const errorMessage = error?.data?.message || 
-                           error?.message || 
-                           'An error occurred while submitting the form';
-        
+        // Set submitting to false to re-enable the form
         setStatus(prev => ({
           ...prev,
-          error: hasFieldErrors ? 'Please fix the validation errors below' : errorMessage
+          isSubmitting: false
         }));
         
-        if (!hasFieldErrors) {
-          toast.error(errorMessage, { autoClose: 5000 });
+        // If this is a validation error from the inner try-catch, don't show duplicate messages
+        if (error?.handled) {
+          return { success: false, error };
         }
         
-        // Scroll to the first error after a short delay
+        // Handle network errors
+        if (error.message === 'Network Error' || error.message.includes('Network request failed')) {
+          const networkError = 'Network error: Unable to connect to the server. Please check your connection and try again.';
+          
+          // Update form status
+          setStatus(prev => ({
+            ...prev,
+            error: networkError,
+            isSubmitting: false,
+            serverError: networkError
+          }));
+          
+          // Show toast
+          toast.error(networkError, {
+            position: 'top-center',
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true
+          });
+          
+          return { 
+            success: false, 
+            error: {
+              ...error,
+              message: networkError,
+              handled: true
+            } 
+          };
+        }
+        
+        // For other errors, show a generic error message
+        let errorMessage = 'An unexpected error occurred. Please try again.';
+        let errorDetails = null;
+        let fieldErrors = {};
+        
+        // Handle different types of errors
+        if (error?.response?.data) {
+          const { message, errors, fieldErrors: apiFieldErrors } = error.response.data;
+          
+          // Handle API error messages
+          if (message) {
+            errorMessage = message;
+          }
+          
+          // Handle validation errors
+          if (errors) {
+            errorDetails = Array.isArray(errors) ? errors.join(' ') : String(errors);
+          }
+          
+          // Handle field-specific errors
+          if (apiFieldErrors) {
+            fieldErrors = apiFieldErrors;
+            // Set field errors in formik
+            Object.entries(fieldErrors).forEach(([field, messages]) => {
+              if (Array.isArray(messages) && messages.length > 0) {
+                formik.setFieldError(field, messages[0]);
+              } else if (typeof messages === 'string') {
+                formik.setFieldError(field, messages);
+              }
+            });
+          }
+        } else if (error?.message) {
+          // Handle JavaScript/network errors
+          errorMessage = error.message;
+        }
+        
+        // Update form status with the error and details
+        setStatus(prev => ({
+          ...prev,
+          error: errorMessage,
+          details: errorDetails,
+          fieldErrors,
+          isSubmitting: false,
+          serverError: errorMessage,
+          hasErrors: true
+        }));
+        
+        // Mark form as touched to show validation errors
+        if (Object.keys(fieldErrors).length > 0) {
+          const touched = {};
+          Object.keys(fieldErrors).forEach(field => {
+            touched[field] = true;
+          });
+          formik.setTouched(touched, false);
+        }
+        
+        // Show error toast
+        toast.error(errorMessage, {
+          position: 'top-center',
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true
+        });
+        
+        // Scroll to the first error or top of the form
         setTimeout(() => {
-          const firstError = document.querySelector('.Mui-error');
+          const firstError = document.querySelector('.Mui-error, [data-error="true"]');
           if (firstError) {
-            firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          } else if (errorMessage) {
-            // If no field errors but we have a message, scroll to the top
+            firstError.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center',
+              inline: 'nearest'
+            });
+          } else {
+            // If no specific error field, scroll to top
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }
         }, 100);
         
-        return { success: false, error };
+        return { 
+          success: false, 
+          error: {
+            ...error,
+            message: errorMessage,
+            handled: true
+          } 
+        };
       } finally {
         setSubmitting(false);
       }
@@ -478,19 +750,70 @@ const WorkOrderForm = ({
             {mode === 'edit' ? 'Edit Work Order' : 'Create New Work Order'}
           </Typography>
 
-          {formik.status?.error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {formik.status.error}
+          {/* Show form-level errors */}
+          {(formik.status?.error || formik.status?.serverError) && (
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 2,
+                '& .MuiAlert-message': {
+                  width: '100%',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }
+              }}
+            >
+              <Box>
+                <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                  {formik.status.error || formik.status.serverError}
+                </Typography>
+                {formik.status.details && (
+                  <Typography variant="body2" component="div">
+                    {formik.status.details}
+                  </Typography>
+                )}
+              </Box>
+            </Alert>
+          )}
+          
+          {/* Show field-level validation errors */}
+          {Object.keys(formik.errors).length > 0 && formik.submitCount > 0 && (
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 2,
+                '& .MuiAlert-message': {
+                  width: '100%'
+                }
+              }}
+            >
+              <Box>
+                <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                  Please fix the following errors:
+                </Typography>
+                <Box component="ul" sx={{ pl: 2, m: 0 }}>
+                  {Object.entries(formik.errors).map(([field, error]) => (
+                    formik.touched[field] && error && (
+                      <li key={field}>
+                        <Typography variant="body2">
+                          <strong>{field}:</strong> {error}
+                        </Typography>
+                      </li>
+                    )
+                  ))}
+                </Box>
+              </Box>
             </Alert>
           )}
 
-          <Box component="form" onSubmit={formik.handleSubmit}>
+          <Box component="form" onSubmit={formik.handleSubmit} noValidate>
             <Grid container spacing={3}>
               {/* Title */}
               {mode === 'create' && (
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
+                    id="title"
                     name="title"
                     label="Title *"
                     value={formik.values.title}
@@ -498,170 +821,59 @@ const WorkOrderForm = ({
                     onBlur={formik.handleBlur}
                     error={formik.touched.title && Boolean(formik.errors.title)}
                     helperText={formik.touched.title && formik.errors.title}
+                    margin="normal"
+                    variant="outlined"
+                    inputProps={{
+                      'data-testid': 'title-input',
+                      'aria-invalid': formik.touched.title && Boolean(formik.errors.title),
+                      'aria-describedby': formik.touched.title && formik.errors.title ? 'title-error' : undefined
+                    }}
+                    FormHelperTextProps={{
+                      error: formik.touched.title && Boolean(formik.errors.title),
+                      id: 'title-error'
+                    }}
                   />
                 </Grid>
               )}
-              
-              {/* Building Selection */}
-              <Grid item xs={12} md={mode === 'edit' ? 6 : 6}>
-                <FormControl 
-                  fullWidth 
-                  error={formik.touched.building && Boolean(formik.errors.building)}
-                >
-                  <InputLabel>Building *</InputLabel>
-                  <Select
-                    name="building"
-                    value={formik.values.building}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    label="Building *"
-                  >
-                    {buildings.map((building) => (
-                      <MenuItem key={building._id} value={building._id}>
-                        {building.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {formik.touched.building && formik.errors.building && (
-                    <FormHelperText>{formik.errors.building}</FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
-
-              {/* Apartment Number */}
-              <Grid item xs={12} md={3}>
-                <TextField
-                  fullWidth
-                  name="apartmentNumber"
-                  label="Apartment Number *"
-                  value={formik.values.apartmentNumber}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  error={formik.touched.apartmentNumber && Boolean(formik.errors.apartmentNumber)}
-                  helperText={formik.touched.apartmentNumber && formik.errors.apartmentNumber}
-                />
-              </Grid>
-
-              {/* Block */}
-              <Grid item xs={12} md={3}>
-                <TextField
-                  fullWidth
-                  name="block"
-                  label="Block *"
-                  value={formik.values.block}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  error={formik.touched.block && Boolean(formik.errors.block)}
-                  helperText={formik.touched.block && formik.errors.block}
-                />
-              </Grid>
-
-              {/* Apartment Status */}
-              <Grid item xs={12} md={6}>
-                <FormControl 
-                  fullWidth 
-                  error={formik.touched.apartmentStatus && Boolean(formik.errors.apartmentStatus)}
-                >
-                  <InputLabel>Apartment Status *</InputLabel>
-                  <Select
-                    name="apartmentStatus"
-                    value={formik.values.apartmentStatus}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    label="Apartment Status *"
-                  >
-                    {apartmentStatusOptions.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {formik.touched.apartmentStatus && formik.errors.apartmentStatus && (
-                    <FormHelperText>{formik.errors.apartmentStatus}</FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
 
               {/* Work Type */}
               <Grid item xs={12} md={6}>
                 <FormControl 
-                  fullWidth 
+                  fullWidth
                   error={formik.touched.workType && Boolean(formik.errors.workType)}
+                  margin="normal"
+                  variant="outlined"
+                  required
                 >
-                  <InputLabel>Work Type *</InputLabel>
+                  <InputLabel id="work-type-label">Work Type *</InputLabel>
                   <Select
+                    id="workType"
                     name="workType"
-                    value={formik.values.workType}
-                    onChange={(e) => {
-                      formik.handleChange(e);
-                      // Reset workSubType when workType changes
-                      formik.setFieldValue('workSubType', '');
-                    }}
+                    value={formik.values.workType || ''}
+                    onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
+                    labelId="work-type-label"
                     label="Work Type *"
+                    inputProps={{
+                      'aria-invalid': formik.touched.workType && Boolean(formik.errors.workType),
+                      'aria-describedby': formik.touched.workType && formik.errors.workType ? 'work-type-error' : undefined
+                    }}
                   >
+                    <MenuItem value="" disabled>
+                      <em>Select work type</em>
+                    </MenuItem>
                     {workTypeOptions.map((option) => (
                       <MenuItem key={option.value} value={option.value}>
                         {option.label}
                       </MenuItem>
                     ))}
                   </Select>
-                  {formik.touched.workType && formik.errors.workType && (
-                    <FormHelperText>{formik.errors.workType}</FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
-
-              {/* Work Sub-Type */}
-              <Grid item xs={12} md={6}>
-                <FormControl 
-                  fullWidth 
-                  error={formik.touched.workSubType && Boolean(formik.errors.workSubType)}
-                  disabled={!formik.values.workType}
-                >
-                  <InputLabel>Service *</InputLabel>
-                  <Select
-                    name="workSubType"
-                    value={formik.values.workSubType}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    label="Service *"
+                  <FormHelperText 
+                    id="work-type-error"
+                    error={formik.touched.workType && Boolean(formik.errors.workType)}
                   >
-                    {availableSubTypes.map((subType) => (
-                      <MenuItem key={subType} value={subType}>
-                        {subType}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {formik.touched.workSubType && formik.errors.workSubType && (
-                    <FormHelperText>{formik.errors.workSubType}</FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
-
-              {/* Priority */}
-              <Grid item xs={12} md={6}>
-                <FormControl 
-                  fullWidth 
-                  error={formik.touched.priority && Boolean(formik.errors.priority)}
-                >
-                  <InputLabel>Priority *</InputLabel>
-                  <Select
-                    name="priority"
-                    value={formik.values.priority}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    label="Priority *"
-                  >
-                    {priorityOptions.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {formik.touched.priority && formik.errors.priority && (
-                    <FormHelperText>{formik.errors.priority}</FormHelperText>
-                  )}
+                    {formik.touched.workType && formik.errors.workType}
+                  </FormHelperText>
                 </FormControl>
               </Grid>
 
@@ -670,6 +882,8 @@ const WorkOrderForm = ({
                 <FormControl 
                   fullWidth 
                   error={formik.touched.status && Boolean(formik.errors.status)}
+                  margin="normal"
+                  variant="outlined"
                 >
                   <InputLabel>Work Status *</InputLabel>
                   <Select
@@ -685,9 +899,9 @@ const WorkOrderForm = ({
                       </MenuItem>
                     ))}
                   </Select>
-                  {formik.touched.status && formik.errors.status && (
-                    <FormHelperText>{formik.errors.status}</FormHelperText>
-                  )}
+                  <FormHelperText error>
+                    {formik.touched.status && formik.errors.status}
+                  </FormHelperText>
                 </FormControl>
               </Grid>
 
