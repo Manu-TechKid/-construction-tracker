@@ -232,118 +232,114 @@ const WorkOrderForm = ({
     validateOnChange: true,
     validateOnBlur: true,
     onSubmit: async (values, { setSubmitting, setFieldError, setStatus, resetForm }) => {
-      setStatus({ isSubmitting: true });
-      
-      // Convert building object to ID if needed
-      if (values.building && typeof values.building === 'object') {
-        values.building = values.building._id || values.building;
-      }
-      
-      // Ensure assignedTo is an array
-      if (!Array.isArray(values.assignedTo)) {
-        values.assignedTo = [];
-      }
-      
-      setStatus({ ...formik.status, error: '' });
-      
-      // Format dates to ISO strings
-      const formatDate = (date) => {
-        if (!date) return null;
-        try {
-          const dateObj = new Date(date);
-          return isNaN(dateObj.getTime()) ? null : dateObj.toISOString();
-        } catch (error) {
-          console.error('Error formatting date:', { date, error });
-          return null;
-        }
-      };
-      
-      // Format assigned workers with notes
-      const formatWorker = (worker) => {
-        if (!worker) return null;
-        if (typeof worker === 'string') return { 
-          worker, 
-          status: 'pending',
-          assignedAt: new Date().toISOString(),
-          assignedBy: 'system',
-          notes: ''
-        };
-        return {
-          worker: worker._id || worker.worker?._id || worker.worker,
-          status: worker.status || 'pending',
-          assignedAt: worker.assignedAt || new Date().toISOString(),
-          assignedBy: worker.assignedBy || 'system',
-          notes: worker.notes || ''
-        };
-      };
-
-      // Process photos - convert to proper format for backend
-      const processedPhotos = Array.isArray(photos) 
-        ? photos
-            .filter(photo => photo) // Remove null/undefined
-            .map(photo => ({
-              url: photo.url || photo,
-              description: photo.description || photo.caption || '',
-              type: photo.type || 'other',
-              uploadedAt: photo.uploadedAt || new Date().toISOString()
-            }))
-        : [];
-
-      // Log the values being submitted for debugging
-      console.log('Form values being submitted:', values);
-
-      // Prepare submission data
-      const submissionData = {
-        ...values,
-        building: values.building?._id || values.building,
-        assignedTo: Array.isArray(values.assignedTo) 
-          ? values.assignedTo.map(formatWorker).filter(Boolean) // Remove any null values
-          : [],
-        photos: processedPhotos,
-        scheduledDate: formatDate(values.scheduledDate),
-        estimatedCompletionDate: formatDate(values.estimatedCompletionDate),
-        updatedAt: new Date().toISOString()
-      };
-      
-      // Clean up the submission data by removing any undefined or null values
-      Object.keys(submissionData).forEach(key => {
-        if (submissionData[key] === undefined || submissionData[key] === null) {
-          delete submissionData[key];
-        }
-      });
-      
-      console.log('Submitting work order data:', submissionData);
-      
-      // For edit mode, include the _id if it exists
-      if (mode === 'edit' && values._id) {
-        submissionData._id = values._id;
-      }
-      
       try {
-        // Call the onSubmit prop with the formatted data
-        const result = await onSubmit(submissionData);
+        setStatus({ isSubmitting: true, error: null });
         
-        // Show success message
-        toast.success(
-          mode === 'edit' 
-            ? 'Work order updated successfully!'
-            : 'Work order created successfully!',
-          { autoClose: 3000 }
-        );
-        
-        // If we have a successful result, reset the form if this is a create operation
-        if (mode === 'create' && result?.success) {
-          resetForm();
+        // Convert building object to ID if needed
+        if (values.building && typeof values.building === 'object') {
+          values.building = values.building._id || values.building;
         }
         
-        return result; // Return the result to the caller
-      } catch (error) {
-        console.error('Error submitting form:', {
-          error,
-          message: error?.message,
-          response: error?.data,
-          status: error?.status
+        // Ensure assignedTo is an array
+        if (!Array.isArray(values.assignedTo)) {
+          values.assignedTo = [];
+        }
+        
+        // Format dates to ISO strings
+        const formatDate = (date) => {
+          if (!date) return null;
+          try {
+            const dateObj = new Date(date);
+            return isNaN(dateObj.getTime()) ? null : dateObj.toISOString();
+          } catch (error) {
+            console.error('Error formatting date:', { date, error });
+            return null;
+          }
+        };
+        
+        // Format assigned workers with notes
+        const formatWorker = (worker) => {
+          if (!worker) return null;
+          if (typeof worker === 'string') return { 
+            worker, 
+            status: 'pending',
+            assignedAt: new Date().toISOString(),
+            assignedBy: 'system',
+            notes: ''
+          };
+          return {
+            worker: worker._id || worker.worker?._id || worker.worker,
+            status: worker.status || 'pending',
+            assignedAt: worker.assignedAt || new Date().toISOString(),
+            assignedBy: worker.assignedBy || 'system',
+            notes: worker.notes || ''
+          };
+        };
+
+        // Process photos - convert to proper format for backend
+        const processedPhotos = Array.isArray(photos) 
+          ? photos
+              .filter(photo => photo) // Remove null/undefined
+              .map(photo => ({
+                url: photo.url || photo,
+                description: photo.description || photo.caption || '',
+                type: photo.type || 'other',
+                uploadedAt: photo.uploadedAt || new Date().toISOString()
+              }))
+          : [];
+
+        console.log('Form values being submitted:', values);
+
+        // Prepare submission data
+        const submissionData = {
+          ...values,
+          building: values.building?._id || values.building,
+          assignedTo: Array.isArray(values.assignedTo) 
+            ? values.assignedTo.map(formatWorker).filter(Boolean) // Remove any null values
+            : [],
+          photos: processedPhotos,
+          scheduledDate: formatDate(values.scheduledDate),
+          estimatedCompletionDate: formatDate(values.estimatedCompletionDate),
+          updatedAt: new Date().toISOString()
+        };
+        
+        // Clean up the submission data by removing any undefined or null values
+        Object.keys(submissionData).forEach(key => {
+          if (submissionData[key] === undefined || submissionData[key] === null) {
+            delete submissionData[key];
+          }
         });
+        
+        console.log('Submitting work order data:', submissionData);
+        
+        // For edit mode, include the _id if it exists
+        if (mode === 'edit' && values._id) {
+          submissionData._id = values._id;
+        }
+        
+        // Call the onSubmit prop with the formatted data
+        const result = await onSubmit(submissionData, { setStatus, setFieldError });
+        
+        if (result?.success) {
+          // Show success message
+          toast.success(
+            mode === 'edit' 
+              ? 'Work order updated successfully!'
+              : 'Work order created successfully!',
+            { autoClose: 3000 }
+          );
+          
+          // If we have a successful result, reset the form if this is a create operation
+          if (mode === 'create') {
+            resetForm();
+          }
+          
+          return result;
+        }
+        
+        return result || { success: false };
+      } catch (error) {
+        console.error('Error in form submission:', error);
         
         // Handle API validation errors
         let hasFieldErrors = false;
@@ -351,7 +347,6 @@ const WorkOrderForm = ({
         // Handle field-specific validation errors from fieldErrors
         if (error?.data?.fieldErrors) {
           Object.entries(error.data.fieldErrors).forEach(([apiField, messages]) => {
-            // Handle nested fields (e.g., assignedTo.worker)
             const fieldParts = apiField.split('.');
             const formField = fieldParts[0];
             
@@ -372,16 +367,6 @@ const WorkOrderForm = ({
               const errorMessage = Array.isArray(messages) ? messages[0] : messages;
               setFieldError(formField, errorMessage);
               hasFieldErrors = true;
-            } else {
-              // If we can't map the field, add to general error
-              console.warn(`Could not map error for field: ${apiField}`);
-              const errorMessage = Array.isArray(messages) ? messages[0] : messages;
-              setStatus(prev => ({
-                ...prev,
-                error: prev?.error 
-                  ? `${prev.error}. ${apiField}: ${errorMessage}` 
-                  : `${apiField}: ${errorMessage}`
-              }));
             }
           });
         }
@@ -393,43 +378,37 @@ const WorkOrderForm = ({
             if (formik.values[apiField] !== undefined) {
               setFieldError(apiField, errorMessage);
               hasFieldErrors = true;
-            } else {
-              // If field doesn't exist in form, add to general error
-              setStatus(prev => ({
-                ...prev,
-                error: prev?.error 
-                  ? `${prev.error}. ${apiField}: ${errorMessage}` 
-                  : `${apiField}: ${errorMessage}`
-              }));
             }
           });
         }
         
         // Handle general error message
+        const errorMessage = error?.data?.message || 
+                           error?.message || 
+                           'An error occurred while submitting the form';
+        
+        setStatus(prev => ({
+          ...prev,
+          error: hasFieldErrors ? 'Please fix the validation errors below' : errorMessage
+        }));
+        
         if (!hasFieldErrors) {
-          const errorMessage = error?.data?.message || 
-                             error?.message || 
-                             'An error occurred while submitting the form';
-          setStatus(prev => ({
-            ...prev,
-            error: errorMessage
-          }));
           toast.error(errorMessage, { autoClose: 5000 });
-        } else {
-          setStatus(prev => ({
-            ...prev,
-            error: 'Please fix the validation errors below'
-          }));
-          
-          // Scroll to the first error after a short delay
-          setTimeout(() => {
-            const firstError = document.querySelector('.Mui-error');
-            if (firstError) {
-              firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-          }, 100);
         }
         
+        // Scroll to the first error after a short delay
+        setTimeout(() => {
+          const firstError = document.querySelector('.Mui-error');
+          if (firstError) {
+            firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          } else if (errorMessage) {
+            // If no field errors but we have a message, scroll to the top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }, 100);
+        
+        return { success: false, error };
+      } finally {
         setSubmitting(false);
       }
     },

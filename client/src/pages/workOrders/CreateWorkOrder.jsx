@@ -18,7 +18,7 @@ const CreateWorkOrder = () => {
   const navigate = useNavigate();
   const [createWorkOrder, { isLoading }] = useCreateWorkOrderMutation();
 
-  const handleSubmit = async (values, { setErrors, setSubmitting }) => {
+  const handleSubmit = async (values, { setErrors, setSubmitting, setStatus }) => {
     try {
       console.log('Submitting work order:', values);
       
@@ -32,6 +32,7 @@ const CreateWorkOrder = () => {
           errors[field] = 'This field is required';
         });
         setErrors(errors);
+        setSubmitting(false);
         return;
       }
       
@@ -55,7 +56,7 @@ const CreateWorkOrder = () => {
           navigate('/work-orders');
         }, 1000);
         
-        return result;
+        return { success: true, data: result };
       } catch (error) {
         console.error('API Error:', error);
         
@@ -74,14 +75,25 @@ const CreateWorkOrder = () => {
             formErrors[field] = Array.isArray(message) ? message[0] : message;
           });
           setErrors(formErrors);
+        } else if (error?.data?.fieldErrors) {
+          // Handle field-specific errors
+          const formErrors = {};
+          Object.entries(error.data.fieldErrors).forEach(([field, messages]) => {
+            formErrors[field] = Array.isArray(messages) ? messages[0] : messages;
+          });
+          setErrors(formErrors);
         }
         
-        throw error;
+        // Set form status with error
+        setStatus({ error: error?.data?.message || 'Failed to create work order' });
+        
+        return { success: false, error };
       }
     } catch (error) {
       console.error('Unexpected error:', error);
       toast.error('An unexpected error occurred. Please try again.');
-      throw error;
+      setStatus({ error: 'An unexpected error occurred. Please try again.' });
+      return { success: false, error };
     } finally {
       setSubmitting(false);
     }
