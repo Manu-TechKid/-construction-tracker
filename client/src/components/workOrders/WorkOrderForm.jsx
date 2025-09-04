@@ -243,101 +243,21 @@ const WorkOrderForm = ({
       if (!Array.isArray(values.assignedTo)) {
         values.assignedTo = [];
       }
-      try {
-        setStatus({ ...formik.status, error: '' });
-        
-        // Format dates to ISO strings
-        const formatDate = (date) => {
-          if (!date) return null;
-          try {
-            const dateObj = new Date(date);
-            return isNaN(dateObj.getTime()) ? null : dateObj.toISOString();
-          } catch (error) {
-            console.error('Error formatting date:', { date, error });
-            return null;
-          }
-        };
-
-        // Format assigned workers with notes
-        const formatWorker = (worker) => {
-          if (!worker) return null;
-          if (typeof worker === 'string') return { 
-            worker, 
-            status: 'pending',
-            assignedAt: new Date().toISOString(),
-            assignedBy: 'system',
-            notes: ''
-          };
-          return {
-            worker: worker._id || worker.worker?._id || worker.worker,
-            status: worker.status || 'pending',
-            assignedAt: worker.assignedAt || new Date().toISOString(),
-            assignedBy: worker.assignedBy || 'system',
-            notes: worker.notes || ''
-          };
-        };
-
-        // Process photos - convert to proper format for backend
-        const processedPhotos = Array.isArray(photos) 
-          ? photos
-              .filter(photo => photo) // Remove null/undefined
-              .map(photo => ({
-                url: photo.url || photo,
-                description: photo.description || photo.caption || '',
-                type: photo.type || 'other',
-                uploadedAt: photo.uploadedAt || new Date().toISOString()
-              }))
-          : [];
-
-        // Log the values being submitted for debugging
-        console.log('Form values being submitted:', values);
-
-        // Prepare submission data
-        const submissionData = {
-          ...values,
-          building: values.building?._id || values.building,
-          assignedTo: Array.isArray(values.assignedTo) 
-            ? values.assignedTo.map(formatWorker).filter(Boolean) // Remove any null values
-            : [],
-          photos: processedPhotos,
-          scheduledDate: formatDate(values.scheduledDate),
-          estimatedCompletionDate: formatDate(values.estimatedCompletionDate),
-          updatedAt: new Date().toISOString()
-        };
-        
-        // Clean up the submission data by removing any undefined or null values
-        Object.keys(submissionData).forEach(key => {
-          if (submissionData[key] === undefined || submissionData[key] === null) {
-            delete submissionData[key];
-          }
-        });
-        
-        console.log('Submitting work order data:', submissionData);
-        
-        // For edit mode, include the _id if it exists
-        if (mode === 'edit' && values._id) {
-          submissionData._id = values._id;
-        }
-        
+      
+      setStatus({ ...formik.status, error: '' });
+      
+      // Format dates to ISO strings
+      const formatDate = (date) => {
+        if (!date) return null;
         try {
-          // Call the onSubmit prop with the formatted data
-          const result = await onSubmit(submissionData);
-          
-          // Show success message
-          toast.success(
-            mode === 'edit' 
-              ? 'Work order updated successfully!'
-              : 'Work order created successfully!',
-            { autoClose: 3000 }
-          );
-          
-          // If we have a successful result, reset the form if this is a create operation
+          const dateObj = new Date(date);
+          return isNaN(dateObj.getTime()) ? null : dateObj.toISOString();
         } catch (error) {
           console.error('Error formatting date:', { date, error });
           return null;
         }
       };
-
+      
       // Format assigned workers with notes
       const formatWorker = (worker) => {
         if (!worker) return null;
