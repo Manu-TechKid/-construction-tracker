@@ -34,6 +34,7 @@ const WorkOrderForm = ({
   onSubmit,
   isSubmitting,
   onCancel,
+  mode = 'create',
 }) => {
   const { t } = useTranslation();
   const { data: buildingsData, isLoading: buildingsLoading, error: buildingsError } = useGetBuildingsQuery();
@@ -137,7 +138,9 @@ const WorkOrderForm = ({
     { value: 'reserved', label: 'Reserved' },
   ];
 
-  const validationSchema = Yup.object({
+  // Base validation schema for create mode
+  const createValidationSchema = Yup.object({
+    title: Yup.string().required('Title is required'),
     building: Yup.string().required('Building is required'),
     apartmentNumber: Yup.string().required('Apartment number is required'),
     block: Yup.string().required('Block is required'),
@@ -147,13 +150,47 @@ const WorkOrderForm = ({
     description: Yup.string().required('Description is required'),
     priority: Yup.string().required('Priority is required'),
     status: Yup.string().required('Status is required'),
-    estimatedCost: Yup.number().min(0, 'Cost must be positive'),
-    actualCost: Yup.number().min(0, 'Actual cost must be positive'),
-    scheduledDate: Yup.date().nullable(),
-    estimatedCompletionDate: Yup.date().nullable(),
+    estimatedCost: Yup.number()
+      .min(0, 'Cost must be positive')
+      .typeError('Must be a number'),
+    actualCost: Yup.number()
+      .min(0, 'Actual cost must be positive')
+      .typeError('Must be a number'),
+    scheduledDate: Yup.date()
+      .nullable()
+      .typeError('Invalid date format'),
+    estimatedCompletionDate: Yup.date()
+      .nullable()
+      .min(
+        Yup.ref('scheduledDate'),
+        'Completion date must be after scheduled date'
+      )
+      .typeError('Invalid date format'),
+    assignedTo: Yup.array().of(
+      Yup.object({
+        worker: Yup.string().required('Worker is required'),
+        status: Yup.string(),
+        assignedAt: Yup.date(),
+        assignedBy: Yup.string()
+      })
+    ),
+    photos: Yup.array().of(
+      Yup.object({
+        url: Yup.string().required('Photo URL is required'),
+        description: Yup.string(),
+        type: Yup.string(),
+        uploadedAt: Yup.date()
+      })
+    )
   });
 
+  // For edit mode, make all fields optional
+  const validationSchema = mode === 'edit' 
+    ? createValidationSchema.optional() 
+    : createValidationSchema;
+
   const initialValues = {
+    title: '',
     building: '',
     apartmentNumber: '',
     block: '',
@@ -169,31 +206,79 @@ const WorkOrderForm = ({
     estimatedCompletionDate: null,
     assignedTo: [],
     photos: [],
+    notes: '',
     ...initialValuesProp,
   };
 
   const formik = useFormik({
+    enableReinitialize: true,
     initialValues,
     validationSchema,
-    onSubmit: async (values) => {
+    onSubmit: async (values, { setSubmitting, setFieldError }) => {
       try {
         setSubmitError('');
         
-        // Process photos - convert to proper format for backend
-        const processedPhotos = photos.map(photo => ({
-          url: photo.url,
-          description: photo.caption || '',
-          type: photo.type || 'other',
-          uploadedAt: new Date().toISOString()
-        }));
-        
-        const formData = {
-          ...values,
-          photos: processedPhotos,
-          assignedTo: values.assignedTo.map(worker => worker._id || worker),
+        // Format dates to ISO strings
+        const formatDate = (date) => {
+          if (!date) return null;
+          return new Date(date).toISOString();
         };
+
+        // Format assigned workers
+        const formatWorker = (worker) => {
+          if (typeof worker === 'string') return worker; // Already formatted
+          return {
+            worker: worker._id || worker.worker?._id || worker.worker,
+            status: worker.status || 'pending',
+            assignedAt: worker.assignedAt || new Date().toISOString(),
+            assignedBy: worker.assignedBy || 'system',
+            notes: worker.notes || ''
+          };
+        };
+
+        // Process photos - convert to proper format for backend
+        const processedPhotos = (photos || []).map(photo => ({
+          url: photo.url || photo,
+          description: photo.description || photo.caption || '',
+          type: photo.type || 'other',
+          uploadedAt: photo.uploadedAt || new Date().toISOString()
+        }));
+
+        // Prepare submission data
+        const submissionData = {
+          ...values,
+          building: values.building?._id || values.building,
+          assignedTo: Array.isArray(values.assignedTo) 
+            ? values.assignedTo.map(formatWorker)
+            : [],
+          photos: processedPhotos,
+          scheduledDate: formatDate(values.scheduledDate),
+          estimatedCompletionDate: formatDate(values.estimatedCompletionDate),
+          updatedAt: new Date().toISOString()
+        };
+
+        // For edit mode, include the _id if it exists
+        if (mode === 'edit' && values._id) {
+          submissionData._id = values._id;
+        }
+
+        console.log('Submitting work order data:', submissionData);
         
-        await onSubmit(formData);
+        try {
+          await onSubmit(submissionData);
+          toast.success(
+            mode === 'edit' 
+              ? 'Work order updated successfully!'
+              : 'Work order created successfully!',
+            { autoClose: 3000 }
+          );
+        } catch (error) {
+          console.error('Error submitting work order:', error);
+          const errorMessage = error?.data?.message || 'Failed to save work order';
+          setSubmitError(errorMessage);
+          toast.error(errorMessage, { autoClose: 5000 });
+          throw error; // Re-throw to let formik handle the error state
+        }
       } catch (error) {
         console.error('Form submission error:', error);
         setSubmitError(error?.data?.message || 'Failed to submit form');
@@ -243,7 +328,7 @@ const WorkOrderForm = ({
       <Card>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            Work Order Details
+            {mode === 'edit' ? 'Edit Work Order' : 'Create New Work Order'}
           </Typography>
 
           {submitError && (
@@ -254,8 +339,24 @@ const WorkOrderForm = ({
 
           <Box component="form" onSubmit={formik.handleSubmit}>
             <Grid container spacing={3}>
+              {/* Title */}
+              {mode === 'create' && (
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    name="title"
+                    label="Title *"
+                    value={formik.values.title}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    error={formik.touched.title && Boolean(formik.errors.title)}
+                    helperText={formik.touched.title && formik.errors.title}
+                  />
+                </Grid>
+              )}
+              
               {/* Building Selection */}
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={mode === 'edit' ? 6 : 6}>
                 <FormControl 
                   fullWidth 
                   error={formik.touched.building && Boolean(formik.errors.building)}
@@ -587,22 +688,42 @@ const WorkOrderForm = ({
 
               {/* Action Buttons */}
               <Grid item xs={12}>
-                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-                  <Button
-                    variant="outlined"
-                    onClick={handleCancel}
-                    disabled={isSubmitting}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    disabled={isSubmitting}
-                    startIcon={isSubmitting && <CircularProgress size={20} />}
-                  >
-                    {isSubmitting ? 'Saving...' : 'Save Work Order'}
-                  </Button>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+                  <div>
+                    {mode === 'edit' && (
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        onClick={onCancel}
+                        disabled={isSubmitting}
+                        startIcon={<DeleteIcon />}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button
+                      variant="outlined"
+                      onClick={onCancel}
+                      disabled={isSubmitting}
+                    >
+                      {mode === 'edit' ? 'Discard Changes' : 'Cancel'}
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      color="primary"
+                      disabled={isSubmitting}
+                      startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
+                    >
+                      {isSubmitting 
+                        ? 'Saving...' 
+                        : mode === 'edit' 
+                          ? 'Update Work Order' 
+                          : 'Create Work Order'}
+                    </Button>
+                  </Box>
                 </Box>
               </Grid>
             </Grid>
