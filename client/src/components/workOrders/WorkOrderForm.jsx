@@ -29,6 +29,7 @@ import { useGetWorkersQuery } from '../../features/workers/workersApiSlice';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const WorkOrderForm = ({
   initialValues: initialValuesProp,
@@ -215,18 +216,25 @@ const WorkOrderForm = ({
     enableReinitialize: true,
     initialValues,
     validationSchema,
-    onSubmit: async (values, { setSubmitting, setFieldError }) => {
+    onSubmit: async (values, { setSubmitting, setFieldError, resetForm }) => {
       try {
         setSubmitError('');
         
         // Format dates to ISO strings
         const formatDate = (date) => {
           if (!date) return null;
-          return new Date(date).toISOString();
+          try {
+            const dateObj = new Date(date);
+            return isNaN(dateObj.getTime()) ? null : dateObj.toISOString();
+          } catch (error) {
+            console.error('Error formatting date:', { date, error });
+            return null;
+          }
         };
 
         // Format assigned workers
         const formatWorker = (worker) => {
+          if (!worker) return null;
           if (typeof worker === 'string') return worker; // Already formatted
           return {
             worker: worker._id || worker.worker?._id || worker.worker,
@@ -238,52 +246,141 @@ const WorkOrderForm = ({
         };
 
         // Process photos - convert to proper format for backend
-        const processedPhotos = (photos || []).map(photo => ({
-          url: photo.url || photo,
-          description: photo.description || photo.caption || '',
-          type: photo.type || 'other',
-          uploadedAt: photo.uploadedAt || new Date().toISOString()
-        }));
+        const processedPhotos = Array.isArray(photos) 
+          ? photos
+              .filter(photo => photo) // Remove null/undefined
+              .map(photo => ({
+                url: photo.url || photo,
+                description: photo.description || photo.caption || '',
+                type: photo.type || 'other',
+                uploadedAt: photo.uploadedAt || new Date().toISOString()
+              }))
+          : [];
+
+        // Log the values being submitted for debugging
+        console.log('Form values being submitted:', values);
 
         // Prepare submission data
         const submissionData = {
           ...values,
           building: values.building?._id || values.building,
           assignedTo: Array.isArray(values.assignedTo) 
-            ? values.assignedTo.map(formatWorker)
+            ? values.assignedTo.map(formatWorker).filter(Boolean) // Remove any null values
             : [],
           photos: processedPhotos,
           scheduledDate: formatDate(values.scheduledDate),
           estimatedCompletionDate: formatDate(values.estimatedCompletionDate),
           updatedAt: new Date().toISOString()
         };
-
+        
+        // Clean up the submission data by removing any undefined or null values
+        Object.keys(submissionData).forEach(key => {
+          if (submissionData[key] === undefined || submissionData[key] === null) {
+            delete submissionData[key];
+          }
+        });
+        
+        console.log('Submitting work order data:', submissionData);
+        
         // For edit mode, include the _id if it exists
         if (mode === 'edit' && values._id) {
           submissionData._id = values._id;
         }
-
-        console.log('Submitting work order data:', submissionData);
         
         try {
-          await onSubmit(submissionData);
+          // Call the onSubmit prop with the formatted data
+          const result = await onSubmit(submissionData);
+          
+          // Show success message
           toast.success(
             mode === 'edit' 
               ? 'Work order updated successfully!'
               : 'Work order created successfully!',
             { autoClose: 3000 }
           );
+          
+          // If we have a successful result, reset the form if this is a create operation
+          if (mode === 'create' && result?.success) {
+            resetForm();
+          }
+          
+          return result; // Return the result to the caller
         } catch (error) {
-          console.error('Error submitting work order:', error);
-          const errorMessage = error?.data?.message || 'Failed to save work order';
-          setSubmitError(errorMessage);
-          toast.error(errorMessage, { autoClose: 5000 });
-          throw error; // Re-throw to let formik handle the error state
+          console.error('Error submitting work order:', {
+            error,
+            message: error?.message,
+            response: error?.data,
+            status: error?.status
+          });
+          
+          // Re-throw the error to be handled by the outer catch block
+          throw error;
         }
       } catch (error) {
-        console.error('Form submission error:', error);
-        setSubmitError(error?.data?.message || 'Failed to submit form');
-        toast.error(error?.data?.message || 'Failed to submit form');
+        console.error('Error submitting form:', {
+          error,
+          message: error?.message,
+          response: error?.data,
+          status: error?.status
+        });
+        
+        // Handle API validation errors
+        if (error?.data?.errors) {
+          // Handle field-specific validation errors
+          const fieldErrors = error.data.errors;
+          let hasFieldErrors = false;
+          
+          // Map backend field names to form field names if needed
+          const fieldMapping = {
+            // Add any field name mappings here if needed
+            // e.g., 'buildingId': 'building'
+          };
+          
+          Object.keys(fieldErrors).forEach(apiField => {
+            const formField = fieldMapping[apiField] || apiField;
+            const messages = Array.isArray(fieldErrors[apiField]) 
+              ? fieldErrors[apiField].join(', ')
+              : fieldErrors[apiField].message || fieldErrors[apiField];
+              
+            // Only set field error if the field exists in the form
+            if (formik.values[formField] !== undefined) {
+              setFieldError(formField, messages);
+              hasFieldErrors = true;
+            } else {
+              // If we can't map the field, add to general error
+              setSubmitError(prev => 
+                prev ? `${prev}. ${apiField}: ${messages}` : `${apiField}: ${messages}`
+              );
+            }
+          });
+          
+          if (!hasFieldErrors && !submitError) {
+            // If we couldn't map any fields, show a general error
+            setSubmitError('Please check the form for errors');
+          } else if (hasFieldErrors) {
+            setSubmitError('Please fix the validation errors below');
+          }
+          
+          // Scroll to the first error
+          setTimeout(() => {
+            const firstError = document.querySelector('.Mui-error');
+            if (firstError) {
+              firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 100);
+          
+        } else {
+          // Handle other types of errors
+          const errorMessage = error?.data?.message || 
+                             error?.message || 
+                             'An error occurred while submitting the form';
+          setSubmitError(errorMessage);
+          
+          // Show error toast for non-validation errors
+          toast.error(errorMessage, { autoClose: 5000 });
+        }
+        
+        setSubmitting(false);
       }
     },
   });
@@ -694,12 +791,12 @@ const WorkOrderForm = ({
                     {mode === 'edit' && (
                       <Button
                         variant="outlined"
-                        color="error"
+                        color="secondary"
                         onClick={onCancel}
                         disabled={isSubmitting}
-                        startIcon={<DeleteIcon />}
+                        startIcon={<ArrowBackIcon />}
                       >
-                        Cancel
+                        Back to List
                       </Button>
                     )}
                   </div>

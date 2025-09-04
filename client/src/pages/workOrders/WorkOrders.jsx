@@ -47,6 +47,7 @@ import { toast } from 'react-toastify';
 
 import { useGetWorkOrdersQuery, useDeleteWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
+import { apiSlice } from '../../app/api/apiSlice';
 import { useAuth } from '../../hooks/useAuth';
 import { useBuildingContext } from '../../contexts/BuildingContext';
 
@@ -128,28 +129,48 @@ const WorkOrders = () => {
     try {
       console.log('Sending delete request for work order:', workOrderId);
       
-      // Get the current auth token for debugging
-      const token = localStorage.getItem('token');
-      console.log('Current auth token exists:', !!token);
+      // Show loading state
+      const toastId = toast.loading('Deleting work order...');
       
-      const result = await deleteWorkOrder(workOrderId).unwrap();
-      console.log('Delete API response:', result);
-      
-      if (result?.status === 'success' || result?.success) {
+      try {
+        const result = await deleteWorkOrder(workOrderId).unwrap();
+        console.log('Delete API response:', result);
+        
+        // Handle successful deletion
         console.log('Work order deleted successfully');
-        toast.success('Work order deleted successfully');
+        toast.update(toastId, {
+          render: 'Work order deleted successfully',
+          type: 'success',
+          isLoading: false,
+          autoClose: 3000
+        });
+        
+        // Close dialogs and reset state
         setDeleteDialogOpen(false);
         handleMenuClose();
         
-        // Force refetch work orders with a small delay to ensure the backend has processed the deletion
-        setTimeout(() => {
-          console.log('Refreshing work orders list...');
-          refetch();
-        }, 500);
-      } else {
-        const errorMsg = result?.message || 'Failed to delete work order';
-        console.error('Delete operation failed:', errorMsg);
-        throw new Error(errorMsg);
+        // Invalidate the cache for work orders and dashboard stats
+        apiSlice.util.invalidateTags([
+          { type: 'WorkOrder', id: workOrderId },
+          'WorkOrder',
+          'DashboardStats'
+        ]);
+        
+        // Refetch the work orders list
+        refetch();
+      } catch (error) {
+        console.error('Error in deleteWorkOrder mutation:', error);
+        
+        // Show error toast
+        toast.update(toastId, {
+          render: error?.data?.message || 'Failed to delete work order',
+          type: 'error',
+          isLoading: false,
+          autoClose: 5000
+        });
+        
+        // Re-throw to be caught by the outer catch block
+        throw error;
       }
     } catch (error) {
       console.error('Error in handleDelete:', {

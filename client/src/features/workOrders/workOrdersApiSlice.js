@@ -33,26 +33,30 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
     }),
     createWorkOrder: builder.mutation({
       query: (workOrderData) => ({
-        url: '/api/v1/work-orders',
+        url: '/work-orders',
         method: 'POST',
         body: workOrderData,
         headers: {
           'Content-Type': 'application/json',
         },
       }),
+      invalidatesTags: ['WorkOrder'],
       transformResponse: (response, meta, arg) => {
         console.log('Create work order response:', response);
-        if (response && response.status === 'success') {
+        // Handle both direct data and nested response.data
+        const data = response.data || response;
+        
+        if (response && (response.status === 'success' || data)) {
           return { 
             success: true, 
-            data: response.data,
+            data: data,
             message: response.message || 'Work order created successfully!'
           };
         }
         return { 
           success: false, 
           message: response?.message || 'Failed to create work order',
-          data: response.data
+          data: response?.data
         };
       },
       transformErrorResponse: (response, meta, arg) => {
@@ -213,33 +217,62 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
       invalidatesTags: (result, error, id) => [
         { type: 'WorkOrder', id },
         'WorkOrder',
+        'DashboardStats',
       ],
       // Transform the response to handle different response formats
-      transformResponse: (response, meta, arg) => {
-        if (response && response.status === 'success') {
+      transformResponse: (response, meta, id) => {
+        console.log('Delete work order response:', response);
+        
+        // Handle different response formats
+        if (response && (response.status === 'success' || response.data)) {
           return { 
             success: true, 
             message: response.message || 'Work order deleted successfully!',
-            data: response.data
+            data: response.data || { _id: id }
           };
         }
+        
+        // If response is just the deleted work order
+        if (response && response._id) {
+          return {
+            success: true,
+            message: 'Work order deleted successfully!',
+            data: response
+          };
+        }
+        
         return response;
       },
       // Handle errors consistently
       transformErrorResponse: (response, meta, arg) => {
-        let errorMessage = 'An error occurred while deleting the work order';
+        console.error('Delete work order error:', response);
         
-        if (response.data) {
-          if (response.data.message) {
-            errorMessage = response.data.message;
-          } else if (response.data.error) {
-            errorMessage = response.data.error;
+        let errorMessage = 'An error occurred while deleting the work order';
+        let errorData = response.data;
+        
+        if (errorData) {
+          // Handle different error response formats
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          } else if (typeof errorData === 'string') {
+            errorMessage = errorData;
           }
+        }
+        
+        // Handle specific status codes
+        if (response.status === 404) {
+          errorMessage = 'Work order not found. It may have already been deleted.';
+        } else if (response.status === 403) {
+          errorMessage = 'You do not have permission to delete this work order.';
+        } else if (response.status === 401) {
+          errorMessage = 'Your session has expired. Please log in again.';
         }
         
         return {
           status: response.status,
-          data: response.data,
+          data: errorData,
           message: errorMessage
         };
       },

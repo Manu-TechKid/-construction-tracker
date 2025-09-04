@@ -20,13 +20,34 @@ const CreateWorkOrder = () => {
 
   const handleSubmit = async (values) => {
     try {
-      await createWorkOrder(values).unwrap();
-      // The success toast will be shown by the WorkOrderForm
-      navigate('/work-orders');
+      console.log('Submitting work order:', values);
+      const result = await createWorkOrder(values).unwrap();
+      
+      // Log the API response for debugging
+      console.log('Work order creation response:', result);
+      
+      // Show success message
+      toast.success(result.message || 'Work order created successfully!');
+      
+      // Navigate to work orders list after a short delay
+      setTimeout(() => {
+        navigate('/work-orders');
+      }, 500);
+      
+      return result; // Return the result to the form
     } catch (error) {
-      console.error('Error creating work order:', error);
-      // The error will be handled by the WorkOrderForm
-      throw error; // Re-throw to let WorkOrderForm handle the error state
+      console.error('Error creating work order:', {
+        error,
+        status: error?.status,
+        data: error?.data,
+        message: error?.message
+      });
+      
+      // Show error message
+      toast.error(error?.data?.message || error?.message || 'Failed to create work order');
+      
+      // Re-throw to let WorkOrderForm handle the error state
+      throw error;
     }
   };
 
