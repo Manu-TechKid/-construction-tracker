@@ -57,7 +57,6 @@ const WorkOrderForm = ({
   const [assignedWorkers, setAssignedWorkers] = useState([]);
   const [availableBlocks, setAvailableBlocks] = useState([]);
   const [workerNotes, setWorkerNotes] = useState({});
-  const [submitError, setSubmitError] = useState('');
 
   // Work type options matching database model
   const workTypeOptions = [
@@ -245,7 +244,7 @@ const WorkOrderForm = ({
         values.assignedTo = [];
       }
       try {
-        setSubmitError('');
+        setStatus({ ...formik.status, error: '' });
         
         // Format dates to ISO strings
         const formatDate = (date) => {
@@ -333,22 +332,91 @@ const WorkOrderForm = ({
           );
           
           // If we have a successful result, reset the form if this is a create operation
-          if (mode === 'create' && result?.success) {
-            resetForm();
-          }
-          
-          return result; // Return the result to the caller
         } catch (error) {
-          console.error('Error submitting work order:', {
-            error,
-            message: error?.message,
-            response: error?.data,
-            status: error?.status
-          });
-          
-          // Re-throw the error to be handled by the outer catch block
-          throw error;
+          console.error('Error formatting date:', { date, error });
+          return null;
         }
+      };
+
+      // Format assigned workers with notes
+      const formatWorker = (worker) => {
+        if (!worker) return null;
+        if (typeof worker === 'string') return { 
+          worker, 
+          status: 'pending',
+          assignedAt: new Date().toISOString(),
+          assignedBy: 'system',
+          notes: ''
+        };
+        return {
+          worker: worker._id || worker.worker?._id || worker.worker,
+          status: worker.status || 'pending',
+          assignedAt: worker.assignedAt || new Date().toISOString(),
+          assignedBy: worker.assignedBy || 'system',
+          notes: worker.notes || ''
+        };
+      };
+
+      // Process photos - convert to proper format for backend
+      const processedPhotos = Array.isArray(photos) 
+        ? photos
+            .filter(photo => photo) // Remove null/undefined
+            .map(photo => ({
+              url: photo.url || photo,
+              description: photo.description || photo.caption || '',
+              type: photo.type || 'other',
+              uploadedAt: photo.uploadedAt || new Date().toISOString()
+            }))
+        : [];
+
+      // Log the values being submitted for debugging
+      console.log('Form values being submitted:', values);
+
+      // Prepare submission data
+      const submissionData = {
+        ...values,
+        building: values.building?._id || values.building,
+        assignedTo: Array.isArray(values.assignedTo) 
+          ? values.assignedTo.map(formatWorker).filter(Boolean) // Remove any null values
+          : [],
+        photos: processedPhotos,
+        scheduledDate: formatDate(values.scheduledDate),
+        estimatedCompletionDate: formatDate(values.estimatedCompletionDate),
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Clean up the submission data by removing any undefined or null values
+      Object.keys(submissionData).forEach(key => {
+        if (submissionData[key] === undefined || submissionData[key] === null) {
+          delete submissionData[key];
+        }
+      });
+      
+      console.log('Submitting work order data:', submissionData);
+      
+      // For edit mode, include the _id if it exists
+      if (mode === 'edit' && values._id) {
+        submissionData._id = values._id;
+      }
+      
+      try {
+        // Call the onSubmit prop with the formatted data
+        const result = await onSubmit(submissionData);
+        
+        // Show success message
+        toast.success(
+          mode === 'edit' 
+            ? 'Work order updated successfully!'
+            : 'Work order created successfully!',
+          { autoClose: 3000 }
+        );
+        
+        // If we have a successful result, reset the form if this is a create operation
+        if (mode === 'create' && result?.success) {
+          resetForm();
+        }
+        
+        return result; // Return the result to the caller
       } catch (error) {
         console.error('Error submitting form:', {
           error,
@@ -387,9 +455,13 @@ const WorkOrderForm = ({
             } else {
               // If we can't map the field, add to general error
               console.warn(`Could not map error for field: ${apiField}`);
-              setSubmitError(prev => 
-                prev ? `${prev}. ${apiField}: ${messages}` : `${apiField}: ${messages}`
-              );
+              const errorMessage = Array.isArray(messages) ? messages[0] : messages;
+              setStatus(prev => ({
+                ...prev,
+                error: prev?.error 
+                  ? `${prev.error}. ${apiField}: ${errorMessage}` 
+                  : `${apiField}: ${errorMessage}`
+              }));
             }
           });
         }
@@ -398,8 +470,18 @@ const WorkOrderForm = ({
         if (error?.data?.errors && !hasFieldErrors) {
           Object.entries(error.data.errors).forEach(([apiField, messages]) => {
             const errorMessage = Array.isArray(messages) ? messages[0] : messages;
-            setFieldError(apiField, errorMessage);
-            hasFieldErrors = true;
+            if (formik.values[apiField] !== undefined) {
+              setFieldError(apiField, errorMessage);
+              hasFieldErrors = true;
+            } else {
+              // If field doesn't exist in form, add to general error
+              setStatus(prev => ({
+                ...prev,
+                error: prev?.error 
+                  ? `${prev.error}. ${apiField}: ${errorMessage}` 
+                  : `${apiField}: ${errorMessage}`
+              }));
+            }
           });
         }
         
@@ -408,10 +490,16 @@ const WorkOrderForm = ({
           const errorMessage = error?.data?.message || 
                              error?.message || 
                              'An error occurred while submitting the form';
-          setSubmitError(errorMessage);
+          setStatus(prev => ({
+            ...prev,
+            error: errorMessage
+          }));
           toast.error(errorMessage, { autoClose: 5000 });
         } else {
-          setSubmitError('Please fix the validation errors below');
+          setStatus(prev => ({
+            ...prev,
+            error: 'Please fix the validation errors below'
+          }));
           
           // Scroll to the first error after a short delay
           setTimeout(() => {
@@ -491,9 +579,9 @@ const WorkOrderForm = ({
             {mode === 'edit' ? 'Edit Work Order' : 'Create New Work Order'}
           </Typography>
 
-          {submitError && (
+          {formik.status?.error && (
             <Alert severity="error" sx={{ mb: 2 }}>
-              {submitError}
+              {formik.status.error}
             </Alert>
           )}
 
