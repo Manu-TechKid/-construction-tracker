@@ -57,6 +57,7 @@ const WorkOrderForm = ({
   const [assignedWorkers, setAssignedWorkers] = useState([]);
   const [availableBlocks, setAvailableBlocks] = useState([]);
   const [workerNotes, setWorkerNotes] = useState({});
+  const [submitError, setSubmitError] = useState('');
 
   // Work type options matching database model
   const workTypeOptions = [
@@ -231,7 +232,7 @@ const WorkOrderForm = ({
     validateOnMount: true,
     validateOnChange: true,
     validateOnBlur: true,
-    onSubmit: async (values, { setSubmitting, setFieldError, setStatus }) => {
+    onSubmit: async (values, { setSubmitting, setFieldError, setStatus, resetForm }) => {
       setStatus({ isSubmitting: true });
       
       // Convert building object to ID if needed
