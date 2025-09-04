@@ -28,6 +28,7 @@ import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice
 import { useGetWorkersQuery } from '../../features/workers/workersApiSlice';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 const WorkOrderForm = ({
   initialValues: initialValuesProp,
