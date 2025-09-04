@@ -42,14 +42,42 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
     const workOrderScheduledDate = scheduledDate ? new Date(scheduledDate) : new Date();
 
     // Validate required fields
-    const requiredFields = ['title', 'priority', 'status'];
-    const missingFields = requiredFields.filter(field => !req.body[field]);
+    const requiredFields = [
+      'title', 
+      'description', 
+      'building', 
+      'apartmentNumber', 
+      'block', 
+      'apartmentStatus',
+      'priority', 
+      'status',
+      'workType'
+    ];
+    
+    const missingFields = [];
+    const fieldErrors = {};
+    
+    // Check for missing required fields
+    requiredFields.forEach(field => {
+      if (!req.body[field] && req.body[field] !== 0 && req.body[field] !== false) {
+        missingFields.push(field);
+        fieldErrors[field] = `Field '${field}' is required`;
+      }
+    });
     
     if (missingFields.length > 0) {
+      console.error('Missing required fields:', { missingFields, fieldErrors });
       return next(new AppError(
         `Missing required fields: ${missingFields.join(', ')}`,
-        400
+        400,
+        { fieldErrors }
       ));
+    }
+    
+    // Validate building ID format
+    if (!mongoose.Types.ObjectId.isValid(building)) {
+      fieldErrors.building = 'Invalid building ID format';
+      return next(new AppError('Invalid building ID format', 400, { fieldErrors }));
     }
 
     // Validate services array
@@ -86,13 +114,52 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       }));
     }
 
-    // Process assigned workers
-    const processedAssignedTo = Array.isArray(assignedTo) ? assignedTo.map(workerId => ({
-      worker: workerId,
-      status: 'pending',
-      assignedAt: new Date(),
-      assignedBy: createdBy
-    })) : [];
+    // Process assigned workers with notes
+    const processedAssignedTo = [];
+    if (Array.isArray(assignedTo)) {
+      for (const worker of assignedTo) {
+        try {
+          let workerId;
+          let workerNotes = '';
+          
+          // Handle both direct worker IDs and worker objects with notes
+          if (typeof worker === 'string' || worker instanceof String) {
+            workerId = worker;
+          } else if (worker && (worker.worker || worker._id)) {
+            workerId = worker.worker || worker._id;
+            workerNotes = worker.notes || '';
+          } else {
+            console.warn('Invalid worker format:', worker);
+            continue; // Skip invalid worker entries
+          }
+          
+          // Validate worker ID format
+          if (!mongoose.Types.ObjectId.isValid(workerId)) {
+            console.warn('Invalid worker ID format:', workerId);
+            continue; // Skip invalid worker IDs
+          }
+          
+          // Check if worker exists
+          const workerExists = await User.exists({ _id: workerId, role: 'worker' });
+          if (!workerExists) {
+            console.warn(`Worker with ID ${workerId} not found or not a worker`);
+            continue; // Skip non-existent workers
+          }
+          
+          processedAssignedTo.push({
+            worker: workerId,
+            status: worker.status || 'pending',
+            assignedAt: worker.assignedAt || new Date(),
+            assignedBy: createdBy, // Always use the current user as the assigner
+            notes: workerNotes
+          });
+          
+        } catch (error) {
+          console.error('Error processing worker assignment:', error);
+          // Continue with other workers even if one fails
+        }
+      }
+    }
 
     // Process services with defaults
     const processedServices = services.map(service => ({
@@ -114,12 +181,12 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
     }));
 
     // Create the work order with processed data
-    const workOrder = await WorkOrder.create({
-      title: title.trim(),
-      description: description ? description.trim() : '',
-      building: building || null,
-      apartmentNumber: apartmentNumber ? apartmentNumber.trim() : '',
-      block: block ? block.trim() : '',
+    const workOrderData = {
+      title,
+      description,
+      building,
+      apartmentNumber,
+      block,
       apartmentStatus,
       priority,
       status,
@@ -128,12 +195,32 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       assignedTo: processedAssignedTo,
       services: processedServices,
       photos,
-      notes: processedNotes,
+      notes: processedNotes, // Use processedNotes instead of raw notes
       createdBy,
-      updatedBy: createdBy,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    });
+      updatedBy: createdBy
+    };
+
+    console.log('Creating work order with data:', JSON.stringify(workOrderData, null, 2));
+    
+    try {
+      const workOrder = await WorkOrder.create(workOrderData);
+      console.log('Work order created successfully:', workOrder);
+    } catch (createError) {
+      console.error('Error creating work order in database:', {
+        error: createError,
+        workOrderData: {
+          ...workOrderData,
+          createdBy: workOrderData.createdBy ? workOrderData.createdBy.toString() : 'undefined',
+          updatedBy: workOrderData.updatedBy ? workOrderData.updatedBy.toString() : 'undefined',
+          assignedTo: workOrderData.assignedTo.map(a => ({
+            ...a,
+            worker: a.worker ? a.worker.toString() : 'undefined',
+            assignedBy: a.assignedBy ? a.assignedBy.toString() : 'undefined'
+          }))
+        }
+      });
+      throw createError;
+    }
 
     // Populate the work order with related data for the response
     const populatedWorkOrder = await WorkOrder.findById(workOrder._id)
@@ -1033,7 +1120,7 @@ exports.getWorkOrderStats = catchAsync(async (req, res, next) => {
         totalCost: completedWorkOrders[0]?.totalCost || 0
       }
     };
-
+    
     res.status(200).json(result);
   } catch (error) {
     handleWorkOrderError(error, next);
@@ -1042,32 +1129,50 @@ exports.getWorkOrderStats = catchAsync(async (req, res, next) => {
 
 // Helper function to handle common error cases
 const handleWorkOrderError = (error, next) => {
-  console.error('Work Order Error:', error);
-  
-  if (error.name === 'ValidationError') {
-    const messages = Object.values(error.errors).map(val => val.message);
-    return next(new AppError(`Validation error: ${messages.join('. ')}`, 400));
-  }
-  
-  if (error.name === 'CastError') {
-    return next(new AppError(`Invalid ID format: ${error.value}`, 400));
-  }
-  
-  if (error.code === 11000) {
-    return next(new AppError('Duplicate field value. Please use another value.', 400));
-  }
-  
-  // Log detailed error information for debugging
-  console.error('Error Details:', {
+  console.error('Work Order Error:', {
     name: error.name,
     message: error.message,
-    stack: error.stack,
-    ...(error.errors && { errors: error.errors })
+    code: error.code,
+    errors: error.errors,
+    stack: error.stack
   });
   
-  return next(new AppError(`An unexpected error occurred: ${error.message}`, 500));
+  // Handle validation errors
+  if (error.name === 'ValidationError') {
+    const messages = Object.entries(error.errors).map(([field, err]) => 
+      `${field}: ${err.message}`
+    );
+    return next(new AppError(`Validation Error: ${messages.join('. ')}`, 400));
+  }
+  
+  // Handle duplicate field errors
+  if (error.code === 11000) {
+    const field = Object.keys(error.keyValue || {})[0] || 'unknown field';
+    return next(new AppError(`Duplicate field value: ${field}. Please use another value.`, 400));
+  }
+  
+  // Handle CastError (invalid ObjectId)
+  if (error.name === 'CastError') {
+    const message = error.path === '_id' 
+      ? `Invalid ID format: ${error.value}`
+      : `Invalid ${error.path}: ${error.value}`;
+    return next(new AppError(message, 400));
+  }
+  
+  // Handle missing required fields
+  if (error.message && error.message.includes('Path `') && error.message.includes('` is required')) {
+    const field = error.message.match(/Path `([^`]+)`/)[1];
+    return next(new AppError(`Missing required field: ${field}`, 400));
+  }
+  
+  // Default error handler with more detailed message
+  return next(new AppError(
+    error.message || 'An unexpected error occurred. Please try again.', 
+    error.statusCode || 500
+  ));
 };
 
+// ...
 // Get all work orders with filtering, sorting, and pagination
 exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
   try {

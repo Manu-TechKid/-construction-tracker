@@ -18,36 +18,72 @@ const CreateWorkOrder = () => {
   const navigate = useNavigate();
   const [createWorkOrder, { isLoading }] = useCreateWorkOrderMutation();
 
-  const handleSubmit = async (values) => {
+  const handleSubmit = async (values, { setErrors, setSubmitting }) => {
     try {
       console.log('Submitting work order:', values);
-      const result = await createWorkOrder(values).unwrap();
       
-      // Log the API response for debugging
-      console.log('Work order creation response:', result);
+      // Validate required fields
+      const requiredFields = ['title', 'building', 'apartmentNumber', 'workType'];
+      const missingFields = requiredFields.filter(field => !values[field]);
       
-      // Show success message
-      toast.success(result.message || 'Work order created successfully!');
+      if (missingFields.length > 0) {
+        const errors = {};
+        missingFields.forEach(field => {
+          errors[field] = 'This field is required';
+        });
+        setErrors(errors);
+        return;
+      }
       
-      // Navigate to work orders list after a short delay
-      setTimeout(() => {
-        navigate('/work-orders');
-      }, 500);
+      // Show loading state
+      const loadingToast = toast.loading('Creating work order...');
       
-      return result; // Return the result to the form
+      try {
+        const result = await createWorkOrder(values).unwrap();
+        console.log('Work order creation response:', result);
+        
+        // Update loading toast to success
+        toast.update(loadingToast, {
+          render: result.message || 'Work order created successfully!',
+          type: 'success',
+          isLoading: false,
+          autoClose: 3000
+        });
+        
+        // Navigate to work orders list after a short delay
+        setTimeout(() => {
+          navigate('/work-orders');
+        }, 1000);
+        
+        return result;
+      } catch (error) {
+        console.error('API Error:', error);
+        
+        // Update loading toast to error
+        toast.update(loadingToast, {
+          render: error?.data?.message || error?.message || 'Failed to create work order',
+          type: 'error',
+          isLoading: false,
+          autoClose: 5000
+        });
+        
+        // Handle validation errors
+        if (error?.data?.errors) {
+          const formErrors = {};
+          Object.entries(error.data.errors).forEach(([field, message]) => {
+            formErrors[field] = Array.isArray(message) ? message[0] : message;
+          });
+          setErrors(formErrors);
+        }
+        
+        throw error;
+      }
     } catch (error) {
-      console.error('Error creating work order:', {
-        error,
-        status: error?.status,
-        data: error?.data,
-        message: error?.message
-      });
-      
-      // Show error message
-      toast.error(error?.data?.message || error?.message || 'Failed to create work order');
-      
-      // Re-throw to let WorkOrderForm handle the error state
+      console.error('Unexpected error:', error);
+      toast.error('An unexpected error occurred. Please try again.');
       throw error;
+    } finally {
+      setSubmitting(false);
     }
   };
 

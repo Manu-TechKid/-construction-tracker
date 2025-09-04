@@ -32,15 +32,31 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
       providesTags: (result, error, id) => [{ type: 'WorkOrder', id }],
     }),
     createWorkOrder: builder.mutation({
-      query: (workOrderData) => ({
-        url: '/work-orders',
-        method: 'POST',
-        body: workOrderData,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }),
-      invalidatesTags: ['WorkOrder'],
+      query: (workOrderData) => {
+        // Process worker assignments to include notes
+        const processedData = {
+          ...workOrderData,
+          assignedTo: Array.isArray(workOrderData.assignedTo) 
+            ? workOrderData.assignedTo.map(worker => ({
+                worker: worker._id || worker.worker?._id || worker.worker || worker,
+                status: worker.status || 'pending',
+                notes: worker.notes || '',
+                assignedAt: worker.assignedAt || new Date().toISOString(),
+                assignedBy: worker.assignedBy || 'system'
+              }))
+            : []
+        };
+
+        return {
+          url: '/work-orders',
+          method: 'POST',
+          body: processedData,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        };
+      },
+      invalidatesTags: ['WorkOrder', 'DashboardStats'],
       transformResponse: (response, meta, arg) => {
         console.log('Create work order response:', response);
         // Handle both direct data and nested response.data
@@ -68,21 +84,39 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
         });
         
         let errorMessage = 'An error occurred while creating the work order';
+        let fieldErrors = {};
         
         if (response.data) {
-          // Handle validation errors
-          if (response.data.errors) {
-            const errorMessages = Object.values(response.data.errors)
-              .map(err => err.msg || err.message || err)
-              .join('\n');
-            errorMessage = errorMessages || errorMessage;
+          // Handle field validation errors (new format)
+          if (response.data.fieldErrors) {
+            fieldErrors = response.data.fieldErrors;
+            errorMessage = 'Please fix the validation errors below';
           } 
+          // Handle legacy validation errors
+          else if (response.data.errors) {
+            // Convert errors object to fieldErrors format
+            fieldErrors = {};
+            Object.entries(response.data.errors).forEach(([field, error]) => {
+              fieldErrors[field] = error.msg || error.message || error;
+            });
+            errorMessage = 'Please fix the validation errors below';
+          }
           // Handle other error formats
           else if (response.data.message) {
             errorMessage = response.data.message;
           } else if (response.data.error) {
             errorMessage = response.data.error;
           }
+        }
+        
+        if (response.status === 400 && response.data && response.data.fieldErrors) {
+          return {
+            ...response,
+            data: {
+              ...response.data,
+              fieldErrors: response.data.fieldErrors
+            }
+          };
         }
         
         return {
@@ -100,6 +134,7 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
           console.error('Work order creation failed:', {
             status: error.error?.status,
             data: error.error?.data,
+            fieldErrors: error.error?.data?.fieldErrors,
             message: error.error?.data?.message || error.message
           });
         }

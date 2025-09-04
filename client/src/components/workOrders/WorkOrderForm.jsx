@@ -54,8 +54,9 @@ const WorkOrderForm = ({
   }, [workersData]);
 
   const [photos, setPhotos] = useState([]);
-  const [submitError, setSubmitError] = useState([]);
+  const [assignedWorkers, setAssignedWorkers] = useState([]);
   const [availableBlocks, setAvailableBlocks] = useState([]);
+  const [workerNotes, setWorkerNotes] = useState({});
 
   // Work type options matching database model
   const workTypeOptions = [
@@ -142,12 +143,23 @@ const WorkOrderForm = ({
 
   // Base validation schema for create mode
   const createValidationSchema = Yup.object({
-    title: Yup.string().required('Title is required'),
-    building: Yup.string().required('Building is required'),
-    apartmentNumber: Yup.string().required('Apartment number is required'),
-    block: Yup.string().required('Block is required'),
-    apartmentStatus: Yup.string().required('Apartment status is required'),
-    workType: Yup.string().required('Work type is required'),
+    title: Yup.string()
+      .required('Title is required')
+      .min(5, 'Title must be at least 5 characters')
+      .max(100, 'Title must be less than 100 characters'),
+    building: Yup.mixed().required('Building is required'),
+    apartmentNumber: Yup.string()
+      .required('Apartment number is required')
+      .max(20, 'Apartment number must be less than 20 characters'),
+    block: Yup.string()
+      .required('Block is required')
+      .max(20, 'Block must be less than 20 characters'),
+    apartmentStatus: Yup.string()
+      .required('Apartment status is required')
+      .oneOf(['vacant', 'occupied', 'under_renovation', 'reserved'], 'Invalid status'),
+    workType: Yup.string()
+      .required('Work type is required')
+      .oneOf(workTypeOptions.map(opt => opt.value), 'Invalid work type'),
     workSubType: Yup.string().required('Work sub-type is required'),
     description: Yup.string().required('Description is required'),
     priority: Yup.string().required('Priority is required'),
@@ -216,7 +228,21 @@ const WorkOrderForm = ({
     enableReinitialize: true,
     initialValues,
     validationSchema,
-    onSubmit: async (values, { setSubmitting, setFieldError, resetForm }) => {
+    validateOnMount: true,
+    validateOnChange: true,
+    validateOnBlur: true,
+    onSubmit: async (values, { setSubmitting, setFieldError, setStatus }) => {
+      setStatus({ isSubmitting: true });
+      
+      // Convert building object to ID if needed
+      if (values.building && typeof values.building === 'object') {
+        values.building = values.building._id || values.building;
+      }
+      
+      // Ensure assignedTo is an array
+      if (!Array.isArray(values.assignedTo)) {
+        values.assignedTo = [];
+      }
       try {
         setSubmitError('');
         
@@ -232,10 +258,16 @@ const WorkOrderForm = ({
           }
         };
 
-        // Format assigned workers
+        // Format assigned workers with notes
         const formatWorker = (worker) => {
           if (!worker) return null;
-          if (typeof worker === 'string') return worker; // Already formatted
+          if (typeof worker === 'string') return { 
+            worker, 
+            status: 'pending',
+            assignedAt: new Date().toISOString(),
+            assignedBy: 'system',
+            notes: ''
+          };
           return {
             worker: worker._id || worker.worker?._id || worker.worker,
             status: worker.status || 'pending',
@@ -325,59 +357,68 @@ const WorkOrderForm = ({
         });
         
         // Handle API validation errors
-        if (error?.data?.errors) {
-          // Handle field-specific validation errors
-          const fieldErrors = error.data.errors;
-          let hasFieldErrors = false;
-          
-          // Map backend field names to form field names if needed
-          const fieldMapping = {
-            // Add any field name mappings here if needed
-            // e.g., 'buildingId': 'building'
-          };
-          
-          Object.keys(fieldErrors).forEach(apiField => {
-            const formField = fieldMapping[apiField] || apiField;
-            const messages = Array.isArray(fieldErrors[apiField]) 
-              ? fieldErrors[apiField].join(', ')
-              : fieldErrors[apiField].message || fieldErrors[apiField];
+        let hasFieldErrors = false;
+        
+        // Handle field-specific validation errors from fieldErrors
+        if (error?.data?.fieldErrors) {
+          Object.entries(error.data.fieldErrors).forEach(([apiField, messages]) => {
+            // Handle nested fields (e.g., assignedTo.worker)
+            const fieldParts = apiField.split('.');
+            const formField = fieldParts[0];
+            
+            // Handle array fields like assignedTo[0].worker
+            const arrayMatch = formField.match(/(\w+)\[(\d+)\]/);
+            if (arrayMatch) {
+              const arrayField = arrayMatch[1];
+              const index = parseInt(arrayMatch[2], 10);
+              const subField = fieldParts[1];
               
-            // Only set field error if the field exists in the form
-            if (formik.values[formField] !== undefined) {
-              setFieldError(formField, messages);
+              if (Array.isArray(formik.values[arrayField]) && formik.values[arrayField][index]) {
+                const errorMessage = Array.isArray(messages) ? messages[0] : messages;
+                setFieldError(`${arrayField}[${index}].${subField}`, errorMessage);
+                hasFieldErrors = true;
+              }
+            } else if (formik.values[formField] !== undefined) {
+              // Handle regular fields
+              const errorMessage = Array.isArray(messages) ? messages[0] : messages;
+              setFieldError(formField, errorMessage);
               hasFieldErrors = true;
             } else {
               // If we can't map the field, add to general error
+              console.warn(`Could not map error for field: ${apiField}`);
               setSubmitError(prev => 
                 prev ? `${prev}. ${apiField}: ${messages}` : `${apiField}: ${messages}`
               );
             }
           });
+        }
+        
+        // Handle legacy errors format
+        if (error?.data?.errors && !hasFieldErrors) {
+          Object.entries(error.data.errors).forEach(([apiField, messages]) => {
+            const errorMessage = Array.isArray(messages) ? messages[0] : messages;
+            setFieldError(apiField, errorMessage);
+            hasFieldErrors = true;
+          });
+        }
+        
+        // Handle general error message
+        if (!hasFieldErrors) {
+          const errorMessage = error?.data?.message || 
+                             error?.message || 
+                             'An error occurred while submitting the form';
+          setSubmitError(errorMessage);
+          toast.error(errorMessage, { autoClose: 5000 });
+        } else {
+          setSubmitError('Please fix the validation errors below');
           
-          if (!hasFieldErrors && !submitError) {
-            // If we couldn't map any fields, show a general error
-            setSubmitError('Please check the form for errors');
-          } else if (hasFieldErrors) {
-            setSubmitError('Please fix the validation errors below');
-          }
-          
-          // Scroll to the first error
+          // Scroll to the first error after a short delay
           setTimeout(() => {
             const firstError = document.querySelector('.Mui-error');
             if (firstError) {
               firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
           }, 100);
-          
-        } else {
-          // Handle other types of errors
-          const errorMessage = error?.data?.message || 
-                             error?.message || 
-                             'An error occurred while submitting the form';
-          setSubmitError(errorMessage);
-          
-          // Show error toast for non-validation errors
-          toast.error(errorMessage, { autoClose: 5000 });
         }
         
         setSubmitting(false);
@@ -403,6 +444,26 @@ const WorkOrderForm = ({
     if (onCancel) {
       onCancel();
     }
+  };
+
+  const handleWorkerAssignment = (event, newValue) => {
+    setAssignedWorkers(newValue);
+    // Initialize notes for new workers
+    const newWorkerNotes = { ...workerNotes };
+    newValue.forEach(worker => {
+      if (!workerNotes[worker._id || worker]) {
+        newWorkerNotes[worker._id || worker] = '';
+      }
+    });
+    setWorkerNotes(newWorkerNotes);
+    formik.setFieldValue('assignedTo', newValue);
+  };
+
+  const handleWorkerNotesChange = (workerId, notes) => {
+    setWorkerNotes(prev => ({
+      ...prev,
+      [workerId]: notes
+    }));
   };
 
   if (buildingsLoading || workersLoading) {
@@ -697,9 +758,7 @@ const WorkOrderForm = ({
                   options={workers}
                   getOptionLabel={(option) => option.name || ''}
                   value={formik.values.assignedTo}
-                  onChange={(event, newValue) => {
-                    formik.setFieldValue('assignedTo', newValue);
-                  }}
+                  onChange={handleWorkerAssignment}
                   renderTags={(value, getTagProps) =>
                     value.map((option, index) => (
                       <Chip
@@ -714,10 +773,36 @@ const WorkOrderForm = ({
                     <TextField
                       {...params}
                       label="Assign Workers"
-                      placeholder="Select workers to assign"
+                      placeholder="Select workers"
+                      error={formik.touched.assignedTo && Boolean(formik.errors.assignedTo)}
+                      helperText={formik.touched.assignedTo && formik.errors.assignedTo}
                     />
                   )}
                 />
+                
+                {/* Worker Notes */}
+                {formik.values.assignedTo && formik.values.assignedTo.length > 0 && (
+                  <Box sx={{ mt: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Notes for Assigned Workers
+                    </Typography>
+                    {formik.values.assignedTo.map((worker) => (
+                      <TextField
+                        key={worker._id || worker}
+                        fullWidth
+                        margin="normal"
+                        size="small"
+                        label={`Notes for ${worker.name || worker}`}
+                        value={workerNotes[worker._id || worker] || ''}
+                        onChange={(e) => handleWorkerNotesChange(worker._id || worker, e.target.value)}
+                        multiline
+                        rows={2}
+                        variant="outlined"
+                        sx={{ mb: 1 }}
+                      />
+                    ))}
+                  </Box>
+                )}
               </Grid>
 
               {/* Description */}
