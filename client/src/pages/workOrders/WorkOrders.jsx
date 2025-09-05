@@ -111,89 +111,45 @@ const WorkOrders = () => {
   };
 
   const handleDelete = async () => {
-    if (!selectedWorkOrder) {
-      console.error('No work order selected for deletion');
-      toast.error('No work order selected');
+    if (!selectedWorkOrder?._id) {
+      console.error('No valid work order selected');
+      toast.error('Please select a work order to delete');
       return;
     }
-    
-    const workOrderId = selectedWorkOrder._id;
-    console.log('Attempting to delete work order ID:', workOrderId);
-    
-    if (!workOrderId) {
-      console.error('Invalid work order ID');
-      toast.error('Invalid work order ID');
-      return;
-    }
-    
+
     try {
-      console.log('Sending delete request for work order:', workOrderId);
-      
-      // Show loading state
       const toastId = toast.loading('Deleting work order...');
       
       try {
-        const result = await deleteWorkOrder(workOrderId).unwrap();
-        console.log('Delete API response:', result);
+        await deleteWorkOrder(selectedWorkOrder._id).unwrap();
         
-        // Handle successful deletion
-        console.log('Work order deleted successfully');
         toast.update(toastId, {
           render: 'Work order deleted successfully',
           type: 'success',
           isLoading: false,
           autoClose: 3000
         });
-        
+
         // Close dialogs and reset state
         setDeleteDialogOpen(false);
         handleMenuClose();
         
-        // Invalidate the cache for work orders and dashboard stats
-        apiSlice.util.invalidateTags([
-          { type: 'WorkOrder', id: workOrderId },
-          'WorkOrder',
-          'DashboardStats'
-        ]);
-        
-        // Refetch the work orders list
+        // Invalidate cache and refetch
+        apiSlice.util.invalidateTags(['WorkOrder', 'DashboardStats']);
         refetch();
-      } catch (error) {
-        console.error('Error in deleteWorkOrder mutation:', error);
         
-        // Show error toast
+      } catch (error) {
+        console.error('Delete error:', error);
         toast.update(toastId, {
           render: error?.data?.message || 'Failed to delete work order',
           type: 'error',
           isLoading: false,
           autoClose: 5000
         });
-        
-        // Re-throw to be caught by the outer catch block
-        throw error;
       }
     } catch (error) {
-      console.error('Error in handleDelete:', {
-        name: error.name,
-        message: error.message,
-        status: error.status,
-        data: error.data,
-        stack: error.stack
-      });
-      
-      let errorMessage = 'Failed to delete work order. Please try again.';
-      
-      if (error.status === 401) {
-        errorMessage = 'Session expired. Please log in again.';
-      } else if (error.status === 403) {
-        errorMessage = 'You do not have permission to delete this work order.';
-      } else if (error.status === 404) {
-        errorMessage = 'Work order not found. It may have already been deleted.';
-      } else if (error.data?.message) {
-        errorMessage = error.data.message;
-      }
-      
-      toast.error(errorMessage);
+      console.error('Unexpected error:', error);
+      toast.error('An unexpected error occurred');
     }
   };
 

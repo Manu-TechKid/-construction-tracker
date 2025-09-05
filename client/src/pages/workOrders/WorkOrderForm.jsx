@@ -88,16 +88,47 @@ const WorkOrderForm = ({ isEdit = false }) => {
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
   
+  // State for error handling
+  const [error, setError] = useState(null);
+  
   // API hooks
   const [createWorkOrder, { isLoading: isCreating }] = useCreateWorkOrderMutation();
   const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
   
   // Fetch work order data if in edit mode
-  const { data: workOrderData, isLoading: isLoadingWorkOrder } = useGetWorkOrderQuery(id, {
+  const { 
+    data: workOrderData, 
+    isLoading: isLoadingWorkOrder,
+    error: fetchError 
+  } = useGetWorkOrderQuery(id, {
     skip: !isEdit,
   });
+
+  // Handle fetch errors
+  useEffect(() => {
+    if (fetchError) {
+      console.error('Error fetching work order:', fetchError);
+      setError(fetchError?.data?.message || 'Failed to load work order data');
+    }
+  }, [fetchError]);
   
-  // Fetch buildings and workers
+  // Show error state
+  if (error) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => window.location.reload()}
+        >
+          Reload
+        </Button>
+      </Container>
+    );
+  }
   const { data: buildingsData } = useGetBuildingsQuery();
   const { data: workersData } = useGetWorkersQuery();
   
@@ -125,29 +156,63 @@ const WorkOrderForm = ({ isEdit = false }) => {
       attachments: [],
     },
     validationSchema,
-    onSubmit: async (values, { setSubmitting, setFieldError }) => {
+    onSubmit: async (values, { setSubmitting, setStatus }) => {
+      if (isLoading) return;
+      
+      setSubmitting(true);
+      setStatus(null);
+      setError(null);
+      
       try {
-        const formattedValues = {
-          ...values,
-          dueDate: values.dueDate.toISOString(),
-        };
+        const formData = new FormData();
+        
+        // Add all form values to FormData
+        Object.entries(values).forEach(([key, value]) => {
+          if (value === null || value === undefined) return;
+          
+          if (key === 'assignedTo' && Array.isArray(value)) {
+            value.forEach((id, i) => formData.append(`assignedTo[${i}]`, id));
+          } else if (key === 'dueDate') {
+            formData.append(key, value.toISOString());
+          } else if (typeof value === 'object') {
+            formData.append(key, JSON.stringify(value));
+          } else {
+            formData.append(key, value);
+          }
+        });
+        
+        // Handle photo uploads
+        if (photos?.length) {
+          photos.forEach(photo => {
+            if (photo instanceof File) {
+              formData.append('photos', photo);
+            } else if (typeof photo === 'string') {
+              formData.append('photoUrls', photo);
+            }
+          });
+        }
         
         if (isEdit) {
-          await updateWorkOrder({ id, ...formattedValues }).unwrap();
+          await updateWorkOrder({ 
+            id, 
+            formData 
+          }).unwrap();
+          
+          toast.success('Work order updated successfully!');
+          navigate(`/work-orders/${id}`);
         } else {
-          await createWorkOrder(formattedValues).unwrap();
+          const result = await createWorkOrder(formData).unwrap();
+          toast.success('Work order created successfully!');
+          navigate(`/work-orders/${result.data._id}`);
         }
         
-        navigate(isEdit ? `/work-orders/${id}` : '/work-orders');
+        setStatus({ success: true });
       } catch (error) {
-        console.error('Error saving work order:', error);
-        if (error.data?.errors) {
-          error.data.errors.forEach((err) => {
-            setFieldError(err.param, err.msg);
-          });
-        } else {
-          setFieldError('submit', error.data?.message || 'Failed to save work order');
-        }
+        console.error('Form submission error:', error);
+        const errorMessage = error?.data?.message || error.message || 'Failed to save work order';
+        setError(errorMessage);
+        setStatus({ success: false, error: errorMessage });
+        toast.error(errorMessage);
       } finally {
         setSubmitting(false);
       }

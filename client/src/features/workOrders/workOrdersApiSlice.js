@@ -32,65 +32,34 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
       providesTags: (result, error, id) => [{ type: 'WorkOrder', id }],
     }),
     createWorkOrder: builder.mutation({
-      query: (workOrderData) => {
-        // Transform worker assignments
-        const transformWorkerAssignment = (worker) => {
-          // Handle both object and string worker IDs
-          const workerId = worker._id || worker.worker?._id || worker.worker || worker;
+      query: (formData) => {
+        // If formData is not a FormData instance, convert it
+        const isFormData = formData instanceof FormData;
+        
+        if (!isFormData) {
+          // Handle non-FormData (for backward compatibility or testing)
+          const processedData = {
+            ...formData,
+            // Ensure arrays exist
+            assignedTo: Array.isArray(formData.assignedTo) ? formData.assignedTo : [],
+            services: Array.isArray(formData.services) ? formData.services : [],
+            photos: Array.isArray(formData.photos) ? formData.photos : [],
+            notes: Array.isArray(formData.notes) ? formData.notes : []
+          };
           
           return {
-            worker: workerId,
-            status: worker.status || 'pending',
-            notes: worker.notes || '',
-            timeSpent: worker.timeSpent || { hours: 0, minutes: 0 },
-            materials: Array.isArray(worker.materials) ? worker.materials : [],
-            assignedAt: worker.assignedAt || new Date().toISOString(),
-            assignedBy: worker.assignedBy || 'system'
+            url: '/work-orders',
+            method: 'POST',
+            body: processedData,
+            headers: { 'Content-Type': 'application/json' },
           };
-        };
-
-        // Transform services
-        const transformService = (service) => ({
-          type: service.type || 'other',
-          description: service.description || '',
-          laborCost: Number(service.laborCost) || 0,
-          materialCost: Number(service.materialCost) || 0,
-          estimatedHours: Number(service.estimatedHours) || 1,
-          status: service.status || 'pending',
-          notes: Array.isArray(service.notes) ? service.notes : [],
-          completedAt: service.completedAt || null,
-          completedBy: service.completedBy || null
-        });
-
-        // Process the work order data
-        const processedData = {
-          ...workOrderData,
-          // Handle assigned workers
-          assignedTo: Array.isArray(workOrderData.assignedTo) 
-            ? workOrderData.assignedTo.map(transformWorkerAssignment)
-            : [],
-          
-          // Handle services
-          services: Array.isArray(workOrderData.services)
-            ? workOrderData.services.map(transformService)
-            : [],
-          
-          // Ensure photos is an array
-          photos: Array.isArray(workOrderData.photos) ? workOrderData.photos : [],
-          
-          // Ensure notes is an array
-          notes: Array.isArray(workOrderData.notes) ? workOrderData.notes : []
-        };
-
-        console.log('Submitting work order data:', processedData);
-
+        }
+        
+        // For FormData, let the browser set the content type with boundary
         return {
           url: '/work-orders',
           method: 'POST',
-          body: processedData,
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          body: formData,
         };
       },
       invalidatesTags: ['WorkOrder', 'DashboardStats'],
@@ -179,11 +148,24 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
       invalidatesTags: ['WorkOrder'],
     }),
     updateWorkOrder: builder.mutation({
-      query: ({ id, ...updates }) => ({
-        url: `/work-orders/${id}`,
-        method: 'PATCH',
-        body: updates,
-      }),
+      query: ({ id, formData, ...rest }) => {
+        // If formData is a FormData instance, send as multipart/form-data
+        if (formData instanceof FormData) {
+          return {
+            url: `/work-orders/${id}`,
+            method: 'PATCH',
+            body: formData,
+          };
+        }
+        
+        // For backward compatibility
+        return {
+          url: `/work-orders/${id}`,
+          method: 'PATCH',
+          body: { ...formData, ...rest },
+          headers: { 'Content-Type': 'application/json' },
+        };
+      },
       invalidatesTags: (result, error, { id }) => [
         { type: 'WorkOrder', id },
         'WorkOrder',
