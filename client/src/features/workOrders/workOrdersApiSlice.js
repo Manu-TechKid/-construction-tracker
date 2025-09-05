@@ -33,19 +33,56 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
     }),
     createWorkOrder: builder.mutation({
       query: (workOrderData) => {
-        // Process worker assignments to include notes
+        // Transform worker assignments
+        const transformWorkerAssignment = (worker) => {
+          // Handle both object and string worker IDs
+          const workerId = worker._id || worker.worker?._id || worker.worker || worker;
+          
+          return {
+            worker: workerId,
+            status: worker.status || 'pending',
+            notes: worker.notes || '',
+            timeSpent: worker.timeSpent || { hours: 0, minutes: 0 },
+            materials: Array.isArray(worker.materials) ? worker.materials : [],
+            assignedAt: worker.assignedAt || new Date().toISOString(),
+            assignedBy: worker.assignedBy || 'system'
+          };
+        };
+
+        // Transform services
+        const transformService = (service) => ({
+          type: service.type || 'other',
+          description: service.description || '',
+          laborCost: Number(service.laborCost) || 0,
+          materialCost: Number(service.materialCost) || 0,
+          estimatedHours: Number(service.estimatedHours) || 1,
+          status: service.status || 'pending',
+          notes: Array.isArray(service.notes) ? service.notes : [],
+          completedAt: service.completedAt || null,
+          completedBy: service.completedBy || null
+        });
+
+        // Process the work order data
         const processedData = {
           ...workOrderData,
+          // Handle assigned workers
           assignedTo: Array.isArray(workOrderData.assignedTo) 
-            ? workOrderData.assignedTo.map(worker => ({
-                worker: worker._id || worker.worker?._id || worker.worker || worker,
-                status: worker.status || 'pending',
-                notes: worker.notes || '',
-                assignedAt: worker.assignedAt || new Date().toISOString(),
-                assignedBy: worker.assignedBy || 'system'
-              }))
-            : []
+            ? workOrderData.assignedTo.map(transformWorkerAssignment)
+            : [],
+          
+          // Handle services
+          services: Array.isArray(workOrderData.services)
+            ? workOrderData.services.map(transformService)
+            : [],
+          
+          // Ensure photos is an array
+          photos: Array.isArray(workOrderData.photos) ? workOrderData.photos : [],
+          
+          // Ensure notes is an array
+          notes: Array.isArray(workOrderData.notes) ? workOrderData.notes : []
         };
+
+        console.log('Submitting work order data:', processedData);
 
         return {
           url: '/work-orders',
