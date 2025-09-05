@@ -374,7 +374,7 @@ const WorkOrderForm = ({
                 <Autocomplete
                   multiple
                   id="assignedWorkers"
-                  options={Array.isArray(workers) ? workers : []}
+                  options={Array.isArray(workersData) ? workersData : []}
                   getOptionLabel={(option) => {
                     if (!option) return '';
                     if (typeof option === 'string') return option;
