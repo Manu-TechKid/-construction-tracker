@@ -373,27 +373,35 @@ const WorkOrderForm = ({
               <Grid item xs={12}>
                 <Autocomplete
                   multiple
-                  options={workersData || []}
-                  getOptionLabel={(worker) => worker.name || ''}
-                  value={formik.values.assignedWorkers}
+                  id="assignedWorkers"
+                  options={Array.isArray(workers) ? workers : []}
+                  getOptionLabel={(option) => {
+                    if (!option) return '';
+                    if (typeof option === 'string') return option;
+                    return option.name ? `${option.name} (${option.role || 'No Role'})` : 'Unnamed Worker';
+                  }}
+                  value={Array.isArray(formik.values.assignedWorkers) ? formik.values.assignedWorkers : []}
                   onChange={handleWorkerAssignment}
+                  onBlur={formik.handleBlur}
+                  isOptionEqualToValue={(option, value) => {
+                    if (!option || !value) return false;
+                    return option._id === value._id || option === value;
+                  }}
                   renderInput={(params) => (
                     <TextField
                       {...params}
                       label="Assigned Workers"
-                      margin="normal"
-                      placeholder="Select workers"
+                      variant="outlined"
+                      error={
+                        formik.touched.assignedWorkers &&
+                        Boolean(formik.errors.assignedWorkers)
+                      }
+                      helperText={
+                        formik.touched.assignedWorkers &&
+                        formik.errors.assignedWorkers
+                      }
                     />
                   )}
-                  renderTags={(value, getTagProps) =>
-                    value.map((option, index) => (
-                      <Chip
-                        {...getTagProps({ index })}
-                        key={option._id}
-                        label={option.name}
-                      />
-                    ))
-                  }
                 />
               </Grid>
 
@@ -404,7 +412,7 @@ const WorkOrderForm = ({
                   maxFiles={5}
                   acceptedFormats={['image/jpeg', 'image/png']}
                 />
-                {formik.values.photos.length > 0 && (
+                {Array.isArray(formik.values.photos) && formik.values.photos.length > 0 && (
                   <Box mt={2}>
                     <Typography variant="subtitle2" gutterBottom>
                       Uploaded Photos:
