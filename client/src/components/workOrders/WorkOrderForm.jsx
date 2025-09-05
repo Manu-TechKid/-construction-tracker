@@ -57,6 +57,10 @@ const WorkOrderForm = ({
     refetch: refetchWorkers 
   } = useGetWorkersQuery();
   
+  // Get buildings and workers from the API response
+  const buildings = buildingsData?.data?.buildings || [];
+  const workers = workersData?.data?.workers || [];
+  
   // Log initial values and loading states for debugging
   console.log('WorkOrderForm - initialValuesProp:', initialValuesProp);
   console.log('WorkOrderForm - loading states:', { 
@@ -64,8 +68,9 @@ const WorkOrderForm = ({
     workersLoading,
     buildingsError: buildingsError?.data?.message || buildingsError?.message,
     workersError: workersError?.data?.message || workersError?.message,
-    buildingsCount: buildingsData?.data?.buildings?.length || 0,
-    workersCount: workersData?.data?.workers?.length || 0
+    buildingsCount: buildings.length,
+    workersCount: workers.length,
+    buildings: buildings.map(b => ({ id: b._id, name: b.name }))
   });
   
   // Form validation schema
@@ -92,6 +97,17 @@ const WorkOrderForm = ({
       ? safeInitialValues.photos 
       : [];
     
+    // Format dates if they exist
+    const formatDate = (dateString) => {
+      if (!dateString) return null;
+      try {
+        const date = new Date(dateString);
+        return isNaN(date.getTime()) ? null : date;
+      } catch (e) {
+        return null;
+      }
+    };
+    
     return {
       _id: safeInitialValues._id || undefined,
       title: safeInitialValues.title || '',
@@ -105,12 +121,12 @@ const WorkOrderForm = ({
       floor: safeInitialValues.floor || '',
       description: safeInitialValues.description || '',
       notes: safeInitialValues.notes || '',
-      scheduledDate: safeInitialValues.scheduledDate || null,
-      estimatedCompletionDate: safeInitialValues.estimatedCompletionDate || null,
+      scheduledDate: formatDate(safeInitialValues.scheduledDate),
+      estimatedCompletionDate: formatDate(safeInitialValues.estimatedCompletionDate),
       assignedWorkers: assignedWorkers,
       photos: photos,
-      createdAt: safeInitialValues.createdAt || new Date().toISOString(),
-      updatedAt: safeInitialValues.updatedAt || new Date().toISOString()
+      createdAt: formatDate(safeInitialValues.createdAt) || new Date().toISOString(),
+      updatedAt: formatDate(safeInitialValues.updatedAt) || new Date().toISOString()
     };
   }, [initialValuesProp]);
 
@@ -339,12 +355,16 @@ const WorkOrderForm = ({
                   <InputLabel>Building *</InputLabel>
                   <Select
                     name="building"
-                    value={formik.values.building}
+                    value={formik.values.building || ''}
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
                     label="Building *"
+                    displayEmpty
                   >
-                    {buildingsData?.map((building) => (
+                    <MenuItem value="" disabled>
+                      <em>Select a building</em>
+                    </MenuItem>
+                    {buildings.map((building) => (
                       <MenuItem key={building._id} value={building._id}>
                         {building.name}
                       </MenuItem>
