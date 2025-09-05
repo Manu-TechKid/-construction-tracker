@@ -59,21 +59,42 @@ const WorkOrderForm = ({
     description: Yup.string().required('Description is required'),
   });
 
-  // Form initial values with proper fallbacks
-  const initialValues = useMemo(() => ({
-    title: initialValuesProp.title || '',
-    workType: initialValuesProp.workType || '',
-    status: initialValuesProp.status || 'pending',
-    building: initialValuesProp.building || '',
-    apartmentNumber: initialValuesProp.apartmentNumber || '',
-    description: initialValuesProp.description || '',
-    scheduledDate: initialValuesProp.scheduledDate || null,
-    estimatedCompletionDate: initialValuesProp.estimatedCompletionDate || null,
-    assignedWorkers: initialValuesProp.assignedTo?.map(a => a.worker) || [],
-    photos: initialValuesProp.photos || [],
-    priority: initialValuesProp.priority || 'medium',
-    workSubType: initialValuesProp.workSubType || ''
-  }), [initialValuesProp]);
+  // Set up initial values with defaults and null checks
+  const initialValues = useMemo(() => {
+    // Ensure initialValuesProp is an object
+    const safeInitialValues = initialValuesProp || {};
+    
+    // Ensure assignedWorkers is always an array
+    const assignedWorkers = Array.isArray(safeInitialValues.assignedWorkers) 
+      ? safeInitialValues.assignedWorkers 
+      : [];
+    
+    // Ensure photos is always an array
+    const photos = Array.isArray(safeInitialValues.photos) 
+      ? safeInitialValues.photos 
+      : [];
+    
+    return {
+      _id: safeInitialValues._id || undefined,
+      title: safeInitialValues.title || '',
+      workType: safeInitialValues.workType || '',
+      workSubType: safeInitialValues.workSubType || '',
+      status: safeInitialValues.status || 'pending',
+      priority: safeInitialValues.priority || 'medium',
+      building: safeInitialValues.building || '',
+      apartmentNumber: safeInitialValues.apartmentNumber || '',
+      block: safeInitialValues.block || '',
+      floor: safeInitialValues.floor || '',
+      description: safeInitialValues.description || '',
+      notes: safeInitialValues.notes || '',
+      scheduledDate: safeInitialValues.scheduledDate || null,
+      estimatedCompletionDate: safeInitialValues.estimatedCompletionDate || null,
+      assignedWorkers: assignedWorkers,
+      photos: photos,
+      createdAt: safeInitialValues.createdAt || new Date().toISOString(),
+      updatedAt: safeInitialValues.updatedAt || new Date().toISOString()
+    };
+  }, [initialValuesProp]);
 
   const formik = useFormik({
     enableReinitialize: true, // Allow form to reinitialize when initialValues change
@@ -140,7 +161,7 @@ const WorkOrderForm = ({
   };
 
   // Show loading state with more detailed skeleton
-  if (buildingsLoading || workersLoading) {
+  if (buildingsLoading || workersLoading || !initialValues) {
     return (
       <Box sx={{ p: 3 }}>
         <Skeleton variant="rectangular" height={60} sx={{ mb: 2 }} />

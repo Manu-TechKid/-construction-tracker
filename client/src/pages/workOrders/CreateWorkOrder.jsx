@@ -153,16 +153,21 @@ const CreateWorkOrder = () => {
               initialValues={{
                 title: '',
                 workType: '',
+                workSubType: '',
                 status: 'pending',
+                priority: 'medium',
                 building: '',
                 apartmentNumber: '',
+                block: '',
+                floor: '',
                 description: '',
+                notes: '',
                 scheduledDate: null,
                 estimatedCompletionDate: null,
                 assignedWorkers: [],
                 photos: [],
-                priority: 'medium',
-                workSubType: ''
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
               }}
             />
           </Box>
