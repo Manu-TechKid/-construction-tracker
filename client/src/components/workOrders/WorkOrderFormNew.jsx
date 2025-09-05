@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { useFormik } from 'formik';
+import React, { useState, useEffect } from 'react';
+import { useFormik, Form, FormikProvider } from 'formik';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -18,30 +19,88 @@ import {
   Divider,
   CircularProgress,
   Alert,
-  Stack,
-  IconButton
+  Tabs,
+  Tab,
+  FormControlLabel,
+  Checkbox,
+  InputAdornment,
+  Container,
+  LinearProgress,
+  Chip
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import PhotoUpload from '../common/PhotoUpload';
+import SaveIcon from '@mui/icons-material/Save';
+import DeleteIcon from '@mui/icons-material/Delete';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
+
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { useGetWorkersQuery } from '../../features/workers/workersApiSlice';
+import { 
+  useCreateWorkOrderMutation, 
+  useUpdateWorkOrderMutation,
+  useGetWorkOrderQuery
+} from '../../features/workOrders/workOrdersApiSlice';
 import { workOrderValidationSchema } from './utils/validationSchema';
 import { getInitialValues, formatFormDataForSubmit, calculateTotalEstimatedCost } from './utils/formHelpers';
 import WorkerAssignmentSection from './sections/WorkerAssignmentSection';
 import ServicesSection from './sections/ServicesSection';
+import PhotoUploadSection from './sections/PhotoUploadSection';
+
+// Tab panel component
+const TabPanel = (props) => {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`simple-tabpanel-${index}`}
+      aria-labelledby={`simple-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+};
+
+const a11yProps = (index) => ({
+  id: `simple-tab-${index}`,
+  'aria-controls': `simple-tabpanel-${index}`,
+});
 
 const WorkOrderForm = ({
   initialValues: initialValuesProp = {},
-  onSubmit: onSubmitProp,
-  isSubmitting = false,
   onCancel,
   mode = 'create',
+  workOrderId = null
 }) => {
+  const navigate = useNavigate();
   const { t } = useTranslation();
+  
+  // API Hooks
+  const [createWorkOrder, { isLoading: isCreating }] = useCreateWorkOrderMutation();
+  const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
+  
+  // Fetch work order data if in edit mode
+  const { 
+    data: workOrderData, 
+    isLoading: isLoadingWorkOrder, 
+    isError: workOrderError,
+    refetch: refetchWorkOrder 
+  } = useGetWorkOrderQuery(workOrderId, { skip: mode !== 'edit' });
+
+  // Form state
+  const [activeTab, setActiveTab] = useState(0);
   const [photos, setPhotos] = useState(initialValuesProp.photos || []);
+  const isSubmitting = isCreating || isUpdating;
   
   // Fetch buildings and workers data
   const { 
@@ -59,39 +118,39 @@ const WorkOrderForm = ({
   } = useGetWorkersQuery();
 
   // Initialize form with default values
-  const initialValues = getInitialValues(initialValuesProp);
+  const [initialValues, setInitialValues] = useState(getInitialValues(initialValuesProp));
 
   // Form submission handler
   const onSubmit = async (values, { setSubmitting, setStatus }) => {
     try {
       // Format the form data for submission
-      const formData = formatFormDataForSubmit(values, calculateTotalEstimatedCost(values.services));
+      const formData = formatFormDataForSubmit(values, calculateTotalEstimatedCost(values.services || []));
       
       // Add photos to the form data
       formData.photos = photos;
       
-      // Call the onSubmit prop with the formatted data
-      await onSubmitProp(formData);
-      
-      // Show success message
-      toast.success(
-        mode === 'create' 
-          ? t('workOrder.createSuccess') 
-          : t('workOrder.updateSuccess')
-      );
-      
+      let result;
+      if (mode === 'create') {
+        result = await createWorkOrder(formData).unwrap();
+        toast.success('Work order created successfully!');
+        navigate(`/work-orders/${result.data._id}`);
+      } else {
+        result = await updateWorkOrder({
+          id: workOrderId || values._id,
+          updates: formData
+        }).unwrap();
+        toast.success('Work order updated successfully!');
+        navigate(`/work-orders/${workOrderId || values._id}`);
+      }
+
       setStatus({ success: true });
+      return result;
     } catch (error) {
       console.error('Form submission error:', error);
-      setStatus({ success: false, error: error.message || 'An error occurred' });
-      
-      // Show error message
-      toast.error(
-        error.response?.data?.message || 
-        (mode === 'create' 
-          ? t('workOrder.createError') 
-          : t('workOrder.updateError'))
-      );
+      const errorMessage = error?.data?.message || error.message || 'An error occurred';
+      setStatus({ success: false, error: errorMessage });
+      toast.error(errorMessage);
+      throw error;
     } finally {
       setSubmitting(false);
     }
@@ -103,7 +162,37 @@ const WorkOrderForm = ({
     validationSchema: workOrderValidationSchema,
     onSubmit,
     enableReinitialize: true,
+    validateOnMount: true,
   });
+
+  // Update initial values when workOrderData changes (edit mode)
+  useEffect(() => {
+    if (mode === 'edit' && workOrderData) {
+      const values = getInitialValues(workOrderData);
+      setInitialValues(values);
+      setPhotos(workOrderData.photos || []);
+    }
+  }, [workOrderData, mode]);
+
+  // Handle tab change
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+
+  // Handle form reset
+  const handleReset = () => {
+    formik.resetForm();
+    setPhotos(initialValues.photos || []);
+  };
+
+  // Handle cancel
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+    } else {
+      navigate(-1);
+    }
+  };
 
   // Handle photo upload
   const handlePhotoUpload = (newPhotos) => {
@@ -117,258 +206,153 @@ const WorkOrderForm = ({
     setPhotos(newPhotos);
   };
 
-  // Handle building selection
-  const handleBuildingChange = (event) => {
-    const buildingId = event.target.value;
-    const selectedBuilding = buildingsData?.find(b => b._id === buildingId);
-    
-    formik.setFieldValue('building', buildingId);
-    
-    // If the building has an address, update the location fields
-    if (selectedBuilding?.address) {
-      formik.setFieldValue('location', selectedBuilding.address);
-    }
-  };
+  // Loading and error states
+  const isLoading = isLoadingWorkOrder || buildingsLoading || workersLoading;
+  const hasError = workOrderError || buildingsError || workersError;
 
-  // Render loading state
-  if (buildingsLoading || workersLoading) {
+  // Show loading state
+  if (isLoading) {
     return (
-      <Box sx={{ p: 3 }}>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
         <CircularProgress />
-        <Typography variant="body1" sx={{ mt: 2 }}>Loading form data...</Typography>
       </Box>
     );
   }
 
-  // Render error state
-  if (buildingsError || workersError) {
+  // Show error state
+  if (hasError) {
     return (
-      <Alert severity="error" sx={{ m: 2 }}>
-        Failed to load form data. Please try again.
-        <Button 
-          onClick={() => {
-            if (buildingsError) refetchBuildings();
-            if (workersError) refetchWorkers();
-          }}
-          sx={{ ml: 2 }}
-        >
-          Retry
+      <Alert severity="error" sx={{ mb: 3 }}>
+        {t('common.errorLoadingData')}
+        <Button onClick={() => {
+          refetchWorkOrder();
+          refetchBuildings();
+          refetchWorkers();
+        }} color="inherit" size="small">
+          {t('common.retry')}
         </Button>
       </Alert>
     );
   }
 
+  // Render the form
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <form onSubmit={formik.handleSubmit}>
-        <Card>
-          <CardContent>
-            {/* Form Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h5" component="h2">
-                {mode === 'create' ? 'Create Work Order' : 'Edit Work Order'}
-              </Typography>
-              <Box>
-                <Button
-                  startIcon={<ArrowBackIcon />}
-                  onClick={onCancel}
-                  sx={{ mr: 1 }}
-                >
-                  Back
-                </Button>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                  disabled={formik.isSubmitting || isSubmitting}
-                >
-                  {formik.isSubmitting || isSubmitting ? (
-                    <CircularProgress size={24} />
-                  ) : mode === 'create' ? (
-                    'Create Work Order'
-                  ) : (
-                    'Update Work Order'
-                  )}
-                </Button>
-              </Box>
-            </Box>
+      <FormikProvider value={formik}>
+        <Form>
+          <Container maxWidth="lg">
+            <Card>
+              <CardContent>
+                {/* Form Header */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                  <Typography variant="h5" component="h2">
+                    {mode === 'create' ? t('workOrder.createTitle') : t('workOrder.editTitle')}
+                  </Typography>
+                </Box>
 
-            {formik.status?.error && (
-              <Alert severity="error" sx={{ mb: 3 }}>
-                {formik.status.error}
-              </Alert>
-            )}
-
-            {/* Basic Information Section */}
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h6" gutterBottom>
-                Basic Information
-              </Typography>
-              <Divider sx={{ mb: 3 }} />
-              
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    id="title"
-                    name="title"
-                    label="Title *"
-                    value={formik.values.title}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    error={formik.touched.title && Boolean(formik.errors.title)}
-                    helperText={formik.touched.title && formik.errors.title}
-                    margin="normal"
-                    variant="outlined"
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <FormControl 
-                    fullWidth 
-                    margin="normal"
-                    error={formik.touched.building && Boolean(formik.errors.building)}
+                {/* Form Tabs */}
+                <Box sx={{ width: '100%' }}>
+                  <Tabs
+                    value={activeTab}
+                    onChange={handleTabChange}
+                    aria-label="work order form tabs"
+                    variant="scrollable"
+                    scrollButtons="auto"
                   >
-                    <InputLabel>Building *</InputLabel>
-                    <Select
-                      name="building"
-                      value={formik.values.building || ''}
-                      onChange={handleBuildingChange}
-                      onBlur={formik.handleBlur}
-                      label="Building *"
-                    >
-                      {buildingsData?.map((building) => (
-                        <MenuItem key={building._id} value={building._id}>
-                          {building.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    {formik.touched.building && formik.errors.building && (
-                      <FormHelperText>{formik.errors.building}</FormHelperText>
-                    )}
-                  </FormControl>
-                </Grid>
-                
-                <Grid item xs={12} md={4}>
-                  <TextField
-                    fullWidth
-                    id="apartmentNumber"
-                    name="apartmentNumber"
-                    label="Apartment / Unit #"
-                    value={formik.values.apartmentNumber || ''}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    margin="normal"
-                    variant="outlined"
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={4}>
-                  <TextField
-                    fullWidth
-                    id="block"
-                    name="block"
-                    label="Block"
-                    value={formik.values.block || ''}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    margin="normal"
-                    variant="outlined"
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={4}>
-                  <TextField
-                    fullWidth
-                    id="floor"
-                    name="floor"
-                    label="Floor"
-                    value={formik.values.floor || ''}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    margin="normal"
-                    variant="outlined"
-                  />
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    id="description"
-                    name="description"
-                    label="Description *"
-                    value={formik.values.description || ''}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    error={formik.touched.description && Boolean(formik.errors.description)}
-                    helperText={formik.touched.description && formik.errors.description}
-                    margin="normal"
-                    variant="outlined"
-                    multiline
-                    rows={4}
-                  />
-                </Grid>
-              </Grid>
-            </Box>
+                    <Tab label={t('workOrder.tabs.basicInfo')} {...a11yProps(0)} />
+                    <Tab label={t('workOrder.tabs.workers')} {...a11yProps(1)} />
+                    <Tab label={t('workOrder.tabs.services')} {...a11yProps(2)} />
+                    <Tab label={t('workOrder.tabs.schedule')} {...a11yProps(3)} />
+                    <Tab label={t('workOrder.tabs.costs')} {...a11yProps(4)} />
+                    <Tab label={t('workOrder.tabs.photos')} {...a11yProps(5)} />
+                    <Tab label={t('workOrder.tabs.notes')} {...a11yProps(6)} />
+                  </Tabs>
 
-            {/* Worker Assignment Section */}
-            <WorkerAssignmentSection
-              values={formik.values}
-              errors={formik.errors}
-              touched={formik.touched}
-              handleChange={formik.handleChange}
-              handleBlur={formik.handleBlur}
-              setFieldValue={formik.setFieldValue}
-              workers={workersData || []}
-            />
+                  {/* Tab Panels */}
+                  <TabPanel value={activeTab} index={0}>
+                    {/* Basic Info Tab */}
+                    <Grid container spacing={3}>
+                      <Grid item xs={12} md={6}>
+                        <FormControl fullWidth margin="normal">
+                          <InputLabel id="building-label">{t('workOrder.building')} *</InputLabel>
+                          <Select
+                            labelId="building-label"
+                            id="building"
+                            name="building"
+                            value={formik.values.building}
+                            onChange={formik.handleChange}
+                            onBlur={formik.handleBlur}
+                            error={formik.touched.building && Boolean(formik.errors.building)}
+                            label={t('workOrder.building')}
+                          >
+                            {buildingsData?.map((building) => (
+                              <MenuItem key={building._id} value={building._id}>
+                                {building.name}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                          <FormHelperText error>
+                            {formik.touched.building && formik.errors.building}
+                          </FormHelperText>
+                        </FormControl>
+                      </Grid>
+                      {/* Add more fields for basic info */}
+                    </Grid>
+                  </TabPanel>
 
-            {/* Services Section */}
-            <ServicesSection
-              values={formik.values}
-              errors={formik.errors}
-              touched={formik.touched}
-              handleChange={formik.handleChange}
-              handleBlur={formik.handleBlur}
-              setFieldValue={formik.setFieldValue}
-              calculateTotalEstimatedCost={calculateTotalEstimatedCost}
-            />
+                  <TabPanel value={activeTab} index={1}>
+                    <WorkerAssignmentSection 
+                      workers={workersData || []} 
+                      formik={formik} 
+                    />
+                  </TabPanel>
 
-            {/* Photos Section */}
-            <Box sx={{ mt: 4 }}>
-              <Typography variant="h6" gutterBottom>
-                Photos & Attachments
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-              <PhotoUpload
-                photos={photos}
-                onUpload={handlePhotoUpload}
-                onDelete={handlePhotoDelete}
-                maxPhotos={10}
-              />
-            </Box>
+                  <TabPanel value={activeTab} index={2}>
+                    <ServicesSection 
+                      formik={formik}
+                      onServiceChange={(services) => {
+                        formik.setFieldValue('services', services);
+                      }}
+                    />
+                  </TabPanel>
 
-            {/* Form Actions */}
-            <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-              <Button
-                variant="outlined"
-                onClick={onCancel}
-                disabled={formik.isSubmitting || isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                variant="contained"
-                color="primary"
-                disabled={formik.isSubmitting || isSubmitting}
-                startIcon={formik.isSubmitting || isSubmitting ? <CircularProgress size={20} /> : null}
-              >
-                {mode === 'create' ? 'Create Work Order' : 'Update Work Order'}
-              </Button>
-            </Box>
-          </CardContent>
-        </Card>
-      </form>
+                  {/* Add other tab panels */}
+                </Box>
+
+                {/* Form Actions */}
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3, gap: 2 }}>
+                  <Button
+                    type="button"
+                    variant="outlined"
+                    onClick={handleCancel}
+                    disabled={isSubmitting}
+                    startIcon={<ArrowForwardIcon />}
+                  >
+                    {t('common.cancel')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outlined"
+                    onClick={handleReset}
+                    disabled={isSubmitting}
+                    startIcon={<RestartAltIcon />}
+                  >
+                    {t('common.reset')}
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={isSubmitting || !formik.isValid}
+                    startIcon={<SaveIcon />}
+                  >
+                    {isSubmitting ? t('common.saving') : t('common.save')}
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Container>
+        </Form>
+      </FormikProvider>
     </LocalizationProvider>
   );
 };
