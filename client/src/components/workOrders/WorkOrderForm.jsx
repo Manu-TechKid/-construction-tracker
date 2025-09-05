@@ -43,12 +43,30 @@ const WorkOrderForm = ({
   mode = 'create',
 }) => {
   const { t } = useTranslation();
-  const { data: buildingsData, isLoading: buildingsLoading, error: buildingsError } = useGetBuildingsQuery();
-  const { data: workersData, isLoading: workersLoading, error: workersError } = useGetWorkersQuery();
+  const { 
+    data: buildingsData, 
+    isLoading: buildingsLoading, 
+    error: buildingsError,
+    refetch: refetchBuildings 
+  } = useGetBuildingsQuery();
+  
+  const { 
+    data: workersData, 
+    isLoading: workersLoading, 
+    error: workersError,
+    refetch: refetchWorkers 
+  } = useGetWorkersQuery();
   
   // Log initial values and loading states for debugging
   console.log('WorkOrderForm - initialValuesProp:', initialValuesProp);
-  console.log('WorkOrderForm - loading states:', { buildingsLoading, workersLoading });
+  console.log('WorkOrderForm - loading states:', { 
+    buildingsLoading, 
+    workersLoading,
+    buildingsError: buildingsError?.data?.message || buildingsError?.message,
+    workersError: workersError?.data?.message || workersError?.message,
+    buildingsCount: buildingsData?.data?.buildings?.length || 0,
+    workersCount: workersData?.data?.workers?.length || 0
+  });
   
   // Form validation schema
   const validationSchema = Yup.object({
@@ -161,15 +179,39 @@ const WorkOrderForm = ({
   };
 
   // Show loading state with more detailed skeleton
-  if (buildingsLoading || workersLoading || !initialValues) {
+  if (buildingsLoading || workersLoading) {
     return (
       <Box sx={{ p: 3 }}>
+        <Typography variant="h6" gutterBottom>Loading form data...</Typography>
         <Skeleton variant="rectangular" height={60} sx={{ mb: 2 }} />
         <Skeleton variant="rectangular" height={400} />
         <Box display="flex" justifyContent="flex-end" mt={2}>
           <Skeleton variant="rectangular" width={120} height={40} sx={{ mr: 2 }} />
           <Skeleton variant="rectangular" width={120} height={40} />
         </Box>
+      </Box>
+    );
+  }
+
+  if (buildingsError || workersError) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          Error loading required data. Please try again.
+          {buildingsError && <div>Buildings: {buildingsError.data?.message || buildingsError.message}</div>}
+          {workersError && <div>Workers: {workersError.data?.message || workersError.message}</div>}
+        </Alert>
+        <Button 
+          variant="contained" 
+          color="primary" 
+          onClick={() => {
+            if (buildingsError) refetchBuildings();
+            if (workersError) refetchWorkers();
+          }}
+          startIcon={<RefreshIcon />}
+        >
+          Retry Loading Data
+        </Button>
       </Box>
     );
   }
@@ -195,22 +237,22 @@ const WorkOrderForm = ({
     );
   }
 
-  // Wrap the form in an error boundary
-  try {
+  // Add error boundary for the form
+  const FormContent = () => {
     return (
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <Card>
           <CardContent>
-          <Typography variant="h6" gutterBottom>
-            {mode === 'edit' ? 'Edit Work Order' : 'Create New Work Order'}
-          </Typography>
+            <Typography variant="h6" gutterBottom>
+              {mode === 'edit' ? 'Edit Work Order' : 'Create New Work Order'}
+            </Typography>
 
-          {/* Form Error Alert */}
-          {formik.status?.error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {formik.status.error}
-            </Alert>
-          )}
+            {/* Form Error Alert */}
+            {formik.status?.error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {formik.status.error}
+              </Alert>
+            )}
 
           <form onSubmit={formik.handleSubmit}>
             <Grid container spacing={3}>
@@ -485,23 +527,14 @@ const WorkOrderForm = ({
         </Card>
       </LocalizationProvider>
     );
-  } catch (error) {
-    console.error('Error rendering WorkOrderForm:', error);
-    return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error" sx={{ mb: 2 }}>
-          An error occurred while rendering the form. Please try again.
-        </Alert>
-        <Button 
-          variant="outlined" 
-          onClick={() => window.location.reload()}
-          startIcon={<RefreshIcon />}
-        >
-          Reload Page
-        </Button>
-      </Box>
-    );
-  }
+  };
+
+  // Wrap form content in error boundary
+  return (
+    <ErrorBoundary>
+      <FormContent />
+    </ErrorBoundary>
+  );
 };
 
 export default WorkOrderForm;
