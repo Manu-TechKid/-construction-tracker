@@ -18,21 +18,30 @@ const CreateWorkOrder = () => {
   const navigate = useNavigate();
   const [createWorkOrder, { isLoading }] = useCreateWorkOrderMutation();
 
-  const handleSubmit = async (values, { setErrors, setSubmitting, setStatus }) => {
+  const handleSubmit = async (values, { setSubmitting, setErrors, setStatus }) => {
     try {
       console.log('Submitting work order:', values);
       
       // Prepare the data for the API
       const workOrderData = {
         ...values,
+        // Format assigned workers for the API
+        assignedTo: values.assignedWorkers?.map(workerId => ({
+          worker: workerId,
+          status: 'pending',
+          assignedAt: new Date().toISOString(),
+          assignedBy: 'system' // This should be the current user's ID in a real app
+        })) || [],
         // Ensure dates are properly formatted for the API
         scheduledDate: values.scheduledDate ? new Date(values.scheduledDate).toISOString() : null,
         estimatedCompletionDate: values.estimatedCompletionDate 
           ? new Date(values.estimatedCompletionDate).toISOString() 
           : null,
-        // Ensure assignedWorkers is an array of IDs
-        assignedWorkers: values.assignedWorkers?.map(worker => worker._id) || []
+        // Remove the temporary assignedWorkers field
+        assignedWorkers: undefined
       };
+      
+      console.log('Sending work order data to API:', workOrderData);
       
       // Show loading state
       const loadingToast = toast.loading('Creating work order...');
@@ -59,8 +68,9 @@ const CreateWorkOrder = () => {
         console.error('API Error:', error);
         
         // Show error message
+        const errorMessage = error?.data?.message || error?.message || 'Failed to create work order';
         toast.update(loadingToast, {
-          render: error?.data?.message || error?.message || 'Failed to create work order',
+          render: errorMessage,
           type: 'error',
           isLoading: false,
           autoClose: 5000
@@ -73,15 +83,22 @@ const CreateWorkOrder = () => {
             formErrors[field] = Array.isArray(message) ? message[0] : message;
           });
           setErrors(formErrors);
+          
+          // Also set status for non-field specific errors
+          setStatus({ 
+            error: errorMessage,
+            details: error?.data?.details
+          });
+        } else {
+          // For non-validation errors
+          setStatus({ 
+            error: errorMessage,
+            details: error?.data?.details
+          });
         }
         
-        // Set form status with error
-        setStatus({ 
-          error: error?.data?.message || 'Failed to create work order',
-          details: error?.data?.details
-        });
-        
-        return { success: false, error };
+        // Re-throw to allow form to handle the error state
+        throw error;
       }
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -113,23 +130,28 @@ const CreateWorkOrder = () => {
             </Typography>
           </Box>
 
-          <WorkOrderForm
-            mode="create"
-            onSubmit={handleSubmit}
-            isSubmitting={isLoading}
-            onCancel={() => navigate('/work-orders')}
-            initialValues={{
-              title: '',
-              workType: '',
-              status: 'pending',
-              building: '',
-              description: '',
-              scheduledDate: null,
-              estimatedCompletionDate: null,
-              assignedWorkers: [],
-              photos: []
-            }}
-          />
+          <Box sx={{ mt: 2 }}>
+            <WorkOrderForm
+              mode="create"
+              onSubmit={handleSubmit}
+              isSubmitting={isLoading}
+              onCancel={() => navigate('/work-orders')}
+              initialValues={{
+                title: '',
+                workType: '',
+                status: 'pending',
+                building: '',
+                apartmentNumber: '',
+                description: '',
+                scheduledDate: null,
+                estimatedCompletionDate: null,
+                assignedWorkers: [],
+                photos: [],
+                priority: 'medium',
+                workSubType: ''
+              }}
+            />
+          </Box>
         </Paper>
       </Container>
     </LocalizationProvider>

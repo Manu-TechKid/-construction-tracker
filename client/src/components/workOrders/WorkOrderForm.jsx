@@ -35,15 +35,19 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ErrorBoundary from '../common/ErrorBoundary';
 
 const WorkOrderForm = ({
-  initialValues: initialValuesProp,
+  initialValues: initialValuesProp = {},
   onSubmit,
-  isSubmitting,
+  isSubmitting = false,
   onCancel,
   mode = 'create',
 }) => {
   const { t } = useTranslation();
   const { data: buildingsData, isLoading: buildingsLoading, error: buildingsError } = useGetBuildingsQuery();
   const { data: workersData, isLoading: workersLoading, error: workersError } = useGetWorkersQuery();
+  
+  // Log initial values and loading states for debugging
+  console.log('WorkOrderForm - initialValuesProp:', initialValuesProp);
+  console.log('WorkOrderForm - loading states:', { buildingsLoading, workersLoading });
   
   // Form validation schema
   const validationSchema = Yup.object({
@@ -54,29 +58,45 @@ const WorkOrderForm = ({
     description: Yup.string().required('Description is required'),
   });
 
-  // Form initial values
-  const initialValues = {
-    title: '',
-    workType: '',
-    status: 'pending',
-    building: '',
-    description: '',
-    scheduledDate: null,
-    estimatedCompletionDate: null,
-    assignedWorkers: [],
-    photos: [],
-    ...initialValuesProp
-  };
+  // Form initial values with proper fallbacks
+  const initialValues = useMemo(() => ({
+    title: initialValuesProp.title || '',
+    workType: initialValuesProp.workType || '',
+    status: initialValuesProp.status || 'pending',
+    building: initialValuesProp.building || '',
+    apartmentNumber: initialValuesProp.apartmentNumber || '',
+    description: initialValuesProp.description || '',
+    scheduledDate: initialValuesProp.scheduledDate || null,
+    estimatedCompletionDate: initialValuesProp.estimatedCompletionDate || null,
+    assignedWorkers: initialValuesProp.assignedTo?.map(a => a.worker) || [],
+    photos: initialValuesProp.photos || [],
+    priority: initialValuesProp.priority || 'medium',
+    workSubType: initialValuesProp.workSubType || ''
+  }), [initialValuesProp]);
 
   const formik = useFormik({
+    enableReinitialize: true, // Allow form to reinitialize when initialValues change
     initialValues,
     validationSchema,
-    onSubmit: async (values, { setSubmitting, setFieldError, setStatus }) => {
+    onSubmit: async (values, { setSubmitting, setFieldError, setStatus, setErrors }) => {
       try {
+        console.log('Form submitted with values:', values);
         await onSubmit(values);
       } catch (error) {
-        setStatus({ error: 'Failed to save work order' });
         console.error('Error saving work order:', error);
+        const errorMessage = error?.message || 'Failed to save work order';
+        setStatus({ error: errorMessage });
+        
+        // Handle field-specific errors
+        if (error?.errors) {
+          const formErrors = {};
+          Object.entries(error.errors).forEach(([field, message]) => {
+            formErrors[field] = Array.isArray(message) ? message[0] : message;
+          });
+          setErrors(formErrors);
+        }
+        
+        throw error; // Re-throw to allow parent component to handle the error
       } finally {
         setSubmitting(false);
       }
@@ -118,11 +138,16 @@ const WorkOrderForm = ({
     formik.setFieldValue('photos', newPhotos);
   };
 
-  // Show loading state
+  // Show loading state with more detailed skeleton
   if (buildingsLoading || workersLoading) {
     return (
       <Box sx={{ p: 3 }}>
+        <Skeleton variant="rectangular" height={60} sx={{ mb: 2 }} />
         <Skeleton variant="rectangular" height={400} />
+        <Box display="flex" justifyContent="flex-end" mt={2}>
+          <Skeleton variant="rectangular" width={120} height={40} sx={{ mr: 2 }} />
+          <Skeleton variant="rectangular" width={120} height={40} />
+        </Box>
       </Box>
     );
   }

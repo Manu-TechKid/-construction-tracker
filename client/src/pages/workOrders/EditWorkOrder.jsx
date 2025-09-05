@@ -76,25 +76,51 @@ const EditWorkOrder = () => {
 
   const handleSubmit = async (formData) => {
     try {
+      console.log('Submitting work order update:', formData);
+      
+      // Transform the data for the API
+      const updateData = {
+        ...formData,
+        // Format assigned workers
+        assignedTo: formData.assignedWorkers?.map(workerId => ({
+          worker: workerId,
+          status: 'pending',
+          assignedAt: new Date().toISOString(),
+          assignedBy: 'system' // This should be the current user's ID in a real app
+        })) || [],
+        // Ensure dates are properly formatted
+        scheduledDate: formData.scheduledDate ? new Date(formData.scheduledDate).toISOString() : null,
+        estimatedCompletionDate: formData.estimatedCompletionDate ? new Date(formData.estimatedCompletionDate).toISOString() : null
+      };
+      
+      console.log('Sending update data:', updateData);
+      
       const result = await updateWorkOrder({ 
         id, 
-        ...formData,
-        // Ensure assignedTo is properly formatted
-        assignedTo: formData.assignedTo?.map(worker => ({
-          worker: worker._id || worker,
-          status: worker.status || 'pending',
-          assignedAt: worker.assignedAt || new Date().toISOString(),
-          assignedBy: worker.assignedBy || workOrderData?.createdBy?._id || 'system'
-        })) || []
+        ...updateData
       }).unwrap();
+      
+      console.log('Update successful:', result);
       
       toast.success('Work order updated successfully', { autoClose: 3000 });
       navigate(`/work-orders/${id}`);
+      
+      return result;
     } catch (error) {
       console.error('Failed to update work order:', error);
-      const errorMessage = error?.data?.message || 'Failed to update work order';
+      const errorMessage = error?.data?.message || error?.message || 'Failed to update work order';
       setSubmitError(errorMessage);
       toast.error(errorMessage, { autoClose: 5000 });
+      
+      // Format API errors for form fields
+      if (error?.data?.errors) {
+        const fieldErrors = {};
+        Object.entries(error.data.errors).forEach(([field, messages]) => {
+          fieldErrors[field] = Array.isArray(messages) ? messages[0] : messages;
+        });
+        throw { errors: fieldErrors };
+      }
+      
       throw error; // Re-throw to let WorkOrderForm handle the error state
     }
   };
@@ -119,8 +145,9 @@ const EditWorkOrder = () => {
 
   if (isLoading || !initialValues) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
         <CircularProgress />
+        <Box ml={2}>Loading work order data...</Box>
       </Box>
     );
   }
@@ -172,13 +199,15 @@ const EditWorkOrder = () => {
             </Alert>
           )}
 
-          <WorkOrderForm
-            mode="edit"
-            initialValues={initialValues}
-            onSubmit={handleSubmit}
-            isSubmitting={isUpdating}
-            onCancel={() => navigate(`/work-orders/${id}`)}
-          />
+          <Box sx={{ mt: 2 }}>
+            <WorkOrderForm
+              initialValues={initialValues}
+              onSubmit={handleSubmit}
+              isSubmitting={isUpdating}
+              onCancel={handleCancel}
+              mode="edit"
+            />
+          </Box>
         </Paper>
 
         {/* Delete Confirmation Dialog */}
