@@ -11,7 +11,7 @@ import {
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import WorkOrderForm from '../../components/workOrders/WorkOrderForm.fixed';
+import WorkOrderForm from '../../components/workOrders/WorkOrderForm';
 import { useCreateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 
 const CreateWorkOrder = () => {
