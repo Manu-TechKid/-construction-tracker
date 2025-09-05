@@ -8,7 +8,7 @@ import {
   Paper,
   IconButton
 } from '@mui/material';
-import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import { ArrowBack as ArrowBackIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import WorkOrderForm from '../../components/workOrders/WorkOrderForm';
@@ -113,10 +113,21 @@ const CreateWorkOrder = () => {
     }
   };
 
-  return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Paper sx={{ p: 3 }}>
+  // Wrap the component in a try-catch to prevent rendering errors
+  try {
+    if (isLoading) {
+      return (
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+          <CircularProgress />
+          <Box ml={2}>Loading work order form...</Box>
+        </Box>
+      );
+    }
+
+    return (
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+          <Paper sx={{ p: 3 }}>
           <Box display="flex" alignItems="center" mb={3}>
             <IconButton 
               onClick={() => navigate(-1)} 
@@ -152,10 +163,27 @@ const CreateWorkOrder = () => {
               }}
             />
           </Box>
-        </Paper>
-      </Container>
-    </LocalizationProvider>
-  );
+          </Paper>
+        </Container>
+      </LocalizationProvider>
+    );
+  } catch (error) {
+    console.error('Error rendering CreateWorkOrder:', error);
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          An error occurred while rendering the form. Please try again.
+        </Alert>
+        <Button 
+          variant="outlined" 
+          onClick={() => window.location.reload()}
+          startIcon={<RefreshIcon />}
+        >
+          Reload Page
+        </Button>
+      </Box>
+    );
+  }
 };
 
 export default CreateWorkOrder;

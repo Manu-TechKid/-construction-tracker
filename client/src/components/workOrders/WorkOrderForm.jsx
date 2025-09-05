@@ -32,6 +32,7 @@ import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import ErrorBoundary from '../common/ErrorBoundary';
 
 const WorkOrderForm = ({
@@ -152,19 +153,33 @@ const WorkOrderForm = ({
     );
   }
 
-  // Show error state
+  // Show error state with more details
   if (buildingsError || workersError) {
+    const errorMessage = buildingsError?.message || workersError?.message || 'Error loading data';
+    console.error('Error loading form data:', { buildingsError, workersError });
+    
     return (
-      <Alert severity="error">
-        {buildingsError?.message || workersError?.message || 'Error loading data'}
-      </Alert>
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {errorMessage}
+        </Alert>
+        <Button 
+          variant="outlined" 
+          onClick={() => window.location.reload()}
+          startIcon={<RefreshIcon />}
+        >
+          Reload Page
+        </Button>
+      </Box>
     );
   }
 
-  return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Card>
-        <CardContent>
+  // Wrap the form in an error boundary
+  try {
+    return (
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <Card>
+          <CardContent>
           <Typography variant="h6" gutterBottom>
             {mode === 'edit' ? 'Edit Work Order' : 'Create New Work Order'}
           </Typography>
@@ -437,10 +452,27 @@ const WorkOrderForm = ({
               </Grid>
             </Grid>
           </form>
-        </CardContent>
-      </Card>
-    </LocalizationProvider>
-  );
+          </CardContent>
+        </Card>
+      </LocalizationProvider>
+    );
+  } catch (error) {
+    console.error('Error rendering WorkOrderForm:', error);
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          An error occurred while rendering the form. Please try again.
+        </Alert>
+        <Button 
+          variant="outlined" 
+          onClick={() => window.location.reload()}
+          startIcon={<RefreshIcon />}
+        >
+          Reload Page
+        </Button>
+      </Box>
+    );
+  }
 };
 
 export default WorkOrderForm;

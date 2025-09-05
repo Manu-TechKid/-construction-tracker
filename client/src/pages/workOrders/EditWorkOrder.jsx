@@ -16,7 +16,7 @@ import {
   IconButton,
   Tooltip
 } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { ArrowBack as ArrowBackIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { 
   useGetWorkOrderQuery, 
@@ -143,7 +143,7 @@ const EditWorkOrder = () => {
     navigate(`/work-orders/${id}`);
   };
 
-  if (isLoading || !initialValues) {
+  if (isLoading || !workOrderData) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
         <CircularProgress />
@@ -153,26 +153,28 @@ const EditWorkOrder = () => {
   }
 
   if (error) {
+    console.error('Error loading work order:', error);
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Box sx={{ p: 3 }}>
         <Alert severity="error" sx={{ mb: 2 }}>
-          Error loading work order: {error?.data?.message || 'Unknown error'}
+          {error.data?.message || 'Error loading work order'}
         </Alert>
         <Button 
           variant="outlined" 
-          onClick={() => navigate('/work-orders')}
-          startIcon={<ArrowBackIcon />}
+          onClick={() => window.location.reload()}
+          startIcon={<RefreshIcon />}
         >
-          Back to Work Orders
+          Try Again
         </Button>
-      </Container>
+      </Box>
     );
   }
 
-  return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Paper sx={{ p: 3 }}>
+  try {
+    return (
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+          <Paper sx={{ p: 3 }}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
             <Box display="flex" alignItems="center">
               <IconButton onClick={() => navigate(-1)} sx={{ mr: 2 }}>
@@ -249,6 +251,23 @@ const EditWorkOrder = () => {
       </Container>
     </LocalizationProvider>
   );
+  } catch (error) {
+    console.error('Error rendering EditWorkOrder:', error);
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          An error occurred while rendering the form. Please try again.
+        </Alert>
+        <Button 
+          variant="outlined" 
+          onClick={() => window.location.reload()}
+          startIcon={<RefreshIcon />}
+        >
+          Reload Page
+        </Button>
+      </Box>
+    );
+  }
 };
 
 export default EditWorkOrder;
