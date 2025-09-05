@@ -11,7 +11,7 @@ import {
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import WorkOrderForm from '../../components/workOrders/WorkOrderForm';
+import WorkOrderForm from '../../components/workOrders/WorkOrderForm.fixed';
 import { useCreateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 
 const CreateWorkOrder = () => {
@@ -22,28 +22,26 @@ const CreateWorkOrder = () => {
     try {
       console.log('Submitting work order:', values);
       
-      // Validate required fields
-      const requiredFields = ['title', 'building', 'apartmentNumber', 'workType'];
-      const missingFields = requiredFields.filter(field => !values[field]);
-      
-      if (missingFields.length > 0) {
-        const errors = {};
-        missingFields.forEach(field => {
-          errors[field] = 'This field is required';
-        });
-        setErrors(errors);
-        setSubmitting(false);
-        return;
-      }
+      // Prepare the data for the API
+      const workOrderData = {
+        ...values,
+        // Ensure dates are properly formatted for the API
+        scheduledDate: values.scheduledDate ? new Date(values.scheduledDate).toISOString() : null,
+        estimatedCompletionDate: values.estimatedCompletionDate 
+          ? new Date(values.estimatedCompletionDate).toISOString() 
+          : null,
+        // Ensure assignedWorkers is an array of IDs
+        assignedWorkers: values.assignedWorkers?.map(worker => worker._id) || []
+      };
       
       // Show loading state
       const loadingToast = toast.loading('Creating work order...');
       
       try {
-        const result = await createWorkOrder(values).unwrap();
+        const result = await createWorkOrder(workOrderData).unwrap();
         console.log('Work order creation response:', result);
         
-        // Update loading toast to success
+        // Show success message
         toast.update(loadingToast, {
           render: result.message || 'Work order created successfully!',
           type: 'success',
@@ -60,7 +58,7 @@ const CreateWorkOrder = () => {
       } catch (error) {
         console.error('API Error:', error);
         
-        // Update loading toast to error
+        // Show error message
         toast.update(loadingToast, {
           render: error?.data?.message || error?.message || 'Failed to create work order',
           type: 'error',
@@ -75,24 +73,23 @@ const CreateWorkOrder = () => {
             formErrors[field] = Array.isArray(message) ? message[0] : message;
           });
           setErrors(formErrors);
-        } else if (error?.data?.fieldErrors) {
-          // Handle field-specific errors
-          const formErrors = {};
-          Object.entries(error.data.fieldErrors).forEach(([field, messages]) => {
-            formErrors[field] = Array.isArray(messages) ? messages[0] : messages;
-          });
-          setErrors(formErrors);
         }
         
         // Set form status with error
-        setStatus({ error: error?.data?.message || 'Failed to create work order' });
+        setStatus({ 
+          error: error?.data?.message || 'Failed to create work order',
+          details: error?.data?.details
+        });
         
         return { success: false, error };
       }
     } catch (error) {
       console.error('Unexpected error:', error);
       toast.error('An unexpected error occurred. Please try again.');
-      setStatus({ error: 'An unexpected error occurred. Please try again.' });
+      setStatus({ 
+        error: 'An unexpected error occurred. Please try again.',
+        details: error.message
+      });
       return { success: false, error };
     } finally {
       setSubmitting(false);
@@ -104,7 +101,11 @@ const CreateWorkOrder = () => {
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Paper sx={{ p: 3 }}>
           <Box display="flex" alignItems="center" mb={3}>
-            <IconButton onClick={() => navigate(-1)} sx={{ mr: 2 }}>
+            <IconButton 
+              onClick={() => navigate(-1)} 
+              sx={{ mr: 2 }}
+              aria-label="Go back"
+            >
               <ArrowBackIcon />
             </IconButton>
             <Typography variant="h4" component="h1">
@@ -117,6 +118,17 @@ const CreateWorkOrder = () => {
             onSubmit={handleSubmit}
             isSubmitting={isLoading}
             onCancel={() => navigate('/work-orders')}
+            initialValues={{
+              title: '',
+              workType: '',
+              status: 'pending',
+              building: '',
+              description: '',
+              scheduledDate: null,
+              estimatedCompletionDate: null,
+              assignedWorkers: [],
+              photos: []
+            }}
           />
         </Paper>
       </Container>
