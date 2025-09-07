@@ -13,6 +13,10 @@ const { sendWorkOrderAssignedEmail } = require('../services/emailService');
  * @access  Private/Admin/Manager
  */
 exports.createWorkOrder = catchAsync(async (req, res, next) => {
+  console.log('=== CREATE WORK ORDER START ===');
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
+  console.log('Request user:', req.user ? { id: req.user._id, role: req.user.role } : 'No user');
+  
   try {
     // Extract data from request body with defaults
     const {
@@ -219,9 +223,15 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
         data: responseData
       });
     } catch (error) {
+      console.error('=== WORK ORDER CREATION ERROR (INNER) ===');
+      console.error('Error details:', error);
+      console.error('Error stack:', error.stack);
       handleWorkOrderError(error, next);
     }
   } catch (error) {
+    console.error('=== WORK ORDER CREATION ERROR (OUTER) ===');
+    console.error('Error details:', error);
+    console.error('Error stack:', error);
     handleWorkOrderError(error, next);
   }
 });
@@ -1125,6 +1135,13 @@ const handleWorkOrderError = (error, next) => {
   }
   
   // Default error handler with more detailed message
+  console.error('=== UNHANDLED ERROR IN handleWorkOrderError ===');
+  console.error('Error name:', error.name);
+  console.error('Error message:', error.message);
+  console.error('Error stack:', error.stack);
+  console.error('Error code:', error.code);
+  console.error('Error statusCode:', error.statusCode);
+  
   return next(new AppError(
     error.message || 'An unexpected error occurred. Please try again.', 
     error.statusCode || 500
