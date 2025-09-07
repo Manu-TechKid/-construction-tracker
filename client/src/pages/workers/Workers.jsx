@@ -439,7 +439,7 @@ const Workers = () => {
                 value={workerForm.email}
                 onChange={handleInputChange}
                 required
-                disabled={isSubmitting || editMode}
+                disabled={isSubmitting}
                 margin="normal"
               />
             </Grid>

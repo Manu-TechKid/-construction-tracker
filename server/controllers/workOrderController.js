@@ -44,13 +44,7 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
     // Validate required fields
     const requiredFields = [
       'title', 
-      'description', 
-      'building', 
-      'apartmentNumber', 
-      'block', 
-      'apartmentStatus',
-      'priority', 
-      'status'
+      'building'
     ];
     
     const missingFields = [];

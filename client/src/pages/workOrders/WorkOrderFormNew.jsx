@@ -51,13 +51,7 @@ const validationSchema = Yup.object({
   title: Yup.string().required('Title is required'),
   description: Yup.string().required('Description is required'),
   building: Yup.string().required('Building is required'),
-  apartmentNumber: Yup.string().required('Apartment number is required'),
-  block: Yup.string().required('Block is required'),
-  apartmentStatus: Yup.string().required('Apartment status is required'),
-  priority: Yup.string().required('Priority is required'),
-  scheduledDate: Yup.date().required('Scheduled date is required'),
-  assignedTo: Yup.array().min(1, 'At least one worker must be assigned'),
-  services: Yup.array().min(1, 'At least one service is required')
+  scheduledDate: Yup.date().required('Scheduled date is required')
 });
 
 const WorkOrderFormNew = ({ isEdit = false }) => {
@@ -73,7 +67,7 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
   const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
   const { data: workOrderData } = useGetWorkOrderQuery(id, { skip: !isEdit || !id });
   const { data: buildingsData } = useGetBuildingsQuery();
-  const { data: usersData } = useGetUsersQuery();
+  const { data: usersData } = useGetUsersQuery({ role: 'worker' });
   
   const buildings = buildingsData?.data?.buildings || [];
   const workers = usersData?.data?.users?.filter(user => 
