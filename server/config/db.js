@@ -2,10 +2,9 @@ const mongoose = require('mongoose');
 const colors = require('colors');
 
 const connectDB = async () => {
-  // For local development, use a simple local MongoDB or skip DB connection
-  if (process.env.NODE_ENV === 'development' && !process.env.MONGO_URI) {
-    console.log('No MongoDB URI provided for development. Skipping database connection.');
-    return null;
+  // For local development without MONGO_URI, throw an error to require proper setup
+  if (!process.env.MONGO_URI) {
+    throw new Error('MONGO_URI environment variable is required. Please add your MongoDB Atlas connection string to the .env file.');
   }
 
   const maxRetries = 2; // Reduced from 3 to 2 for faster failure

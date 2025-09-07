@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import '@testing-library/jest-dom';
-import WorkOrderForm from './WorkOrderFormNew';
+import WorkOrderForm from '../../pages/workOrders/WorkOrderFormNew';
 
 // Mock API responses
 const mockBuildings = [

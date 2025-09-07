@@ -417,12 +417,18 @@ const WorkOrders = () => {
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
-        <MenuItem onClick={() => navigate(`/work-orders/${selectedWorkOrder?._id}`)}>
+        <MenuItem onClick={() => {
+          setAnchorEl(null);
+          navigate(`/work-orders/${selectedWorkOrder._id}/details`);
+        }}>
           <ViewIcon sx={{ mr: 1 }} />
           View Details
         </MenuItem>
-        {!isWorker && hasPermission(['update:workorders']) && (
-          <MenuItem onClick={() => navigate(`/work-orders/${selectedWorkOrder?._id}/edit`)}>
+        {hasPermission('update:work-orders') && (
+          <MenuItem onClick={() => {
+            setAnchorEl(null);
+            navigate(`/work-orders/${selectedWorkOrder._id}/edit`);
+          }}>
             <EditIcon sx={{ mr: 1 }} />
             Edit
           </MenuItem>

@@ -50,8 +50,7 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       'block', 
       'apartmentStatus',
       'priority', 
-      'status',
-      'workType'
+      'status'
     ];
     
     const missingFields = [];
@@ -73,6 +72,9 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
         { fieldErrors }
       ));
     }
+    
+    // Import mongoose for validation
+    const mongoose = require('mongoose');
     
     // Validate building ID format
     if (!mongoose.Types.ObjectId.isValid(building)) {
@@ -114,44 +116,32 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       }));
     }
 
-    // Process assigned workers with notes
-    const processedAssignedTo = [];
-    if (Array.isArray(assignedTo)) {
-      for (const worker of assignedTo) {
+    // Process assigned workers - convert to proper format
+    let processedAssignedTo = [];
+    if (Array.isArray(assignedTo) && assignedTo.length > 0) {
+      for (const workerId of assignedTo) {
         try {
-          let workerId;
-          let workerNotes = '';
-          
-          // Handle both direct worker IDs and worker objects with notes
-          if (typeof worker === 'string' || worker instanceof String) {
-            workerId = worker;
-          } else if (worker && (worker.worker || worker._id)) {
-            workerId = worker.worker || worker._id;
-            workerNotes = worker.notes || '';
-          } else {
-            console.warn('Invalid worker format:', worker);
-            continue; // Skip invalid worker entries
-          }
+          // Handle both string IDs and objects
+          const id = typeof workerId === 'string' ? workerId : workerId.worker || workerId._id;
           
           // Validate worker ID format
-          if (!mongoose.Types.ObjectId.isValid(workerId)) {
-            console.warn('Invalid worker ID format:', workerId);
+          if (!mongoose.Types.ObjectId.isValid(id)) {
+            console.warn('Invalid worker ID format:', id);
             continue; // Skip invalid worker IDs
           }
           
           // Check if worker exists
-          const workerExists = await User.exists({ _id: workerId, role: 'worker' });
+          const workerExists = await User.exists({ _id: id, role: 'worker' });
           if (!workerExists) {
-            console.warn(`Worker with ID ${workerId} not found or not a worker`);
+            console.warn(`Worker with ID ${id} not found or not a worker`);
             continue; // Skip non-existent workers
           }
           
           processedAssignedTo.push({
-            worker: workerId,
-            status: worker.status || 'pending',
-            assignedAt: worker.assignedAt || new Date(),
-            assignedBy: createdBy, // Always use the current user as the assigner
-            notes: workerNotes
+            worker: id,
+            assignedAt: new Date(),
+            assignedBy: req.user._id,
+            status: 'pending'
           });
           
         } catch (error) {

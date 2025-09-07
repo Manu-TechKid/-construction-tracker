@@ -31,9 +31,8 @@ import BuildingDetails from './pages/buildings/BuildingDetails';
 import CreateBuilding from './pages/buildings/CreateBuilding';
 import BuildingEdit from './pages/buildings/BuildingEdit';
 import WorkOrders from './pages/workOrders/WorkOrders';
-import CreateWorkOrder from './pages/workOrders/CreateWorkOrder';
-import WorkOrderDetails from './pages/workOrders/WorkOrderDetails';
-import EditWorkOrder from './pages/workOrders/EditWorkOrder';
+import WorkOrderFormNew from './pages/workOrders/WorkOrderFormNew';
+import WorkOrderDetailsNew from './pages/workOrders/WorkOrderDetailsNew';
 import WorkProgress from './pages/workOrders/WorkProgress';
 import Workers from './pages/workers/Workers';
 import CreateWorker from './pages/workers/CreateWorker';
@@ -183,10 +182,10 @@ const AppContent = () => {
                 } 
               />
               <Route 
-                path="work-orders/create" 
+                path="work-orders/new" 
                 element={
                   <RoleBasedRoute requiredPermissions={['create:workorders']}>
-                    <CreateWorkOrder />
+                    <WorkOrderFormNew />
                   </RoleBasedRoute>
                 } 
               />
@@ -194,15 +193,15 @@ const AppContent = () => {
                 path="work-orders/:id/edit" 
                 element={
                   <RoleBasedRoute requiredPermissions={['update:workorders']}>
-                    <EditWorkOrder />
+                    <WorkOrderFormNew isEdit={true} />
                   </RoleBasedRoute>
                 } 
               />
               <Route 
-                path="work-orders/:id" 
+                path="work-orders/:id/details" 
                 element={
                   <RoleBasedRoute requiredPermissions={['read:workorders']}>
-                    <WorkOrderDetails />
+                    <WorkOrderDetailsNew />
                   </RoleBasedRoute>
                 } 
               />
