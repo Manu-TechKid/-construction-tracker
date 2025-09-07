@@ -134,6 +134,12 @@ const Workers = () => {
     return workers;
   }, [allWorkersData, tabValue]);
 
+  // Get counts for each tab
+  const allWorkers = allWorkersData?.data?.workers || [];
+  const pendingCount = allWorkers.filter(w => w.workerProfile?.approvalStatus === 'pending').length;
+  const approvedCount = allWorkers.filter(w => w.workerProfile?.approvalStatus === 'approved').length;
+  const rejectedCount = allWorkers.filter(w => w.workerProfile?.approvalStatus === 'rejected').length;
+
   // Handle worker edit button click
   const handleEditClick = (worker) => {
     if (!worker || !worker._id) {
@@ -318,10 +324,10 @@ const Workers = () => {
           variant="scrollable"
           scrollButtons="auto"
         >
-          <Tab label={`All Workers (${filteredWorkers.length})`} />
-          <Tab label={`Pending (${filteredWorkers.filter(w => w.workerProfile?.approvalStatus === 'pending').length})`} />
-          <Tab label={`Approved (${filteredWorkers.filter(w => w.workerProfile?.approvalStatus === 'approved').length})`} />
-          <Tab label={`Rejected (${filteredWorkers.filter(w => w.workerProfile?.approvalStatus === 'rejected').length})`} />
+          <Tab label={`All Workers (${allWorkers.length})`} />
+          <Tab label={`Pending (${pendingCount})`} />
+          <Tab label={`Approved (${approvedCount})`} />
+          <Tab label={`Rejected (${rejectedCount})`} />
         </Tabs>
       </Box>
 

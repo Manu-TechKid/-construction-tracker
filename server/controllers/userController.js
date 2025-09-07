@@ -85,19 +85,34 @@ exports.getUser = catchAsync(async (req, res, next) => {
 
 // Create worker (by employer)
 exports.createWorker = catchAsync(async (req, res, next) => {
+    // Check for duplicate email
+    const existingUser = await User.findOne({ email: req.body.email });
+    if (existingUser) {
+        return next(new AppError('A user with this email already exists', 400));
+    }
+
+    // Validate required fields
+    if (!req.body.name || !req.body.email) {
+        return next(new AppError('Name and email are required', 400));
+    }
+
+    if (!req.body.password) {
+        return next(new AppError('Password is required', 400));
+    }
+
     const workerData = {
         name: req.body.name,
         email: req.body.email,
         phone: req.body.phone,
         role: 'worker',
-        password: req.body.password || 'TempPassword123!', // Temporary password
+        password: req.body.password,
         workerProfile: {
-            skills: req.body.skills || [],
-            paymentType: req.body.paymentType || 'hourly',
-            hourlyRate: req.body.hourlyRate,
-            contractRate: req.body.contractRate,
-            status: req.body.status || 'active',
-            notes: req.body.notes,
+            skills: req.body.workerProfile?.skills || req.body.skills || [],
+            paymentType: req.body.workerProfile?.paymentType || req.body.paymentType || 'hourly',
+            hourlyRate: req.body.workerProfile?.hourlyRate || req.body.hourlyRate || 0,
+            contractRate: req.body.workerProfile?.contractRate || req.body.contractRate || 0,
+            status: req.body.workerProfile?.status || req.body.status || 'active',
+            notes: req.body.workerProfile?.notes || req.body.notes || '',
             createdBy: req.user.id, // Employer who created this worker
             approvalStatus: 'approved' // Auto-approve employer-created workers
         }
@@ -123,6 +138,14 @@ exports.updateUser = catchAsync(async (req, res, next) => {
     if (!user) {
         return next(new AppError('No user found with that ID', 404));
     }
+
+    // Check for email uniqueness if email is being updated
+    if (req.body.email && req.body.email !== user.email) {
+        const existingUser = await User.findOne({ email: req.body.email });
+        if (existingUser) {
+            return next(new AppError('A user with this email already exists', 400));
+        }
+    }
     
     // Update basic fields
     const allowedFields = ['name', 'email', 'phone', 'isActive'];
@@ -131,13 +154,24 @@ exports.updateUser = catchAsync(async (req, res, next) => {
             user[field] = req.body[field];
         }
     });
+
+    // Update password if provided
+    if (req.body.password) {
+        user.password = req.body.password;
+    }
     
     // Update worker profile if user is a worker
-    if (user.role === 'worker' && req.body.workerProfile) {
+    if (user.role === 'worker') {
+        // Handle both nested workerProfile and flat structure
+        const workerData = req.body.workerProfile || req.body;
         const workerFields = ['skills', 'paymentType', 'hourlyRate', 'contractRate', 'status', 'notes'];
+        
         workerFields.forEach(field => {
-            if (req.body.workerProfile[field] !== undefined) {
-                user.workerProfile[field] = req.body.workerProfile[field];
+            if (workerData[field] !== undefined) {
+                if (!user.workerProfile) {
+                    user.workerProfile = {};
+                }
+                user.workerProfile[field] = workerData[field];
             }
         });
     }
