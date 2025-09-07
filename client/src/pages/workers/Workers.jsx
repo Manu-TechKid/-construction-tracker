@@ -75,7 +75,7 @@ const Workers = () => {
 
   const handleMenuClose = () => {
     setAnchorEl(null);
-    setSelectedWorker(null);
+    // Don't clear selectedWorker here - keep it for delete dialog
   };
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [workerDialogOpen, setWorkerDialogOpen] = useState(false);
@@ -233,7 +233,8 @@ const Workers = () => {
       await deleteWorker(selectedWorker._id).unwrap();
       toast.success('Worker deleted successfully');
       setDeleteDialogOpen(false);
-      handleMenuClose();
+      setSelectedWorker(null);
+      setAnchorEl(null);
       refetch();
     } catch (error) {
       console.error('Error deleting worker:', error);
@@ -273,6 +274,7 @@ const Workers = () => {
     });
     setSelectedWorker(null);
     setEditMode(false);
+    setAnchorEl(null);
   };
 
   // Handle input changes
@@ -601,7 +603,7 @@ const Workers = () => {
           <MenuItem 
             onClick={() => {
               handleEditClick(selectedWorker);
-              handleMenuClose();
+              setAnchorEl(null);
             }}
             disabled={isUpdatingApproval}
           >
@@ -612,7 +614,7 @@ const Workers = () => {
         {hasPermission(['delete:workers']) && (
           <MenuItem 
             onClick={() => {
-              handleMenuClose();
+              setAnchorEl(null);
               setDeleteDialogOpen(true);
             }}
             disabled={isDeleting || isUpdatingApproval}
