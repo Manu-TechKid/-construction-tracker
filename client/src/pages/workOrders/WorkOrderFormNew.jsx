@@ -296,49 +296,73 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                     </Grid>
                     
                     <Grid item xs={12} sm={6}>
-                      <FormControl fullWidth error={formik.touched.block && Boolean(formik.errors.block)}>
-                        <InputLabel>Block</InputLabel>
-                        <Select
+                      {isEdit ? (
+                        <TextField
+                          fullWidth
                           name="block"
+                          label="Block"
                           value={formik.values.block}
                           onChange={formik.handleChange}
-                          label="Block"
-                          disabled={!selectedBuilding}
-                        >
-                          {blocks.map((block) => (
-                            <MenuItem key={block} value={block}>
-                              {block}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                        {formik.touched.block && formik.errors.block && (
-                          <FormHelperText>{formik.errors.block}</FormHelperText>
-                        )}
-                      </FormControl>
+                          error={formik.touched.block && Boolean(formik.errors.block)}
+                          helperText={formik.touched.block && formik.errors.block}
+                        />
+                      ) : (
+                        <FormControl fullWidth error={formik.touched.block && Boolean(formik.errors.block)}>
+                          <InputLabel>Block</InputLabel>
+                          <Select
+                            name="block"
+                            value={formik.values.block}
+                            onChange={formik.handleChange}
+                            label="Block"
+                            disabled={!selectedBuilding}
+                          >
+                            {blocks.map((block) => (
+                              <MenuItem key={block} value={block}>
+                                {block}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                          {formik.touched.block && formik.errors.block && (
+                            <FormHelperText>{formik.errors.block}</FormHelperText>
+                          )}
+                        </FormControl>
+                      )}
                     </Grid>
                     
                     <Grid item xs={12} sm={6}>
-                      <FormControl fullWidth error={formik.touched.apartmentNumber && Boolean(formik.errors.apartmentNumber)}>
-                        <InputLabel>Apartment Number</InputLabel>
-                        <Select
+                      {isEdit ? (
+                        <TextField
+                          fullWidth
                           name="apartmentNumber"
+                          label="Apartment Number"
                           value={formik.values.apartmentNumber}
                           onChange={formik.handleChange}
-                          label="Apartment Number"
-                          disabled={!formik.values.block}
-                        >
-                          {apartments
-                            .filter(apt => apt.block === formik.values.block)
-                            .map((apartment) => (
-                              <MenuItem key={apartment._id} value={apartment.number}>
-                                {apartment.number}
-                              </MenuItem>
-                            ))}
-                        </Select>
-                        {formik.touched.apartmentNumber && formik.errors.apartmentNumber && (
-                          <FormHelperText>{formik.errors.apartmentNumber}</FormHelperText>
-                        )}
-                      </FormControl>
+                          error={formik.touched.apartmentNumber && Boolean(formik.errors.apartmentNumber)}
+                          helperText={formik.touched.apartmentNumber && formik.errors.apartmentNumber}
+                        />
+                      ) : (
+                        <FormControl fullWidth error={formik.touched.apartmentNumber && Boolean(formik.errors.apartmentNumber)}>
+                          <InputLabel>Apartment Number</InputLabel>
+                          <Select
+                            name="apartmentNumber"
+                            value={formik.values.apartmentNumber}
+                            onChange={formik.handleChange}
+                            label="Apartment Number"
+                            disabled={!formik.values.block}
+                          >
+                            {apartments
+                              .filter(apt => apt.block === formik.values.block)
+                              .map((apartment) => (
+                                <MenuItem key={apartment._id} value={apartment.number}>
+                                  {apartment.number}
+                                </MenuItem>
+                              ))}
+                          </Select>
+                          {formik.touched.apartmentNumber && formik.errors.apartmentNumber && (
+                            <FormHelperText>{formik.errors.apartmentNumber}</FormHelperText>
+                          )}
+                        </FormControl>
+                      )}
                     </Grid>
                     
                     <Grid item xs={12} sm={6}>
