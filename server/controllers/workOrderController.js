@@ -76,23 +76,25 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       return next(new AppError('Invalid building ID format', 400, { fieldErrors }));
     }
 
-    // Validate services array
-    if (!Array.isArray(services) || services.length === 0) {
-      return next(new AppError('At least one service is required', 400));
-    }
-
-    // Validate each service
-    const invalidServices = services.filter(service => {
-      return !service.type || !service.description || 
-             service.laborCost === undefined || 
-             service.materialCost === undefined;
-    });
-
-    if (invalidServices.length > 0) {
-      return next(new AppError(
-        'Each service must have type, description, laborCost, and materialCost',
-        400
-      ));
+    // Validate services array - make it optional
+    let processedServices = [];
+    if (services && Array.isArray(services) && services.length > 0) {
+      processedServices = services.map(service => ({
+        type: service.type || 'other',
+        description: service.description || '',
+        laborCost: parseFloat(service.laborCost) || 0,
+        materialCost: parseFloat(service.materialCost) || 0,
+        status: service.status || 'pending'
+      }));
+    } else {
+      // Default service if none provided
+      processedServices = [{
+        type: 'other',
+        description: 'General work',
+        laborCost: 0,
+        materialCost: 0,
+        status: 'pending'
+      }];
     }
 
     // Get the authenticated user's ID
@@ -145,16 +147,7 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       }
     }
 
-    // Process services with defaults
-    const processedServices = services.map(service => ({
-      type: service.type || 'other',
-      description: service.description || '',
-      laborCost: Number(service.laborCost) || 0,
-      materialCost: Number(service.materialCost) || 0,
-      estimatedHours: Number(service.estimatedHours) || 1,
-      status: service.status || 'pending',
-      notes: service.notes || ''
-    }));
+    // Use the already processed services from above
 
     // Process notes
     const processedNotes = (Array.isArray(notes) ? notes : []).map(note => ({
@@ -186,25 +179,7 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
 
     console.log('Creating work order with data:', JSON.stringify(workOrderData, null, 2));
     
-    try {
-      const workOrder = await WorkOrder.create(workOrderData);
-      console.log('Work order created successfully:', workOrder);
-    } catch (createError) {
-      console.error('Error creating work order in database:', {
-        error: createError,
-        workOrderData: {
-          ...workOrderData,
-          createdBy: workOrderData.createdBy ? workOrderData.createdBy.toString() : 'undefined',
-          updatedBy: workOrderData.updatedBy ? workOrderData.updatedBy.toString() : 'undefined',
-          assignedTo: workOrderData.assignedTo.map(a => ({
-            ...a,
-            worker: a.worker ? a.worker.toString() : 'undefined',
-            assignedBy: a.assignedBy ? a.assignedBy.toString() : 'undefined'
-          }))
-        }
-      });
-      throw createError;
-    }
+    const workOrder = await WorkOrder.create(workOrderData);
 
     // Populate the work order with related data for the response
     const populatedWorkOrder = await WorkOrder.findById(workOrder._id)

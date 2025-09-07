@@ -106,47 +106,30 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
     validationSchema,
     onSubmit: async (values, { setSubmitting }) => {
       try {
-        const formData = new FormData();
-        
-        // Add basic fields
-        formData.append('title', values.title);
-        formData.append('description', values.description);
-        formData.append('building', values.building);
-        formData.append('apartmentNumber', values.apartmentNumber);
-        formData.append('block', values.block);
-        formData.append('apartmentStatus', values.apartmentStatus);
-        formData.append('priority', values.priority);
-        formData.append('status', values.status);
-        formData.append('scheduledDate', values.scheduledDate.toISOString());
-        formData.append('estimatedCompletionDate', values.estimatedCompletionDate.toISOString());
-        formData.append('createdBy', user._id);
-        
-        // Add assigned workers
-        values.assignedTo.forEach((workerId, index) => {
-          formData.append(`assignedTo[${index}]`, workerId);
-        });
-        
-        // Add services
-        values.services.forEach((service, index) => {
-          formData.append(`services[${index}][type]`, service.type);
-          formData.append(`services[${index}][description]`, service.description);
-          formData.append(`services[${index}][laborCost]`, service.laborCost);
-          formData.append(`services[${index}][materialCost]`, service.materialCost);
-          formData.append(`services[${index}][status]`, service.status);
-        });
-        
-        // Add photos
-        photos.forEach((photo, index) => {
-          if (photo instanceof File) {
-            formData.append('photos', photo);
-          }
-        });
+        // Create JSON payload instead of FormData for better compatibility
+        const workOrderData = {
+          title: values.title,
+          description: values.description,
+          building: values.building,
+          apartmentNumber: values.apartmentNumber || '',
+          block: values.block || '',
+          apartmentStatus: values.apartmentStatus,
+          priority: values.priority,
+          status: values.status,
+          scheduledDate: values.scheduledDate.toISOString(),
+          estimatedCompletionDate: values.estimatedCompletionDate.toISOString(),
+          assignedTo: values.assignedTo || [],
+          services: values.services || [],
+          notes: values.notes || []
+        };
+
+        console.log('Starting work order creation with data:', workOrderData);
         
         if (isEdit && id) {
-          await updateWorkOrder({ id, formData }).unwrap();
+          await updateWorkOrder({ id, ...workOrderData }).unwrap();
           toast.success('Work order updated successfully');
         } else {
-          await createWorkOrder(formData).unwrap();
+          await createWorkOrder(workOrderData).unwrap();
           toast.success('Work order created successfully');
         }
         

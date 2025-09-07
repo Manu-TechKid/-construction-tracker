@@ -116,7 +116,6 @@ const workOrderSchema = new mongoose.Schema({
   },
   apartmentStatus: {
     type: String,
-    required: [true, 'Apartment status is required'],
     enum: {
       values: ['vacant', 'occupied', 'under_renovation', 'reserved'],
       message: 'Apartment status must be one of: vacant, occupied, under_renovation, reserved'
