@@ -30,7 +30,8 @@ import {
   Save as SaveIcon,
   Cancel as CancelIcon,
   CloudUpload as CloudUploadIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  Add as AddIcon
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -314,7 +315,7 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                             value={formik.values.block}
                             onChange={formik.handleChange}
                             label="Block"
-                            disabled={!selectedBuilding}
+                            disabled={false}
                           >
                             {blocks.map((block) => (
                               <MenuItem key={block} value={block}>
@@ -348,7 +349,7 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                             value={formik.values.apartmentNumber}
                             onChange={formik.handleChange}
                             label="Apartment Number"
-                            disabled={!formik.values.block}
+                            disabled={false}
                           >
                             {apartments
                               .filter(apt => apt.block === formik.values.block)
@@ -462,6 +463,119 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                 </CardContent>
               </Card>
               
+              {/* Services */}
+              <Card sx={{ mt: 2 }}>
+                <CardHeader 
+                  title="Services" 
+                  action={
+                    <Button
+                      size="small"
+                      onClick={addService}
+                      startIcon={<AddIcon />}
+                    >
+                      Add Service
+                    </Button>
+                  }
+                />
+                <CardContent>
+                  {formik.values.services.map((service, index) => (
+                    <Box key={index} sx={{ mb: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} sm={6}>
+                          <FormControl fullWidth>
+                            <InputLabel>Service Type</InputLabel>
+                            <Select
+                              name={`services[${index}].type`}
+                              value={service.type}
+                              onChange={formik.handleChange}
+                              label="Service Type"
+                            >
+                              <MenuItem value="plumbing">Plumbing</MenuItem>
+                              <MenuItem value="electrical">Electrical</MenuItem>
+                              <MenuItem value="hvac">HVAC</MenuItem>
+                              <MenuItem value="painting">Painting</MenuItem>
+                              <MenuItem value="carpentry">Carpentry</MenuItem>
+                              <MenuItem value="cleaning">Cleaning</MenuItem>
+                              <MenuItem value="maintenance">Maintenance</MenuItem>
+                              <MenuItem value="other">Other</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <FormControl fullWidth>
+                            <InputLabel>Status</InputLabel>
+                            <Select
+                              name={`services[${index}].status`}
+                              value={service.status}
+                              onChange={formik.handleChange}
+                              label="Status"
+                            >
+                              <MenuItem value="pending">Pending</MenuItem>
+                              <MenuItem value="in_progress">In Progress</MenuItem>
+                              <MenuItem value="completed">Completed</MenuItem>
+                              <MenuItem value="cancelled">Cancelled</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid item xs={12}>
+                          <TextField
+                            fullWidth
+                            name={`services[${index}].description`}
+                            label="Service Description"
+                            value={service.description}
+                            onChange={formik.handleChange}
+                            multiline
+                            rows={2}
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={4}>
+                          <TextField
+                            fullWidth
+                            name={`services[${index}].laborCost`}
+                            label="Labor Cost"
+                            type="number"
+                            value={service.laborCost}
+                            onChange={formik.handleChange}
+                            InputProps={{
+                              startAdornment: <Typography variant="body2">$</Typography>
+                            }}
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={4}>
+                          <TextField
+                            fullWidth
+                            name={`services[${index}].materialCost`}
+                            label="Material Cost"
+                            type="number"
+                            value={service.materialCost}
+                            onChange={formik.handleChange}
+                            InputProps={{
+                              startAdornment: <Typography variant="body2">$</Typography>
+                            }}
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={4}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+                            <Typography variant="body2" sx={{ mr: 2 }}>
+                              Total: ${(parseFloat(service.laborCost || 0) + parseFloat(service.materialCost || 0)).toFixed(2)}
+                            </Typography>
+                            {formik.values.services.length > 1 && (
+                              <IconButton
+                                color="error"
+                                onClick={() => removeService(index)}
+                                size="small"
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            )}
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  ))}
+                </CardContent>
+              </Card>
+
               {/* Photo Upload */}
               <Card sx={{ mt: 2 }}>
                 <CardHeader title="Photos" />

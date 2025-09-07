@@ -312,13 +312,14 @@ const WorkOrders = () => {
                 <TableCell>Description</TableCell>
                 {!isWorker && <TableCell>Est. Cost</TableCell>}
                 <TableCell>Scheduled</TableCell>
+                <TableCell>Photos</TableCell>
                 <TableCell>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {filteredWorkOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={isWorker ? 9 : 10} align="center">
+                  <TableCell colSpan={isWorker ? 10 : 11} align="center">
                     <Box py={4}>
                       <Typography variant="h6" color="text.secondary" gutterBottom>
                         {isWorker ? 'No work orders assigned to you' : 'No work orders found'}
@@ -394,6 +395,26 @@ const WorkOrders = () => {
                     )}
                     <TableCell>
                       {workOrder.scheduledDate ? format(new Date(workOrder.scheduledDate), 'MMM dd, yyyy') : 'Not scheduled'}
+                    </TableCell>
+                    <TableCell>
+                      {workOrder.photos && workOrder.photos.length > 0 ? (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Avatar
+                            src={workOrder.photos[0].url || workOrder.photos[0]}
+                            sx={{ width: 32, height: 32 }}
+                            variant="rounded"
+                          />
+                          {workOrder.photos.length > 1 && (
+                            <Typography variant="caption" color="text.secondary">
+                              +{workOrder.photos.length - 1}
+                            </Typography>
+                          )}
+                        </Box>
+                      ) : (
+                        <Typography variant="caption" color="text.secondary">
+                          No photos
+                        </Typography>
+                      )}
                     </TableCell>
                     <TableCell>
                       <IconButton
