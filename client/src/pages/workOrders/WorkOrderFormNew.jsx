@@ -315,7 +315,7 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                             value={formik.values.block}
                             onChange={formik.handleChange}
                             label="Block"
-                            disabled={false}
+                            disabled={!selectedBuilding}
                           >
                             {blocks.map((block) => (
                               <MenuItem key={block} value={block}>
@@ -349,7 +349,7 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                             value={formik.values.apartmentNumber}
                             onChange={formik.handleChange}
                             label="Apartment Number"
-                            disabled={false}
+                            disabled={!formik.values.block}
                           >
                             {apartments
                               .filter(apt => apt.block === formik.values.block)
