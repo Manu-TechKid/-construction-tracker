@@ -245,7 +245,8 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
           laborCost: 0,
           materialCost: 0,
           estimatedHours: 1,
-          status: 'pending'
+          status: 'pending',
+          completed: false
         }
       ],
       notes: [],
@@ -254,8 +255,11 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
     validate: (values) => {
       const errors = {};
       
-      if (!values.title) {
+      // Required fields
+      if (!values.title || values.title.trim() === '') {
         errors.title = 'Title is required';
+      } else if (values.title.length > 100) {
+        errors.title = 'Title must be less than 100 characters';
       }
       
       if (!values.building) {
@@ -266,15 +270,42 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
         errors.scheduledDate = 'Scheduled date is required';
       }
       
-      // Ensure services have required fields
+      // Validate assigned workers
+      if (values.assignedTo && values.assignedTo.length > 0) {
+        const invalidWorkers = values.assignedTo.filter(id => !id || id.trim() === '');
+        if (invalidWorkers.length > 0) {
+          errors.assignedTo = 'Invalid worker selection';
+        }
+      }
+      
+      // Validate services
       if (values.services && values.services.length > 0) {
         const serviceErrors = [];
         values.services.forEach((service, index) => {
-          if (!service.type) {
-            serviceErrors[index] = { type: 'Service type is required' };
+          const serviceError = {};
+          
+          if (!service.type || service.type.trim() === '') {
+            serviceError.type = 'Service type is required';
           }
-          if (!service.description) {
-            serviceErrors[index] = { ...serviceErrors[index], description: 'Description is required' };
+          
+          if (!service.description || service.description.trim() === '') {
+            serviceError.description = 'Description is required';
+          }
+          
+          if (service.laborCost < 0) {
+            serviceError.laborCost = 'Labor cost cannot be negative';
+          }
+          
+          if (service.materialCost < 0) {
+            serviceError.materialCost = 'Material cost cannot be negative';
+          }
+          
+          if (service.estimatedHours <= 0) {
+            serviceError.estimatedHours = 'Estimated hours must be greater than 0';
+          }
+          
+          if (Object.keys(serviceError).length > 0) {
+            serviceErrors[index] = serviceError;
           }
         });
         
@@ -302,7 +333,7 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
           }
         };
         
-        // Prepare the work order data
+        // Prepare the work order data with proper formatting
         const workOrderData = {
           title: (values.title || '').trim(),
           description: (values.description || '').trim(),
@@ -313,11 +344,15 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
           priority: values.priority || 'medium',
           status: values.status || 'pending',
           scheduledDate: formatDate(values.scheduledDate) || new Date().toISOString(),
-          estimatedCompletionDate: formatDate(values.estimatedCompletionDate),
+          estimatedCompletionDate: formatDate(values.estimatedCompletionDate) || undefined,
           assignedTo: Array.isArray(values.assignedTo) 
             ? values.assignedTo
                 .filter(id => id && id.toString().trim() !== '')
-                .map(id => id.toString())
+                .map(id => ({
+                  worker: id.toString(),
+                  status: 'pending',
+                  assignedAt: new Date().toISOString()
+                }))
             : [],
           services: Array.isArray(values.services) 
             ? values.services.map(service => ({
@@ -326,13 +361,15 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                 laborCost: Math.max(0, Number(service?.laborCost) || 0),
                 materialCost: Math.max(0, Number(service?.materialCost) || 0),
                 estimatedHours: Math.max(0.1, Number(service?.estimatedHours) || 1),
-                status: (service?.status || 'pending').trim()
+                status: (service?.status || 'pending').trim(),
+                completed: service?.completed || false
               }))
             : [],
-          notes: Array.isArray(values.notes) 
+          notes: Array.isArray(values.notes) && values.notes.length > 0
             ? values.notes.map(note => ({
-                text: (note?.text || '').trim(),
+                content: (note?.text || note?.content || '').trim(),
                 createdBy: note?.createdBy || user?._id || '',
+                isPrivate: note?.isPrivate || false,
                 createdAt: note?.createdAt || new Date().toISOString()
               }))
             : []
@@ -386,19 +423,35 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
           console.error('API Error:', error);
           
           // Handle validation errors
-          if (error?.data?.errors) {
-            Object.entries(error.data.errors).forEach(([field, message]) => {
-              setFieldError(field, message);
+          if (error?.data?.errors || error?.data?.fieldErrors) {
+            const errors = error.data.errors || error.data.fieldErrors;
+            Object.entries(errors).forEach(([field, message]) => {
+              // Map backend field names to form field names if needed
+              const formField = field === 'assignedTo.0' ? 'assignedTo' : field;
+              setFieldError(formField, message);
             });
             
             // Scroll to first error
-            const firstError = Object.keys(error.data.errors)[0];
+            const firstError = Object.keys(errors)[0];
             if (firstError) {
-              const element = document.querySelector(`[name="${firstError}"]`);
-              element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              const formField = firstError === 'assignedTo.0' ? 'assignedTo' : firstError;
+              const element = document.querySelector(`[name="${formField}"]`);
+              if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                element.focus();
+              }
             }
             
-            toast.error('Please fix the validation errors');
+            toast.error('Please fix the form errors');
+          } else if (error?.status === 401) {
+            toast.error('You need to be logged in to perform this action');
+          } else if (error?.status === 403) {
+            toast.error('You do not have permission to perform this action');
+          } else if (error?.status === 404) {
+            toast.error('The requested resource was not found');
+          } else if (error?.status >= 500) {
+            console.error('Server error details:', error.data);
+            toast.error('A server error occurred. Please try again later.');
           } else {
             // Show generic error
             toast.error(error?.data?.message || 'Failed to save work order');
