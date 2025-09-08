@@ -303,10 +303,9 @@ workOrderSchema.index({ 'assignedTo.worker': 1 });
 workOrderSchema.index({ 'assignedTo.status': 1 });
 workOrderSchema.index({ scheduledDate: 1 });
 
-// Virtual for work order title and other computed properties
-workOrderSchema.virtual('title').get(function() {
-  const prefix = this.services?.[0]?.type ? this.services[0].type.toUpperCase().substring(0, 3) : 'WO';
-  return `${prefix}-${this._id.toString().substring(18, 24)}`;
+// Virtual for work order display name (since 'title' is now a real field)
+workOrderSchema.virtual('displayName').get(function() {
+  return this.title || `${this.services?.[0]?.type?.toUpperCase().substring(0, 3) || 'WO'}-${this._id.toString().substring(18, 24)}`;
 });
 
 // Calculate total estimated cost
