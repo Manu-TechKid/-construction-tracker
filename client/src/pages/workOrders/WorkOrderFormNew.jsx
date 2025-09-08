@@ -180,8 +180,15 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
   // Process workers data with proper error handling
   const workers = React.useMemo(() => {
     try {
-      // Access the response data correctly based on your API structure
-      const workersData = workersResponse?.data?.users || workersResponse?.data || [];
+      // Access the response data correctly based on API structure
+      const responseData = workersResponse?.data?.data?.workers || 
+                          workersResponse?.data?.workers || 
+                          [];
+      
+      // Ensure we have an array
+      const workersData = Array.isArray(responseData) ? responseData : [];
+      
+      console.log('Workers data from API:', workersData);
       
       console.log('Raw workers response:', workersResponse);
       console.log('Processed workers array:', workersData);
@@ -190,7 +197,14 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
         ...worker,
         _id: worker._id?.toString(),
         name: worker.name || `${worker.firstName || ''} ${worker.lastName || ''}`.trim() || worker.email || 'Unknown Worker',
-        workerProfile: worker.workerProfile || {}
+        // Ensure workerProfile exists
+        workerProfile: worker.workerProfile || {},
+        // Ensure we have all required fields with defaults
+        firstName: worker.firstName || '',
+        lastName: worker.lastName || '',
+        email: worker.email || '',
+        role: worker.role || 'worker',
+        isActive: worker.isActive !== false // Default to true if undefined
       }));
     } catch (error) {
       console.error('Error processing workers data:', error);
@@ -222,16 +236,54 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
       priority: 'medium',
       status: 'pending',
       scheduledDate: new Date(),
-      estimatedCompletionDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
+      estimatedCompletionDate: null,
       assignedTo: [],
-      services: [{
-        type: 'other',
-        description: '',
-        laborCost: 0,
-        materialCost: 0,
-        status: 'pending'
-      }],
-      notes: []
+      services: [
+        {
+          type: 'other',
+          description: '',
+          laborCost: 0,
+          materialCost: 0,
+          estimatedHours: 1,
+          status: 'pending'
+        }
+      ],
+      notes: [],
+      photos: []
+    },
+    validate: (values) => {
+      const errors = {};
+      
+      if (!values.title) {
+        errors.title = 'Title is required';
+      }
+      
+      if (!values.building) {
+        errors.building = 'Building is required';
+      }
+      
+      if (!values.scheduledDate) {
+        errors.scheduledDate = 'Scheduled date is required';
+      }
+      
+      // Ensure services have required fields
+      if (values.services && values.services.length > 0) {
+        const serviceErrors = [];
+        values.services.forEach((service, index) => {
+          if (!service.type) {
+            serviceErrors[index] = { type: 'Service type is required' };
+          }
+          if (!service.description) {
+            serviceErrors[index] = { ...serviceErrors[index], description: 'Description is required' };
+          }
+        });
+        
+        if (serviceErrors.length > 0) {
+          errors.services = serviceErrors;
+        }
+      }
+      
+      return errors;
     },
     validationSchema,
     onSubmit: async (values, { setSubmitting, setFieldError }) => {
@@ -241,131 +293,134 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
         // Format dates to ISO strings
         const formatDate = (date) => {
           if (!date) return null;
-          const d = new Date(date);
-          return isNaN(d.getTime()) ? null : d.toISOString();
+          try {
+            const d = new Date(date);
+            return isNaN(d.getTime()) ? null : d.toISOString();
+          } catch (e) {
+            console.error('Error formatting date:', e);
+            return null;
+          }
         };
-
-        // Ensure assignedTo is an array of strings (worker IDs)
-        const assignedTo = Array.isArray(values.assignedTo) 
-          ? values.assignedTo.map(id => id.toString()) 
-          : [];
-
-        // Prepare base work order data
+        
+        // Prepare the work order data
         const workOrderData = {
-          title: values.title?.trim() || '',
-          description: values.description?.trim() || '',
-          building: values.building || null,
-          apartmentNumber: (values.apartmentNumber || '')?.trim() || null,
-          block: (values.block || '')?.trim() || null,
+          title: (values.title || '').trim(),
+          description: (values.description || '').trim(),
+          building: values.building?.toString() || '',
+          apartmentNumber: (values.apartmentNumber || '').toString(),
+          block: (values.block || '').toString(),
           apartmentStatus: values.apartmentStatus || 'occupied',
           priority: values.priority || 'medium',
           status: values.status || 'pending',
           scheduledDate: formatDate(values.scheduledDate) || new Date().toISOString(),
-          estimatedCompletionDate: formatDate(values.estimatedCompletionDate) || 
-            new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          assignedTo: assignedTo,
-          services: (Array.isArray(values.services) ? values.services : []).map(service => ({
-            type: service?.type || 'other',
-            description: service?.description?.trim() || '',
-            laborCost: Number(service?.laborCost) || 0,
-            materialCost: Number(service?.materialCost) || 0,
-            status: service?.status || 'pending'
-          })),
-          notes: (Array.isArray(values.notes) ? values.notes : []).map(note => ({
-            content: note?.content?.trim() || '',
-            isPrivate: Boolean(note?.isPrivate),
-            createdBy: user?._id || null
-          }))
+          estimatedCompletionDate: formatDate(values.estimatedCompletionDate),
+          assignedTo: Array.isArray(values.assignedTo) 
+            ? values.assignedTo
+                .filter(id => id && id.toString().trim() !== '')
+                .map(id => id.toString())
+            : [],
+          services: Array.isArray(values.services) 
+            ? values.services.map(service => ({
+                type: (service?.type || 'other').trim(),
+                description: (service?.description || '').trim(),
+                laborCost: Math.max(0, Number(service?.laborCost) || 0),
+                materialCost: Math.max(0, Number(service?.materialCost) || 0),
+                estimatedHours: Math.max(0.1, Number(service?.estimatedHours) || 1),
+                status: (service?.status || 'pending').trim()
+              }))
+            : [],
+          notes: Array.isArray(values.notes) 
+            ? values.notes.map(note => ({
+                text: (note?.text || '').trim(),
+                createdBy: note?.createdBy || currentUser?._id || '',
+                createdAt: note?.createdAt || new Date().toISOString()
+              }))
+            : []
         };
-
-        console.log('Prepared work order data:', JSON.stringify(workOrderData, null, 2));
-
-        let response;
         
-        if (photos.length > 0) {
-          // If there are photos, use FormData
+        console.log('Prepared work order data:', workOrderData);
+        
+        // Check if we have files to upload
+        let requestData;
+        const hasFiles = values.photos?.some(photo => photo instanceof File);
+        
+        if (hasFiles) {
           const formData = new FormData();
           
-          // Append all fields to FormData
-          Object.entries(workOrderData).forEach(([key, value]) => {
-            if (value === null || value === undefined) return;
-            
-            if (Array.isArray(value) || typeof value === 'object') {
-              formData.append(key, JSON.stringify(value));
-            } else {
-              formData.append(key, value);
-            }
-          });
-          
-          // Append photos
-          photos.forEach((photo) => {
-            if (photo instanceof File || photo instanceof Blob) {
+          // Append files
+          values.photos.forEach((photo, index) => {
+            if (photo instanceof File) {
               formData.append('photos', photo);
+            } else if (photo?.url) {
+              // Keep track of existing photos
+              formData.append('existingPhotos', JSON.stringify(photo));
             }
           });
           
-          console.log('Sending FormData with photos');
-          response = isEdit && id 
-            ? await updateWorkOrder({ id, formData }).unwrap()
-            : await createWorkOrder(formData).unwrap();
-            
-        } else {
-          // If no photos, send as JSON
-          console.log('Sending JSON data');
-          response = isEdit && id 
-            ? await updateWorkOrder({ id, ...workOrderData }).unwrap()
-            : await createWorkOrder(workOrderData).unwrap();
-        }
-
-        console.log('Work order submission successful:', response);
-        
-        // Show success message
-        toast.success(response.message || (isEdit ? 'Work order updated successfully' : 'Work order created successfully'));
-        
-        // Navigate to work orders list
-        navigate('/work-orders');
-      } catch (error) {
-        console.error('Form submission error:', error);
-        
-        // Log detailed error information
-        if (error?.data) {
-          console.error('Error details:', JSON.stringify(error.data, null, 2));
-        }
-        
-        let errorMessage = 'Failed to save work order';
-        
-        // Handle different types of errors
-        if (error?.status === 400 && error.data?.fieldErrors) {
-          // Set field errors
-          Object.entries(error.data.fieldErrors).forEach(([field, message]) => {
-            setFieldError(field, message);
-          });
+          // Append other data as JSON string
+          const { photos, ...dataWithoutPhotos } = workOrderData;
+          formData.append('data', JSON.stringify(dataWithoutPhotos));
           
-          // Scroll to first error
-          const firstErrorField = Object.keys(error.data.fieldErrors)[0];
-          if (firstErrorField) {
-            const element = document.querySelector(`[name="${firstErrorField}"]`);
-            element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-          errorMessage = 'Please fix the validation errors';
-        } 
-        else if (error?.status === 404) {
-          errorMessage = 'The requested resource was not found';
-          navigate('/work-orders');
-        } 
-        else if (error?.status >= 500) {
-          errorMessage = 'A server error occurred. Please try again later.';
-          if (error?.data?.stack) {
-            console.error('Server error stack:', error.data.stack);
-          }
-        } 
-        else {
-          errorMessage = error?.data?.message || 
-                        error?.data?.error || 
-                        error?.message || 
-                        'Failed to save work order';
+          requestData = formData;
+          console.log('Sending FormData with photos');
+        } else {
+          // No files to upload, send as JSON
+          requestData = workOrderData;
+          console.log('Sending JSON data');
         }
         
+        console.log('Submitting work order with data:', requestData);
+        
+        try {
+          if (isEdit) {
+            await updateWorkOrder({ id, data: requestData }).unwrap();
+            toast.success('Work order updated successfully');
+          } else {
+            await createWorkOrder(requestData).unwrap();
+            toast.success('Work order created successfully');
+          }
+          
+          // Navigate after successful submission
+          navigate('/work-orders');
+        } catch (error) {
+          console.error('API Error:', error);
+          
+          // Handle validation errors
+          if (error?.data?.errors) {
+            Object.entries(error.data.errors).forEach(([field, message]) => {
+              setFieldError(field, message);
+            });
+            
+            // Scroll to first error
+            const firstError = Object.keys(error.data.errors)[0];
+            if (firstError) {
+              const element = document.querySelector(`[name="${firstError}"]`);
+              element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            
+            toast.error('Please fix the validation errors');
+          } else {
+            // Show generic error
+            toast.error(error?.data?.message || 'Failed to save work order');
+          }
+          
+          throw error; // Re-throw to be caught by outer catch
+        }
+      } catch (error) {
+        // This catch block is now a fallback for unexpected errors
+        console.error('Unexpected error in form submission:', error);
+        
+        let errorMessage = 'An unexpected error occurred. Please try again.';
+        
+        // Log detailed error information for debugging
+        console.error('Error details:', {
+          status: error?.status,
+          message: error?.message,
+          data: error?.data,
+          stack: error?.stack
+        });
+        
+        // Show error to user
         toast.error(errorMessage);
       } finally {
         setSubmitting(false);
