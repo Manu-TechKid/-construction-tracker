@@ -150,11 +150,16 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
     error: buildingsError 
   } = useGetBuildingsQuery();
   
+  // Fetch workers with proper error handling and logging
   const { 
-    data: usersData, 
+    data: workersResponse, 
     isLoading: isLoadingWorkers,
-    error: workersError 
-  } = useGetWorkersQuery();
+    error: workersError,
+    isError: isWorkersError
+  } = useGetWorkersQuery(undefined, {
+    // Force refetch on mount to ensure fresh data
+    refetchOnMountOrArgChange: true
+  });
   
   // Combined loading state
   const isLoading = isCreating || isUpdating || (isEdit && isLoadingWorkOrder) || 
@@ -171,45 +176,36 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
   }, [createError, updateError, workOrderError, buildingsError, workersError]);
   
   const buildings = buildingsData?.data?.buildings || [];
-  // Debug workers data
-  console.log('Raw workers data:', usersData?.data?.users);
   
-  // Filter active workers with more lenient checks and better error handling
-  const workers = (usersData?.data?.users || []).filter(user => {
-    if (!user) return false;
-    
-    // Check if user is a worker
-    const isWorker = user.role === 'worker' || user.role === 'worker';
-    const isActive = user.isActive !== false; // Default to true if undefined
-    
-    // Get worker name for logging
-    const userName = user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown';
-    
-    console.log(`User ${userName} (${user._id}):`, {
-      role: user.role,
-      isActive: user.isActive,
-      hasWorkerProfile: !!user.workerProfile,
-      isIncluded: isWorker && isActive
-    });
-    
-    return isWorker && isActive;
-  }).map(worker => ({
-    ...worker,
-    // Ensure we have consistent ID and name fields
-    _id: worker._id?.toString(),
-    name: worker.name || `${worker.firstName || ''} ${worker.lastName || ''}`.trim() || worker.email || 'Unknown Worker',
-    // Ensure workerProfile exists
-    workerProfile: worker.workerProfile || {}
-  }));
+  // Process workers data with proper error handling
+  const workers = React.useMemo(() => {
+    try {
+      // Access the response data correctly based on your API structure
+      const workersData = workersResponse?.data?.users || workersResponse?.data || [];
+      
+      console.log('Raw workers response:', workersResponse);
+      console.log('Processed workers array:', workersData);
+      
+      return workersData.map(worker => ({
+        ...worker,
+        _id: worker._id?.toString(),
+        name: worker.name || `${worker.firstName || ''} ${worker.lastName || ''}`.trim() || worker.email || 'Unknown Worker',
+        workerProfile: worker.workerProfile || {}
+      }));
+    } catch (error) {
+      console.error('Error processing workers data:', error);
+      return [];
+    }
+  }, [workersResponse]);
   
-  console.log('Filtered workers:', workers);
-  
-  // Log worker count and IDs for debugging
-  console.log(`Found ${workers.length} active workers:`, workers.map(w => ({
-    id: w._id,
-    name: w.name,
-    email: w.email
-  })));
+  // Log worker data for debugging
+  useEffect(() => {
+    if (workers.length > 0) {
+      console.log(`Loaded ${workers.length} workers:`, workers);
+    } else if (!isLoadingWorkers && !isWorkersError) {
+      console.warn('No workers found in the response');
+    }
+  }, [workers, isLoadingWorkers, isWorkersError]);
   
   // Get apartments for selected building
   const apartments = selectedBuilding?.apartments || [];
@@ -721,14 +717,17 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                     </Grid>
                     
                     <Grid item xs={12}>
-                      <FormControl fullWidth error={formik.touched.assignedTo && Boolean(formik.errors.assignedTo)}>
+                      <FormControl 
+                        fullWidth 
+                        error={formik.touched.assignedTo && Boolean(formik.errors.assignedTo)}
+                        disabled={isLoadingWorkers || formik.isSubmitting}
+                      >
                         <InputLabel>Assigned Workers</InputLabel>
                         <Select
                           multiple
                           name="assignedTo"
                           value={Array.isArray(formik.values.assignedTo) ? formik.values.assignedTo : []}
                           onChange={(e) => {
-                            // Ensure we always have an array of strings
                             const value = Array.isArray(e.target.value) 
                               ? e.target.value.map(String) 
                               : [String(e.target.value)];
@@ -736,42 +735,54 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                           }}
                           onBlur={formik.handleBlur}
                           label="Assigned Workers"
-                          disabled={formik.isSubmitting || workers.length === 0}
+                          disabled={isLoadingWorkers || formik.isSubmitting || workers.length === 0}
                           renderValue={(selected) => (
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                              {selected.map((workerId) => {
-                                const worker = workers.find(w => w._id === workerId || w._id === String(workerId));
-                                const workerName = worker ? 
-                                  `${worker.firstName || ''} ${worker.lastName || ''}`.trim() || worker.email : 
-                                  'Unknown Worker';
-                                
-                                return (
-                                  <Chip
-                                    key={workerId}
-                                    label={workerName}
-                                    size="small"
-                                    onDelete={() => {
-                                      formik.setFieldValue(
-                                        'assignedTo', 
-                                        formik.values.assignedTo.filter(id => id !== workerId)
-                                      );
-                                    }}
-                                    sx={{ 
-                                      maxWidth: 200,
-                                      '& .MuiChip-label': {
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap'
-                                      }
-                                    }}
-                                  />
-                                );
-                              })}
+                              {isLoadingWorkers ? (
+                                <Typography variant="body2" color="text.secondary">
+                                  Loading workers...
+                                </Typography>
+                              ) : selected.length === 0 ? (
+                                <Typography variant="body2" color="text.secondary">
+                                  No workers selected
+                                </Typography>
+                              ) : (
+                                selected.map((workerId) => {
+                                  const worker = workers.find(w => w._id === workerId || w._id === String(workerId));
+                                  const workerName = worker 
+                                    ? `${worker.firstName || ''} ${worker.lastName || ''}`.trim() || worker.email 
+                                    : 'Unknown Worker';
+                                  
+                                  return (
+                                    <Chip
+                                      key={workerId}
+                                      label={workerName}
+                                      size="small"
+                                      onDelete={() => {
+                                        formik.setFieldValue(
+                                          'assignedTo', 
+                                          formik.values.assignedTo.filter(id => id !== workerId)
+                                        );
+                                      }}
+                                      sx={{ 
+                                        maxWidth: 200,
+                                        '& .MuiChip-label': {
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis',
+                                          whiteSpace: 'nowrap'
+                                        }
+                                      }}
+                                    />
+                                  );
+                                })
+                              )}
                             </Box>
                           )}
                         >
-                          {workers.length === 0 ? (
-                            <MenuItem disabled>No workers available</MenuItem>
+                          {isLoadingWorkers ? (
+                            <MenuItem disabled>Loading workers...</MenuItem>
+                          ) : workers.length === 0 ? (
+                            <MenuItem disabled>No active workers available</MenuItem>
                           ) : (
                             workers.map((worker) => {
                               const fullName = `${worker.firstName || ''} ${worker.lastName || ''}`.trim();
@@ -784,6 +795,8 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                                     checked={formik.values.assignedTo?.some(id => 
                                       id === worker._id || id === String(worker._id)
                                     )} 
+                                    size="small"
+                                    sx={{ p: 0.5, mr: 1 }}
                                   />
                                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
                                     <Avatar 
@@ -791,12 +804,13 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                                         width: 32, 
                                         height: 32,
                                         bgcolor: 'primary.main',
-                                        color: 'primary.contrastText'
+                                        color: 'primary.contrastText',
+                                        fontSize: '0.875rem'
                                       }}
                                     >
                                       {displayName.charAt(0).toUpperCase()}
                                     </Avatar>
-                                    <Box sx={{ minWidth: 0 }}>
+                                    <Box sx={{ minWidth: 0, flex: 1 }}>
                                       <Typography 
                                         variant="body2" 
                                         noWrap 
@@ -806,7 +820,7 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                                       </Typography>
                                       <Typography 
                                         variant="caption" 
-                                        color="textSecondary"
+                                        color="text.secondary"
                                         sx={{
                                           display: 'block',
                                           textOverflow: 'ellipsis',
@@ -826,9 +840,11 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                         <FormHelperText>
                           {formik.touched.assignedTo && formik.errors.assignedTo 
                             ? formik.errors.assignedTo 
-                            : workers.length > 0 
-                              ? 'Select one or more workers' 
-                              : 'No active workers available'}
+                            : isLoadingWorkers 
+                              ? 'Loading workers...' 
+                              : workers.length > 0 
+                                ? 'Select one or more workers' 
+                                : 'No active workers available'}
                         </FormHelperText>
                       </FormControl>
                     </Grid>
