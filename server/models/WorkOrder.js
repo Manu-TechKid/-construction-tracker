@@ -97,6 +97,18 @@ const serviceSchema = new mongoose.Schema({
 
 // Main work order schema
 const workOrderSchema = new mongoose.Schema({
+  // Basic work order information
+  title: {
+    type: String,
+    required: [true, 'Work order title is required'],
+    trim: true,
+    maxlength: [100, 'Title cannot be longer than 100 characters']
+  },
+  description: {
+    type: String,
+    required: [true, 'Description is required'],
+    trim: true
+  },
   // Building reference - required
   building: {
     type: mongoose.Schema.Types.ObjectId,
@@ -120,7 +132,7 @@ const workOrderSchema = new mongoose.Schema({
       values: ['vacant', 'occupied', 'under_renovation', 'reserved'],
       message: 'Apartment status must be one of: vacant, occupied, under_renovation, reserved'
     },
-    default: 'vacant',
+    default: 'occupied',
     lowercase: true
   },
   // Array of services with details and costs
@@ -153,11 +165,6 @@ const workOrderSchema = new mongoose.Schema({
       }
     }]
   }],
-  description: {
-    type: String,
-    required: [true, 'Description is required'],
-    trim: true
-  },
   priority: {
     type: String,
     enum: ['low', 'medium', 'high', 'urgent'],
@@ -205,19 +212,10 @@ const workOrderSchema = new mongoose.Schema({
       notes: String
     }]
   }],
-  startDate: {
+  scheduledDate: {
     type: Date,
-    required: [true, 'Start date is required']
-  },
-  endDate: {
-    type: Date,
-    required: [true, 'End date is required'],
-    validate: {
-      validator: function(value) {
-        return value >= this.startDate;
-      },
-      message: 'End date must be after start date'
-    }
+    required: [true, 'Scheduled date is required'],
+    default: Date.now
   },
   estimatedCost: {
     type: Number,
@@ -231,10 +229,6 @@ const workOrderSchema = new mongoose.Schema({
   },
   estimatedCompletionDate: Date,
   actualCompletionDate: Date,
-  scheduledDate: {
-    type: Date,
-    required: [true, 'Scheduled date is required']
-  },
   completedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

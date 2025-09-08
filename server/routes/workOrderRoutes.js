@@ -232,56 +232,8 @@ const validateTask = [
 
 // Create a new work order - REMOVED DUPLICATE
 
-// Get all work orders with filtering and pagination
-router.get(
-  '/',
-  [
-    query('status').optional().isIn([
-      'pending', 'in_progress', 'on_hold', 'completed', 
-      'cancelled', 'pending_review', 'issue_reported'
-    ]),
-    query('priority').optional().isIn(['low', 'medium', 'high', 'urgent']),
-    query('building').optional().isMongoId(),
-    query('assignedTo').optional().isMongoId(),
-    query('startDate').optional().isISO8601(),
-    query('endDate').optional().isISO8601(),
-    query('page').optional().isInt({ min: 1 }),
-    query('limit').optional().isInt({ min: 1, max: 100 }),
-    validateRequest
-  ],
-  workOrderController.getAllWorkOrders
-);
 
-// Get a single work order by ID
-router.get(
-  '/:id',
-  [
-    param('id').isMongoId().withMessage('Invalid work order ID'),
-    validateRequest
-  ],
-  workOrderController.getWorkOrder
-);
 
-// Update a work order
-router.patch(
-  '/:id',
-  [
-    uploadWorkOrderPhotos,
-    param('id').isMongoId().withMessage('Invalid work order ID'),
-    ...validateUpdateWorkOrder
-  ],
-  workOrderController.updateWorkOrder
-);
-
-// Delete a work order
-router.delete(
-  '/:id',
-  [
-    param('id').isMongoId().withMessage('Invalid work order ID'),
-    validateRequest
-  ],
-  workOrderController.deleteWorkOrder
-);
 
 const validateTaskUpdate = [
   body('completed').optional().isBoolean(),
