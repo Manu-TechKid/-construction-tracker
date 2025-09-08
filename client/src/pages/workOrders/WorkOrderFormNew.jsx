@@ -170,12 +170,45 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
   }, [createError, updateError, workOrderError, buildingsError, workersError]);
   
   const buildings = buildingsData?.data?.buildings || [];
-  const workers = usersData?.data?.users?.filter(user => 
-    user.role === 'worker' && 
-    user.isActive && 
-    user.workerProfile?.status === 'active' &&
-    user.workerProfile?.approvalStatus === 'approved'
-  ) || [];
+  // Debug workers data
+  console.log('Raw workers data:', usersData?.data?.users);
+  
+  // Filter active workers with more lenient checks and better error handling
+  const workers = (usersData?.data?.users || []).filter(user => {
+    if (!user) return false;
+    
+    // Check if user is a worker
+    const isWorker = user.role === 'worker' || user.role === 'worker';
+    const isActive = user.isActive !== false; // Default to true if undefined
+    
+    // Get worker name for logging
+    const userName = user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown';
+    
+    console.log(`User ${userName} (${user._id}):`, {
+      role: user.role,
+      isActive: user.isActive,
+      hasWorkerProfile: !!user.workerProfile,
+      isIncluded: isWorker && isActive
+    });
+    
+    return isWorker && isActive;
+  }).map(worker => ({
+    ...worker,
+    // Ensure we have consistent ID and name fields
+    _id: worker._id?.toString(),
+    name: worker.name || `${worker.firstName || ''} ${worker.lastName || ''}`.trim() || worker.email || 'Unknown Worker',
+    // Ensure workerProfile exists
+    workerProfile: worker.workerProfile || {}
+  }));
+  
+  console.log('Filtered workers:', workers);
+  
+  // Log worker count and IDs for debugging
+  console.log(`Found ${workers.length} active workers:`, workers.map(w => ({
+    id: w._id,
+    name: w.name,
+    email: w.email
+  })));
   
   // Get apartments for selected building
   const apartments = selectedBuilding?.apartments || [];
@@ -211,77 +244,101 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
         // Format dates to ISO strings
         const formatDate = (date) => {
           if (!date) return null;
-          return new Date(date).toISOString();
+          const d = new Date(date);
+          return isNaN(d.getTime()) ? null : d.toISOString();
         };
 
-        // Create work order payload
+        // Ensure assignedTo is an array of strings (worker IDs)
+        const assignedTo = Array.isArray(values.assignedTo) 
+          ? values.assignedTo.map(id => id.toString()) 
+          : [];
+
+        // Prepare base work order data
         const workOrderData = {
-          title: values.title.trim(),
-          description: values.description.trim(),
-          building: values.building,
-          apartmentNumber: (values.apartmentNumber || '').trim(),
-          block: (values.block || '').trim(),
-          apartmentStatus: values.apartmentStatus,
-          priority: values.priority,
-          status: values.status,
-          scheduledDate: formatDate(values.scheduledDate),
-          estimatedCompletionDate: formatDate(values.estimatedCompletionDate),
-          assignedTo: values.assignedTo || [],
-          services: (values.services || []).map(service => ({
-            type: service.type,
-            description: service.description.trim(),
-            laborCost: Number(service.laborCost) || 0,
-            materialCost: Number(service.materialCost) || 0,
-            status: service.status || 'pending'
+          title: values.title?.trim() || '',
+          description: values.description?.trim() || '',
+          building: values.building || null,
+          apartmentNumber: (values.apartmentNumber || '')?.trim() || null,
+          block: (values.block || '')?.trim() || null,
+          apartmentStatus: values.apartmentStatus || 'occupied',
+          priority: values.priority || 'medium',
+          status: values.status || 'pending',
+          scheduledDate: formatDate(values.scheduledDate) || new Date().toISOString(),
+          estimatedCompletionDate: formatDate(values.estimatedCompletionDate) || 
+            new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          assignedTo: assignedTo,
+          services: (Array.isArray(values.services) ? values.services : []).map(service => ({
+            type: service?.type || 'other',
+            description: service?.description?.trim() || '',
+            laborCost: Number(service?.laborCost) || 0,
+            materialCost: Number(service?.materialCost) || 0,
+            status: service?.status || 'pending'
           })),
-          notes: (values.notes || []).map(note => ({
-            content: note.content.trim(),
-            isPrivate: Boolean(note.isPrivate),
-            createdBy: user?._id
+          notes: (Array.isArray(values.notes) ? values.notes : []).map(note => ({
+            content: note?.content?.trim() || '',
+            isPrivate: Boolean(note?.isPrivate),
+            createdBy: user?._id || null
           }))
         };
 
-        // Add photos if any
+        console.log('Prepared work order data:', JSON.stringify(workOrderData, null, 2));
+
+        let response;
+        
         if (photos.length > 0) {
+          // If there are photos, use FormData
           const formData = new FormData();
+          
+          // Append all fields to FormData
           Object.entries(workOrderData).forEach(([key, value]) => {
-            if (Array.isArray(value)) {
+            if (value === null || value === undefined) return;
+            
+            if (Array.isArray(value) || typeof value === 'object') {
               formData.append(key, JSON.stringify(value));
-            } else if (value !== null && value !== undefined) {
+            } else {
               formData.append(key, value);
             }
           });
           
+          // Append photos
           photos.forEach((photo) => {
-            formData.append(`photos`, photo);
+            if (photo instanceof File || photo instanceof Blob) {
+              formData.append('photos', photo);
+            }
           });
           
-          workOrderData.formData = formData;
+          console.log('Sending FormData with photos');
+          response = isEdit && id 
+            ? await updateWorkOrder({ id, formData }).unwrap()
+            : await createWorkOrder(formData).unwrap();
+            
+        } else {
+          // If no photos, send as JSON
+          console.log('Sending JSON data');
+          response = isEdit && id 
+            ? await updateWorkOrder({ id, ...workOrderData }).unwrap()
+            : await createWorkOrder(workOrderData).unwrap();
         }
 
-        console.log('Submitting work order:', workOrderData);
+        console.log('Work order submission successful:', response);
         
-        if (isEdit && id) {
-          const result = await updateWorkOrder({ 
-            id, 
-            ...(workOrderData.formData ? { formData: workOrderData.formData } : workOrderData)
-          }).unwrap();
-          
-          toast.success(result.message || 'Work order updated successfully');
-        } else {
-          const result = await createWorkOrder(
-            workOrderData.formData || workOrderData
-          ).unwrap();
-          
-          toast.success(result.message || 'Work order created successfully');
-        }
+        // Show success message
+        toast.success(response.message || (isEdit ? 'Work order updated successfully' : 'Work order created successfully'));
         
+        // Navigate to work orders list
         navigate('/work-orders');
       } catch (error) {
         console.error('Form submission error:', error);
         
-        // Handle validation errors
-        if (error.status === 400 && error.data?.fieldErrors) {
+        // Log detailed error information
+        if (error?.data) {
+          console.error('Error details:', JSON.stringify(error.data, null, 2));
+        }
+        
+        let errorMessage = 'Failed to save work order';
+        
+        // Handle different types of errors
+        if (error?.status === 400 && error.data?.fieldErrors) {
           // Set field errors
           Object.entries(error.data.fieldErrors).forEach(([field, message]) => {
             setFieldError(field, message);
@@ -291,38 +348,28 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
           const firstErrorField = Object.keys(error.data.fieldErrors)[0];
           if (firstErrorField) {
             const element = document.querySelector(`[name="${firstErrorField}"]`);
-            if (element) {
-              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
+            element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
-          
-          toast.error('Please fix the validation errors');
+          errorMessage = 'Please fix the validation errors';
         } 
-        // Handle unauthorized errors
-        else if (error.status === 401) {
-          toast.error('Your session has expired. Please log in again.');
-        }
-        // Handle forbidden errors
-        else if (error.status === 403) {
-          toast.error('You do not have permission to perform this action');
-        }
-        // Handle not found errors
-        else if (error.status === 404) {
-          toast.error('The requested resource was not found');
+        else if (error?.status === 404) {
+          errorMessage = 'The requested resource was not found';
           navigate('/work-orders');
-        }
-        // Handle server errors
-        else if (error.status >= 500) {
-          toast.error('A server error occurred. Please try again later.');
-        }
-        // Handle other errors
+        } 
+        else if (error?.status >= 500) {
+          errorMessage = 'A server error occurred. Please try again later.';
+          if (error?.data?.stack) {
+            console.error('Server error stack:', error.data.stack);
+          }
+        } 
         else {
-          const errorMessage = error?.data?.message || 
-                             error?.data?.error || 
-                             error?.message || 
-                             'Failed to save work order';
-          toast.error(errorMessage);
+          errorMessage = error?.data?.message || 
+                        error?.data?.error || 
+                        error?.message || 
+                        'Failed to save work order';
         }
+        
+        toast.error(errorMessage);
       } finally {
         setSubmitting(false);
       }
@@ -678,47 +725,110 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                         <Select
                           multiple
                           name="assignedTo"
-                          value={formik.values.assignedTo}
-                          onChange={formik.handleChange}
+                          value={Array.isArray(formik.values.assignedTo) ? formik.values.assignedTo : []}
+                          onChange={(e) => {
+                            // Ensure we always have an array of strings
+                            const value = Array.isArray(e.target.value) 
+                              ? e.target.value.map(String) 
+                              : [String(e.target.value)];
+                            formik.setFieldValue('assignedTo', value);
+                          }}
                           onBlur={formik.handleBlur}
                           label="Assigned Workers"
                           disabled={formik.isSubmitting || workers.length === 0}
                           renderValue={(selected) => (
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                               {selected.map((workerId) => {
-                                const worker = workers.find(w => w._id === workerId);
-                                return worker ? (
+                                const worker = workers.find(w => w._id === workerId || w._id === String(workerId));
+                                const workerName = worker ? 
+                                  `${worker.firstName || ''} ${worker.lastName || ''}`.trim() || worker.email : 
+                                  'Unknown Worker';
+                                
+                                return (
                                   <Chip
                                     key={workerId}
-                                    label={worker.name}
+                                    label={workerName}
                                     size="small"
-                                    avatar={<Avatar>{worker.name.charAt(0)}</Avatar>}
+                                    onDelete={() => {
+                                      formik.setFieldValue(
+                                        'assignedTo', 
+                                        formik.values.assignedTo.filter(id => id !== workerId)
+                                      );
+                                    }}
+                                    sx={{ 
+                                      maxWidth: 200,
+                                      '& .MuiChip-label': {
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap'
+                                      }
+                                    }}
                                   />
-                                ) : null;
+                                );
                               })}
                             </Box>
                           )}
                         >
-                          {workers.map((worker) => (
-                            <MenuItem key={worker._id} value={worker._id}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Avatar size="small">{worker.name.charAt(0)}</Avatar>
-                                <Box>
-                                  <Typography variant="body2">{worker.name}</Typography>
-                                  <Typography variant="caption" color="textSecondary">
-                                    {worker.workerProfile?.skills?.join(', ') || 'General'}
-                                  </Typography>
-                                </Box>
-                              </Box>
-                            </MenuItem>
-                          ))}
+                          {workers.length === 0 ? (
+                            <MenuItem disabled>No workers available</MenuItem>
+                          ) : (
+                            workers.map((worker) => {
+                              const fullName = `${worker.firstName || ''} ${worker.lastName || ''}`.trim();
+                              const displayName = fullName || worker.email || 'Unknown Worker';
+                              const skills = worker.workerProfile?.skills?.join(', ') || 'General';
+                              
+                              return (
+                                <MenuItem key={worker._id} value={worker._id}>
+                                  <Checkbox 
+                                    checked={formik.values.assignedTo?.some(id => 
+                                      id === worker._id || id === String(worker._id)
+                                    )} 
+                                  />
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                                    <Avatar 
+                                      sx={{ 
+                                        width: 32, 
+                                        height: 32,
+                                        bgcolor: 'primary.main',
+                                        color: 'primary.contrastText'
+                                      }}
+                                    >
+                                      {displayName.charAt(0).toUpperCase()}
+                                    </Avatar>
+                                    <Box sx={{ minWidth: 0 }}>
+                                      <Typography 
+                                        variant="body2" 
+                                        noWrap 
+                                        sx={{ fontWeight: 'medium' }}
+                                      >
+                                        {displayName}
+                                      </Typography>
+                                      <Typography 
+                                        variant="caption" 
+                                        color="textSecondary"
+                                        sx={{
+                                          display: 'block',
+                                          textOverflow: 'ellipsis',
+                                          overflow: 'hidden',
+                                          whiteSpace: 'nowrap'
+                                        }}
+                                      >
+                                        {skills}
+                                      </Typography>
+                                    </Box>
+                                  </Box>
+                                </MenuItem>
+                              );
+                            })
+                          )}
                         </Select>
-                        {formik.touched.assignedTo && formik.errors.assignedTo && (
-                          <FormHelperText>{formik.errors.assignedTo}</FormHelperText>
-                        )}
-                        {workers.length === 0 && (
-                          <FormHelperText>No active workers found</FormHelperText>
-                        )}
+                        <FormHelperText>
+                          {formik.touched.assignedTo && formik.errors.assignedTo 
+                            ? formik.errors.assignedTo 
+                            : workers.length > 0 
+                              ? 'Select one or more workers' 
+                              : 'No active workers available'}
+                        </FormHelperText>
                       </FormControl>
                     </Grid>
                   </Grid>
