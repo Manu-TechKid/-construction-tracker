@@ -3,8 +3,11 @@ services:
     name: construction-tracker
     env: node
     plan: starter
-    buildCommand: npm run build
+    nodeVersion: 20.9.0
+    buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_OPTIONS
+        value: --openssl-legacy-provider
