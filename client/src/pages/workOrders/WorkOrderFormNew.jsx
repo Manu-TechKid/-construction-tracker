@@ -332,7 +332,7 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
           notes: Array.isArray(values.notes) 
             ? values.notes.map(note => ({
                 text: (note?.text || '').trim(),
-                createdBy: note?.createdBy || currentUser?._id || '',
+                createdBy: note?.createdBy || user?._id || '',
                 createdAt: note?.createdAt || new Date().toISOString()
               }))
             : []
