@@ -22,7 +22,6 @@ import {
   Chip,
   Avatar,
   IconButton,
-  Paper,
   Divider
 } from '@mui/material';
 import {
@@ -37,22 +36,77 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
-import { 
-  useCreateWorkOrderMutation, 
-  useUpdateWorkOrderMutation,
-  useGetWorkOrderQuery 
-} from '../../features/workOrders/workOrdersApiSlice';
-import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
-import { useGetUsersQuery } from '../../features/users/usersApiSlice';
-import { useAuth } from '../../hooks/useAuth';
-
 // Validation schema matching backend model
 const validationSchema = Yup.object({
-  title: Yup.string().required('Title is required'),
-  description: Yup.string().required('Description is required'),
-  building: Yup.string().required('Building is required'),
-  scheduledDate: Yup.date().required('Scheduled date is required')
-});
+  title: Yup.string()
+    .required('Work order title is required')
+    .max(100, 'Title cannot be longer than 100 characters'),
+  description: Yup.string()
+    .required('Description is required')
+    .min(10, 'Description must be at least 10 characters'),
+  building: Yup.string()
+    .required('Building is required')
+    .matches(/^[0-9a-fA-F]{24}$/, 'Invalid building ID format'),
+  apartmentNumber: Yup.string()
+    .max(20, 'Apartment number cannot be longer than 20 characters'),
+  block: Yup.string()
+    .max(50, 'Block cannot be longer than 50 characters'),
+  apartmentStatus: Yup.string()
+    .oneOf(['vacant', 'occupied', 'under_renovation', 'reserved'], 'Invalid apartment status')
+    .default('occupied'),
+  priority: Yup.string()
+    .oneOf(['low', 'medium', 'high', 'urgent'], 'Invalid priority level')
+    .default('medium'),
+  status: Yup.string()
+    .oneOf(['pending', 'in_progress', 'on_hold', 'completed', 'cancelled'], 'Invalid status')
+    .default('pending'),
+  scheduledDate: Yup.date()
+    .required('Scheduled date is required')
+    .min(new Date(), 'Scheduled date cannot be in the past')
+    .typeError('Please enter a valid date'),
+  estimatedCompletionDate: Yup.date()
+    .min(Yup.ref('scheduledDate'), 'Completion date must be after scheduled date')
+    .nullable()
+    .typeError('Please enter a valid date'),
+  assignedTo: Yup.array()
+    .of(Yup.string().matches(/^[0-9a-fA-F]{24}$/, 'Invalid worker ID format')),
+  services: Yup.array()
+    .min(1, 'At least one service is required')
+    .of(
+      Yup.object({
+        type: Yup.string()
+          .required('Service type is required')
+          .oneOf([
+            'painting', 'cleaning', 'repair', 'plumbing', 
+            'electrical', 'hvac', 'flooring', 'roofing', 'carpentry', 'other'
+          ]),
+        description: Yup.string()
+          .required('Service description is required'),
+        laborCost: Yup.number()
+          .min(0, 'Labor cost cannot be negative')
+          .default(0),
+        materialCost: Yup.number()
+          .min(0, 'Material cost cannot be negative')
+          .default(0),
+        status: Yup.string()
+          .oneOf(['pending', 'in_progress', 'completed', 'on_hold', 'cancelled'])
+          .default('pending')
+      })
+    ),
+  notes: Yup.array().of(
+    Yup.object({
+      content: Yup.string().required('Note content is required'),
+      isPrivate: Yup.boolean().default(false)
+    })
+  )
+}).test(
+  'dates-valid',
+  'Completion date must be after scheduled date',
+  function(value) {
+    if (!value.estimatedCompletionDate) return true;
+    return new Date(value.estimatedCompletionDate) >= new Date(value.scheduledDate);
+  }
+);
 
 const WorkOrderFormNew = ({ isEdit = false }) => {
   const navigate = useNavigate();
@@ -62,12 +116,50 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
   const [photos, setPhotos] = useState([]);
   const [selectedBuilding, setSelectedBuilding] = useState(null);
   
-  // API hooks
-  const [createWorkOrder, { isLoading: isCreating }] = useCreateWorkOrderMutation();
-  const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
-  const { data: workOrderData } = useGetWorkOrderQuery(id, { skip: !isEdit || !id });
-  const { data: buildingsData } = useGetBuildingsQuery();
-  const { data: usersData } = useGetUsersQuery({ role: 'worker' });
+  // API hooks with loading and error states
+  const [createWorkOrder, { 
+    isLoading: isCreating,
+    error: createError 
+  }] = useCreateWorkOrderMutation();
+  
+  const [updateWorkOrder, { 
+    isLoading: isUpdating,
+    error: updateError 
+  }] = useUpdateWorkOrderMutation();
+  
+  const { 
+    data: workOrderData, 
+    isLoading: isLoadingWorkOrder,
+    error: workOrderError 
+  } = useGetWorkOrderQuery(id, { 
+    skip: !isEdit || !id 
+  });
+  
+  const { 
+    data: buildingsData, 
+    isLoading: isLoadingBuildings,
+    error: buildingsError 
+  } = useGetBuildingsQuery();
+  
+  const { 
+    data: usersData, 
+    isLoading: isLoadingWorkers,
+    error: workersError 
+  } = useGetUsersQuery({ role: 'worker' });
+  
+  // Combined loading state
+  const isLoading = isCreating || isUpdating || (isEdit && isLoadingWorkOrder) || 
+                   isLoadingBuildings || isLoadingWorkers;
+  
+  // Handle API errors
+  useEffect(() => {
+    const error = createError || updateError || workOrderError || buildingsError || workersError;
+    if (error) {
+      console.error('API Error:', error);
+      const errorMessage = error?.data?.message || error?.error || 'An error occurred';
+      toast.error(errorMessage);
+    }
+  }, [createError, updateError, workOrderError, buildingsError, workersError]);
   
   const buildings = buildingsData?.data?.buildings || [];
   const workers = usersData?.data?.users?.filter(user => 
@@ -88,11 +180,11 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
       building: '',
       apartmentNumber: '',
       block: '',
-      apartmentStatus: 'vacant',
+      apartmentStatus: 'occupied',
       priority: 'medium',
       status: 'pending',
       scheduledDate: new Date(),
-      estimatedCompletionDate: new Date(),
+      estimatedCompletionDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
       assignedTo: [],
       services: [{
         type: 'other',
@@ -104,48 +196,131 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
       notes: []
     },
     validationSchema,
-    onSubmit: async (values, { setSubmitting }) => {
+    onSubmit: async (values, { setSubmitting, setFieldError }) => {
       try {
-        // Create JSON payload instead of FormData for better compatibility
+        setSubmitting(true);
+        
+        // Format dates to ISO strings
+        const formatDate = (date) => {
+          if (!date) return null;
+          return new Date(date).toISOString();
+        };
+
+        // Create work order payload
         const workOrderData = {
-          title: values.title,
-          description: values.description,
+          title: values.title.trim(),
+          description: values.description.trim(),
           building: values.building,
-          apartmentNumber: values.apartmentNumber || '',
-          block: values.block || '',
+          apartmentNumber: (values.apartmentNumber || '').trim(),
+          block: (values.block || '').trim(),
           apartmentStatus: values.apartmentStatus,
           priority: values.priority,
           status: values.status,
-          scheduledDate: values.scheduledDate.toISOString(),
-          estimatedCompletionDate: values.estimatedCompletionDate.toISOString(),
+          scheduledDate: formatDate(values.scheduledDate),
+          estimatedCompletionDate: formatDate(values.estimatedCompletionDate),
           assignedTo: values.assignedTo || [],
-          services: values.services || [],
-          notes: values.notes || []
+          services: (values.services || []).map(service => ({
+            type: service.type,
+            description: service.description.trim(),
+            laborCost: Number(service.laborCost) || 0,
+            materialCost: Number(service.materialCost) || 0,
+            status: service.status || 'pending'
+          })),
+          notes: (values.notes || []).map(note => ({
+            content: note.content.trim(),
+            isPrivate: Boolean(note.isPrivate),
+            createdBy: user?._id
+          }))
         };
 
-        console.log('Starting work order creation with data:', workOrderData);
-        console.log('Current user from Redux:', user);
-        console.log('User role:', user?.role);
-        console.log('Auth token:', localStorage.getItem('token') ? 'Present' : 'Missing');
+        // Add photos if any
+        if (photos.length > 0) {
+          const formData = new FormData();
+          Object.entries(workOrderData).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+              formData.append(key, JSON.stringify(value));
+            } else if (value !== null && value !== undefined) {
+              formData.append(key, value);
+            }
+          });
+          
+          photos.forEach((photo) => {
+            formData.append(`photos`, photo);
+          });
+          
+          workOrderData.formData = formData;
+        }
+
+        console.log('Submitting work order:', workOrderData);
         
         if (isEdit && id) {
-          await updateWorkOrder({ id, ...workOrderData }).unwrap();
-          toast.success('Work order updated successfully');
+          const result = await updateWorkOrder({ 
+            id, 
+            ...(workOrderData.formData ? { formData: workOrderData.formData } : workOrderData)
+          }).unwrap();
+          
+          toast.success(result.message || 'Work order updated successfully');
         } else {
-          await createWorkOrder(workOrderData).unwrap();
-          toast.success('Work order created successfully');
+          const result = await createWorkOrder(
+            workOrderData.formData || workOrderData
+          ).unwrap();
+          
+          toast.success(result.message || 'Work order created successfully');
         }
         
         navigate('/work-orders');
       } catch (error) {
         console.error('Form submission error:', error);
-        toast.error(error?.data?.message || 'Failed to save work order');
+        
+        // Handle validation errors
+        if (error.status === 400 && error.data?.fieldErrors) {
+          // Set field errors
+          Object.entries(error.data.fieldErrors).forEach(([field, message]) => {
+            setFieldError(field, message);
+          });
+          
+          // Scroll to first error
+          const firstErrorField = Object.keys(error.data.fieldErrors)[0];
+          if (firstErrorField) {
+            const element = document.querySelector(`[name="${firstErrorField}"]`);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
+          
+          toast.error('Please fix the validation errors');
+        } 
+        // Handle unauthorized errors
+        else if (error.status === 401) {
+          toast.error('Your session has expired. Please log in again.');
+        }
+        // Handle forbidden errors
+        else if (error.status === 403) {
+          toast.error('You do not have permission to perform this action');
+        }
+        // Handle not found errors
+        else if (error.status === 404) {
+          toast.error('The requested resource was not found');
+          navigate('/work-orders');
+        }
+        // Handle server errors
+        else if (error.status >= 500) {
+          toast.error('A server error occurred. Please try again later.');
+        }
+        // Handle other errors
+        else {
+          const errorMessage = error?.data?.message || 
+                             error?.data?.error || 
+                             error?.message || 
+                             'Failed to save work order';
+          toast.error(errorMessage);
+        }
       } finally {
         setSubmitting(false);
       }
     }
   });
-  
+
   // Load work order data for editing
   useEffect(() => {
     if (isEdit && workOrderData?.data) {
@@ -156,7 +331,7 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
         building: wo.building?._id || wo.building || '',
         apartmentNumber: wo.apartmentNumber || '',
         block: wo.block || '',
-        apartmentStatus: wo.apartmentStatus || 'vacant',
+        apartmentStatus: wo.apartmentStatus || 'occupied',
         priority: wo.priority || 'medium',
         status: wo.status || 'pending',
         scheduledDate: wo.scheduledDate ? new Date(wo.scheduledDate) : new Date(),
@@ -209,16 +384,35 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
     formik.setFieldValue('services', newServices);
   };
 
+  // Show loading state while data is being fetched
+  if (isLoading && !formik.isSubmitting) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <CircularProgress />
+        <Typography variant="body1" sx={{ ml: 2 }}>Loading work order data...</Typography>
+      </Box>
+    );
+  }
+
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
         <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton onClick={() => navigate('/work-orders')} color="primary">
+          <IconButton 
+            onClick={() => navigate('/work-orders')} 
+            color="primary"
+            disabled={formik.isSubmitting}
+          >
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h4" component="h1">
-            {isEdit ? 'Edit Work Order' : 'Create Work Order'}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography variant="h4" component="h1">
+              {isEdit ? 'Edit Work Order' : 'Create Work Order'}
+            </Typography>
+            {formik.isSubmitting && (
+              <CircularProgress size={24} />
+            )}
+          </Box>
         </Box>
 
         <form onSubmit={formik.handleSubmit}>
@@ -236,8 +430,13 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                         label="Work Order Title"
                         value={formik.values.title}
                         onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
                         error={formik.touched.title && Boolean(formik.errors.title)}
-                        helperText={formik.touched.title && formik.errors.title}
+                        helperText={(formik.touched.title && formik.errors.title) || ' '}
+                        disabled={formik.isSubmitting}
+                        inputProps={{
+                          maxLength: 100
+                        }}
                       />
                     </Grid>
                     
@@ -250,19 +449,33 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                         label="Description"
                         value={formik.values.description}
                         onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
                         error={formik.touched.description && Boolean(formik.errors.description)}
-                        helperText={formik.touched.description && formik.errors.description}
+                        helperText={(formik.touched.description && formik.errors.description) || ' '}
+                        disabled={formik.isSubmitting}
+                        inputProps={{
+                          minLength: 10
+                        }}
                       />
                     </Grid>
                     
                     <Grid item xs={12} sm={6}>
-                      <FormControl fullWidth error={formik.touched.building && Boolean(formik.errors.building)}>
-                        <InputLabel>Building</InputLabel>
+                      <FormControl 
+                        fullWidth 
+                        error={formik.touched.building && Boolean(formik.errors.building)}
+                        disabled={formik.isSubmitting}
+                      >
+                        <InputLabel>Building *</InputLabel>
                         <Select
                           name="building"
                           value={formik.values.building}
-                          onChange={formik.handleChange}
-                          label="Building"
+                          onChange={(e) => {
+                            formik.setFieldValue('building', e.target.value);
+                            formik.setFieldValue('apartmentNumber', '');
+                            formik.setFieldValue('block', '');
+                          }}
+                          onBlur={formik.handleBlur}
+                          label="Building *"
                         >
                           {buildings.map((building) => (
                             <MenuItem key={building._id} value={building._id}>
@@ -270,44 +483,39 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                             </MenuItem>
                           ))}
                         </Select>
-                        {formik.touched.building && formik.errors.building && (
-                          <FormHelperText>{formik.errors.building}</FormHelperText>
-                        )}
+                        <FormHelperText>
+                          {(formik.touched.building && formik.errors.building) || ' '}
+                        </FormHelperText>
                       </FormControl>
                     </Grid>
                     
                     <Grid item xs={12} sm={6}>
-                      {isEdit ? (
-                        <TextField
-                          fullWidth
+                      <FormControl 
+                        fullWidth 
+                        error={formik.touched.block && Boolean(formik.errors.block)}
+                        disabled={!formik.values.building || formik.isSubmitting}
+                      >
+                        <InputLabel>Block</InputLabel>
+                        <Select
                           name="block"
-                          label="Block"
                           value={formik.values.block}
-                          onChange={formik.handleChange}
-                          error={formik.touched.block && Boolean(formik.errors.block)}
-                          helperText={formik.touched.block && formik.errors.block}
-                        />
-                      ) : (
-                        <FormControl fullWidth error={formik.touched.block && Boolean(formik.errors.block)}>
-                          <InputLabel>Block</InputLabel>
-                          <Select
-                            name="block"
-                            value={formik.values.block}
-                            onChange={formik.handleChange}
-                            label="Block"
-                            disabled={!selectedBuilding}
-                          >
-                            {blocks.map((block) => (
-                              <MenuItem key={block} value={block}>
-                                {block}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                          {formik.touched.block && formik.errors.block && (
-                            <FormHelperText>{formik.errors.block}</FormHelperText>
-                          )}
-                        </FormControl>
-                      )}
+                          onChange={(e) => {
+                            formik.setFieldValue('block', e.target.value);
+                            formik.setFieldValue('apartmentNumber', '');
+                          }}
+                          onBlur={formik.handleBlur}
+                          label="Block"
+                        >
+                          {blocks.map((block) => (
+                            <MenuItem key={block} value={block}>
+                              {block}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                        <FormHelperText>
+                          {(formik.touched.block && formik.errors.block) || ' '}
+                        </FormHelperText>
+                      </FormControl>
                     </Grid>
                     
                     <Grid item xs={12} sm={6}>
@@ -318,18 +526,27 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                           label="Apartment Number"
                           value={formik.values.apartmentNumber}
                           onChange={formik.handleChange}
+                          onBlur={formik.handleBlur}
                           error={formik.touched.apartmentNumber && Boolean(formik.errors.apartmentNumber)}
-                          helperText={formik.touched.apartmentNumber && formik.errors.apartmentNumber}
+                          helperText={(formik.touched.apartmentNumber && formik.errors.apartmentNumber) || ' '}
+                          disabled={formik.isSubmitting}
+                          inputProps={{
+                            maxLength: 20
+                          }}
                         />
                       ) : (
-                        <FormControl fullWidth error={formik.touched.apartmentNumber && Boolean(formik.errors.apartmentNumber)}>
+                        <FormControl 
+                          fullWidth 
+                          error={formik.touched.apartmentNumber && Boolean(formik.errors.apartmentNumber)}
+                          disabled={!formik.values.block || formik.isSubmitting}
+                        >
                           <InputLabel>Apartment Number</InputLabel>
                           <Select
                             name="apartmentNumber"
                             value={formik.values.apartmentNumber}
                             onChange={formik.handleChange}
+                            onBlur={formik.handleBlur}
                             label="Apartment Number"
-                            disabled={!formik.values.block}
                           >
                             {apartments
                               .filter(apt => apt.block === formik.values.block)
@@ -339,20 +556,21 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                                 </MenuItem>
                               ))}
                           </Select>
-                          {formik.touched.apartmentNumber && formik.errors.apartmentNumber && (
-                            <FormHelperText>{formik.errors.apartmentNumber}</FormHelperText>
-                          )}
+                          <FormHelperText>
+                            {(formik.touched.apartmentNumber && formik.errors.apartmentNumber) || ' '}
+                          </FormHelperText>
                         </FormControl>
                       )}
                     </Grid>
                     
                     <Grid item xs={12} sm={6}>
-                      <FormControl fullWidth>
+                      <FormControl fullWidth disabled={formik.isSubmitting}>
                         <InputLabel>Apartment Status</InputLabel>
                         <Select
                           name="apartmentStatus"
                           value={formik.values.apartmentStatus}
                           onChange={formik.handleChange}
+                          onBlur={formik.handleBlur}
                           label="Apartment Status"
                         >
                           <MenuItem value="vacant">Vacant</MenuItem>
@@ -364,12 +582,13 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                     </Grid>
                     
                     <Grid item xs={12} sm={6}>
-                      <FormControl fullWidth>
+                      <FormControl fullWidth disabled={formik.isSubmitting}>
                         <InputLabel>Priority</InputLabel>
                         <Select
                           name="priority"
                           value={formik.values.priority}
                           onChange={formik.handleChange}
+                          onBlur={formik.handleBlur}
                           label="Priority"
                         >
                           <MenuItem value="low">Low</MenuItem>
@@ -381,85 +600,153 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                     </Grid>
                     
                     <Grid item xs={12} sm={6}>
+                      <FormControl fullWidth disabled={formik.isSubmitting}>
+                        <InputLabel>Status</InputLabel>
+                        <Select
+                          name="status"
+                          value={formik.values.status}
+                          onChange={formik.handleChange}
+                          onBlur={formik.handleBlur}
+                          label="Status"
+                        >
+                          <MenuItem value="pending">Pending</MenuItem>
+                          <MenuItem value="in_progress">In Progress</MenuItem>
+                          <MenuItem value="on_hold">On Hold</MenuItem>
+                          <MenuItem value="completed">Completed</MenuItem>
+                          <MenuItem value="cancelled">Cancelled</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={6}>
                       <DatePicker
-                        label="Scheduled Date"
+                        label="Scheduled Date *"
                         value={formik.values.scheduledDate}
-                        onChange={(value) => formik.setFieldValue('scheduledDate', value)}
-                        renderInput={(params) => <TextField {...params} fullWidth />}
+                        onChange={(date) => {
+                          formik.setFieldValue('scheduledDate', date);
+                          // If estimated date is before the new scheduled date, update it
+                          if (formik.values.estimatedCompletionDate < date) {
+                            const newEstimatedDate = new Date(date);
+                            newEstimatedDate.setDate(newEstimatedDate.getDate() + 1);
+                            formik.setFieldValue('estimatedCompletionDate', newEstimatedDate);
+                          }
+                        }}
+                        minDate={new Date()}
+                        disabled={formik.isSubmitting}
+                        renderInput={(params) => (
+                          <TextField
+                            fullWidth
+                            {...params}
+                            onBlur={() => formik.setFieldTouched('scheduledDate', true)}
+                            error={formik.touched.scheduledDate && Boolean(formik.errors.scheduledDate)}
+                            helperText={(formik.touched.scheduledDate && formik.errors.scheduledDate) || ' '}
+                          />
+                        )}
                       />
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={6}>
+                      <DatePicker
+                        label="Estimated Completion Date"
+                        value={formik.values.estimatedCompletionDate}
+                        onChange={(date) => formik.setFieldValue('estimatedCompletionDate', date)}
+                        minDate={formik.values.scheduledDate}
+                        disabled={formik.isSubmitting || !formik.values.scheduledDate}
+                        renderInput={(params) => (
+                          <TextField
+                            fullWidth
+                            {...params}
+                            onBlur={() => formik.setFieldTouched('estimatedCompletionDate', true)}
+                            error={formik.touched.estimatedCompletionDate && Boolean(formik.errors.estimatedCompletionDate)}
+                            helperText={(formik.touched.estimatedCompletionDate && formik.errors.estimatedCompletionDate) || ' '}
+                          />
+                        )}
+                      />
+                    </Grid>
+                    
+                    <Grid item xs={12}>
+                      <FormControl fullWidth error={formik.touched.assignedTo && Boolean(formik.errors.assignedTo)}>
+                        <InputLabel>Assigned Workers</InputLabel>
+                        <Select
+                          multiple
+                          name="assignedTo"
+                          value={formik.values.assignedTo}
+                          onChange={formik.handleChange}
+                          onBlur={formik.handleBlur}
+                          label="Assigned Workers"
+                          disabled={formik.isSubmitting || workers.length === 0}
+                          renderValue={(selected) => (
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                              {selected.map((workerId) => {
+                                const worker = workers.find(w => w._id === workerId);
+                                return worker ? (
+                                  <Chip
+                                    key={workerId}
+                                    label={worker.name}
+                                    size="small"
+                                    avatar={<Avatar>{worker.name.charAt(0)}</Avatar>}
+                                  />
+                                ) : null;
+                              })}
+                            </Box>
+                          )}
+                        >
+                          {workers.map((worker) => (
+                            <MenuItem key={worker._id} value={worker._id}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Avatar size="small">{worker.name.charAt(0)}</Avatar>
+                                <Box>
+                                  <Typography variant="body2">{worker.name}</Typography>
+                                  <Typography variant="caption" color="textSecondary">
+                                    {worker.workerProfile?.skills?.join(', ') || 'General'}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </MenuItem>
+                          ))}
+                        </Select>
+                        {formik.touched.assignedTo && formik.errors.assignedTo && (
+                          <FormHelperText>{formik.errors.assignedTo}</FormHelperText>
+                        )}
+                        {workers.length === 0 && (
+                          <FormHelperText>No active workers found</FormHelperText>
+                        )}
+                      </FormControl>
                     </Grid>
                   </Grid>
                 </CardContent>
               </Card>
-            </Grid>
-            
-            {/* Worker Assignment */}
-            <Grid item xs={12} md={4}>
-              <Card>
-                <CardHeader title="Assign Workers" />
-                <CardContent>
-                  <FormControl fullWidth error={formik.touched.assignedTo && Boolean(formik.errors.assignedTo)}>
-                    <InputLabel>Select Workers</InputLabel>
-                    <Select
-                      multiple
-                      name="assignedTo"
-                      value={formik.values.assignedTo}
-                      onChange={formik.handleChange}
-                      label="Select Workers"
-                      renderValue={(selected) => (
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                          {selected.map((workerId) => {
-                            const worker = workers.find(w => w._id === workerId);
-                            return worker ? (
-                              <Chip
-                                key={workerId}
-                                label={worker.name}
-                                size="small"
-                                avatar={<Avatar>{worker.name.charAt(0)}</Avatar>}
-                              />
-                            ) : null;
-                          })}
-                        </Box>
-                      )}
-                    >
-                      {workers.map((worker) => (
-                        <MenuItem key={worker._id} value={worker._id}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Avatar size="small">{worker.name.charAt(0)}</Avatar>
-                            <Box>
-                              <Typography variant="body2">{worker.name}</Typography>
-                              <Typography variant="caption" color="textSecondary">
-                                {worker.workerProfile?.skills?.join(', ') || 'General'}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    {formik.touched.assignedTo && formik.errors.assignedTo && (
-                      <FormHelperText>{formik.errors.assignedTo}</FormHelperText>
-                    )}
-                  </FormControl>
-                </CardContent>
-              </Card>
               
-              {/* Services */}
-              <Card sx={{ mt: 2 }}>
+              {/* Services Section */}
+              <Card sx={{ mt: 3 }}>
                 <CardHeader 
                   title="Services" 
                   action={
-                    <Button
-                      size="small"
+                    <Button 
+                      startIcon={<AddIcon />} 
                       onClick={addService}
-                      startIcon={<AddIcon />}
+                      disabled={formik.isSubmitting}
                     >
                       Add Service
                     </Button>
-                  }
+                  } 
                 />
                 <CardContent>
                   {formik.values.services.map((service, index) => (
-                    <Box key={index} sx={{ mb: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
+                    <Box key={index} sx={{ mb: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                        <Typography variant="subtitle1">Service {index + 1}</Typography>
+                        {formik.values.services.length > 1 && (
+                          <IconButton 
+                            size="small" 
+                            onClick={() => removeService(index)}
+                            disabled={formik.isSubmitting}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        )}
+                      </Box>
+                      
                       <Grid container spacing={2}>
                         <Grid item xs={12} sm={6}>
                           <FormControl fullWidth>
@@ -468,19 +755,24 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                               name={`services[${index}].type`}
                               value={service.type}
                               onChange={formik.handleChange}
+                              onBlur={formik.handleBlur}
                               label="Service Type"
+                              disabled={formik.isSubmitting}
                             >
+                              <MenuItem value="painting">Painting</MenuItem>
+                              <MenuItem value="cleaning">Cleaning</MenuItem>
+                              <MenuItem value="repair">Repair</MenuItem>
                               <MenuItem value="plumbing">Plumbing</MenuItem>
                               <MenuItem value="electrical">Electrical</MenuItem>
                               <MenuItem value="hvac">HVAC</MenuItem>
-                              <MenuItem value="painting">Painting</MenuItem>
+                              <MenuItem value="flooring">Flooring</MenuItem>
+                              <MenuItem value="roofing">Roofing</MenuItem>
                               <MenuItem value="carpentry">Carpentry</MenuItem>
-                              <MenuItem value="cleaning">Cleaning</MenuItem>
-                              <MenuItem value="maintenance">Maintenance</MenuItem>
                               <MenuItem value="other">Other</MenuItem>
                             </Select>
                           </FormControl>
                         </Grid>
+                        
                         <Grid item xs={12} sm={6}>
                           <FormControl fullWidth>
                             <InputLabel>Status</InputLabel>
@@ -488,129 +780,282 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
                               name={`services[${index}].status`}
                               value={service.status}
                               onChange={formik.handleChange}
+                              onBlur={formik.handleBlur}
                               label="Status"
+                              disabled={formik.isSubmitting}
                             >
                               <MenuItem value="pending">Pending</MenuItem>
                               <MenuItem value="in_progress">In Progress</MenuItem>
                               <MenuItem value="completed">Completed</MenuItem>
+                              <MenuItem value="on_hold">On Hold</MenuItem>
                               <MenuItem value="cancelled">Cancelled</MenuItem>
                             </Select>
                           </FormControl>
                         </Grid>
+                        
                         <Grid item xs={12}>
                           <TextField
                             fullWidth
-                            name={`services[${index}].description`}
-                            label="Service Description"
-                            value={service.description}
-                            onChange={formik.handleChange}
                             multiline
                             rows={2}
+                            name={`services[${index}].description`}
+                            label="Description"
+                            value={service.description}
+                            onChange={formik.handleChange}
+                            onBlur={formik.handleBlur}
+                            disabled={formik.isSubmitting}
                           />
                         </Grid>
-                        <Grid item xs={12} sm={4}>
+                        
+                        <Grid item xs={12} sm={6}>
                           <TextField
                             fullWidth
-                            name={`services[${index}].laborCost`}
-                            label="Labor Cost"
                             type="number"
+                            name={`services[${index}].laborCost`}
+                            label="Labor Cost ($)"
                             value={service.laborCost}
                             onChange={formik.handleChange}
+                            onBlur={formik.handleBlur}
+                            disabled={formik.isSubmitting}
                             InputProps={{
-                              startAdornment: <Typography variant="body2">$</Typography>
+                              startAdornment: '$',
+                              inputProps: { min: 0, step: 0.01 }
                             }}
                           />
                         </Grid>
-                        <Grid item xs={12} sm={4}>
+                        
+                        <Grid item xs={12} sm={6}>
                           <TextField
                             fullWidth
-                            name={`services[${index}].materialCost`}
-                            label="Material Cost"
                             type="number"
+                            name={`services[${index}].materialCost`}
+                            label="Material Cost ($)"
                             value={service.materialCost}
                             onChange={formik.handleChange}
+                            onBlur={formik.handleBlur}
+                            disabled={formik.isSubmitting}
                             InputProps={{
-                              startAdornment: <Typography variant="body2">$</Typography>
+                              startAdornment: '$',
+                              inputProps: { min: 0, step: 0.01 }
                             }}
                           />
-                        </Grid>
-                        <Grid item xs={12} sm={4}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
-                            <Typography variant="body2" sx={{ mr: 2 }}>
-                              Total: ${(parseFloat(service.laborCost || 0) + parseFloat(service.materialCost || 0)).toFixed(2)}
-                            </Typography>
-                            {formik.values.services.length > 1 && (
-                              <IconButton
-                                color="error"
-                                onClick={() => removeService(index)}
-                                size="small"
-                              >
-                                <DeleteIcon />
-                              </IconButton>
-                            )}
-                          </Box>
                         </Grid>
                       </Grid>
                     </Box>
                   ))}
                 </CardContent>
               </Card>
-
-              {/* Photo Upload */}
-              <Card sx={{ mt: 2 }}>
+              
+              {/* Photos Section */}
+              <Card sx={{ mt: 3 }}>
                 <CardHeader title="Photos" />
                 <CardContent>
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    fullWidth
-                    startIcon={<CloudUploadIcon />}
-                  >
-                    Upload Photos
-                    <input
-                      type="file"
-                      hidden
-                      multiple
-                      accept="image/*"
-                      onChange={handlePhotoUpload}
-                    />
-                  </Button>
+                  <input
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    id="work-order-photos"
+                    type="file"
+                    multiple
+                    onChange={handlePhotoUpload}
+                    disabled={formik.isSubmitting}
+                  />
+                  <label htmlFor="work-order-photos">
+                    <Button
+                      variant="outlined"
+                      component="span"
+                      startIcon={<CloudUploadIcon />}
+                      disabled={formik.isSubmitting}
+                    >
+                      Upload Photos
+                    </Button>
+                  </label>
                   
                   {photos.length > 0 && (
                     <Box sx={{ mt: 2 }}>
-                      {photos.map((photo, index) => (
-                        <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                          <Typography variant="body2" sx={{ flex: 1 }}>
-                            {photo.name}
-                          </Typography>
-                          <IconButton size="small" onClick={() => removePhoto(index)}>
-                            <DeleteIcon />
-                          </IconButton>
-                        </Box>
-                      ))}
+                      <Typography variant="subtitle2" gutterBottom>
+                        Selected Photos ({photos.length}):
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                        {photos.map((photo, index) => (
+                          <Box key={index} sx={{ position: 'relative' }}>
+                            <img
+                              src={URL.createObjectURL(photo)}
+                              alt={`Preview ${index + 1}`}
+                              style={{ 
+                                width: 100, 
+                                height: 100, 
+                                objectFit: 'cover',
+                                borderRadius: 4
+                              }}
+                            />
+                            <IconButton
+                              size="small"
+                              sx={{
+                                position: 'absolute',
+                                top: -8,
+                                right: -8,
+                                backgroundColor: 'error.main',
+                                color: 'white',
+                                '&:hover': {
+                                  backgroundColor: 'error.dark',
+                                },
+                              }}
+                              onClick={() => removePhoto(index)}
+                              disabled={formik.isSubmitting}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        ))}
+                      </Box>
                     </Box>
                   )}
+                </CardContent>
+              </Card>
+            </Grid>
+            
+            {/* Sidebar */}
+            <Grid item xs={12} md={4}>
+              {/* Notes Section */}
+              <Card>
+                <CardHeader title="Notes" />
+                <CardContent>
+                  <Box sx={{ mb: 2 }}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      placeholder="Add a note..."
+                      variant="outlined"
+                      value={formik.values.newNote || ''}
+                      onChange={(e) => formik.setFieldValue('newNote', e.target.value)}
+                      disabled={formik.isSubmitting}
+                    />
+                    <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        onClick={() => {
+                          if (formik.values.newNote?.trim()) {
+                            formik.setFieldValue('notes', [
+                              ...formik.values.notes,
+                              {
+                                content: formik.values.newNote.trim(),
+                                isPrivate: false,
+                                createdBy: user?._id,
+                                createdAt: new Date().toISOString()
+                              }
+                            ]);
+                            formik.setFieldValue('newNote', '');
+                          }
+                        }}
+                        disabled={!formik.values.newNote?.trim() || formik.isSubmitting}
+                      >
+                        Add Note
+                      </Button>
+                    </Box>
+                  </Box>
+                  
+                  <Box sx={{ maxHeight: 300, overflow: 'auto' }}>
+                    {formik.values.notes.length > 0 ? (
+                      formik.values.notes.map((note, index) => (
+                        <Box 
+                          key={index} 
+                          sx={{ 
+                            p: 1.5, 
+                            mb: 1, 
+                            bgcolor: 'background.paper',
+                            borderRadius: 1,
+                            border: '1px solid',
+                            borderColor: 'divider'
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                            <Typography variant="caption" color="textSecondary">
+                              {new Date(note.createdAt).toLocaleString()}
+                            </Typography>
+                            {note.isPrivate && (
+                              <Chip 
+                                label="Private" 
+                                size="small" 
+                                color="primary" 
+                                variant="outlined"
+                              />
+                            )}
+                          </Box>
+                          <Typography variant="body2">{note.content}</Typography>
+                        </Box>
+                      ))
+                    ) : (
+                      <Typography variant="body2" color="textSecondary" align="center" sx={{ py: 2 }}>
+                        No notes added yet
+                      </Typography>
+                    )}
+                  </Box>
+                </CardContent>
+              </Card>
+              
+              {/* Summary Section */}
+              <Card sx={{ mt: 3 }}>
+                <CardHeader title="Summary" />
+                <CardContent>
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Total Services: {formik.values.services.length}
+                    </Typography>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Assigned Workers: {formik.values.assignedTo.length}
+                    </Typography>
+                    <Divider sx={{ my: 2 }} />
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography>Labor Cost:</Typography>
+                      <Typography>
+                        ${formik.values.services.reduce((sum, service) => sum + (Number(service.laborCost) || 0), 0).toFixed(2)}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography>Material Cost:</Typography>
+                      <Typography>
+                        ${formik.values.services.reduce((sum, service) => sum + (Number(service.materialCost) || 0), 0).toFixed(2)}
+                      </Typography>
+                    </Box>
+                    <Divider sx={{ my: 2 }} />
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+                      <Typography>Total Estimated Cost:</Typography>
+                      <Typography>
+                        ${formik.values.services.reduce((sum, service) => {
+                          const labor = Number(service.laborCost) || 0;
+                          const material = Number(service.materialCost) || 0;
+                          return sum + labor + material;
+                        }, 0).toFixed(2)}
+                      </Typography>
+                    </Box>
+                  </Box>
                 </CardContent>
               </Card>
             </Grid>
           </Grid>
           
           {/* Action Buttons */}
-          <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
             <Button
               variant="outlined"
               onClick={() => navigate('/work-orders')}
               startIcon={<CancelIcon />}
+              disabled={formik.isSubmitting}
             >
               Cancel
             </Button>
             <Button
               type="submit"
               variant="contained"
-              disabled={formik.isSubmitting}
+              color="primary"
               startIcon={formik.isSubmitting ? <CircularProgress size={20} /> : <SaveIcon />}
+              disabled={!formik.isValid || formik.isSubmitting}
             >
-              {isEdit ? 'Update' : 'Create'} Work Order
+              {formik.isSubmitting 
+                ? (isEdit ? 'Updating...' : 'Creating...') 
+                : (isEdit ? 'Update' : 'Create') + ' Work Order'}
             </Button>
           </Box>
         </form>
