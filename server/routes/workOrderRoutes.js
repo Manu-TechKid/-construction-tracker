@@ -28,7 +28,7 @@ const validateCreateWorkOrder = [
     .isLength({ min: 10 }).withMessage('Description must be at least 10 characters'),
     
   body('building')
-    .optional()
+    .notEmpty().withMessage('Building is required')
     .isMongoId().withMessage('Invalid building ID format'),
     
   body('apartmentNumber')
@@ -78,18 +78,17 @@ const validateCreateWorkOrder = [
     .withMessage('Invalid worker ID format'),
     
   body('services')
-    .isArray({ min: 1 })
-    .withMessage('At least one service is required'),
+    .optional()
+    .isArray()
+    .withMessage('Services must be an array'),
     
   body('services.*.type')
-    .notEmpty()
-    .withMessage('Service type is required')
+    .optional()
     .isString()
     .trim(),
     
   body('services.*.description')
-    .notEmpty()
-    .withMessage('Service description is required')
+    .optional()
     .isString()
     .trim(),
     
@@ -209,13 +208,7 @@ const validateTask = [
 // Work Order Routes
 // ================
 
-// Create a new work order
-router.post(
-  '/',
-  uploadWorkOrderPhotos,
-  validateCreateWorkOrder,
-  workOrderController.createWorkOrder
-);
+// Create a new work order - REMOVED DUPLICATE
 
 // Get all work orders with filtering and pagination
 router.get(
@@ -334,12 +327,20 @@ router.post(
   authController.restrictTo('admin', 'manager', 'supervisor'),
   uploadWorkOrderPhotos, // Max 10 photos
   [
-    ...validateCreateWorkOrder,
-    body('services').isArray({ min: 1 }),
-    body('services.*.type').isIn([
-      'cleaning', 'maintenance', 'inspection', 'renovation', 'delivery',
-      'move_in', 'move_out', 'other'
-    ]),
+    body('title').trim().notEmpty().withMessage('Title is required'),
+    body('building').notEmpty().withMessage('Building is required').isMongoId().withMessage('Invalid building ID format'),
+    body('description').optional().trim(),
+    body('apartmentNumber').optional().trim(),
+    body('block').optional().trim(),
+    body('apartmentStatus').optional().isIn(['vacant', 'occupied', 'under_renovation', 'reserved']),
+    body('priority').optional().isIn(['low', 'medium', 'high', 'urgent']),
+    body('status').optional().isIn(['pending', 'in_progress', 'on_hold', 'completed', 'cancelled', 'pending_review', 'issue_reported']),
+    body('scheduledDate').optional().isISO8601(),
+    body('estimatedCompletionDate').optional().isISO8601(),
+    body('assignedTo').optional().isArray(),
+    body('assignedTo.*').optional().isMongoId(),
+    body('services').optional().isArray(),
+    body('notes').optional().isArray(),
     validateRequest
   ],
   workOrderController.createWorkOrder

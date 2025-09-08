@@ -17,6 +17,11 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
   console.log('Request body:', JSON.stringify(req.body, null, 2));
   console.log('Request user:', req.user ? { id: req.user._id, role: req.user.role } : 'No user');
   
+  // Check if user is authenticated
+  if (!req.user || !req.user._id) {
+    return next(new AppError('User not authenticated. Please log in.', 401));
+  }
+  
   try {
     // Extract data from request body with defaults
     const {
