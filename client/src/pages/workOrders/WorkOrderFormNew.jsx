@@ -10,7 +10,7 @@ import {
   useGetWorkOrderQuery 
 } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
-import { useGetUsersQuery } from '../../features/users/usersApiSlice';
+import { useGetWorkersQuery } from '../../features/users/usersApiSlice';
 import {
   Box,
   Button,
@@ -153,7 +153,7 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
     data: usersData, 
     isLoading: isLoadingWorkers,
     error: workersError 
-  } = useGetUsersQuery({ role: 'worker' });
+  } = useGetWorkersQuery();
   
   // Combined loading state
   const isLoading = isCreating || isUpdating || (isEdit && isLoadingWorkOrder) || 
