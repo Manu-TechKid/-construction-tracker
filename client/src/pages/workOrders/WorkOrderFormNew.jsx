@@ -124,6 +124,9 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
         };
 
         console.log('Starting work order creation with data:', workOrderData);
+        console.log('Current user from Redux:', user);
+        console.log('User role:', user?.role);
+        console.log('Auth token:', localStorage.getItem('token') ? 'Present' : 'Missing');
         
         if (isEdit && id) {
           await updateWorkOrder({ id, ...workOrderData }).unwrap();
