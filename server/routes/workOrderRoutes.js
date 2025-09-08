@@ -11,12 +11,24 @@ const uploadWorkOrderPhotos = uploadMultiple('work-orders', 'photos', 10);
 
 const router = express.Router();
 
-// Add a simple test endpoint first
+// Add a simple test endpoint BEFORE auth middleware
 router.get('/test', (req, res) => {
   console.log('=== TEST ENDPOINT HIT ===');
   res.json({ 
     status: 'success', 
     message: 'Work order routes are working',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Add another test endpoint that requires auth
+router.get('/test-auth', authController.protect, (req, res) => {
+  console.log('=== AUTH TEST ENDPOINT HIT ===');
+  console.log('User:', req.user ? { id: req.user._id, role: req.user.role } : 'No user');
+  res.json({ 
+    status: 'success', 
+    message: 'Authentication is working',
+    user: req.user ? { id: req.user._id, role: req.user.role } : null,
     timestamp: new Date().toISOString()
   });
 });
