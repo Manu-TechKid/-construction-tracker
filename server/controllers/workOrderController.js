@@ -49,8 +49,19 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       notes = []
     } = req.body;
     
-    // Set default scheduledDate if not provided
-    const workOrderScheduledDate = scheduledDate ? new Date(scheduledDate) : new Date();
+    // Set default scheduledDate if not provided - handle date parsing more safely
+    let workOrderScheduledDate;
+    try {
+      workOrderScheduledDate = scheduledDate ? new Date(scheduledDate) : new Date();
+      // Validate the parsed date
+      if (isNaN(workOrderScheduledDate.getTime())) {
+        console.error('Invalid scheduledDate provided:', scheduledDate);
+        workOrderScheduledDate = new Date(); // Fallback to current date
+      }
+    } catch (dateError) {
+      console.error('Error parsing scheduledDate:', dateError);
+      workOrderScheduledDate = new Date(); // Fallback to current date
+    }
 
     // Validate required fields
     const requiredFields = [
@@ -179,7 +190,16 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       priority,
       status,
       scheduledDate: workOrderScheduledDate,
-      estimatedCompletionDate: estimatedCompletionDate ? new Date(estimatedCompletionDate) : null,
+      estimatedCompletionDate: (() => {
+        try {
+          if (!estimatedCompletionDate) return null;
+          const date = new Date(estimatedCompletionDate);
+          return isNaN(date.getTime()) ? null : date;
+        } catch (error) {
+          console.error('Error parsing estimatedCompletionDate:', error);
+          return null;
+        }
+      })(),
       assignedTo: processedAssignedTo,
       services: processedServices,
       photos,
