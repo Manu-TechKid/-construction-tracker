@@ -13,16 +13,18 @@ const { sendWorkOrderAssignedEmail } = require('../services/emailService');
  * @access  Private/Admin/Manager
  */
 exports.createWorkOrder = catchAsync(async (req, res, next) => {
-  console.log('=== CREATE WORK ORDER START ===');
-  console.log('Request body:', JSON.stringify(req.body, null, 2));
-  console.log('Request user:', req.user ? { id: req.user._id, role: req.user.role } : 'No user');
-  
-  // Check if user is authenticated
-  if (!req.user || !req.user._id) {
-    return next(new AppError('User not authenticated. Please log in.', 401));
-  }
-  
   try {
+    console.log('=== CREATE WORK ORDER START ===');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('Request user:', req.user ? { id: req.user._id, role: req.user.role } : 'No user');
+    
+    // Check if user is authenticated
+    if (!req.user || !req.user._id) {
+      console.log('User authentication failed');
+      return next(new AppError('User not authenticated. Please log in.', 401));
+    }
+    
+    console.log('User authenticated, proceeding with work order creation');
     // Extract data from request body with defaults
     const {
       title,

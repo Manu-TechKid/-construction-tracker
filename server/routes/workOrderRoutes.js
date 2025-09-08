@@ -11,6 +11,16 @@ const uploadWorkOrderPhotos = uploadMultiple('work-orders', 'photos', 10);
 
 const router = express.Router();
 
+// Add a simple test endpoint first
+router.get('/test', (req, res) => {
+  console.log('=== TEST ENDPOINT HIT ===');
+  res.json({ 
+    status: 'success', 
+    message: 'Work order routes are working',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Protect all routes after this middleware
 router.use(authController.protect);
 router.use(hidePricesFromWorkers);

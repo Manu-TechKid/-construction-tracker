@@ -112,6 +112,14 @@ app.use((req, res, next) => {
 });
 
 // 3) ROUTES
+// Add global request logging
+app.use('/api/v1', (req, res, next) => {
+  console.log(`=== API REQUEST: ${req.method} ${req.originalUrl} ===`);
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  next();
+});
+
 // API routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
