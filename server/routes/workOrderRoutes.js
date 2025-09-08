@@ -324,6 +324,13 @@ router.get(
  */
 router.post(
   '/',
+  (req, res, next) => {
+    console.log('=== WORK ORDER ROUTE START ===');
+    console.log('Headers:', req.headers);
+    console.log('Body:', req.body);
+    console.log('User from previous middleware:', req.user ? { id: req.user._id, role: req.user.role } : 'No user');
+    next();
+  },
   authController.restrictTo('admin', 'manager', 'supervisor'),
   uploadWorkOrderPhotos, // Max 10 photos
   [

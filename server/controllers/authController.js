@@ -142,6 +142,10 @@ exports.logout = (req, res) => {
 };
 
 exports.protect = catchAsync(async (req, res, next) => {
+  console.log('=== AUTH PROTECT MIDDLEWARE ===');
+  console.log('Headers:', req.headers);
+  console.log('Cookies:', req.cookies);
+  
   // 1) Getting token and check of it's there
   let token;
   if (
@@ -149,11 +153,16 @@ exports.protect = catchAsync(async (req, res, next) => {
     req.headers.authorization.startsWith('Bearer')
   ) {
     token = req.headers.authorization.split(' ')[1];
+    console.log('Token from Authorization header:', token ? 'Found' : 'Not found');
   } else if (req.cookies.jwt) {
     token = req.cookies.jwt;
+    console.log('Token from cookies:', token ? 'Found' : 'Not found');
   }
 
+  console.log('Final token:', token ? 'Present' : 'Missing');
+
   if (!token) {
+    console.log('No token found, returning 401');
     return next(
       new AppError('You are not logged in! Please log in to get access.', 401)
     );
