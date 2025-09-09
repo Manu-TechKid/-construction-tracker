@@ -165,26 +165,36 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
     // Process assigned workers - convert to proper format
     let processedAssignedTo = [];
     if (Array.isArray(parsedAssignedTo) && parsedAssignedTo.length > 0) {
-      for (const workerId of parsedAssignedTo) {
+      for (const item of parsedAssignedTo) {
         try {
-          // Handle both string IDs and objects
-          const id = typeof workerId === 'string' ? workerId : workerId.worker || workerId._id;
+          // Handle different formats: string ID, object with worker property, or object with _id
+          let workerId;
+          if (typeof item === 'string') {
+            workerId = item;
+          } else if (item && typeof item === 'object') {
+            workerId = item.worker || item._id;
+          }
+          
+          if (!workerId) {
+            console.warn('No valid worker ID found in item:', item);
+            continue;
+          }
           
           // Validate worker ID format
-          if (!mongoose.Types.ObjectId.isValid(id)) {
-            console.warn('Invalid worker ID format:', id);
+          if (!mongoose.Types.ObjectId.isValid(workerId)) {
+            console.warn('Invalid worker ID format:', workerId);
             continue; // Skip invalid worker IDs
           }
           
           // Check if worker exists
-          const workerExists = await User.exists({ _id: id, role: 'worker' });
+          const workerExists = await User.exists({ _id: workerId, role: 'worker' });
           if (!workerExists) {
-            console.warn(`Worker with ID ${id} not found or not a worker`);
+            console.warn(`Worker with ID ${workerId} not found or not a worker`);
             continue; // Skip non-existent workers
           }
           
           processedAssignedTo.push({
-            worker: id,
+            worker: workerId,
             assignedAt: new Date(),
             assignedBy: req.user._id,
             status: 'pending'

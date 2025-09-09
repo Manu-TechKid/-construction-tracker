@@ -137,14 +137,25 @@ const CreateWorkOrder = () => {
           priority: values.priority || 'medium',
           scheduledDate: values.scheduledDate ? values.scheduledDate.toISOString() : new Date().toISOString(),
           estimatedCost: parseFloat(values.estimatedCost) || 0,
-          services: values.services && values.services.length > 0 ? values.services : [{
+          services: values.services && values.services.length > 0 ? values.services.map(service => ({
+            type: service.type || 'other',
+            description: service.description || 'General work',
+            laborCost: parseFloat(service.laborCost) || 0,
+            materialCost: parseFloat(service.materialCost) || 0,
+            status: service.status || 'pending'
+          })) : [{
             type: 'other',
             description: 'General work',
             laborCost: 0,
             materialCost: 0,
             status: 'pending'
           }],
-          assignedTo: values.assignedTo || [],
+          // Transform assignedTo array to match WorkOrder model structure
+          assignedTo: values.assignedTo && values.assignedTo.length > 0 ? values.assignedTo.map(workerId => ({
+            worker: workerId,
+            assignedBy: user._id,
+            status: 'pending'
+          })) : [],
           notes: [],
           createdBy: user._id,
           updatedBy: user._id
