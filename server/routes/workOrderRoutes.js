@@ -319,7 +319,9 @@ router.post(
     body('scheduledDate').optional().isISO8601(),
     body('estimatedCompletionDate').optional().isISO8601(),
     body('assignedTo').optional().isArray(),
-    body('assignedTo.*').optional().isMongoId(),
+    body('assignedTo.*.worker').optional().isMongoId().withMessage('Invalid worker ID'),
+    body('assignedTo.*.assignedBy').optional().isMongoId().withMessage('Invalid assignedBy ID'),
+    body('assignedTo.*.status').optional().isIn(['pending', 'in_progress', 'completed', 'rejected']),
     body('services').optional().isArray(),
     body('notes').optional().isArray(),
     validateRequest

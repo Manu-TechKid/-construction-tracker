@@ -99,9 +99,7 @@ const validationSchema = Yup.object({
       ),
       photos: Yup.array(),
   assignedTo: Yup.array().of(
-    Yup.object({
-      worker: Yup.string().required('Worker is required'),
-    })
+    Yup.string().required('Worker ID is required')
   ),
 });
 
@@ -159,9 +157,17 @@ const WorkOrderForm = () => {
                 formData.append('photos', photo.file);
               }
             });
-          } else if (key === 'services' || key === 'assignedTo') {
-            // Handle arrays
+          } else if (key === 'services') {
+            // Handle services array
             formData.append(key, JSON.stringify(values[key]));
+          } else if (key === 'assignedTo') {
+            // Transform assignedTo to match backend expectations
+            const transformedAssignedTo = values[key].map(workerId => ({
+              worker: workerId,
+              assignedBy: user._id,
+              status: 'pending'
+            }));
+            formData.append(key, JSON.stringify(transformedAssignedTo));
           } else if (values[key] !== null && values[key] !== undefined) {
             formData.append(key, values[key]);
           }
@@ -211,7 +217,7 @@ const WorkOrderForm = () => {
         estimatedCompletionDate: workOrder.estimatedCompletionDate ? new Date(workOrder.estimatedCompletionDate) : null,
         estimatedCost: workOrder.estimatedCost || 0,
         services: workOrder.services || [],
-        assignedTo: workOrder.assignedTo || [],
+        assignedTo: workOrder.assignedTo?.map(assignment => assignment.worker?._id || assignment.worker) || [],
         photos: [], // Reset photos for edit mode
       });
     }
