@@ -49,7 +49,7 @@ import {
   useUpdateWorkOrderMutation
 } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
-import { useGetWorkersQuery } from '../../features/workers/workersApiSlice';
+import { useGetUsersQuery } from '../../features/users/usersApiSlice';
 import { useAuth } from '../../hooks/useAuth';
 
 // Service types matching the database enum
@@ -116,16 +116,16 @@ const WorkOrderForm = () => {
     skip: !isEdit
   });
   const { data: buildingsData, isLoading: isLoadingBuildings } = useGetBuildingsQuery();
-  const { data: workersData, isLoading: isLoadingWorkers } = useGetWorkersQuery();
+  const { data: workersData, isLoading: isLoadingWorkers } = useGetUsersQuery({ role: 'worker' });
   
   const [createWorkOrder, { isLoading: isCreating }] = useCreateWorkOrderMutation();
   const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
 
   const buildings = buildingsData?.data?.buildings || [];
-  const workers = workersData?.data?.workers || [];
+  const workers = workersData?.data?.users || [];
   
-  // Get apartments for selected building
-  const selectedBuilding = buildings.find(b => b._id === formik.values.building);
+  // State for selected building
+  const [selectedBuilding, setSelectedBuilding] = useState(null);
   const availableApartments = selectedBuilding?.apartments || [];
 
   const formik = useFormik({
@@ -192,6 +192,13 @@ const WorkOrderForm = () => {
   useEffect(() => {
     if (isEdit && workOrderData?.data) {
       const workOrder = workOrderData.data;
+      
+      // Set the selected building first
+      if (workOrder.building) {
+        const building = buildings.find(b => b._id === workOrder.building._id);
+        setSelectedBuilding(building);
+      }
+      
       formik.setValues({
         title: workOrder.title || '',
         description: workOrder.description || '',
@@ -205,9 +212,21 @@ const WorkOrderForm = () => {
         estimatedCost: workOrder.estimatedCost || 0,
         services: workOrder.services || [],
         assignedTo: workOrder.assignedTo || [],
+        photos: [], // Reset photos for edit mode
       });
     }
-  }, [isEdit, workOrderData]);
+  }, [isEdit, workOrderData, buildings]);
+
+  // Handle building selection for both create and edit modes
+  useEffect(() => {
+    if (formik.values.building && !isEdit) {
+      const building = buildings.find(b => b._id === formik.values.building);
+      setSelectedBuilding(building);
+      // Reset apartment fields when building changes in create mode
+      formik.setFieldValue('apartmentNumber', '');
+      formik.setFieldValue('block', '');
+    }
+  }, [formik.values.building, buildings, isEdit]);
 
   const addService = () => {
     formik.setFieldValue('services', [

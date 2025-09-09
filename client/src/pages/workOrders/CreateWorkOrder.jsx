@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -152,15 +152,14 @@ const CreateWorkOrder = () => {
   });
 
   // Handle building selection
-  useEffect(() => {
-    if (formik.values.building) {
-      const building = buildings.find(b => b._id === formik.values.building);
-      setSelectedBuilding(building);
-      // Reset apartment fields when building changes
-      formik.setFieldValue('apartmentNumber', '');
-      formik.setFieldValue('block', '');
+  const handleBuildingSelection = (buildingId) => {
+    if (buildingId && buildings.length > 0) {
+      const building = buildings.find(b => b._id === buildingId);
+      if (building) {
+        setSelectedBuilding(building);
+      }
     }
-  }, [formik.values.building, buildings, formik]);
+  };
 
   const addService = () => {
     formik.setFieldValue('services', [
@@ -276,7 +275,14 @@ const CreateWorkOrder = () => {
                     <Select
                       name="building"
                       value={formik.values.building}
-                      onChange={formik.handleChange}
+                      onChange={(e) => {
+                        const buildingId = e.target.value;
+                        formik.setFieldValue('building', buildingId);
+                        handleBuildingSelection(buildingId);
+                        // Reset apartment fields
+                        formik.setFieldValue('apartmentNumber', '');
+                        formik.setFieldValue('block', '');
+                      }}
                       onBlur={formik.handleBlur}
                       label="Building"
                     >
@@ -299,12 +305,15 @@ const CreateWorkOrder = () => {
                           name="apartmentNumber"
                           value={formik.values.apartmentNumber}
                           onChange={(e) => {
-                            formik.setFieldValue('apartmentNumber', e.target.value);
+                            const apartmentNumber = e.target.value;
+                            formik.setFieldValue('apartmentNumber', apartmentNumber);
                             // Auto-fill block when apartment is selected
-                            const selectedApartment = availableApartments.find(apt => apt.number === e.target.value);
-                            if (selectedApartment) {
-                              formik.setFieldValue('block', selectedApartment.block);
-                              formik.setFieldValue('apartmentStatus', selectedApartment.status);
+                            if (apartmentNumber) {
+                              const selectedApartment = availableApartments.find(apt => apt.number === apartmentNumber);
+                              if (selectedApartment) {
+                                formik.setFieldValue('block', selectedApartment.block);
+                                formik.setFieldValue('apartmentStatus', selectedApartment.status);
+                              }
                             }
                           }}
                           onBlur={formik.handleBlur}
