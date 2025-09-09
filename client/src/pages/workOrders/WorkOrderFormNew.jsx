@@ -38,7 +38,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  FormControlLabel
+  FormControlLabel,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
