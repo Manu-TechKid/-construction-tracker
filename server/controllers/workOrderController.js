@@ -304,3 +304,118 @@ exports.deleteWorkOrder = async (req, res, next) => {
     });
   }
 };
+
+/**
+ * @desc    Get work order statistics for a building
+ * @route   GET /api/v1/work-orders/stats/:buildingId
+ * @access  Private
+ */
+exports.getWorkOrderStats = async (req, res, next) => {
+  try {
+    console.log('📊 Getting work order stats for building:', req.params.buildingId);
+    
+    const { buildingId } = req.params;
+    const { startDate, endDate } = req.query;
+
+    // Build query
+    const query = { 
+      building: buildingId,
+      isDeleted: { $ne: true }
+    };
+
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) query.createdAt.$lte = new Date(endDate);
+    }
+
+    // Get basic stats
+    const totalWorkOrders = await WorkOrder.countDocuments(query);
+    const pendingWorkOrders = await WorkOrder.countDocuments({ ...query, status: 'pending' });
+    const inProgressWorkOrders = await WorkOrder.countDocuments({ ...query, status: 'in-progress' });
+    const completedWorkOrders = await WorkOrder.countDocuments({ ...query, status: 'completed' });
+
+    // Get priority breakdown
+    const highPriorityCount = await WorkOrder.countDocuments({ ...query, priority: 'high' });
+    const mediumPriorityCount = await WorkOrder.countDocuments({ ...query, priority: 'medium' });
+    const lowPriorityCount = await WorkOrder.countDocuments({ ...query, priority: 'low' });
+
+    const stats = {
+      total: totalWorkOrders,
+      byStatus: {
+        pending: pendingWorkOrders,
+        inProgress: inProgressWorkOrders,
+        completed: completedWorkOrders
+      },
+      byPriority: {
+        high: highPriorityCount,
+        medium: mediumPriorityCount,
+        low: lowPriorityCount
+      },
+      completionRate: totalWorkOrders > 0 ? Math.round((completedWorkOrders / totalWorkOrders) * 100) : 0
+    };
+
+    return res.status(200).json({
+      status: 'success',
+      timestamp: new Date().toISOString(),
+      version: 'FINAL-FIX-2024-01-10',
+      data: stats
+    });
+    
+  } catch (error) {
+    console.error('❌ Error getting work order stats:', error);
+    
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to get work order statistics',
+      timestamp: new Date().toISOString(),
+      version: 'FINAL-FIX-2024-01-10',
+      error: error.message
+    });
+  }
+};
+
+// Placeholder functions for missing routes - will be implemented later
+exports.addTaskToChecklist = async (req, res) => {
+  res.status(501).json({ status: 'error', message: 'Not implemented yet', version: 'FINAL-FIX-2024-01-10' });
+};
+
+exports.updateTaskStatus = async (req, res) => {
+  res.status(501).json({ status: 'error', message: 'Not implemented yet', version: 'FINAL-FIX-2024-01-10' });
+};
+
+exports.reportIssue = async (req, res) => {
+  res.status(501).json({ status: 'error', message: 'Not implemented yet', version: 'FINAL-FIX-2024-01-10' });
+};
+
+exports.getWorkerAssignments = async (req, res) => {
+  res.status(501).json({ status: 'error', message: 'Not implemented yet', version: 'FINAL-FIX-2024-01-10' });
+};
+
+exports.updateAssignmentStatus = async (req, res) => {
+  res.status(501).json({ status: 'error', message: 'Not implemented yet', version: 'FINAL-FIX-2024-01-10' });
+};
+
+exports.assignWorkers = async (req, res) => {
+  res.status(501).json({ status: 'error', message: 'Not implemented yet', version: 'FINAL-FIX-2024-01-10' });
+};
+
+exports.getWorkOrderFormData = async (req, res) => {
+  res.status(501).json({ status: 'error', message: 'Not implemented yet', version: 'FINAL-FIX-2024-01-10' });
+};
+
+exports.addNoteToWorkOrder = async (req, res) => {
+  res.status(501).json({ status: 'error', message: 'Not implemented yet', version: 'FINAL-FIX-2024-01-10' });
+};
+
+exports.updateNoteInWorkOrder = async (req, res) => {
+  res.status(501).json({ status: 'error', message: 'Not implemented yet', version: 'FINAL-FIX-2024-01-10' });
+};
+
+exports.deleteNoteFromWorkOrder = async (req, res) => {
+  res.status(501).json({ status: 'error', message: 'Not implemented yet', version: 'FINAL-FIX-2024-01-10' });
+};
+
+exports.updateWorkOrderStatus = async (req, res) => {
+  res.status(501).json({ status: 'error', message: 'Not implemented yet', version: 'FINAL-FIX-2024-01-10' });
+};
