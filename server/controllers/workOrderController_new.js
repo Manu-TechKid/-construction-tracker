@@ -204,60 +204,6 @@ exports.getWorkOrder = async (req, res, next) => {
 };
 
 /**
- * @desc    Update work order
- * @route   PUT /api/v1/work-orders/:id
- * @access  Private/Admin/Manager
- */
-exports.updateWorkOrder = async (req, res, next) => {
-  try {
-    console.log('📝 Updating work order:', req.params.id);
-    
-    const workOrder = await WorkOrder.findById(req.params.id);
-    
-    if (!workOrder || workOrder.isDeleted) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Work order not found',
-        timestamp: new Date().toISOString(),
-        version: 'FINAL-FIX-2024-01-10'
-      });
-    }
-
-    // Update fields
-    const updateData = { ...req.body };
-    updateData.updatedBy = req.user._id;
-    updateData.updatedAt = new Date();
-
-    const updatedWorkOrder = await WorkOrder.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('building', 'name address')
-     .populate('createdBy', 'firstName lastName')
-     .populate('assignedTo.worker', 'firstName lastName');
-
-    return res.status(200).json({
-      status: 'success',
-      message: 'Work order updated successfully',
-      timestamp: new Date().toISOString(),
-      version: 'FINAL-FIX-2024-01-10',
-      data: updatedWorkOrder
-    });
-    
-  } catch (error) {
-    console.error('❌ Error updating work order:', error);
-    
-    return res.status(500).json({
-      status: 'error',
-      message: 'Failed to update work order',
-      timestamp: new Date().toISOString(),
-      version: 'FINAL-FIX-2024-01-10',
-      error: error.message
-    });
-  }
-};
-
-/**
  * @desc    Delete work order
  * @route   DELETE /api/v1/work-orders/:id
  * @access  Private/Admin/Manager
