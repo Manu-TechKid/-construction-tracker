@@ -126,14 +126,31 @@ const CreateWorkOrder = () => {
       try {
         console.log('Submitting work order:', values);
         
-        // Create the work order data
+        // Create the work order data with proper validation
         const workOrderData = {
-          ...values,
+          title: values.title,
+          description: values.description,
+          building: values.building,
+          apartmentNumber: values.apartmentNumber || '',
+          block: values.block || '',
+          apartmentStatus: values.apartmentStatus || 'occupied',
+          priority: values.priority || 'medium',
+          scheduledDate: values.scheduledDate ? values.scheduledDate.toISOString() : new Date().toISOString(),
+          estimatedCost: parseFloat(values.estimatedCost) || 0,
+          services: values.services && values.services.length > 0 ? values.services : [{
+            type: 'other',
+            description: 'General work',
+            laborCost: 0,
+            materialCost: 0,
+            status: 'pending'
+          }],
+          assignedTo: values.assignedTo || [],
+          notes: [],
           createdBy: user._id,
-          updatedBy: user._id,
-          // Backend expects simple array of worker IDs
-          assignedTo: values.assignedTo
+          updatedBy: user._id
         };
+
+        console.log('Processed work order data:', workOrderData);
 
         await createWorkOrder(workOrderData).unwrap();
         toast.success('Work order created successfully');

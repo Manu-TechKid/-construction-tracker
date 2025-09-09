@@ -239,6 +239,12 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
 
     console.log('Creating work order with data:', JSON.stringify(workOrderData, null, 2));
     
+    // Verify building exists before creating work order
+    const buildingExists = await Building.findById(building);
+    if (!buildingExists) {
+      return next(new AppError('Building not found', 404));
+    }
+    
     const workOrder = await WorkOrder.create(workOrderData);
 
     // Populate the work order with related data for the response
@@ -287,6 +293,26 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
   } catch (error) {
     console.error('=== WORK ORDER CREATION ERROR (OUTER) ===');
     console.error('Error details:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    
+    // Handle specific MongoDB errors
+    if (error.name === 'ValidationError') {
+      const fieldErrors = {};
+      Object.keys(error.errors).forEach(key => {
+        fieldErrors[key] = error.errors[key].message;
+      });
+      return next(new AppError('Validation failed', 400, { fieldErrors }));
+    }
+    
+    if (error.name === 'CastError') {
+      return next(new AppError('Invalid ID format', 400));
+    }
+    
+    if (error.code === 11000) {
+      return next(new AppError('Duplicate field value', 400));
+    }
     console.error('Error stack:', error);
     handleWorkOrderError(error, next);
   }
