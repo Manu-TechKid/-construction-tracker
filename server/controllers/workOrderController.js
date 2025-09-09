@@ -53,7 +53,38 @@ exports.createWorkOrder = async (req, res, next) => {
       });
     }
 
-    // Create minimal work order data
+    console.log('✅ Building found:', buildingDoc.name);
+
+    // Parse services and assignedTo if provided
+    let parsedServices = [];
+    let parsedAssignedTo = [];
+    
+    try {
+      if (req.body.services) {
+        parsedServices = typeof req.body.services === 'string' 
+          ? JSON.parse(req.body.services) 
+          : req.body.services;
+      }
+      
+      if (req.body.assignedTo) {
+        const rawAssignedTo = typeof req.body.assignedTo === 'string' 
+          ? JSON.parse(req.body.assignedTo) 
+          : req.body.assignedTo;
+        
+        // Transform assignedTo to match schema
+        parsedAssignedTo = Array.isArray(rawAssignedTo) 
+          ? rawAssignedTo.map(item => ({
+              worker: typeof item === 'string' ? item : item.worker,
+              assignedBy: req.user._id,
+              status: 'pending'
+            }))
+          : [];
+      }
+    } catch (parseError) {
+      console.log('⚠️ Error parsing JSON fields:', parseError);
+    }
+
+    // Create work order data with all fields
     const workOrderData = {
       title: title.trim(),
       description: description || 'Work order created',
@@ -63,16 +94,17 @@ exports.createWorkOrder = async (req, res, next) => {
       apartmentStatus: req.body.apartmentStatus || 'occupied',
       priority: req.body.priority || 'medium',
       status: 'pending',
-      scheduledDate: new Date(),
-      estimatedCost: 0,
-      services: [{
+      scheduledDate: req.body.scheduledDate ? new Date(req.body.scheduledDate) : new Date(),
+      estimatedCompletionDate: req.body.estimatedCompletionDate ? new Date(req.body.estimatedCompletionDate) : null,
+      estimatedCost: parseFloat(req.body.estimatedCost) || 0,
+      services: parsedServices.length > 0 ? parsedServices : [{
         type: 'other',
         description: 'General maintenance',
         laborCost: 0,
         materialCost: 0,
         status: 'pending'
       }],
-      assignedTo: [],
+      assignedTo: parsedAssignedTo,
       notes: [],
       photos: [],
       createdBy: req.user._id,
@@ -144,7 +176,9 @@ exports.getAllWorkOrders = async (req, res, next) => {
       results: workOrders.length,
       timestamp: new Date().toISOString(),
       version: 'FINAL-FIX-2024-01-10',
-      data: workOrders
+      data: {
+        workOrders: workOrders
+      }
     });
     
   } catch (error) {
