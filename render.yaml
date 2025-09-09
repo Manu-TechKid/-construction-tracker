@@ -3,11 +3,12 @@ services:
     name: construction-tracker
     env: node
     plan: starter
-    nodeVersion: 20.9.0
+    nodeVersion: 18.18.0
     buildCommand: npm install && npm run build
     startCommand: npm start
+    healthCheckPath: /api/v1/health
     envVars:
       - key: NODE_ENV
         value: production
-      - key: NODE_OPTIONS
-        value: --openssl-legacy-provider
+      - key: PORT
+        value: 10000
