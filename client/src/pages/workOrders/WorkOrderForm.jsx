@@ -33,6 +33,8 @@ import {
   Add as AddIcon,
   Delete as DeleteIcon,
   Save as SaveIcon,
+  CloudUpload as CloudUploadIcon,
+  PhotoCamera as PhotoCameraIcon,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -82,19 +84,20 @@ const validationSchema = Yup.object({
   estimatedCompletionDate: Yup.date(),
   estimatedCost: Yup.number()
     .min(0, 'Estimated cost cannot be negative'),
-  services: Yup.array().of(
-    Yup.object({
-      type: Yup.string()
-        .oneOf(SERVICE_TYPES, 'Invalid service type')
-        .required('Service type is required'),
-      description: Yup.string()
-        .required('Service description is required'),
-      laborCost: Yup.number()
-        .min(0, 'Labor cost cannot be negative'),
-      materialCost: Yup.number()
-        .min(0, 'Material cost cannot be negative'),
-    })
-  ),
+      services: Yup.array().of(
+        Yup.object({
+          type: Yup.string()
+            .oneOf(SERVICE_TYPES, 'Invalid service type')
+            .required('Service type is required'),
+          description: Yup.string()
+            .required('Service description is required'),
+          laborCost: Yup.number()
+            .min(0, 'Labor cost cannot be negative'),
+          materialCost: Yup.number()
+            .min(0, 'Material cost cannot be negative'),
+        })
+      ),
+      photos: Yup.array(),
   assignedTo: Yup.array().of(
     Yup.object({
       worker: Yup.string().required('Worker is required'),
@@ -120,6 +123,10 @@ const WorkOrderForm = () => {
 
   const buildings = buildingsData?.data?.buildings || [];
   const workers = workersData?.data?.workers || [];
+  
+  // Get apartments for selected building
+  const selectedBuilding = buildings.find(b => b._id === formik.values.building);
+  const availableApartments = selectedBuilding?.apartments || [];
 
   const formik = useFormik({
     initialValues: {
@@ -135,22 +142,41 @@ const WorkOrderForm = () => {
       estimatedCost: 0,
       services: [],
       assignedTo: [],
+      photos: [],
     },
     validationSchema,
     onSubmit: async (values) => {
       try {
-        const workOrderData = {
-          ...values,
-          createdBy: user._id,
-          updatedBy: user._id,
-        };
+        // Create FormData for file uploads
+        const formData = new FormData();
+        
+        // Add all form fields
+        Object.keys(values).forEach(key => {
+          if (key === 'photos') {
+            // Handle photos separately
+            values.photos.forEach((photo, index) => {
+              if (photo.file) {
+                formData.append('photos', photo.file);
+              }
+            });
+          } else if (key === 'services' || key === 'assignedTo') {
+            // Handle arrays
+            formData.append(key, JSON.stringify(values[key]));
+          } else if (values[key] !== null && values[key] !== undefined) {
+            formData.append(key, values[key]);
+          }
+        });
+        
+        // Add user info
+        formData.append('createdBy', user._id);
+        formData.append('updatedBy', user._id);
 
         if (isEdit && id) {
-          await updateWorkOrder({ id, formData: workOrderData }).unwrap();
+          await updateWorkOrder({ id, formData }).unwrap();
           toast.success('Work order updated successfully');
           navigate(`/work-orders/${id}/details`);
         } else {
-          const result = await createWorkOrder(workOrderData).unwrap();
+          const result = await createWorkOrder(formData).unwrap();
           toast.success('Work order created successfully');
           navigate(`/work-orders/${result.data._id}/details`);
         }
@@ -227,6 +253,22 @@ const WorkOrderForm = () => {
     const newAssignedTo = [...formik.values.assignedTo];
     newAssignedTo[index] = { ...newAssignedTo[index], [field]: value };
     formik.setFieldValue('assignedTo', newAssignedTo);
+  };
+
+  const handlePhotoUpload = (event) => {
+    const files = Array.from(event.target.files);
+    const newPhotos = files.map(file => ({
+      file,
+      preview: URL.createObjectURL(file),
+      name: file.name,
+      size: file.size
+    }));
+    formik.setFieldValue('photos', [...formik.values.photos, ...newPhotos]);
+  };
+
+  const removePhoto = (index) => {
+    const newPhotos = formik.values.photos.filter((_, i) => i !== index);
+    formik.setFieldValue('photos', newPhotos);
   };
 
   const isLoading = isLoadingWorkOrder || isLoadingBuildings || isLoadingWorkers;
@@ -316,16 +358,35 @@ const WorkOrderForm = () => {
 
                   <Grid container spacing={2} sx={{ mt: 1 }}>
                     <Grid item xs={6}>
-                      <TextField
-                        fullWidth
-                        name="apartmentNumber"
-                        label="Apartment Number"
-                        value={formik.values.apartmentNumber}
-                        onChange={formik.handleChange}
-                        onBlur={formik.handleBlur}
-                        error={formik.touched.apartmentNumber && Boolean(formik.errors.apartmentNumber)}
-                        helperText={formik.touched.apartmentNumber && formik.errors.apartmentNumber}
-                      />
+                      <FormControl fullWidth>
+                        <InputLabel>Apartment Number</InputLabel>
+                        <Select
+                          name="apartmentNumber"
+                          value={formik.values.apartmentNumber}
+                          onChange={(e) => {
+                            formik.setFieldValue('apartmentNumber', e.target.value);
+                            // Auto-fill block when apartment is selected
+                            const selectedApartment = availableApartments.find(apt => apt.number === e.target.value);
+                            if (selectedApartment) {
+                              formik.setFieldValue('block', selectedApartment.block);
+                              formik.setFieldValue('apartmentStatus', selectedApartment.status);
+                            }
+                          }}
+                          onBlur={formik.handleBlur}
+                          label="Apartment Number"
+                          disabled={!formik.values.building}
+                        >
+                          <MenuItem value="">Select Apartment</MenuItem>
+                          {availableApartments.map((apartment) => (
+                            <MenuItem key={apartment._id} value={apartment.number}>
+                              {apartment.number} - Block {apartment.block} - Floor {apartment.floor}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                        <FormHelperText>
+                          {!formik.values.building ? 'Select a building first' : 'Choose from available apartments'}
+                        </FormHelperText>
+                      </FormControl>
                     </Grid>
                     <Grid item xs={6}>
                       <TextField
@@ -337,6 +398,7 @@ const WorkOrderForm = () => {
                         onBlur={formik.handleBlur}
                         error={formik.touched.block && Boolean(formik.errors.block)}
                         helperText={formik.touched.block && formik.errors.block}
+                        disabled={true} // Auto-filled from apartment selection
                       />
                     </Grid>
                   </Grid>
@@ -596,6 +658,98 @@ const WorkOrderForm = () => {
                         </TableBody>
                       </Table>
                     </TableContainer>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* Photo Upload */}
+            <Grid item xs={12}>
+              <Card>
+                <CardHeader 
+                  title="Photos"
+                  action={
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      startIcon={<PhotoCameraIcon />}
+                    >
+                      Upload Photos
+                      <input
+                        type="file"
+                        hidden
+                        multiple
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                      />
+                    </Button>
+                  }
+                />
+                <CardContent>
+                  {formik.values.photos.length === 0 ? (
+                    <Box 
+                      sx={{ 
+                        border: '2px dashed #ccc', 
+                        borderRadius: 2, 
+                        p: 4, 
+                        textAlign: 'center',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => document.querySelector('input[type="file"]').click()}
+                    >
+                      <CloudUploadIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                      <Typography variant="h6" color="text.secondary" gutterBottom>
+                        Upload Photos
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Click here or use the button above to upload photos
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Grid container spacing={2}>
+                      {formik.values.photos.map((photo, index) => (
+                        <Grid item xs={12} sm={6} md={4} key={index}>
+                          <Card>
+                            <Box sx={{ position: 'relative' }}>
+                              <img
+                                src={photo.preview}
+                                alt={photo.name}
+                                style={{
+                                  width: '100%',
+                                  height: 200,
+                                  objectFit: 'cover',
+                                  borderRadius: '4px 4px 0 0'
+                                }}
+                              />
+                              <IconButton
+                                sx={{
+                                  position: 'absolute',
+                                  top: 8,
+                                  right: 8,
+                                  bgcolor: 'rgba(0,0,0,0.5)',
+                                  color: 'white',
+                                  '&:hover': {
+                                    bgcolor: 'rgba(0,0,0,0.7)',
+                                  }
+                                }}
+                                size="small"
+                                onClick={() => removePhoto(index)}
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            </Box>
+                            <CardContent sx={{ p: 1 }}>
+                              <Typography variant="caption" noWrap>
+                                {photo.name}
+                              </Typography>
+                              <Typography variant="caption" display="block" color="text.secondary">
+                                {(photo.size / 1024 / 1024).toFixed(2)} MB
+                              </Typography>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      ))}
+                    </Grid>
                   )}
                 </CardContent>
               </Card>

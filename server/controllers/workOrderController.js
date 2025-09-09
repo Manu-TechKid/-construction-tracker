@@ -15,7 +15,8 @@ const { sendWorkOrderAssignedEmail } = require('../services/emailService');
 exports.createWorkOrder = catchAsync(async (req, res, next) => {
   try {
     console.log('=== CREATE WORK ORDER START ===');
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('Request body:', req.body);
+    console.log('Request files:', req.files);
     console.log('Request user:', req.user ? { id: req.user._id, role: req.user.role } : 'No user');
     
     // Check if user is authenticated
@@ -37,18 +38,45 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       status = 'pending',
       scheduledDate,
       estimatedCompletionDate,
+      estimatedCost = 0,
       assignedTo = [],
-      services = [{
-        type: 'other',
-        description: '',
-        laborCost: 0,
-        materialCost: 0,
-        estimatedHours: 1,
-        status: 'pending'
-      }],
+      services = [],
       notes = []
     } = req.body;
+
+    // Parse JSON strings for arrays
+    let parsedAssignedTo = [];
+    let parsedServices = [];
     
+    try {
+      parsedAssignedTo = assignedTo ? (typeof assignedTo === 'string' ? JSON.parse(assignedTo) : assignedTo) : [];
+      parsedServices = services ? (typeof services === 'string' ? JSON.parse(services) : services) : [];
+    } catch (parseError) {
+      console.log('Error parsing JSON arrays:', parseError);
+      parsedAssignedTo = [];
+      parsedServices = [];
+    }
+    
+    // Handle photo uploads
+    let uploadedPhotos = [];
+    if (req.files && req.files.photos) {
+      try {
+        const photos = Array.isArray(req.files.photos) ? req.files.photos : [req.files.photos];
+        for (const photo of photos) {
+          const result = await uploadToCloudinary(photo.tempFilePath);
+          uploadedPhotos.push({
+            url: result.secure_url,
+            publicId: result.public_id,
+            uploadedBy: req.user._id,
+            uploadedAt: new Date()
+          });
+        }
+      } catch (uploadError) {
+        console.log('Photo upload error:', uploadError);
+        // Continue without photos if upload fails
+      }
+    }
+
     // Set default scheduledDate if not provided - handle date parsing more safely
     let workOrderScheduledDate;
     try {
@@ -204,6 +232,7 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       services: processedServices,
       photos,
       notes: processedNotes, // Use processedNotes instead of raw notes
+      estimatedCost: parseFloat(estimatedCost) || 0,
       createdBy,
       updatedBy: createdBy
     };

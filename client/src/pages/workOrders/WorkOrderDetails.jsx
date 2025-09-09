@@ -383,6 +383,38 @@ const WorkOrderDetails = () => {
             </Card>
           )}
           
+          {/* Photos */}
+          {workOrder.photos && workOrder.photos.length > 0 && (
+            <Card sx={{ mb: 3 }}>
+              <CardHeader title="Photos" />
+              <CardContent>
+                <Grid container spacing={2}>
+                  {workOrder.photos.map((photo, index) => (
+                    <Grid item xs={12} sm={6} md={4} key={index}>
+                      <Card>
+                        <img
+                          src={photo.url}
+                          alt={`Work order photo ${index + 1}`}
+                          style={{
+                            width: '100%',
+                            height: 200,
+                            objectFit: 'cover',
+                            borderRadius: '4px 4px 0 0'
+                          }}
+                        />
+                        <CardContent sx={{ p: 1 }}>
+                          <Typography variant="caption" color="textSecondary">
+                            Uploaded: {photo.uploadedAt ? format(new Date(photo.uploadedAt), 'MMM dd, yyyy') : 'N/A'}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Notes */}
           {workOrder.notes && workOrder.notes.length > 0 && (
             <Card>
