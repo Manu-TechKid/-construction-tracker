@@ -126,10 +126,10 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
       return next(new AppError('Invalid building ID format', 400, { fieldErrors }));
     }
 
-    // Validate services array - make it optional
+    // Validate services array - use parsed services
     let processedServices = [];
-    if (services && Array.isArray(services) && services.length > 0) {
-      processedServices = services.map(service => ({
+    if (parsedServices && Array.isArray(parsedServices) && parsedServices.length > 0) {
+      processedServices = parsedServices.map(service => ({
         type: service.type || 'other',
         description: service.description || '',
         laborCost: parseFloat(service.laborCost) || 0,
@@ -164,8 +164,8 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
 
     // Process assigned workers - convert to proper format
     let processedAssignedTo = [];
-    if (Array.isArray(assignedTo) && assignedTo.length > 0) {
-      for (const workerId of assignedTo) {
+    if (Array.isArray(parsedAssignedTo) && parsedAssignedTo.length > 0) {
+      for (const workerId of parsedAssignedTo) {
         try {
           // Handle both string IDs and objects
           const id = typeof workerId === 'string' ? workerId : workerId.worker || workerId._id;

@@ -131,13 +131,8 @@ const CreateWorkOrder = () => {
           ...values,
           createdBy: user._id,
           updatedBy: user._id,
-          // Convert assignedTo to the format expected by backend
-          assignedTo: values.assignedTo.map(workerId => ({
-            worker: workerId,
-            assignedBy: user._id,
-            status: 'pending',
-            assignedAt: new Date()
-          }))
+          // Backend expects simple array of worker IDs
+          assignedTo: values.assignedTo
         };
 
         await createWorkOrder(workOrderData).unwrap();
