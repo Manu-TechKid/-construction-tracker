@@ -72,17 +72,8 @@ const CreateInvoice = () => {
         const total = subtotal + (values.tax || 0);
 
         const invoiceData = {
-          building: values.building,
-          workOrders: values.workOrders.map(wo => ({
-            workOrder: wo.workOrder,
-            description: wo.description,
-            quantity: wo.quantity,
-            unitPrice: wo.unitPrice,
-            totalPrice: wo.totalPrice,
-          })),
-          subtotal,
-          tax: values.tax,
-          total,
+          buildingId: values.building,
+          workOrderIds: values.workOrders.map(wo => wo.workOrder).filter(id => id),
           dueDate: values.dueDate,
           notes: values.notes,
         };
@@ -317,7 +308,7 @@ const CreateInvoice = () => {
                                     <MenuItem value="">Select Work Order</MenuItem>
                                     {availableWorkOrders.map((wo) => (
                                       <MenuItem key={wo._id} value={wo._id}>
-                                        {wo.title || `${wo.workType} - ${wo.workSubType}`}
+                                        {wo.title || 'Work Order'}
                                       </MenuItem>
                                     ))}
                                   </Select>

@@ -289,6 +289,12 @@ const workOrderSchema = new mongoose.Schema({
   deletedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
+  },
+  // Billing status for invoice generation
+  billingStatus: {
+    type: String,
+    enum: ['pending', 'invoiced', 'paid'],
+    default: 'pending'
   }
 }, {
   timestamps: true,

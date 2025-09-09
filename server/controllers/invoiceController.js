@@ -7,7 +7,7 @@ const catchAsync = require('../utils/catchAsync');
 exports.getAllInvoices = catchAsync(async (req, res, next) => {
     const invoices = await Invoice.find()
         .populate('building', 'name address')
-        .populate('workOrders.workOrder', 'workType workSubType description status')
+        .populate('workOrders.workOrder', 'title description apartmentNumber status')
         .sort('-createdAt');
 
     res.status(200).json({
@@ -23,7 +23,7 @@ exports.getAllInvoices = catchAsync(async (req, res, next) => {
 exports.getInvoice = catchAsync(async (req, res, next) => {
     const invoice = await Invoice.findById(req.params.id)
         .populate('building', 'name address')
-        .populate('workOrders.workOrder', 'workType workSubType description status apartmentNumber');
+        .populate('workOrders.workOrder', 'title description apartmentNumber status');
 
     if (!invoice) {
         return next(new AppError('No invoice found with that ID', 404));
@@ -47,7 +47,7 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
         building: buildingId,
         status: 'completed',
         billingStatus: 'pending'
-    });
+    }).populate('building', 'name address');
 
     if (workOrders.length === 0) {
         return next(new AppError('No eligible work orders found for invoicing', 400));
@@ -56,12 +56,15 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
     // Calculate totals
     let subtotal = 0;
     const invoiceWorkOrders = workOrders.map(wo => {
-        const totalPrice = wo.totalCost || (wo.laborCost + wo.materialsCost) || 0;
+        // Calculate total cost from services
+        const totalPrice = wo.services?.reduce((sum, service) => {
+            return sum + (service.laborCost || 0) + (service.materialCost || 0);
+        }, 0) || 0;
         subtotal += totalPrice;
         
         return {
             workOrder: wo._id,
-            description: `${wo.workType} - ${wo.workSubType} (Apt: ${wo.apartmentNumber})`,
+            description: `${wo.title || 'Work Order'} (Apt: ${wo.apartmentNumber || 'N/A'})`,
             quantity: 1,
             unitPrice: totalPrice,
             totalPrice: totalPrice
@@ -91,7 +94,7 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
 
     const populatedInvoice = await Invoice.findById(invoice._id)
         .populate('building', 'name address')
-        .populate('workOrders.workOrder', 'workType workSubType description');
+        .populate('workOrders.workOrder', 'title description apartmentNumber');
 
     res.status(201).json({
         status: 'success',
@@ -111,7 +114,7 @@ exports.updateInvoice = catchAsync(async (req, res, next) => {
             runValidators: true
         }
     ).populate('building', 'name address')
-     .populate('workOrders.workOrder', 'workType workSubType description');
+     .populate('workOrders.workOrder', 'title description apartmentNumber');
 
     if (!invoice) {
         return next(new AppError('No invoice found with that ID', 404));

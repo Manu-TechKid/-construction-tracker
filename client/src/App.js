@@ -31,16 +31,17 @@ import BuildingDetails from './pages/buildings/BuildingDetails';
 import CreateBuilding from './pages/buildings/CreateBuilding';
 import BuildingEdit from './pages/buildings/BuildingEdit';
 import WorkOrders from './pages/workOrders/WorkOrders';
-import WorkOrderFormNew from './pages/workOrders/WorkOrderFormNew';
-import WorkOrderDetailsNew from './pages/workOrders/WorkOrderDetailsNew';
+import WorkOrderForm from './pages/workOrders/WorkOrderForm';
+import WorkOrderDetails from './pages/workOrders/WorkOrderDetails';
 import WorkProgress from './pages/workOrders/WorkProgress';
-import TestWorkOrderForm from './pages/workOrders/TestWorkOrderForm';
 import Workers from './pages/workers/Workers';
 import CreateWorker from './pages/workers/CreateWorker';
 import Reminders from './pages/reminders/Reminders';
 import CreateReminder from './pages/reminders/CreateReminder';
 import Invoices from './pages/invoices/Invoices';
 import CreateInvoice from './pages/invoices/CreateInvoice';
+import InvoiceDetails from './pages/invoices/InvoiceDetails';
+import EditInvoice from './pages/invoices/EditInvoice';
 import Profile from './pages/profile/Profile';
 import Settings from './pages/settings/Settings';
 
@@ -186,7 +187,7 @@ const AppContent = () => {
                 path="work-orders/new" 
                 element={
                   <RoleBasedRoute requiredPermissions={['create:workorders']}>
-                    <WorkOrderFormNew />
+                    <WorkOrderForm />
                   </RoleBasedRoute>
                 } 
               />
@@ -194,7 +195,7 @@ const AppContent = () => {
                 path="work-orders/:id/edit" 
                 element={
                   <RoleBasedRoute requiredPermissions={['update:workorders']}>
-                    <WorkOrderFormNew isEdit={true} />
+                    <WorkOrderForm />
                   </RoleBasedRoute>
                 } 
               />
@@ -202,7 +203,7 @@ const AppContent = () => {
                 path="work-orders/:id/details" 
                 element={
                   <RoleBasedRoute requiredPermissions={['read:workorders']}>
-                    <WorkOrderDetailsNew />
+                    <WorkOrderDetails />
                   </RoleBasedRoute>
                 } 
               />
@@ -211,14 +212,6 @@ const AppContent = () => {
                 element={
                   <RoleBasedRoute requiredPermissions={['read:workorders']}>
                     <WorkProgress />
-                  </RoleBasedRoute>
-                } 
-              />
-              <Route 
-                path="work-orders/test" 
-                element={
-                  <RoleBasedRoute requiredPermissions={['create:workorders']}>
-                    <TestWorkOrderForm />
                   </RoleBasedRoute>
                 } 
               />
@@ -263,6 +256,22 @@ const AppContent = () => {
                 element={
                   <RoleBasedRoute requiredPermissions={['create:invoices']}>
                     <CreateInvoice />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="invoices/:id" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['read:invoices']}>
+                    <InvoiceDetails />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="invoices/:id/edit" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['update:invoices']}>
+                    <EditInvoice />
                   </RoleBasedRoute>
                 } 
               />
