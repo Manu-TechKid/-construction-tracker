@@ -120,7 +120,6 @@ const WorkOrderDetailsNew = () => {
         id,
         note: {
           content: newNote,
-          createdBy: user._id,
           isPrivate: false
         }
       }).unwrap();

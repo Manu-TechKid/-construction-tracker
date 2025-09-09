@@ -334,7 +334,7 @@ const WorkOrders = () => {
                         <Button
                           variant="contained"
                           startIcon={<AddIcon />}
-                          onClick={() => navigate('/work-orders/create')}
+                          onClick={() => navigate('/work-orders/new')}
                           sx={{ mt: 2 }}
                         >
                           Create Your First Work Order

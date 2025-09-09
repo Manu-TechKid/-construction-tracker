@@ -272,17 +272,21 @@ const WorkOrderFormNew = ({ isEdit = false }) => {
             size: photo.size || 0,
             uploadedBy: user._id,
             uploadedAt: new Date().toISOString()
-          }))
+          })),
+          // Ensure arrays are properly formatted
+          assignedTo: Array.isArray(values.assignedTo) ? values.assignedTo : [],
+          services: Array.isArray(values.services) ? values.services : [],
+          notes: Array.isArray(values.notes) ? values.notes : []
         };
         
         if (isEdit && id) {
           await updateWorkOrder({ id, ...workOrderData }).unwrap();
           toast.success('Work order updated successfully');
-          navigate(`/work-orders/${id}`);
+          navigate(`/work-orders/${id}/details`);
         } else {
           const result = await createWorkOrder(workOrderData).unwrap();
           toast.success('Work order created successfully');
-          navigate(`/work-orders/${result.data._id}`);
+          navigate(`/work-orders/${result.data._id}/details`);
         }
       } catch (error) {
         console.error('Error saving work order:', error);

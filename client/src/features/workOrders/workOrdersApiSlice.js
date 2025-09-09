@@ -171,33 +171,6 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
         'WorkOrder',
       ],
     }),
-    deleteWorkOrder: builder.mutation({
-      query: (id) => {
-        console.log('Preparing DELETE request for work order:', id);
-        return {
-          url: `/work-orders/${id}`,
-          method: 'DELETE'
-        };
-      },
-      async onQueryStarted(arg, { queryFulfilled, dispatch }) {
-        console.log('Starting delete work order query for ID:', arg);
-        try {
-          const { data } = await queryFulfilled;
-          console.log('Delete work order successful:', data);
-        } catch (error) {
-          console.error('Delete work order failed:', {
-            status: error.error?.status,
-            data: error.error?.data,
-            message: error.error?.data?.message || error.message
-          });
-        }
-      },
-      invalidatesTags: (result, error, id) => [
-        { type: 'WorkOrder', id },
-        'WorkOrder',
-        'WorkOrderList'
-      ],
-    }),
     assignWorkers: builder.mutation({
       query: ({ id, workers, scheduledDate }) => ({
         url: `/work-orders/${id}/assign`,
@@ -255,7 +228,7 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
     }),
     updateWorkOrderStatus: builder.mutation({
       query: ({ id, status }) => ({
-        url: `/work-orders/${id}/status`,
+        url: `/work-orders/${id}`,
         method: 'PATCH',
         body: { status },
       }),

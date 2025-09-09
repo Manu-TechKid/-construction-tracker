@@ -1123,6 +1123,67 @@ exports.getWorkOrderStats = catchAsync(async (req, res, next) => {
   }
 });
 
+// Update work order status
+exports.updateWorkOrderStatus = catchAsync(async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    
+    if (!status) {
+      return next(new AppError('Status is required', 400));
+    }
+    
+    const validStatuses = ['pending', 'in_progress', 'on_hold', 'completed', 'cancelled', 'pending_review', 'issue_reported'];
+    if (!validStatuses.includes(status)) {
+      return next(new AppError('Invalid status value', 400));
+    }
+    
+    const workOrder = await WorkOrder.findById(req.params.id);
+    
+    if (!workOrder) {
+      return next(new AppError('No work order found with that ID', 404));
+    }
+    
+    // Check permissions
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'manager';
+    const isSupervisor = req.user.role === 'supervisor';
+    const isAssigned = workOrder.assignedTo.some(
+      assignment => assignment.worker.toString() === req.user._id.toString()
+    );
+    
+    if (!isAdmin && !isSupervisor && !isAssigned) {
+      return next(new AppError('You do not have permission to update this work order status', 403));
+    }
+    
+    // Update the status
+    workOrder.status = status;
+    workOrder.updatedBy = req.user._id;
+    
+    // Set completion date if status is completed
+    if (status === 'completed' && !workOrder.completedAt) {
+      workOrder.completedAt = new Date();
+      workOrder.completedBy = req.user._id;
+    }
+    
+    await workOrder.save();
+    
+    // Populate the updated work order
+    const updatedWorkOrder = await WorkOrder.findById(workOrder._id)
+      .populate('building', 'name address')
+      .populate('assignedTo.worker', 'name email')
+      .populate('createdBy', 'name email')
+      .populate('updatedBy', 'name email');
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        workOrder: updatedWorkOrder
+      }
+    });
+  } catch (error) {
+    handleWorkOrderError(error, next);
+  }
+});
+
 // Helper function to handle common error cases
 const handleWorkOrderError = (error, next) => {
   console.error('Work Order Error:', {

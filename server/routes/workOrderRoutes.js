@@ -542,6 +542,21 @@ router.delete(
   workOrderController.deleteNoteFromWorkOrder
 );
 
+/**
+ * @route   PATCH /api/v1/work-orders/:id/status
+ * @desc    Update work order status
+ * @access  Private (admin, manager, supervisor, assigned worker)
+ */
+router.patch(
+  '/:id/status',
+  [
+    param('id').isMongoId(),
+    body('status').isIn(['pending', 'in_progress', 'on_hold', 'completed', 'cancelled', 'pending_review', 'issue_reported']),
+    validateRequest
+  ],
+  workOrderController.updateWorkOrderStatus
+);
+
 // ======================
 // EXPORT ROUTER
 // ======================
