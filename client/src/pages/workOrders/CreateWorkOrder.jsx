@@ -126,44 +126,51 @@ const CreateWorkOrder = () => {
       try {
         console.log('Submitting work order:', values);
         
-        // Create the work order data with proper validation
-        const workOrderData = {
-          title: values.title,
-          description: values.description,
-          building: values.building,
-          apartmentNumber: values.apartmentNumber || '',
-          block: values.block || '',
-          apartmentStatus: values.apartmentStatus || 'occupied',
-          priority: values.priority || 'medium',
-          scheduledDate: values.scheduledDate ? values.scheduledDate.toISOString() : new Date().toISOString(),
-          estimatedCost: parseFloat(values.estimatedCost) || 0,
-          services: values.services && values.services.length > 0 ? values.services.map(service => ({
-            type: service.type || 'other',
-            description: service.description || 'General work',
-            laborCost: parseFloat(service.laborCost) || 0,
-            materialCost: parseFloat(service.materialCost) || 0,
-            status: service.status || 'pending'
-          })) : [{
-            type: 'other',
-            description: 'General work',
-            laborCost: 0,
-            materialCost: 0,
-            status: 'pending'
-          }],
-          // Transform assignedTo array to match WorkOrder model structure
-          assignedTo: values.assignedTo && values.assignedTo.length > 0 ? values.assignedTo.map(workerId => ({
-            worker: workerId,
-            assignedBy: user._id,
-            status: 'pending'
-          })) : [],
-          notes: [],
-          createdBy: user._id,
-          updatedBy: user._id
-        };
+        // Create FormData for backend compatibility (matches WorkOrderForm pattern)
+        const formData = new FormData();
+        
+        // Add basic fields
+        formData.append('title', values.title);
+        formData.append('description', values.description || 'Work order created');
+        formData.append('building', values.building);
+        formData.append('apartmentNumber', values.apartmentNumber || '');
+        formData.append('block', values.block || '');
+        formData.append('apartmentStatus', values.apartmentStatus || 'occupied');
+        formData.append('priority', values.priority || 'medium');
+        formData.append('scheduledDate', values.scheduledDate ? values.scheduledDate.toISOString() : new Date().toISOString());
+        formData.append('estimatedCost', parseFloat(values.estimatedCost) || 0);
+        
+        // Add services as JSON string (backend expects this format)
+        const processedServices = values.services && values.services.length > 0 ? values.services.map(service => ({
+          type: service.type || 'other',
+          description: service.description || 'General work',
+          laborCost: parseFloat(service.laborCost) || 0,
+          materialCost: parseFloat(service.materialCost) || 0,
+          status: service.status || 'pending'
+        })) : [{
+          type: 'other',
+          description: 'General work',
+          laborCost: 0,
+          materialCost: 0,
+          status: 'pending'
+        }];
+        formData.append('services', JSON.stringify(processedServices));
+        
+        // Add assignedTo as JSON string (backend expects this format)
+        const processedAssignedTo = values.assignedTo && values.assignedTo.length > 0 ? values.assignedTo.map(workerId => ({
+          worker: workerId,
+          assignedBy: user._id,
+          status: 'pending'
+        })) : [];
+        formData.append('assignedTo', JSON.stringify(processedAssignedTo));
+        
+        // Add user fields
+        formData.append('createdBy', user._id);
+        formData.append('updatedBy', user._id);
 
-        console.log('Processed work order data:', workOrderData);
+        console.log('Processed work order FormData for backend');
 
-        await createWorkOrder(workOrderData).unwrap();
+        await createWorkOrder(formData).unwrap();
         toast.success('Work order created successfully');
         navigate('/work-orders');
       } catch (error) {
