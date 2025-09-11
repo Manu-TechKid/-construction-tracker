@@ -53,7 +53,6 @@ import {
   useGetBuildingQuery,
   useDeleteApartmentMutation 
 } from '../../features/buildings/buildingsApiSlice';
-import { useGetWorkOrdersQuery } from '../../features/workOrders/workOrdersApiSlice';
 import { formatDate } from '../../utils/dateUtils';
 import RemindersTab from './RemindersTab';
 
@@ -431,146 +430,6 @@ const ApartmentsTab = ({ building }) => {
   );
 };
 
-const WorkOrdersTab = ({ buildingId }) => {
-  const theme = useTheme();
-  const navigate = useNavigate();
-  const { data: workOrdersData, isLoading } = useGetWorkOrdersQuery({
-    building: buildingId,
-    limit: 5,
-    sort: '-createdAt',
-  });
-  
-  const workOrders = workOrdersData?.data || [];
-  
-  const handleCreateWorkOrder = () => {
-    navigate(`/work-orders/create?building=${buildingId}`);
-  };
-  
-  const columns = [
-    { 
-      field: 'title', 
-      headerName: 'Work Order', 
-      flex: 1,
-      renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <WorkIcon sx={{ mr: 1, color: 'primary.main' }} />
-          <Box>
-            <Typography variant="body2">{params.value}</Typography>
-            <Typography variant="caption" color="text.secondary">
-              #{params.row.workOrderNumber || params.row._id.slice(-6)}
-            </Typography>
-          </Box>
-        </Box>
-      ),
-    },
-    { 
-      field: 'status', 
-      headerName: 'Status', 
-      width: 130,
-      renderCell: (params) => {
-        const statusMap = {
-          completed: { label: 'Completed', color: 'success' },
-          in_progress: { label: 'In Progress', color: 'warning' },
-          pending: { label: 'Pending', color: 'error' },
-          on_hold: { label: 'On Hold', color: 'info' },
-        };
-        
-        const statusConfig = statusMap[params.value] || { label: params.value, color: 'default' };
-        
-        return (
-          <Chip
-            label={statusConfig.label}
-            color={statusConfig.color}
-            size="small"
-            variant="outlined"
-            sx={{ textTransform: 'capitalize' }}
-          />
-        );
-      },
-    },
-    { 
-      field: 'priority', 
-      headerName: 'Priority', 
-      width: 100,
-      renderCell: (params) => (
-        <Chip 
-          label={params.value} 
-          size="small" 
-          color={
-            params.value === 'high' ? 'error' : 
-            params.value === 'medium' ? 'warning' : 'default'
-          }
-          variant="outlined"
-          sx={{ textTransform: 'capitalize' }}
-        />
-      ),
-    },
-    { 
-      field: 'dueDate', 
-      headerName: 'Due Date', 
-      width: 150,
-      valueFormatter: (params) => formatDate(params.value, 'short'),
-    },
-  ];
-
-  return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6">Recent Work Orders</Typography>
-        <Button
-          variant="contained"
-          size="small"
-          startIcon={<AddIcon />}
-          onClick={handleCreateWorkOrder}
-        >
-          Create Work Order
-        </Button>
-      </Box>
-      
-      {isLoading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-          <CircularProgress />
-        </Box>
-      ) : workOrders.length > 0 ? (
-        <Box sx={{ height: 400, width: '100%' }}>
-          <DataGrid
-            rows={workOrders}
-            columns={columns}
-            pageSize={5}
-            rowsPerPageOptions={[5]}
-            disableSelectionOnClick
-            disableColumnMenu
-            hideFooterSelectedRowCount
-            sx={{
-              '& .MuiDataGrid-columnHeaders': {
-                backgroundColor: theme.palette.background.default,
-                borderBottom: `1px solid ${theme.palette.divider}`,
-              },
-              '& .MuiDataGrid-cell': {
-                borderBottom: `1px solid ${theme.palette.divider}`,
-              },
-            }}
-          />
-        </Box>
-      ) : (
-        <Paper variant="outlined" sx={{ p: 4, textAlign: 'center' }}>
-          <WorkIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
-          <Typography variant="body1" color="text.secondary" gutterBottom>
-            No work orders found for this building
-          </Typography>
-          <Button
-            variant="outlined"
-            startIcon={<AddIcon />}
-            onClick={handleCreateWorkOrder}
-            sx={{ mt: 1 }}
-          >
-            Create First Work Order
-          </Button>
-        </Paper>
-      )}
-    </Box>
-  );
-};
 
 const BuildingDetails = () => {
   const { id } = useParams();
@@ -657,11 +516,6 @@ const BuildingDetails = () => {
       label: 'Apartments', 
       icon: <ApartmentIcon />,
       component: <ApartmentsTab building={building} /> 
-    },
-    { 
-      label: 'Work Orders', 
-      icon: <WorkIcon />,
-      component: <WorkOrdersTab buildingId={id} /> 
     },
     { 
       label: apartmentId ? 'Apartment Reminders' : 'Reminders', 

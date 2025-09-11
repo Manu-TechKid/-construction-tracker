@@ -20,10 +20,8 @@ import {
   Error as ErrorIcon,
   Info as InfoIcon
 } from '@mui/icons-material';
-import { useGetWorkOrdersQuery } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
-import { useGetWorkersQuery } from '../../features/workers/workersApiSlice';
-import WorkOrderList from '../../components/dashboard/WorkOrderList';
+import { useGetUsersQuery } from '../../features/users/usersApiSlice';
 import StatCard from '../../components/dashboard/StatCard';
 import BuildingStatus from '../../components/dashboard/BuildingStatus';
 import WorkerAvailability from '../../components/dashboard/WorkerAvailability';
@@ -32,59 +30,31 @@ import { formatDate, timeAgo } from '../../utils/dateUtils';
 const Dashboard = () => {
   const theme = useTheme();
   const [stats, setStats] = useState({
-    totalWorkOrders: 0,
-    completedWorkOrders: 0,
-    inProgressWorkOrders: 0,
-    pendingWorkOrders: 0,
-    onHoldWorkOrders: 0,
-    cancelledWorkOrders: 0,
     totalBuildings: 0,
     totalWorkers: 0,
     availableWorkers: 0,
   });
 
-  // Fetch data with error handling - skip failing endpoints gracefully
-  const { data: workOrdersData, isLoading: isLoadingWorkOrders, error: workOrdersError } = useGetWorkOrdersQuery({});
+  // Fetch data
   const { data: buildingsData, isLoading: isLoadingBuildings, error: buildingsError } = useGetBuildingsQuery({});
-  const { data: workersData, isLoading: isLoadingWorkers, error: workersError } = useGetWorkersQuery({});
+  const { data: usersData, isLoading: isLoadingUsers, error: usersError } = useGetUsersQuery({ role: 'worker' });
 
-  // Process data when loaded - handle missing endpoints gracefully
+  // Process data
   useEffect(() => {
-    // Handle work orders data with proper status counting
-    if (workOrdersData?.data) {
-      const workOrders = workOrdersData.data.workOrders || workOrdersData.data || [];
-      
-      const workOrderStats = {
-        totalWorkOrders: workOrders.length,
-        completedWorkOrders: workOrders.filter(wo => wo.status === 'completed').length,
-        inProgressWorkOrders: workOrders.filter(wo => wo.status === 'in_progress').length,
-        pendingWorkOrders: workOrders.filter(wo => wo.status === 'pending').length,
-        onHoldWorkOrders: workOrders.filter(wo => wo.status === 'on_hold').length,
-        cancelledWorkOrders: workOrders.filter(wo => wo.status === 'cancelled').length
-      };
-
-      setStats(prevStats => ({
-        ...prevStats,
-        ...workOrderStats
-      }));
-    }
-
     // Handle buildings data
     if (buildingsData?.data) {
-      const buildings = buildingsData.data.buildings || buildingsData.data || [];
+      const buildings = buildingsData.data.buildings || [];
       setStats(prevStats => ({
         ...prevStats,
         totalBuildings: buildings.length
       }));
     }
 
-    // Handle workers data - count only workers, not admin/manager/supervisor
-    if (workersData?.data) {
-      const allUsers = workersData.data.workers || workersData.data || [];
-      const workers = allUsers.filter(user => user.role === 'worker');
+    // Handle workers data
+    if (usersData?.data) {
+      const workers = usersData.data.users || [];
       const availableWorkers = workers.filter(worker => 
-        worker.workerProfile?.status === 'available' || 
-        worker.status === 'available'
+        worker.workerProfile?.status === 'available'
       );
       
       setStats(prevStats => ({
@@ -93,44 +63,22 @@ const Dashboard = () => {
         availableWorkers: availableWorkers.length
       }));
     }
-  }, [workOrdersData, buildingsData, workersData]);
-
-  // Auto-refresh data every 30 seconds for real-time updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Refetch all data for real-time updates using RTK Query
-      if (workOrdersData) {
-        // Trigger refetch without page reload
-        window.dispatchEvent(new CustomEvent('refetch-data'));
-      }
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(interval);
-  }, [workOrdersData]);
-
-  // Get recent work orders
-  const recentWorkOrders = workOrdersData?.data?.workOrders 
-    ? [...workOrdersData.data.workOrders]
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, 5)
-    : [];
+  }, [buildingsData, usersData]);
 
   // Get building status
   const buildingStatusData = buildingsData?.data?.buildings?.map(building => ({
     id: building._id,
     name: building.name,
     status: building.status || 'operational',
-    workOrders: workOrdersData?.data?.workOrders?.filter(wo => wo.building?._id === building._id).length || 0,
+    workOrders: 0, // Placeholder
   })) || [];
 
   // Get worker availability
-  const workerAvailabilityData = workersData?.data?.workers?.map(worker => ({
+  const workerAvailabilityData = (usersData?.data?.users || []).map(worker => ({
     id: worker._id,
-    name: worker.name,
-    status: worker.status || 'available',
-    assignedWorkOrders: workOrdersData?.data?.workOrders?.filter(wo => 
-      wo.assignedTo?.some(assignment => assignment.worker?._id === worker._id)
-    ).length || 0,
+    name: `${worker.firstName} ${worker.lastName}`,
+    status: worker.workerProfile?.status || 'unavailable',
+    assignedWorkOrders: 0, // Placeholder
   })) || [];
 
   // Only show loading if buildings are loading (core data)
@@ -161,75 +109,33 @@ const Dashboard = () => {
 
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mt: 2, mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={4}>
           <StatCard
-            title="Total Work Orders"
-            value={stats.totalWorkOrders}
-            icon={<AssignmentIcon />}
+            title="Total Buildings"
+            value={stats.totalBuildings}
+            icon={<BuildingIcon />}
             color={theme.palette.primary.main}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={4}>
           <StatCard
-            title="Completed"
-            value={stats.completedWorkOrders}
-            icon={<CheckCircleIcon />}
-            color={theme.palette.success.main}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="In Progress"
-            value={stats.inProgressWorkOrders}
-            icon={<WarningIcon />}
-            color={theme.palette.warning.main}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Pending"
-            value={stats.pendingWorkOrders}
-            icon={<ErrorIcon />}
-            color={theme.palette.error.main}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="On Hold"
-            value={stats.onHoldWorkOrders}
-            icon={<InfoIcon />}
+            title="Total Workers"
+            value={stats.totalWorkers}
+            icon={<PeopleIcon />}
             color={theme.palette.info.main}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={4}>
           <StatCard
-            title="Cancelled"
-            value={stats.cancelledWorkOrders}
-            icon={<ErrorIcon />}
-            color={theme.palette.error.main}
+            title="Available Workers"
+            value={stats.availableWorkers}
+            icon={<CheckCircleIcon />}
+            color={theme.palette.success.main}
           />
         </Grid>
       </Grid>
 
       <Grid container spacing={3}>
-        {/* Recent Work Orders */}
-        <Grid item xs={12} md={6}>
-          <Card elevation={3}>
-            <CardHeader 
-              title="Recent Work Orders" 
-              titleTypographyProps={{ variant: 'h6' }}
-              action={
-                <Typography variant="body2" color="primary">
-                  View All
-                </Typography>
-              }
-            />
-            <Divider />
-            <CardContent>
-              <WorkOrderList workOrders={recentWorkOrders} />
-            </CardContent>
-          </Card>
-        </Grid>
 
         {/* Building Status */}
         <Grid item xs={12} md={6}>
