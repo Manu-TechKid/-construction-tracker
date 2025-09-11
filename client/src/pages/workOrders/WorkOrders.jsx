@@ -64,7 +64,7 @@ const WorkOrders = () => {
   const { data: workOrdersData, isLoading, error } = useGetWorkOrdersQuery();
   const { data: buildingsData } = useGetBuildingsQuery();
   const [deleteWorkOrder, { isLoading: isDeleting }] = useDeleteWorkOrderMutation();
-
+  
   const workOrders = workOrdersData?.data?.workOrders || [];
   const buildings = buildingsData?.data?.buildings || [];
 
@@ -91,8 +91,8 @@ const WorkOrders = () => {
       const result = await deleteWorkOrder(selectedWorkOrder._id).unwrap();
       console.log('✅ Delete successful:', result);
       toast.success('Work order deleted successfully');
-      setDeleteDialogOpen(false);
-      handleMenuClose();
+        setDeleteDialogOpen(false);
+        handleMenuClose();
     } catch (error) {
       console.error('❌ Delete failed:', error);
       console.error('Error details:', {
@@ -154,7 +154,7 @@ const WorkOrders = () => {
       </Box>
     );
   }
-  
+
   if (error) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
@@ -184,62 +184,62 @@ const WorkOrders = () => {
       </Box>
 
       {/* Filters */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Grid container spacing={2} alignItems="center">
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Status</InputLabel>
-                <Select
+                <FormControl fullWidth size="small">
+                  <InputLabel>Status</InputLabel>
+                  <Select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  label="Status"
-                >
-                  <MenuItem value="">All Statuses</MenuItem>
-                  <MenuItem value="pending">Pending</MenuItem>
-                  <MenuItem value="in_progress">In Progress</MenuItem>
+                    label="Status"
+                  >
+                    <MenuItem value="">All Statuses</MenuItem>
+                    <MenuItem value="pending">Pending</MenuItem>
+                    <MenuItem value="in_progress">In Progress</MenuItem>
                   <MenuItem value="on_hold">On Hold</MenuItem>
-                  <MenuItem value="completed">Completed</MenuItem>
-                  <MenuItem value="cancelled">Cancelled</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
+                    <MenuItem value="completed">Completed</MenuItem>
+                    <MenuItem value="cancelled">Cancelled</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
             <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Priority</InputLabel>
-                <Select
+                <FormControl fullWidth size="small">
+                  <InputLabel>Priority</InputLabel>
+                  <Select
                   value={filterPriority}
                   onChange={(e) => setFilterPriority(e.target.value)}
-                  label="Priority"
-                >
-                  <MenuItem value="">All Priorities</MenuItem>
-                  <MenuItem value="low">Low</MenuItem>
-                  <MenuItem value="medium">Medium</MenuItem>
-                  <MenuItem value="high">High</MenuItem>
-                  <MenuItem value="urgent">Urgent</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
+                    label="Priority"
+                  >
+                    <MenuItem value="">All Priorities</MenuItem>
+                    <MenuItem value="low">Low</MenuItem>
+                    <MenuItem value="medium">Medium</MenuItem>
+                    <MenuItem value="high">High</MenuItem>
+                    <MenuItem value="urgent">Urgent</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
             <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Building</InputLabel>
-                <Select
+                <FormControl fullWidth size="small">
+                  <InputLabel>Building</InputLabel>
+                  <Select
                   value={filterBuilding}
                   onChange={(e) => setFilterBuilding(e.target.value)}
-                  label="Building"
-                >
-                  <MenuItem value="">All Buildings</MenuItem>
-                  {buildings.map((building) => (
-                    <MenuItem key={building._id} value={building._id}>
-                      {building.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                    label="Building"
+                  >
+                    <MenuItem value="">All Buildings</MenuItem>
+                    {buildings.map((building) => (
+                      <MenuItem key={building._id} value={building._id}>
+                        {building.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
             </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
       {/* Work Orders Table */}
       <Card>
@@ -303,7 +303,7 @@ const WorkOrders = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {workOrder.apartmentNumber || 'N/A'}
+                      {workOrder.apartmentNumber || 'N/A'}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -374,7 +374,7 @@ const WorkOrders = () => {
                           ? `${workOrder.assignedTo.length} worker(s)`
                           : 'Unassigned'
                         }
-                      </Typography>
+                        </Typography>
                     </TableCell>
                     <TableCell>
                       <IconButton
