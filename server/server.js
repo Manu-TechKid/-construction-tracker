@@ -13,6 +13,7 @@ const hpp = require('hpp');
 const cookieParser = require('cookie-parser');
 const compression = require('compression');
 const buildingRoutes = require('./routes/buildingRoutes');
+const workOrderRoutes = require('./routes/workOrderRoutes');
 const userRoutes = require('./routes/userRoutes');
 const authRoutes = require('./routes/authRoutes');
 const invoiceRoutes = require('./routes/invoiceRoutes');
@@ -123,6 +124,7 @@ app.use('/api/v1', (req, res, next) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/buildings', buildingRoutes);
+app.use('/api/v1/work-orders', workOrderRoutes);
 app.use('/api/v1/invoices', invoiceRoutes);
 app.use('/api/v1/schedules', scheduleRoutes);
 app.use('/api/v1/notes', noteRoutes);

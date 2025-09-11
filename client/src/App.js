@@ -30,6 +30,9 @@ import Buildings from './pages/buildings/Buildings';
 import BuildingDetails from './pages/buildings/BuildingDetails';
 import CreateBuilding from './pages/buildings/CreateBuilding';
 import BuildingEdit from './pages/buildings/BuildingEdit';
+import WorkOrders from './pages/workOrders/WorkOrders';
+import WorkOrderForm from './pages/workOrders/WorkOrderForm';
+import WorkOrderDetails from './pages/workOrders/WorkOrderDetails';
 import Workers from './pages/workers/Workers';
 import CreateWorker from './pages/workers/CreateWorker';
 import Reminders from './pages/reminders/Reminders';
@@ -170,6 +173,39 @@ const AppContent = () => {
                 } 
               />
 
+              {/* Work Orders */}
+              <Route 
+                path="work-orders" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['read:workorders']}>
+                    <WorkOrders />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="work-orders/new" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['create:workorders']}>
+                    <WorkOrderForm />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="work-orders/:id/edit" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['update:workorders']}>
+                    <WorkOrderForm />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="work-orders/:id" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['read:workorders']}>
+                    <WorkOrderDetails />
+                  </RoleBasedRoute>
+                } 
+              />
 
               {/* Workers - not accessible by workers themselves */}
               <Route 
