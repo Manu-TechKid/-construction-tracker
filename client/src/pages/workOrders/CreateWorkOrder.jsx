@@ -1,21 +1,31 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Box,
+  Container,
+  Paper,
   Typography,
+  TextField,
   Button,
+  Grid,
   Card,
   CardContent,
-  Container,
-  Grid,
-  TextField,
+  CardHeader,
+  Box,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
+  FormHelperText,
   CircularProgress,
-  Alert,
+  Chip,
+  Avatar,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
   IconButton,
+  Divider,
+  InputAdornment,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -48,9 +58,13 @@ const CreateWorkOrder = () => {
     apartmentNumber: '',
     block: '',
     apartmentStatus: 'occupied',
+    workType: '',
+    workSubType: '',
     priority: 'medium',
     scheduledDate: new Date(),
     estimatedCost: 0,
+    estimatedCompletionDate: null,
+    actualCost: 0,
   });
 
   const [errors, setErrors] = useState({});
@@ -76,6 +90,14 @@ const CreateWorkOrder = () => {
     
     if (!formData.building) {
       newErrors.building = 'Building is required';
+    }
+    
+    if (!formData.workType) {
+      newErrors.workType = 'Work type is required';
+    }
+    
+    if (!formData.workSubType) {
+      newErrors.workSubType = 'Work sub-type is required';
     }
     
     setErrors(newErrors);
@@ -277,6 +299,56 @@ const CreateWorkOrder = () => {
                   </FormControl>
                 </Grid>
 
+                {/* Work Type and Sub-Type */}
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth error={!!errors.workType}>
+                    <InputLabel>Work Type *</InputLabel>
+                    <Select
+                      value={formData.workType}
+                      onChange={(e) => handleInputChange('workType', e.target.value)}
+                      label="Work Type *"
+                    >
+                      <MenuItem value="maintenance">Maintenance</MenuItem>
+                      <MenuItem value="repair">Repair</MenuItem>
+                      <MenuItem value="installation">Installation</MenuItem>
+                      <MenuItem value="inspection">Inspection</MenuItem>
+                      <MenuItem value="cleaning">Cleaning</MenuItem>
+                      <MenuItem value="renovation">Renovation</MenuItem>
+                      <MenuItem value="emergency">Emergency</MenuItem>
+                      <MenuItem value="preventive">Preventive</MenuItem>
+                    </Select>
+                    {errors.workType && (
+                      <FormHelperText>{errors.workType}</FormHelperText>
+                    )}
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth error={!!errors.workSubType}>
+                    <InputLabel>Work Sub-Type *</InputLabel>
+                    <Select
+                      value={formData.workSubType}
+                      onChange={(e) => handleInputChange('workSubType', e.target.value)}
+                      label="Work Sub-Type *"
+                    >
+                      <MenuItem value="plumbing">Plumbing</MenuItem>
+                      <MenuItem value="electrical">Electrical</MenuItem>
+                      <MenuItem value="hvac">HVAC</MenuItem>
+                      <MenuItem value="painting">Painting</MenuItem>
+                      <MenuItem value="flooring">Flooring</MenuItem>
+                      <MenuItem value="roofing">Roofing</MenuItem>
+                      <MenuItem value="carpentry">Carpentry</MenuItem>
+                      <MenuItem value="appliance">Appliance</MenuItem>
+                      <MenuItem value="landscaping">Landscaping</MenuItem>
+                      <MenuItem value="security">Security</MenuItem>
+                      <MenuItem value="other">Other</MenuItem>
+                    </Select>
+                    {errors.workSubType && (
+                      <FormHelperText>{errors.workSubType}</FormHelperText>
+                    )}
+                  </FormControl>
+                </Grid>
+
                 {/* Scheduled Date */}
                 <Grid item xs={12} md={6}>
                   <DatePicker
@@ -289,14 +361,42 @@ const CreateWorkOrder = () => {
                   />
                 </Grid>
 
-                {/* Estimated Cost */}
+                {/* Estimated Completion Date */}
+                <Grid item xs={12} md={6}>
+                  <DatePicker
+                    label="Estimated Completion Date"
+                    value={formData.estimatedCompletionDate}
+                    onChange={(newValue) => handleInputChange('estimatedCompletionDate', newValue)}
+                    renderInput={(params) => <TextField {...params} fullWidth />}
+                    minDate={new Date()}
+                  />
+                </Grid>
+
+                {/* Cost Information */}
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
+                    label="Estimated Cost"
                     type="number"
-                    label="Estimated Cost ($)"
                     value={formData.estimatedCost}
-                    onChange={(e) => handleInputChange('estimatedCost', e.target.value)}
+                    onChange={(e) => handleInputChange('estimatedCost', parseFloat(e.target.value) || 0)}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                    }}
+                    inputProps={{ min: 0, step: 0.01 }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Actual Cost"
+                    type="number"
+                    value={formData.actualCost}
+                    onChange={(e) => handleInputChange('actualCost', parseFloat(e.target.value) || 0)}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                    }}
                     inputProps={{ min: 0, step: 0.01 }}
                   />
                 </Grid>

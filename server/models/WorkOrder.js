@@ -135,6 +135,27 @@ const workOrderSchema = new mongoose.Schema({
     default: 'occupied',
     lowercase: true
   },
+  // Work type and sub-type classification
+  workType: {
+    type: String,
+    required: [true, 'Work type is required'],
+    enum: {
+      values: ['maintenance', 'repair', 'installation', 'inspection', 'cleaning', 'renovation', 'emergency', 'preventive'],
+      message: 'Work type must be one of: maintenance, repair, installation, inspection, cleaning, renovation, emergency, preventive'
+    },
+    lowercase: true,
+    trim: true
+  },
+  workSubType: {
+    type: String,
+    required: [true, 'Work sub-type is required'],
+    enum: {
+      values: ['plumbing', 'electrical', 'hvac', 'painting', 'flooring', 'roofing', 'carpentry', 'appliance', 'landscaping', 'security', 'other'],
+      message: 'Work sub-type must be one of: plumbing, electrical, hvac, painting, flooring, roofing, carpentry, appliance, landscaping, security, other'
+    },
+    lowercase: true,
+    trim: true
+  },
   // Array of services with details and costs
   services: [{
     ...serviceSchema.obj,

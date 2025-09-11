@@ -27,14 +27,19 @@ exports.createWorkOrder = async (req, res, next) => {
     }
     
     // Extract required fields
-    const { title, description, building } = req.body;
+    const { title, description, building, workType, workSubType } = req.body;
     
-    if (!title || !building) {
+    if (!title || !building || !workType || !workSubType) {
       console.error('❌ Missing required fields');
       return res.status(400).json({
         status: 'error',
-        message: 'Title and building are required',
-        received: { title: !!title, building: !!building },
+        message: 'Title, building, workType, and workSubType are required',
+        received: { 
+          title: !!title, 
+          building: !!building, 
+          workType: !!workType, 
+          workSubType: !!workSubType 
+        },
         timestamp: new Date().toISOString(),
         version: 'FINAL-FIX-2024-01-10'
       });
@@ -104,14 +109,17 @@ exports.createWorkOrder = async (req, res, next) => {
       apartmentNumber: req.body.apartmentNumber || '',
       block: req.body.block || '',
       apartmentStatus: req.body.apartmentStatus || 'occupied',
+      workType: workType.trim(),
+      workSubType: workSubType.trim(),
       priority: req.body.priority || 'medium',
       status: 'pending',
       scheduledDate: req.body.scheduledDate ? new Date(req.body.scheduledDate) : new Date(),
       estimatedCompletionDate: req.body.estimatedCompletionDate ? new Date(req.body.estimatedCompletionDate) : null,
       estimatedCost: parseFloat(req.body.estimatedCost) || 0,
+      actualCost: parseFloat(req.body.actualCost) || 0,
       services: parsedServices.length > 0 ? parsedServices : [{
-        type: 'other',
-        description: 'General maintenance',
+        type: workSubType.toLowerCase(),
+        description: description || 'General maintenance',
         laborCost: 0,
         materialCost: 0,
         status: 'pending'

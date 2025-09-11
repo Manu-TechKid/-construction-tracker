@@ -248,9 +248,9 @@ const WorkOrders = () => {
             <TableHead>
               <TableRow>
                 <TableCell>Title</TableCell>
+                <TableCell>Type</TableCell>
                 <TableCell>Building</TableCell>
                 <TableCell>Apartment</TableCell>
-                <TableCell>Photos</TableCell>
                 <TableCell>Priority</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Scheduled Date</TableCell>
@@ -297,6 +297,16 @@ const WorkOrders = () => {
                       </Typography>
                     </TableCell>
                     <TableCell>
+                      <Box>
+                        <Typography variant="body2" fontWeight="medium" sx={{ textTransform: 'capitalize' }}>
+                          {workOrder.workType || 'N/A'}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>
+                          {workOrder.workSubType || 'N/A'}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
                       <Typography variant="body2">
                         {workOrder.building?.name || 'N/A'}
                       </Typography>
@@ -305,49 +315,6 @@ const WorkOrders = () => {
                       <Typography variant="body2">
                       {workOrder.apartmentNumber || 'N/A'}
                       </Typography>
-                    </TableCell>
-                    <TableCell>
-                      {workOrder.photos && workOrder.photos.length > 0 ? (
-                        <Box sx={{ display: 'flex', gap: 0.5 }}>
-                          {workOrder.photos.slice(0, 3).map((photo, index) => (
-                            <Box
-                              key={index}
-                              component="img"
-                              src={photo.url}
-                              alt={`Work order photo ${index + 1}`}
-                              sx={{
-                                width: 32,
-                                height: 32,
-                                objectFit: 'cover',
-                                borderRadius: 1,
-                                border: '1px solid',
-                                borderColor: 'divider'
-                              }}
-                            />
-                          ))}
-                          {workOrder.photos.length > 3 && (
-                            <Box
-                              sx={{
-                                width: 32,
-                                height: 32,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                bgcolor: 'grey.200',
-                                borderRadius: 1,
-                                fontSize: '0.75rem',
-                                fontWeight: 'bold'
-                              }}
-                            >
-                              +{workOrder.photos.length - 3}
-                            </Box>
-                          )}
-                        </Box>
-                      ) : (
-                        <Typography variant="caption" color="text.secondary">
-                          No photos
-                        </Typography>
-                      )}
                     </TableCell>
                     <TableCell>
                       <Chip
