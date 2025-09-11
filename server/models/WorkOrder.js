@@ -78,6 +78,14 @@ const workOrderSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
   },
+  photos: [
+    {
+      url: { type: String, required: true },
+      description: { type: String, trim: true },
+      uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      uploadedAt: { type: Date, default: Date.now },
+    },
+  ],
 }, {
   timestamps: true,
 });

@@ -104,9 +104,9 @@ exports.deleteWorkOrder = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Work order not found' });
     }
 
-    await workOrder.remove();
+    await WorkOrder.findByIdAndDelete(req.params.id);
 
-    res.status(200).json({ success: true, data: {} });
+    res.status(204).json({ success: true, data: null });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server Error', error: error.message });
   }

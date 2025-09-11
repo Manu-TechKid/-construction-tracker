@@ -4,22 +4,35 @@ import {
   Box,
   Typography,
   Button,
-  Card,
-  CardContent,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
   Chip,
   CircularProgress,
   Alert,
 } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, Visibility as ViewIcon } from '@mui/icons-material';
+import { DataGrid } from '@mui/x-data-grid';
 import { useGetWorkOrdersQuery } from '../../features/workOrders/workOrdersApiSlice';
 import { format } from 'date-fns';
+
+const getStatusChipColor = (status) => {
+  switch (status) {
+    case 'completed': return 'success';
+    case 'in_progress': return 'info';
+    case 'on_hold': return 'warning';
+    case 'cancelled': return 'error';
+    case 'pending':
+    default: return 'default';
+  }
+};
+
+const getPriorityChipColor = (priority) => {
+  switch (priority) {
+    case 'high':
+    case 'urgent': return 'error';
+    case 'medium': return 'warning';
+    case 'low':
+    default: return 'success';
+  }
+};
 
 const WorkOrders = () => {
   const navigate = useNavigate();
@@ -35,8 +48,59 @@ const WorkOrders = () => {
 
   const workOrders = workOrdersData?.data || [];
 
+  const columns = [
+    { field: 'title', headerName: 'Title', flex: 1 },
+    { 
+      field: 'building',
+      headerName: 'Building',
+      flex: 1,
+      valueGetter: (params) => params.row.building?.name || 'N/A',
+    },
+    {
+      field: 'status',
+      headerName: 'Status',
+      width: 150,
+      renderCell: (params) => (
+        <Chip 
+          label={params.value}
+          color={getStatusChipColor(params.value)}
+          size="small" 
+        />
+      ),
+    },
+    {
+      field: 'priority',
+      headerName: 'Priority',
+      width: 120,
+      renderCell: (params) => (
+        <Chip 
+          label={params.value}
+          color={getPriorityChipColor(params.value)}
+          size="small" 
+        />
+      ),
+    },
+    {
+      field: 'scheduledDate',
+      headerName: 'Scheduled Date',
+      width: 150,
+      valueFormatter: (params) => format(new Date(params.value), 'MM/dd/yyyy'),
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      width: 150,
+      sortable: false,
+      renderCell: (params) => (
+        <Box>
+          <Button size="small" startIcon={<ViewIcon />} onClick={() => navigate(`/work-orders/${params.id}`)}>View</Button>
+        </Box>
+      ),
+    },
+  ];
+
   return (
-    <Box>
+    <Box sx={{ height: 'calc(100vh - 120px)', width: '100%' }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">
           Work Orders
@@ -50,42 +114,15 @@ const WorkOrders = () => {
         </Button>
       </Box>
 
-      <Card>
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Title</TableCell>
-                <TableCell>Building</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Priority</TableCell>
-                <TableCell>Scheduled Date</TableCell>
-                <TableCell>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {workOrders.map((workOrder) => (
-                <TableRow key={workOrder._id} hover>
-                  <TableCell>{workOrder.title}</TableCell>
-                  <TableCell>{workOrder.building?.name || 'N/A'}</TableCell>
-                  <TableCell>
-                    <Chip label={workOrder.status} size="small" />
-                  </TableCell>
-                  <TableCell>
-                    <Chip label={workOrder.priority} size="small" />
-                  </TableCell>
-                  <TableCell>
-                    {format(new Date(workOrder.scheduledDate), 'MM/dd/yyyy')}
-                  </TableCell>
-                  <TableCell>
-                    <Button size="small" onClick={() => navigate(`/work-orders/${workOrder._id}`)}>View</Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Card>
+      <DataGrid
+        rows={workOrders}
+        columns={columns}
+        getRowId={(row) => row._id}
+        pageSize={10}
+        rowsPerPageOptions={[10, 25, 50]}
+        disableSelectionOnClick
+        loading={isLoading}
+      />
     </Box>
   );
 };
