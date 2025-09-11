@@ -17,6 +17,7 @@ import {
   MenuItem,
   FormHelperText,
   CircularProgress,
+  Checkbox,
   Chip,
   Avatar,
   List,
@@ -384,7 +385,7 @@ const CreateWorkOrder = () => {
                       <FormHelperText>Select a building first</FormHelperText>
                     )}
                   </FormControl>
-                </div>
+                </Grid>
 
                 {/* Apartment Status */}
                 <Grid item xs={12} md={4}>
