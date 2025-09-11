@@ -37,6 +37,7 @@ const Dashboard = () => {
     totalWorkOrders: 0,
     pendingWorkOrders: 0,
     completedWorkOrders: 0,
+    inProgressWorkOrders: 0,
   });
 
   // Fetch data
@@ -74,31 +75,42 @@ const Dashboard = () => {
       const workOrders = workOrdersData.data || [];
       const pendingOrders = workOrders.filter(order => order.status === 'pending');
       const completedOrders = workOrders.filter(order => order.status === 'completed');
+      const inProgressOrders = workOrders.filter(order => order.status === 'in_progress');
       
       setStats(prevStats => ({
         ...prevStats,
         totalWorkOrders: workOrders.length,
         pendingWorkOrders: pendingOrders.length,
-        completedWorkOrders: completedOrders.length
+        completedWorkOrders: completedOrders.length,
+        inProgressWorkOrders: inProgressOrders.length
       }));
     }
   }, [buildingsData, usersData, workOrdersData]);
 
-  // Get building status
-  const buildingStatusData = buildingsData?.data?.buildings?.map(building => ({
-    id: building._id,
-    name: building.name,
-    status: building.status || 'operational',
-    workOrders: 0, // Placeholder
-  })) || [];
+  // Get building status with actual work order counts
+  const buildingStatusData = buildingsData?.data?.buildings?.map(building => {
+    const buildingWorkOrders = workOrdersData?.data?.filter(wo => wo.building?._id === building._id) || [];
+    return {
+      id: building._id,
+      name: building.name,
+      status: building.status || 'operational',
+      workOrders: buildingWorkOrders.length,
+    };
+  }) || [];
 
-  // Get worker availability
-  const workerAvailabilityData = (usersData?.data?.users || []).map(worker => ({
-    id: worker._id,
-    name: `${worker.firstName} ${worker.lastName}`,
-    status: worker.workerProfile?.status || 'unavailable',
-    assignedWorkOrders: 0, // Placeholder
-  })) || [];
+  // Get worker availability with actual names and work order counts
+  const workerAvailabilityData = (usersData?.data?.users || []).map(worker => {
+    const assignedOrders = workOrdersData?.data?.filter(wo => 
+      wo.assignedTo?.some(assignment => assignment.worker?._id === worker._id)
+    ) || [];
+    
+    return {
+      id: worker._id,
+      name: worker.name || `${worker.firstName || ''} ${worker.lastName || ''}`.trim() || 'Unknown Worker',
+      status: worker.workerProfile?.status || 'unavailable',
+      assignedWorkOrders: assignedOrders.length,
+    };
+  }) || [];
 
   // Only show loading if buildings are loading (core data)
   const isLoading = isLoadingBuildings;
@@ -128,7 +140,7 @@ const Dashboard = () => {
 
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mt: 2, mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={2.4}>
           <StatCard
             title="Total Buildings"
             value={stats.totalBuildings}
@@ -136,7 +148,7 @@ const Dashboard = () => {
             color={theme.palette.primary.main}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={2.4}>
           <StatCard
             title="Total Workers"
             value={stats.totalWorkers}
@@ -144,20 +156,28 @@ const Dashboard = () => {
             color={theme.palette.info.main}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Work Orders"
-            value={stats.totalWorkOrders}
-            icon={<AssignmentIcon />}
-            color={theme.palette.secondary.main}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={2.4}>
           <StatCard
             title="Pending Orders"
             value={stats.pendingWorkOrders}
             icon={<WarningIcon />}
             color={theme.palette.warning.main}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={2.4}>
+          <StatCard
+            title="In Progress"
+            value={stats.inProgressWorkOrders}
+            icon={<InfoIcon />}
+            color={theme.palette.info.main}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={2.4}>
+          <StatCard
+            title="Completed"
+            value={stats.completedWorkOrders}
+            icon={<CheckCircleIcon />}
+            color={theme.palette.success.main}
           />
         </Grid>
       </Grid>

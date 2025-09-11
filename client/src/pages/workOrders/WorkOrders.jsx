@@ -12,12 +12,25 @@ import {
   Grid,
   Card,
   CardContent,
+  Menu,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, Visibility as ViewIcon } from '@mui/icons-material';
+import { 
+  Add as AddIcon, 
+  Edit as EditIcon, 
+  Visibility as ViewIcon,
+  Schedule as PendingIcon,
+  PlayArrow as InProgressIcon,
+  CheckCircle as CompletedIcon,
+  Pause as OnHoldIcon,
+  Cancel as CancelledIcon
+} from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
-import { useGetWorkOrdersQuery } from '../../features/workOrders/workOrdersApiSlice';
+import { useGetWorkOrdersQuery, useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { format } from 'date-fns';
+import { toast } from 'react-toastify';
 
 const getStatusChipColor = (status) => {
   switch (status) {
@@ -44,12 +57,62 @@ const WorkOrders = () => {
   const navigate = useNavigate();
   const { data: workOrdersData, isLoading, error } = useGetWorkOrdersQuery();
   const { data: buildingsData } = useGetBuildingsQuery();
+  const [updateWorkOrder] = useUpdateWorkOrderMutation();
 
   const [filters, setFilters] = useState({ building: '', status: '' });
+  const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
+  const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
 
   const handleFilterChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
   };
+
+  const handleStatusClick = (event, workOrder) => {
+    event.stopPropagation();
+    setStatusMenuAnchor(event.currentTarget);
+    setSelectedWorkOrder(workOrder);
+  };
+
+  const handleStatusClose = () => {
+    setStatusMenuAnchor(null);
+    setSelectedWorkOrder(null);
+  };
+
+  const handleStatusUpdate = async (newStatus) => {
+    if (!selectedWorkOrder) return;
+    
+    try {
+      await updateWorkOrder({
+        id: selectedWorkOrder._id,
+        status: newStatus
+      }).unwrap();
+      
+      toast.success(`Work order status updated to ${newStatus}`);
+      handleStatusClose();
+    } catch (error) {
+      console.error('Failed to update status:', error);
+      toast.error('Failed to update work order status');
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'pending': return <PendingIcon />;
+      case 'in_progress': return <InProgressIcon />;
+      case 'completed': return <CompletedIcon />;
+      case 'on_hold': return <OnHoldIcon />;
+      case 'cancelled': return <CancelledIcon />;
+      default: return <PendingIcon />;
+    }
+  };
+
+  const statusOptions = [
+    { value: 'pending', label: 'Pending', icon: <PendingIcon /> },
+    { value: 'in_progress', label: 'In Progress', icon: <InProgressIcon /> },
+    { value: 'completed', label: 'Completed', icon: <CompletedIcon /> },
+    { value: 'on_hold', label: 'On Hold', icon: <OnHoldIcon /> },
+    { value: 'cancelled', label: 'Cancelled', icon: <CancelledIcon /> },
+  ];
 
   const workOrders = workOrdersData?.data || [];
 
@@ -86,7 +149,15 @@ const WorkOrders = () => {
         <Chip 
           label={params.value}
           color={getStatusChipColor(params.value)}
-          size="small" 
+          size="small"
+          onClick={(event) => handleStatusClick(event, params.row)}
+          sx={{ 
+            cursor: 'pointer',
+            '&:hover': {
+              opacity: 0.8,
+              transform: 'scale(1.05)'
+            }
+          }}
         />
       ),
     },
@@ -122,9 +193,21 @@ const WorkOrders = () => {
       sortable: false,
       renderCell: (params) => {
         const firstPhoto = params.row.photos?.[0];
-        return firstPhoto ? (
+        if (!firstPhoto) {
+          return (
+            <Box sx={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.100', borderRadius: '4px' }}>
+              <Typography variant="caption" color="textSecondary">No Photo</Typography>
+            </Box>
+          );
+        }
+        
+        // Handle different photo URL formats
+        const photoUrl = firstPhoto.url || firstPhoto.path || (typeof firstPhoto === 'string' ? firstPhoto : null);
+        const fullUrl = photoUrl?.startsWith('http') ? photoUrl : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${photoUrl}`;
+        
+        return (
           <img 
-            src={firstPhoto.url} 
+            src={fullUrl}
             alt="Work Order" 
             style={{ 
               width: 40, 
@@ -134,13 +217,9 @@ const WorkOrders = () => {
               border: '1px solid #ddd'
             }} 
             onError={(e) => {
-              e.target.style.display = 'none';
+              e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0yMCAyNUMyMi43NjE0IDI1IDI1IDIyLjc2MTQgMjUgMjBDMjUgMTcuMjM4NiAyMi43NjE0IDE1IDIwIDE1QzE3LjIzODYgMTUgMTUgMTcuMjM4NiAxNSAyMEMxNSAyMi43NjE0IDE3LjIzODYgMjUgMjAgMjVaIiBmaWxsPSIjQzRDNEM0Ii8+CjxwYXRoIGQ9Ik0xMCAzMEgzMFYyN0gxMFYzMFoiIGZpbGw9IiNDNEM0QzQiLz4KPC9zdmc+';
             }}
           />
-        ) : (
-          <Box sx={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.100', borderRadius: '4px' }}>
-            <Typography variant="caption" color="textSecondary">No Photo</Typography>
-          </Box>
         );
       },
     },
@@ -226,6 +305,29 @@ const WorkOrders = () => {
         loading={isLoading}
         autoHeight
       />
+
+      {/* Status Update Menu */}
+      <Menu
+        anchorEl={statusMenuAnchor}
+        open={Boolean(statusMenuAnchor)}
+        onClose={handleStatusClose}
+        PaperProps={{
+          sx: { minWidth: 200 }
+        }}
+      >
+        {statusOptions.map((option) => (
+          <MenuItem
+            key={option.value}
+            onClick={() => handleStatusUpdate(option.value)}
+            disabled={selectedWorkOrder?.status === option.value}
+          >
+            <ListItemIcon>
+              {option.icon}
+            </ListItemIcon>
+            <ListItemText primary={option.label} />
+          </MenuItem>
+        ))}
+      </Menu>
     </Box>
   );
 };

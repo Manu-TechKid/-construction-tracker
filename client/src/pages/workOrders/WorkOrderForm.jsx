@@ -97,7 +97,7 @@ const WorkOrderForm = () => {
         const message = isEdit ? 'Work order updated successfully!' : 'Work order created successfully!';
         alert(message);
         // Force immediate navigation
-        window.location.href = '/work-orders';
+        navigate('/work-orders', { replace: true });
       } catch (error) {
         console.error('Failed to save work order:', error);
         alert('Failed to save work order. Please try again.');
