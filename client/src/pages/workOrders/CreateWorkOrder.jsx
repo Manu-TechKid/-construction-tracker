@@ -38,6 +38,7 @@ import { toast } from 'react-toastify';
 
 import { useCreateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
+import { useGetUsersQuery } from '../../features/users/usersApiSlice';
 import { useAuth } from '../../hooks/useAuth';
 
 const CreateWorkOrder = () => {
@@ -46,9 +47,33 @@ const CreateWorkOrder = () => {
 
   // API queries
   const { data: buildingsData, isLoading: isLoadingBuildings } = useGetBuildingsQuery();
+  const { data: usersData, isLoading: isLoadingUsers } = useGetUsersQuery();
   const [createWorkOrder, { isLoading: isCreating }] = useCreateWorkOrderMutation();
 
   const buildings = buildingsData?.data?.buildings || [];
+  const workers = (usersData?.data?.users || []).filter(user => user.role === 'worker');
+  
+  // Memoize workers for the dropdown
+  const workerOptions = React.useMemo(() => 
+    workers.map(worker => ({
+      id: worker._id,
+      label: `${worker.firstName} ${worker.lastName}`,
+      ...worker
+    })), 
+    [workers]
+  );
+
+  // Work type and sub-type mappings
+  const workTypeSubtypes = {
+    maintenance: ['inspection', 'cleaning', 'lubrication', 'calibration', 'safety_check'],
+    repair: ['plumbing', 'electrical', 'hvac', 'appliance', 'structural'],
+    installation: ['fixtures', 'appliances', 'systems', 'furniture', 'equipment'],
+    inspection: ['safety', 'compliance', 'quality', 'pre_purchase', 'routine'],
+    cleaning: ['regular', 'deep', 'post_construction', 'carpet', 'window'],
+    renovation: ['kitchen', 'bathroom', 'flooring', 'painting', 'remodeling'],
+    emergency: ['leak', 'power_outage', 'break_in', 'flood', 'fire'],
+    preventive: ['maintenance', 'inspection', 'testing', 'calibration', 'replacement']
+  };
 
   // Form state
   const [formData, setFormData] = useState({
@@ -65,12 +90,45 @@ const CreateWorkOrder = () => {
     estimatedCost: 0,
     estimatedCompletionDate: null,
     actualCost: 0,
+    assignedTo: [],
   });
+
+  // Available apartments and blocks based on selected building
+  const availableApartments = React.useMemo(() => {
+    if (!formData.building) return [];
+    const building = buildings.find(b => b._id === formData.building);
+    return building?.apartments || [];
+  }, [formData.building, buildings]);
+
+  const availableBlocks = React.useMemo(() => {
+    if (!formData.building) return [];
+    const building = buildings.find(b => b._id === formData.building);
+    return [...new Set(building?.apartments?.map(apt => apt.block).filter(Boolean))] || [];
+  }, [formData.building, buildings]);
+
+  // Filtered work sub-types based on selected work type
+  const filteredWorkSubTypes = React.useMemo(() => {
+    if (!formData.workType) return [];
+    return workTypeSubtypes[formData.workType] || [];
+  }, [formData.workType]);
 
   const [errors, setErrors] = useState({});
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      // Reset dependent fields when building or work type changes
+      const updates = { [field]: value };
+      
+      if (field === 'building') {
+        updates.apartmentNumber = '';
+        updates.block = '';
+      } else if (field === 'workType') {
+        updates.workSubType = '';
+      }
+      
+      return { ...prev, ...updates };
+    });
+    
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
@@ -113,9 +171,9 @@ const CreateWorkOrder = () => {
     }
 
     try {
-      console.log('🚀 Creating work order with simplified data:', formData);
+      console.log('🚀 Creating work order with data:', formData);
       
-      // Create simple payload that matches backend expectations
+      // Create payload with proper worker assignments
       const payload = {
         title: formData.title.trim(),
         description: formData.description.trim(),
@@ -123,22 +181,34 @@ const CreateWorkOrder = () => {
         apartmentNumber: formData.apartmentNumber || '',
         block: formData.block || '',
         apartmentStatus: formData.apartmentStatus || 'occupied',
+        workType: formData.workType,
+        workSubType: formData.workSubType,
         priority: formData.priority || 'medium',
         scheduledDate: formData.scheduledDate ? formData.scheduledDate.toISOString() : new Date().toISOString(),
         estimatedCost: parseFloat(formData.estimatedCost) || 0,
-        // Simple service structure
+        estimatedCompletionDate: formData.estimatedCompletionDate ? formData.estimatedCompletionDate.toISOString() : null,
+        actualCost: parseFloat(formData.actualCost) || 0,
+        // Create service entry
         services: [{
-          type: 'other',
+          type: formData.workSubType || 'other',
           description: formData.description.trim(),
           laborCost: parseFloat(formData.estimatedCost) || 0,
           materialCost: 0,
           status: 'pending'
         }],
-        assignedTo: [],
+        // Map worker IDs to assignment objects
+        assignedTo: Array.isArray(formData.assignedTo) ? formData.assignedTo.map(workerId => ({
+          worker: workerId,
+          status: 'pending',
+          assignedBy: user?._id || null,
+          assignedAt: new Date().toISOString()
+        })) : [],
         photos: [],
         notes: []
       };
-
+      
+      console.log('📤 Submitting work order with payload:', payload);
+      
       console.log('📤 Sending payload:', payload);
       
       const result = await createWorkOrder(payload).unwrap();
@@ -227,18 +297,22 @@ const CreateWorkOrder = () => {
                       value={formData.building}
                       onChange={(e) => handleInputChange('building', e.target.value)}
                       label="Building *"
+                      disabled={isLoadingBuildings}
                     >
-                      <MenuItem value="">Select Building</MenuItem>
+                      <MenuItem value="">
+                        <em>Select Building</em>
+                      </MenuItem>
                       {buildings.map((building) => (
                         <MenuItem key={building._id} value={building._id}>
                           {building.name} - {building.address}
                         </MenuItem>
                       ))}
                     </Select>
+                    {isLoadingBuildings && (
+                      <FormHelperText>Loading buildings...</FormHelperText>
+                    )}
                     {errors.building && (
-                      <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1 }}>
-                        {errors.building}
-                      </Typography>
+                      <FormHelperText error>{errors.building}</FormHelperText>
                     )}
                   </FormControl>
                 </Grid>
@@ -260,27 +334,57 @@ const CreateWorkOrder = () => {
                   </FormControl>
                 </Grid>
 
-                {/* Apartment Number */}
-                <Grid item xs={12} md={4}>
-                  <TextField
-                    fullWidth
-                    label="Apartment Number"
-                    value={formData.apartmentNumber}
-                    onChange={(e) => handleInputChange('apartmentNumber', e.target.value)}
-                    placeholder="e.g., 101"
-                  />
-                </Grid>
-
                 {/* Block */}
                 <Grid item xs={12} md={4}>
-                  <TextField
-                    fullWidth
-                    label="Block"
-                    value={formData.block}
-                    onChange={(e) => handleInputChange('block', e.target.value)}
-                    placeholder="e.g., A"
-                  />
+                  <FormControl fullWidth>
+                    <InputLabel>Block</InputLabel>
+                    <Select
+                      value={formData.block}
+                      onChange={(e) => handleInputChange('block', e.target.value)}
+                      label="Block"
+                      disabled={!formData.building}
+                    >
+                      <MenuItem value="">
+                        <em>Select Block</em>
+                      </MenuItem>
+                      {availableBlocks.map((block) => (
+                        <MenuItem key={block} value={block}>
+                          {block}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {!formData.building && (
+                      <FormHelperText>Select a building first</FormHelperText>
+                    )}
+                  </FormControl>
                 </Grid>
+
+                {/* Apartment Number */}
+                <Grid item xs={12} md={4}>
+                  <FormControl fullWidth>
+                    <InputLabel>Apartment Number</InputLabel>
+                    <Select
+                      value={formData.apartmentNumber}
+                      onChange={(e) => handleInputChange('apartmentNumber', e.target.value)}
+                      label="Apartment Number"
+                      disabled={!formData.building}
+                    >
+                      <MenuItem value="">
+                        <em>Select Apartment</em>
+                      </MenuItem>
+                      {availableApartments
+                        .filter(apt => !formData.block || apt.block === formData.block)
+                        .map((apt) => (
+                          <MenuItem key={apt.number} value={apt.number}>
+                            {apt.number} {apt.name ? `(${apt.name})` : ''}
+                          </MenuItem>
+                        ))}
+                    </Select>
+                    {!formData.building && (
+                      <FormHelperText>Select a building first</FormHelperText>
+                    )}
+                  </FormControl>
+                </div>
 
                 {/* Apartment Status */}
                 <Grid item xs={12} md={4}>
@@ -330,19 +434,22 @@ const CreateWorkOrder = () => {
                       value={formData.workSubType}
                       onChange={(e) => handleInputChange('workSubType', e.target.value)}
                       label="Work Sub-Type *"
+                      disabled={!formData.workType}
                     >
-                      <MenuItem value="plumbing">Plumbing</MenuItem>
-                      <MenuItem value="electrical">Electrical</MenuItem>
-                      <MenuItem value="hvac">HVAC</MenuItem>
-                      <MenuItem value="painting">Painting</MenuItem>
-                      <MenuItem value="flooring">Flooring</MenuItem>
-                      <MenuItem value="roofing">Roofing</MenuItem>
-                      <MenuItem value="carpentry">Carpentry</MenuItem>
-                      <MenuItem value="appliance">Appliance</MenuItem>
-                      <MenuItem value="landscaping">Landscaping</MenuItem>
-                      <MenuItem value="security">Security</MenuItem>
-                      <MenuItem value="other">Other</MenuItem>
+                      <MenuItem value="">
+                        <em>Select a sub-type</em>
+                      </MenuItem>
+                      {filteredWorkSubTypes.map((subType) => (
+                        <MenuItem key={subType} value={subType}>
+                          {subType.split('_').map(word => 
+                            word.charAt(0).toUpperCase() + word.slice(1)
+                          ).join(' ')}
+                        </MenuItem>
+                      ))}
                     </Select>
+                    {!formData.workType && (
+                      <FormHelperText>Select a work type first</FormHelperText>
+                    )}
                     {errors.workSubType && (
                       <FormHelperText>{errors.workSubType}</FormHelperText>
                     )}
@@ -370,6 +477,50 @@ const CreateWorkOrder = () => {
                     renderInput={(params) => <TextField {...params} fullWidth />}
                     minDate={new Date()}
                   />
+                </Grid>
+
+                {/* Worker Assignment */}
+                <Grid item xs={12}>
+                  <FormControl fullWidth error={!!errors.assignedTo}>
+                    <InputLabel>Assign Workers</InputLabel>
+                    <Select
+                      multiple
+                      value={formData.assignedTo}
+                      onChange={(e) => handleInputChange('assignedTo', e.target.value)}
+                      label="Assign Workers"
+                      disabled={isLoadingUsers}
+                      renderValue={(selected) => (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {selected.map((workerId) => {
+                            const worker = workers.find(w => w._id === workerId);
+                            return worker ? (
+                              <Chip 
+                                key={worker._id} 
+                                label={`${worker.firstName} ${worker.lastName?.charAt(0) || ''}.`} 
+                                size="small"
+                              />
+                            ) : null;
+                          })}
+                        </Box>
+                      )}
+                    >
+                      {workerOptions.map((worker) => (
+                        <MenuItem key={worker.id} value={worker.id}>
+                          <Checkbox checked={formData.assignedTo.includes(worker.id)} />
+                          <ListItemText 
+                            primary={`${worker.firstName} ${worker.lastName}`}
+                            secondary={worker.email}
+                          />
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {isLoadingUsers && (
+                      <FormHelperText>Loading workers...</FormHelperText>
+                    )}
+                    {errors.assignedTo && (
+                      <FormHelperText error>{errors.assignedTo}</FormHelperText>
+                    )}
+                  </FormControl>
                 </Grid>
 
                 {/* Cost Information */}

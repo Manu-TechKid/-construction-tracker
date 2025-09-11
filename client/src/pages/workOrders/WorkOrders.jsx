@@ -44,9 +44,11 @@ import { toast } from 'react-toastify';
 
 import { 
   useGetWorkOrdersQuery, 
-  useDeleteWorkOrderMutation 
+  useDeleteWorkOrderMutation, 
+  useGetWorkOrderFormDataQuery 
 } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
+import { useGetUsersQuery } from '../../features/users/usersApiSlice';
 import { useAuth } from '../../hooks/useAuth';
 
 const WorkOrders = () => {
@@ -61,12 +63,43 @@ const WorkOrders = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // API queries
-  const { data: workOrdersData, isLoading, error } = useGetWorkOrdersQuery();
+  const { data: workOrdersData, isLoading, error } = useGetWorkOrdersQuery(undefined, {
+    selectFromResult: ({ data, ...rest }) => ({
+      ...rest,
+      data: {
+        ...data,
+        workOrders: data?.data?.workOrders?.map(wo => ({
+          ...wo,
+          // Ensure building is populated with at least an ID
+          building: wo.building?._id ? wo.building : { _id: wo.building }
+        })) || []
+      }
+    })
+  });
+  
   const { data: buildingsData } = useGetBuildingsQuery();
+  const { data: usersData } = useGetUsersQuery();
   const [deleteWorkOrder, { isLoading: isDeleting }] = useDeleteWorkOrderMutation();
   
   const workOrders = workOrdersData?.data?.workOrders || [];
   const buildings = buildingsData?.data?.buildings || [];
+  const workers = (usersData?.data?.users || []).filter(user => user.role === 'worker');
+  
+  // Create a map of building IDs to building objects for quick lookup
+  const buildingMap = React.useMemo(() => {
+    return buildings.reduce((acc, building) => {
+      acc[building._id] = building;
+      return acc;
+    }, {});
+  }, [buildings]);
+  
+  // Create a map of worker IDs to worker objects for quick lookup
+  const workerMap = React.useMemo(() => {
+    return workers.reduce((acc, worker) => {
+      acc[worker._id] = worker;
+      return acc;
+    }, {});
+  }, [workers]);
 
   const handleMenuClick = (event, workOrder) => {
     setAnchorEl(event.currentTarget);
@@ -308,7 +341,7 @@ const WorkOrders = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {workOrder.building?.name || 'N/A'}
+                        {workOrder.building?._id ? (buildingMap[workOrder.building._id]?.name || 'N/A') : 'N/A'}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -338,7 +371,14 @@ const WorkOrders = () => {
                     <TableCell>
                       <Typography variant="body2">
                         {workOrder.assignedTo?.length > 0 
-                          ? `${workOrder.assignedTo.length} worker(s)`
+                          ? workOrder.assignedTo
+                              .map(assignment => {
+                                const worker = workerMap[assignment.worker?._id || assignment.worker];
+                                return worker ? 
+                                  `${worker.firstName} ${worker.lastName?.charAt(0) || ''}.` : 
+                                  'Unknown Worker';
+                              })
+                              .join(', ')
                           : 'Unassigned'
                         }
                         </Typography>
