@@ -25,6 +25,7 @@ import {
   Add as AddIcon,
   Delete as DeleteIcon,
   Save as SaveIcon,
+  PhotoCamera as PhotoCameraIcon,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -167,8 +168,21 @@ const CreateWorkOrder = () => {
         // Add user fields
         formData.append('createdBy', user._id);
         formData.append('updatedBy', user._id);
+        
+        // Add photos if any
+        if (values.photos && values.photos.length > 0) {
+          values.photos.forEach((photo, index) => {
+            if (photo.file) {
+              formData.append('photos', photo.file);
+            }
+          });
+        }
 
         console.log('Processed work order FormData for backend');
+        console.log('FormData entries:');
+        for (let [key, value] of formData.entries()) {
+          console.log(key, typeof value === 'object' ? 'File object' : value);
+        }
 
         await createWorkOrder(formData).unwrap();
         toast.success('Work order created successfully');
@@ -509,6 +523,54 @@ const CreateWorkOrder = () => {
                   }
                 />
                 <CardContent>
+                  {/* Photo Upload Section */}
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="h6" gutterBottom>
+                      Photos
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      startIcon={<PhotoCameraIcon />}
+                      sx={{ mb: 2 }}
+                    >
+                      Upload Photos
+                      <input
+                        type="file"
+                        hidden
+                        multiple
+                        accept="image/*"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files);
+                          const photoObjects = files.map(file => ({ file, preview: URL.createObjectURL(file) }));
+                          formik.setFieldValue('photos', [...formik.values.photos, ...photoObjects]);
+                        }}
+                      />
+                    </Button>
+                    {formik.values.photos && formik.values.photos.length > 0 && (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {formik.values.photos.map((photo, index) => (
+                          <Box key={index} sx={{ position: 'relative' }}>
+                            <img
+                              src={photo.preview || photo.url}
+                              alt={`Preview ${index + 1}`}
+                              style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 4 }}
+                            />
+                            <IconButton
+                              size="small"
+                              sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'error.main', color: 'white' }}
+                              onClick={() => {
+                                const newPhotos = formik.values.photos.filter((_, i) => i !== index);
+                                formik.setFieldValue('photos', newPhotos);
+                              }}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        ))}
+                      </Box>
+                    )}
+                  </Box>
                   {formik.values.services.map((service, index) => (
                     <Card key={index} variant="outlined" sx={{ mb: 2 }}>
                       <CardContent>
@@ -552,24 +614,41 @@ const CreateWorkOrder = () => {
                               rows={2}
                             />
                           </Grid>
-                          <Grid item xs={6}>
+                          <Grid item xs={4}>
                             <TextField
                               fullWidth
                               type="number"
                               label="Labor Cost ($)"
-                              value={service.laborCost}
-                              onChange={(e) => updateService(index, 'laborCost', parseFloat(e.target.value) || 0)}
+                              value={service.laborCost === 0 ? '' : service.laborCost}
+                              onChange={(e) => {
+                                const value = e.target.value === '' ? 0 : parseFloat(e.target.value) || 0;
+                                updateService(index, 'laborCost', value);
+                              }}
+                              placeholder="0.00"
                               inputProps={{ min: 0, step: 0.01 }}
                             />
                           </Grid>
-                          <Grid item xs={6}>
+                          <Grid item xs={4}>
                             <TextField
                               fullWidth
                               type="number"
                               label="Material Cost ($)"
-                              value={service.materialCost}
-                              onChange={(e) => updateService(index, 'materialCost', parseFloat(e.target.value) || 0)}
+                              value={service.materialCost === 0 ? '' : service.materialCost}
+                              onChange={(e) => {
+                                const value = e.target.value === '' ? 0 : parseFloat(e.target.value) || 0;
+                                updateService(index, 'materialCost', value);
+                              }}
+                              placeholder="0.00"
                               inputProps={{ min: 0, step: 0.01 }}
+                            />
+                          </Grid>
+                          <Grid item xs={4}>
+                            <TextField
+                              fullWidth
+                              label="Total Cost ($)"
+                              value={`$${(service.laborCost + service.materialCost).toFixed(2)}`}
+                              InputProps={{ readOnly: true }}
+                              variant="filled"
                             />
                           </Grid>
                         </Grid>

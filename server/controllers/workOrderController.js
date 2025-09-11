@@ -151,7 +151,9 @@ exports.createWorkOrder = async (req, res, next) => {
       timestamp: new Date().toISOString(),
       version: 'FINAL-FIX-2024-01-10',
       error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      stack: error.stack,
+      requestBody: req.body,
+      requestFiles: req.files ? Object.keys(req.files) : 'No files'
     });
   }
 };
