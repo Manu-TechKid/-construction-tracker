@@ -183,6 +183,3 @@ export const createAppTheme = (mode = 'light') => {
 };
 
 export { lightTheme, darkTheme };
-
-// Default export for basic usage
-export default lightTheme;

@@ -59,29 +59,10 @@ const Login = () => {
   // simplified UI to ensure everything renders clearly
 
   return (
-    <Box 
-      sx={{ 
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        bgcolor: 'background.default',
-        p: 3
-      }}
-    >
-      <Box 
-        sx={{ 
-          maxWidth: 400,
-          width: '100%',
-          bgcolor: 'background.paper',
-          p: 4,
-          borderRadius: 2,
-          boxShadow: 3
-        }}
-      >
-        <Typography component="h1" variant="h5" sx={{ mb: 2, textAlign: 'center' }}>
-          Sign in to your account
-        </Typography>
+    <Box>
+      <Typography component="h1" variant="h5" sx={{ mb: 2, textAlign: 'center' }}>
+        Sign in to your account
+      </Typography>
 
       {formErrors && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -135,7 +116,6 @@ const Login = () => {
           </Box>
         </Stack>
       </form>
-      </Box>
     </Box>
   );
 };

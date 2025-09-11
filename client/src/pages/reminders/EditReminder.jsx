@@ -46,7 +46,7 @@ const EditReminder = () => {
       }).unwrap();
       
       toast.success('Reminder updated successfully');
-      navigate('/reminders');
+      navigate(`/reminders/${id}`);
     } catch (error) {
       console.error('Failed to update reminder:', error);
       toast.error(error?.data?.message || 'Failed to update reminder');

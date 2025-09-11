@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -63,22 +63,22 @@ const WorkOrders = () => {
   const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
 
-  const handleFilterChange = (e) => {
+  const handleFilterChange = useCallback((e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
-  };
+  }, [filters]);
 
-  const handleStatusClick = (event, workOrder) => {
+  const handleStatusClick = useCallback((event, workOrder) => {
     event.stopPropagation();
     setStatusMenuAnchor(event.currentTarget);
     setSelectedWorkOrder(workOrder);
-  };
+  }, []);
 
-  const handleStatusClose = () => {
+  const handleStatusClose = useCallback(() => {
     setStatusMenuAnchor(null);
     setSelectedWorkOrder(null);
-  };
+  }, []);
 
-  const handleStatusUpdate = async (newStatus) => {
+  const handleStatusUpdate = useCallback(async (newStatus) => {
     if (!selectedWorkOrder) return;
     
     try {
@@ -87,13 +87,27 @@ const WorkOrders = () => {
         status: newStatus
       }).unwrap();
       
-      toast.success(`Work order status updated to ${newStatus}`);
+      toast.success(`Work order status updated to ${newStatus}`, {
+        position: "top-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: true,
+      });
       handleStatusClose();
     } catch (error) {
       console.error('Failed to update status:', error);
-      toast.error('Failed to update work order status');
+      toast.error('Failed to update work order status', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     }
-  };
+  }, [selectedWorkOrder, updateWorkOrder, handleStatusClose]);
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -210,9 +224,9 @@ const WorkOrders = () => {
             width: 40, 
             height: 40, 
             borderRadius: '4px',
-            border: '2px solid #e0e0e0',
             overflow: 'hidden',
-            bgcolor: '#f5f5f5',
+            border: '2px solid #e0e0e0',
+            backgroundColor: '#f5f5f5',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
@@ -223,11 +237,12 @@ const WorkOrders = () => {
               style={{ 
                 width: '100%', 
                 height: '100%', 
-                objectFit: 'cover'
+                objectFit: 'cover',
+                display: 'block'
               }} 
               onError={(e) => {
                 e.target.style.display = 'none';
-                e.target.parentElement.innerHTML = '<span style="font-size: 10px; color: #666;">No Image</span>';
+                e.target.parentElement.innerHTML = '<div style="font-size: 10px; color: #666; text-align: center;">No Image</div>';
               }}
             />
           </Box>

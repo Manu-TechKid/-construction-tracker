@@ -71,46 +71,54 @@ const WorkOrderForm = () => {
     }),
     onSubmit: async (values) => {
       try {
-        // Show immediate feedback
-        const message = isEdit ? 'Updating work order...' : 'Creating work order...';
-        toast.info(message);
-
         // Format the data correctly for the backend
         const formattedValues = {
           ...values,
+          // Ensure apartmentNumber is mapped correctly
           apartmentNumber: values.apartmentNumber || values.apartment,
+          // Ensure scheduledDate is properly formatted
           scheduledDate: values.scheduledDate instanceof Date ? values.scheduledDate.toISOString() : values.scheduledDate,
         };
 
         let workOrderId = id;
-        
-        // Execute main operation
         if (isEdit) {
           await updateWorkOrder({ id, ...formattedValues }).unwrap();
-          toast.success('Work order updated successfully!');
         } else {
           const newWorkOrder = await createWorkOrder(formattedValues).unwrap();
           workOrderId = newWorkOrder.data._id;
-          toast.success('Work order created successfully!');
         }
 
-        // Handle photo uploads asynchronously after redirect
         if (newPhotos.length > 0) {
-          // Upload photos in background
-          Promise.all(
-            newPhotos.map(photo => uploadPhoto({ workOrderId, photo }).unwrap())
-          ).catch(error => {
-            console.error('Photo upload failed:', error);
-            toast.error('Some photos failed to upload');
-          });
+          for (const photo of newPhotos) {
+            await uploadPhoto({ workOrderId, photo }).unwrap();
+          }
         }
 
-        // Immediate navigation
-        navigate('/work-orders', { replace: true });
+        // Show success message and redirect immediately
+        const message = isEdit ? 'Work order updated successfully!' : 'Work order created successfully!';
+        toast.success(message, {
+          position: "top-right",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: false,
+          draggable: true,
+        });
         
+        // Immediate navigation without delay
+        setTimeout(() => {
+          navigate('/work-orders', { replace: true });
+        }, 100);
       } catch (error) {
         console.error('Failed to save work order:', error);
-        toast.error(error?.data?.message || 'Failed to save work order. Please try again.');
+        toast.error('Failed to save work order. Please try again.', {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
       }
     },
   });
