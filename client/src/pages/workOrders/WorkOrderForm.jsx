@@ -33,32 +33,8 @@ const WorkOrderForm = () => {
   const navigate = useNavigate();
   const isEdit = Boolean(id);
 
-  const { data: buildingsData } = useGetBuildingsQuery();
-  const { data: usersData } = useGetUsersQuery();
-  const { data: workOrderData, isLoading: isLoadingWorkOrder } = useGetWorkOrderQuery(id, { skip: !isEdit });
-  const { data: selectedBuildingData } = useGetBuildingQuery(formik.values.building, { skip: !formik.values.building });
-
-  const [createWorkOrder, { isLoading: isCreating }] = useCreateWorkOrderMutation();
-  const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
-  const [uploadPhoto, { isLoading: isUploading }] = useUploadPhotoMutation();
-  const [deletePhoto] = useDeletePhotoMutation();
   const [newPhotos, setNewPhotos] = useState([]);
   const [existingPhotos, setExistingPhotos] = useState([]);
-
-  const handlePhotoChange = (e) => {
-    if (e.target.files) {
-      setNewPhotos([...newPhotos, ...Array.from(e.target.files)]);
-    }
-  };
-
-  const handleRemoveNewPhoto = (index) => {
-    setNewPhotos(newPhotos.filter((_, i) => i !== index));
-  };
-
-  const handleRemoveExistingPhoto = async (photoId) => {
-    await deletePhoto({ workOrderId: id, photoId });
-    setExistingPhotos(existingPhotos.filter(p => p._id !== photoId));
-  };
 
   const formik = useFormik({
     initialValues: {
@@ -104,8 +80,33 @@ const WorkOrderForm = () => {
     },
   });
 
+  const { data: buildingsData } = useGetBuildingsQuery();
+  const { data: usersData } = useGetUsersQuery();
+  const { data: workOrderData, isLoading: isLoadingWorkOrder } = useGetWorkOrderQuery(id, { skip: !isEdit });
+  const { data: selectedBuildingData } = useGetBuildingQuery(formik.values.building, { skip: !formik.values.building });
+
+  const [createWorkOrder, { isLoading: isCreating }] = useCreateWorkOrderMutation();
+  const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
+  const [uploadPhoto, { isLoading: isUploading }] = useUploadPhotoMutation();
+  const [deletePhoto] = useDeletePhotoMutation();
+
+  const handlePhotoChange = (e) => {
+    if (e.target.files) {
+      setNewPhotos([...newPhotos, ...Array.from(e.target.files)]);
+    }
+  };
+
+  const handleRemoveNewPhoto = (index) => {
+    setNewPhotos(newPhotos.filter((_, i) => i !== index));
+  };
+
+  const handleRemoveExistingPhoto = async (photoId) => {
+    await deletePhoto({ workOrderId: id, photoId });
+    setExistingPhotos(existingPhotos.filter(p => p._id !== photoId));
+  };
+
   useEffect(() => {
-    if (isEdit && workOrderData) {
+    if (isEdit && workOrderData && workOrderData.data) {
       formik.setValues(workOrderData.data);
       if (workOrderData.data.photos) {
         setExistingPhotos(workOrderData.data.photos);
