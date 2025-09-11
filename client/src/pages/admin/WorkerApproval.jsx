@@ -63,7 +63,7 @@ const WorkerApproval = () => {
   const [updateWorker, { isLoading: isUpdating }] = useUpdateWorkerMutation();
 
   // Extract workers from API response
-  const workers = workersData?.data?.workers || workersData?.data || [];
+  const workers = workersData?.data?.users || workersData?.data?.workers || workersData?.data || [];
   
   // Filter workers based on approval status
   const filteredWorkers = workers.filter(worker => {

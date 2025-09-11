@@ -22,6 +22,7 @@ import {
 } from '@mui/icons-material';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { useGetUsersQuery } from '../../features/users/usersApiSlice';
+import { useGetWorkOrdersQuery } from '../../features/workOrders/workOrdersApiSlice';
 import StatCard from '../../components/dashboard/StatCard';
 import BuildingStatus from '../../components/dashboard/BuildingStatus';
 import WorkerAvailability from '../../components/dashboard/WorkerAvailability';
@@ -33,11 +34,15 @@ const Dashboard = () => {
     totalBuildings: 0,
     totalWorkers: 0,
     availableWorkers: 0,
+    totalWorkOrders: 0,
+    pendingWorkOrders: 0,
+    completedWorkOrders: 0,
   });
 
   // Fetch data
   const { data: buildingsData, isLoading: isLoadingBuildings, error: buildingsError } = useGetBuildingsQuery({});
   const { data: usersData, isLoading: isLoadingUsers, error: usersError } = useGetUsersQuery({ role: 'worker' });
+  const { data: workOrdersData, isLoading: isLoadingWorkOrders, error: workOrdersError } = useGetWorkOrdersQuery();
 
   // Process data
   useEffect(() => {
@@ -63,7 +68,21 @@ const Dashboard = () => {
         availableWorkers: availableWorkers.length
       }));
     }
-  }, [buildingsData, usersData]);
+
+    // Handle work orders data
+    if (workOrdersData?.data) {
+      const workOrders = workOrdersData.data || [];
+      const pendingOrders = workOrders.filter(order => order.status === 'pending');
+      const completedOrders = workOrders.filter(order => order.status === 'completed');
+      
+      setStats(prevStats => ({
+        ...prevStats,
+        totalWorkOrders: workOrders.length,
+        pendingWorkOrders: pendingOrders.length,
+        completedWorkOrders: completedOrders.length
+      }));
+    }
+  }, [buildingsData, usersData, workOrdersData]);
 
   // Get building status
   const buildingStatusData = buildingsData?.data?.buildings?.map(building => ({
@@ -109,7 +128,7 @@ const Dashboard = () => {
 
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mt: 2, mb: 4 }}>
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="Total Buildings"
             value={stats.totalBuildings}
@@ -117,7 +136,7 @@ const Dashboard = () => {
             color={theme.palette.primary.main}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="Total Workers"
             value={stats.totalWorkers}
@@ -125,12 +144,20 @@ const Dashboard = () => {
             color={theme.palette.info.main}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Available Workers"
-            value={stats.availableWorkers}
-            icon={<CheckCircleIcon />}
-            color={theme.palette.success.main}
+            title="Work Orders"
+            value={stats.totalWorkOrders}
+            icon={<AssignmentIcon />}
+            color={theme.palette.secondary.main}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard
+            title="Pending Orders"
+            value={stats.pendingWorkOrders}
+            icon={<WarningIcon />}
+            color={theme.palette.warning.main}
           />
         </Grid>
       </Grid>

@@ -41,8 +41,8 @@ exports.getAllWorkOrders = async (req, res) => {
   try {
     const workOrders = await WorkOrder.find()
       .populate('building', 'name')
-      .populate('assignedTo.worker', 'firstName lastName')
-      .populate('createdBy', 'firstName lastName');
+      .populate('assignedTo.worker', 'name email')
+      .populate('createdBy', 'name email');
       
     res.status(200).json({ success: true, count: workOrders.length, data: workOrders });
   } catch (error) {
@@ -57,8 +57,8 @@ exports.getWorkOrderById = async (req, res) => {
   try {
     const workOrder = await WorkOrder.findById(req.params.id)
       .populate('building', 'name address')
-      .populate('assignedTo.worker', 'firstName lastName email')
-      .populate('createdBy', 'firstName lastName');
+      .populate('assignedTo.worker', 'name email')
+      .populate('createdBy', 'name email');
 
     if (!workOrder) {
       return res.status(404).json({ success: false, message: 'Work order not found' });

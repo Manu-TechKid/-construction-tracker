@@ -59,6 +59,7 @@ const WorkOrderForm = () => {
       estimatedCost: 0,
       actualCost: 0,
       scheduledDate: new Date(),
+      status: 'pending',
     },
     validationSchema: Yup.object({
       title: Yup.string().required('Required'),
@@ -92,9 +93,11 @@ const WorkOrderForm = () => {
           }
         }
 
-        // Show success message and redirect
-        alert(isEdit ? 'Work order updated successfully!' : 'Work order created successfully!');
-        navigate('/work-orders');
+        // Show success message and redirect immediately
+        const message = isEdit ? 'Work order updated successfully!' : 'Work order created successfully!';
+        alert(message);
+        // Force immediate navigation
+        window.location.href = '/work-orders';
       } catch (error) {
         console.error('Failed to save work order:', error);
         alert('Failed to save work order. Please try again.');
@@ -131,13 +134,31 @@ const WorkOrderForm = () => {
     if (isEdit && workOrderData?.data) {
       // Exclude fields that are not part of the form to avoid warnings
       const { _id, __v, createdAt, updatedAt, ...formData } = workOrderData.data;
-      formik.setValues(formData);
+      
+      // Ensure all form fields have proper values
+      const safeFormData = {
+        title: formData.title || '',
+        description: formData.description || '',
+        building: formData.building?._id || formData.building || '',
+        block: formData.block || '',
+        apartmentNumber: formData.apartmentNumber || '',
+        workType: formData.workType || '',
+        workSubType: formData.workSubType || '',
+        priority: formData.priority || 'medium',
+        assignedTo: formData.assignedTo?.map(a => a.worker?._id || a.worker) || [],
+        estimatedCost: formData.estimatedCost || 0,
+        actualCost: formData.actualCost || 0,
+        scheduledDate: formData.scheduledDate ? new Date(formData.scheduledDate) : new Date(),
+        status: formData.status || 'pending'
+      };
+      
+      formik.setValues(safeFormData);
 
       if (workOrderData.data.photos) {
         setExistingPhotos(workOrderData.data.photos);
       }
     }
-  }, [isEdit, workOrderData]); // Removed formik from dependencies
+  }, [isEdit, workOrderData]);
 
   if (isLoadingWorkOrder || isLoadingBuildings || isLoadingUsers) {
     return (
@@ -149,7 +170,12 @@ const WorkOrderForm = () => {
 
   return (
     <Container>
-      <Typography variant="h4" gutterBottom>{isEdit ? 'Edit Work Order' : 'Create Work Order'}</Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4">{isEdit ? 'Edit Work Order' : 'Create Work Order'}</Typography>
+        <Button variant="outlined" onClick={() => navigate('/work-orders')}>
+          Back to Work Orders
+        </Button>
+      </Box>
       <form onSubmit={formik.handleSubmit}>
         <Grid container spacing={3}>
           <Grid item xs={12}>
@@ -280,6 +306,18 @@ const WorkOrderForm = () => {
                         <MenuItem value="medium">Medium</MenuItem>
                         <MenuItem value="high">High</MenuItem>
                         <MenuItem value="urgent">Urgent</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth>
+                      <InputLabel>Status</InputLabel>
+                      <Select id="status" name="status" value={formik.values.status} onChange={formik.handleChange}>
+                        <MenuItem value="pending">Pending</MenuItem>
+                        <MenuItem value="in_progress">In Progress</MenuItem>
+                        <MenuItem value="completed">Completed</MenuItem>
+                        <MenuItem value="on_hold">On Hold</MenuItem>
+                        <MenuItem value="cancelled">Cancelled</MenuItem>
                       </Select>
                     </FormControl>
                   </Grid>
