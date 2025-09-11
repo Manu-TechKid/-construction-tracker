@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { ToastContainer } from 'react-toastify';
@@ -55,9 +55,8 @@ const App = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Router>
-        <Suspense fallback={<LoadingFallback />}>
-          <Routes>
+      <Suspense fallback={<LoadingFallback />}>
+        <Routes>
             {/* Public Routes */}
             <Route path="/login" element={
               <PublicRoute>
@@ -178,9 +177,8 @@ const App = () => {
               <Route path="profile" element={<Profile />} />
               <Route path="settings" element={<Settings />} />
             </Route>
-          </Routes>
-        </Suspense>
-      </Router>
+        </Routes>
+      </Suspense>
       
       <ToastContainer
         position="top-right"
