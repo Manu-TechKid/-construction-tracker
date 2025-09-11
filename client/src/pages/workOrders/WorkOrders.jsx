@@ -109,13 +109,37 @@ const WorkOrders = () => {
       valueFormatter: (params) => format(new Date(params.value), 'MM/dd/yyyy'),
     },
     {
+      field: 'assignedTo',
+      headerName: 'Assigned To',
+      flex: 1.5,
+      valueGetter: (params) => 
+        params.row.assignedTo?.map(a => `${a.worker?.firstName} ${a.worker?.lastName}`).join(', ') || 'N/A',
+    },
+    {
+      field: 'photos',
+      headerName: 'Photo',
+      flex: 0.5,
+      sortable: false,
+      renderCell: (params) => {
+        const firstPhoto = params.row.photos?.[0];
+        return firstPhoto ? (
+          <img src={firstPhoto.url} alt="Work Order" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: '4px' }} />
+        ) : null;
+      },
+    },
+    {
       field: 'actions',
       headerName: 'Actions',
-      width: 150,
+      flex: 1,
       sortable: false,
       renderCell: (params) => (
         <Box>
-          <Button size="small" startIcon={<ViewIcon />} onClick={() => navigate(`/work-orders/${params.id}`)}>View</Button>
+          <Button
+            startIcon={<ViewIcon />}
+            onClick={() => navigate(`/work-orders/${params.row._id}`)}
+          >
+            View
+          </Button>
         </Box>
       ),
     },

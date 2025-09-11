@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useFormik } from 'formik';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import * as Yup from 'yup';
 import {
   Box,
@@ -28,6 +31,12 @@ import {
   useUpdateWorkOrderMutation,
 } from '../../features/workOrders/workOrdersApiSlice';
 
+const workSubTypes = {
+  maintenance: ['General Maintenance', 'Preventive Maintenance', 'Inspection'],
+  repair: ['Plumbing', 'Electrical', 'Structural', 'Appliance'],
+  installation: ['New Appliance', 'Fixture Installation', 'System Upgrade'],
+};
+
 const WorkOrderForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -49,6 +58,7 @@ const WorkOrderForm = () => {
       assignedTo: [],
       estimatedCost: 0,
       actualCost: 0,
+      scheduledDate: new Date(),
     },
     validationSchema: Yup.object({
       title: Yup.string().required('Required'),
@@ -80,8 +90,8 @@ const WorkOrderForm = () => {
     },
   });
 
-  const { data: buildingsData } = useGetBuildingsQuery();
-  const { data: usersData } = useGetUsersQuery();
+  const { data: buildingsData, isLoading: isLoadingBuildings } = useGetBuildingsQuery();
+  const { data: usersData, isLoading: isLoadingUsers } = useGetUsersQuery({ role: 'worker' });
   const { data: workOrderData, isLoading: isLoadingWorkOrder } = useGetWorkOrderQuery(id, { skip: !isEdit });
   const { data: selectedBuildingData } = useGetBuildingQuery(formik.values.building, { skip: !formik.values.building });
 
@@ -106,15 +116,24 @@ const WorkOrderForm = () => {
   };
 
   useEffect(() => {
-    if (isEdit && workOrderData && workOrderData.data) {
-      formik.setValues(workOrderData.data);
+    if (isEdit && workOrderData?.data) {
+      // Exclude fields that are not part of the form to avoid warnings
+      const { _id, __v, createdAt, updatedAt, ...formData } = workOrderData.data;
+      formik.setValues(formData);
+
       if (workOrderData.data.photos) {
         setExistingPhotos(workOrderData.data.photos);
       }
     }
-  }, [isEdit, workOrderData, formik]);
+  }, [isEdit, workOrderData]); // Removed formik from dependencies
 
-  if (isLoadingWorkOrder) return <CircularProgress />;
+  if (isLoadingWorkOrder || isLoadingBuildings || isLoadingUsers) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Container>
@@ -147,7 +166,7 @@ const WorkOrderForm = () => {
                     <FormControl fullWidth>
                       <InputLabel>Building</InputLabel>
                       <Select id="building" name="building" value={formik.values.building} onChange={formik.handleChange}>
-                        {buildingsData?.data?.buildings.map((building) => (
+                        {buildingsData?.data?.buildings?.map((building) => (
                           <MenuItem key={building._id} value={building._id}>{building.name}</MenuItem>
                         ))}
                       </Select>
@@ -167,9 +186,7 @@ const WorkOrderForm = () => {
                     <FormControl fullWidth disabled={!formik.values.block}>
                       <InputLabel>Apartment</InputLabel>
                       <Select id="apartmentNumber" name="apartmentNumber" value={formik.values.apartmentNumber} onChange={formik.handleChange}>
-                        {selectedBuildingData?.data?.apartments
-                      ?.filter(a => a.block === formik.values.block)
-                      ?.map((apartment) => (
+                        {selectedBuildingData?.data?.apartments?.filter(a => a.block === formik.values.block)?.map((apartment) => (
                             <MenuItem key={apartment._id} value={apartment.apartmentNumber}>
                               {apartment.apartmentNumber}
                             </MenuItem>
@@ -188,7 +205,14 @@ const WorkOrderForm = () => {
                     </FormControl>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <TextField fullWidth id="workSubType" name="workSubType" label="Work Sub-Type" value={formik.values.workSubType} onChange={formik.handleChange} />
+                    <FormControl fullWidth disabled={!formik.values.workType}>
+                      <InputLabel>Work Sub-Type</InputLabel>
+                      <Select id="workSubType" name="workSubType" value={formik.values.workSubType} onChange={formik.handleChange}>
+                        {formik.values.workType && workSubTypes[formik.values.workType]?.map(subType => (
+                          <MenuItem key={subType} value={subType}>{subType}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
                   </Grid>
                 </Grid>
               </CardContent>
@@ -227,6 +251,16 @@ const WorkOrderForm = () => {
               <CardContent>
                 <Grid container spacing={3}>
                   <Grid item xs={12} sm={6}>
+                    <LocalizationProvider dateAdapter={AdapterDateFns}>
+                      <DatePicker
+                        label="Scheduled Date"
+                        value={formik.values.scheduledDate}
+                        onChange={(newValue) => formik.setFieldValue('scheduledDate', newValue)}
+                        renderInput={(params) => <TextField {...params} fullWidth />}
+                      />
+                    </LocalizationProvider>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
                     <FormControl fullWidth>
                       <InputLabel>Priority</InputLabel>
                       <Select id="priority" name="priority" value={formik.values.priority} onChange={formik.handleChange}>
@@ -247,9 +281,7 @@ const WorkOrderForm = () => {
                     <FormControl fullWidth>
                       <InputLabel>Assign To</InputLabel>
                       <Select multiple id="assignedTo" name="assignedTo" value={formik.values.assignedTo} onChange={formik.handleChange}>
-                        {usersData?.data?.users
-                          .filter(user => user.role === 'worker')
-                          .map((user) => (
+                        {usersData?.data?.users?.map((user) => (
                             <MenuItem key={user._id} value={user._id}>{user.firstName} {user.lastName}</MenuItem>
                         ))}
                       </Select>

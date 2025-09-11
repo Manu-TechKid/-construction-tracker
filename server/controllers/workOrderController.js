@@ -7,10 +7,10 @@ const User = require('../models/User');
 // @access  Private
 exports.createWorkOrder = async (req, res) => {
   try {
-    const { title, description, building, workType, workSubType, assignedTo } = req.body;
+    const { title, description, building, workType, workSubType, assignedTo, scheduledDate } = req.body;
 
     // Basic validation
-    if (!title || !description || !building || !workType || !workSubType) {
+    if (!title || !description || !building || !workType || !workSubType || !scheduledDate) {
       return res.status(400).json({ message: 'Please provide all required fields.' });
     }
 
@@ -20,11 +20,13 @@ exports.createWorkOrder = async (req, res) => {
       return res.status(404).json({ message: 'Building not found.' });
     }
 
-    const workOrder = await WorkOrder.create({
-      ...req.body,
-      createdBy: req.user._id,
-      updatedBy: req.user._id,
-    });
+    const workOrderData = { ...req.body, createdBy: req.user._id };
+
+    if (assignedTo && Array.isArray(assignedTo)) {
+      workOrderData.assignedTo = assignedTo.map(workerId => ({ worker: workerId }));
+    }
+
+    const workOrder = await WorkOrder.create(workOrderData);
 
     res.status(201).json({ success: true, data: workOrder });
   } catch (error) {
@@ -79,10 +81,13 @@ exports.updateWorkOrder = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Work order not found' });
     }
 
-    // Add user who updated the document
-    req.body.updatedBy = req.user._id;
+    const updateData = { ...req.body, updatedBy: req.user._id };
 
-    workOrder = await WorkOrder.findByIdAndUpdate(req.params.id, req.body, {
+    if (updateData.assignedTo && Array.isArray(updateData.assignedTo)) {
+      updateData.assignedTo = updateData.assignedTo.map(workerId => ({ worker: workerId }));
+    }
+
+    workOrder = await WorkOrder.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
     });
