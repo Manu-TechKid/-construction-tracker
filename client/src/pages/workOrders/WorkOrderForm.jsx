@@ -69,11 +69,20 @@ const WorkOrderForm = () => {
     }),
     onSubmit: async (values) => {
       try {
+        // Format the data correctly for the backend
+        const formattedValues = {
+          ...values,
+          // Ensure apartmentNumber is mapped correctly
+          apartmentNumber: values.apartmentNumber || values.apartment,
+          // Ensure scheduledDate is properly formatted
+          scheduledDate: values.scheduledDate instanceof Date ? values.scheduledDate.toISOString() : values.scheduledDate,
+        };
+
         let workOrderId = id;
         if (isEdit) {
-          await updateWorkOrder({ id, ...values }).unwrap();
+          await updateWorkOrder({ id, ...formattedValues }).unwrap();
         } else {
-          const newWorkOrder = await createWorkOrder(values).unwrap();
+          const newWorkOrder = await createWorkOrder(formattedValues).unwrap();
           workOrderId = newWorkOrder.data._id;
         }
 
@@ -187,8 +196,8 @@ const WorkOrderForm = () => {
                       <InputLabel>Apartment</InputLabel>
                       <Select id="apartmentNumber" name="apartmentNumber" value={formik.values.apartmentNumber} onChange={formik.handleChange}>
                         {selectedBuildingData?.data?.apartments?.filter(a => a.block === formik.values.block)?.map((apartment) => (
-                            <MenuItem key={apartment._id} value={apartment.apartmentNumber}>
-                              {apartment.apartmentNumber}
+                            <MenuItem key={apartment._id} value={apartment.number}>
+                              {apartment.number}
                             </MenuItem>
                         ))}
                       </Select>
@@ -282,7 +291,7 @@ const WorkOrderForm = () => {
                       <InputLabel>Assign To</InputLabel>
                       <Select multiple id="assignedTo" name="assignedTo" value={formik.values.assignedTo} onChange={formik.handleChange}>
                         {usersData?.data?.users?.map((user) => (
-                            <MenuItem key={user._id} value={user._id}>{user.firstName} {user.lastName}</MenuItem>
+                            <MenuItem key={user._id} value={user._id}>{user.name}</MenuItem>
                         ))}
                       </Select>
                     </FormControl>

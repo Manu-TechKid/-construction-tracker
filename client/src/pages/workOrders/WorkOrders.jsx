@@ -123,8 +123,25 @@ const WorkOrders = () => {
       renderCell: (params) => {
         const firstPhoto = params.row.photos?.[0];
         return firstPhoto ? (
-          <img src={firstPhoto.url} alt="Work Order" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: '4px' }} />
-        ) : null;
+          <img 
+            src={firstPhoto.url} 
+            alt="Work Order" 
+            style={{ 
+              width: 40, 
+              height: 40, 
+              objectFit: 'cover', 
+              borderRadius: '4px',
+              border: '1px solid #ddd'
+            }} 
+            onError={(e) => {
+              e.target.style.display = 'none';
+            }}
+          />
+        ) : (
+          <Box sx={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.100', borderRadius: '4px' }}>
+            <Typography variant="caption" color="textSecondary">No Photo</Typography>
+          </Box>
+        );
       },
     },
     {

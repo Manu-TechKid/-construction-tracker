@@ -122,9 +122,9 @@ const Workers = () => {
 
   // Filter workers based on tab
   const filteredWorkers = useMemo(() => {
-    if (!allWorkersData?.data?.workers) return [];
+    if (!allWorkersData?.data?.users) return [];
     
-    const workers = allWorkersData.data.workers;
+    const workers = allWorkersData.data.users;
     
     // Filter by tab
     if (tabValue === 1) return workers.filter(w => w.workerProfile?.approvalStatus === 'pending');
@@ -135,7 +135,7 @@ const Workers = () => {
   }, [allWorkersData, tabValue]);
 
   // Get counts for each tab
-  const allWorkers = allWorkersData?.data?.workers || [];
+  const allWorkers = allWorkersData?.data?.users || [];
   const pendingCount = allWorkers.filter(w => w.workerProfile?.approvalStatus === 'pending').length;
   const approvedCount = allWorkers.filter(w => w.workerProfile?.approvalStatus === 'approved').length;
   const rejectedCount = allWorkers.filter(w => w.workerProfile?.approvalStatus === 'rejected').length;
