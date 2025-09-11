@@ -232,6 +232,18 @@ const WorkOrderDetails = () => {
                 
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2" gutterBottom>
+                    Work Type
+                  </Typography>
+                  <Typography variant="body1" sx={{ textTransform: 'capitalize' }}>
+                    {workOrder.workType || 'N/A'}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary" sx={{ textTransform: 'capitalize' }}>
+                    {workOrder.workSubType || 'N/A'}
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" gutterBottom>
                     Apartment Details
                   </Typography>
                   <Typography variant="body1">
@@ -352,7 +364,7 @@ const WorkOrderDetails = () => {
                         <TableRow key={index}>
                           <TableCell>
                             <Typography variant="body2" fontWeight="medium">
-                              {assignment.worker?.name || 'Unknown Worker'}
+                              {assignment.worker ? `${assignment.worker.firstName} ${assignment.worker.lastName}` : 'Unknown Worker'}
                             </Typography>
                             <Typography variant="caption" color="textSecondary">
                               {assignment.worker?.email}

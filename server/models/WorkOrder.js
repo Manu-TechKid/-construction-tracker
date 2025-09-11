@@ -135,26 +135,25 @@ const workOrderSchema = new mongoose.Schema({
     default: 'occupied',
     lowercase: true
   },
-  // Work type and sub-type classification
   workType: {
     type: String,
     required: [true, 'Work type is required'],
     enum: {
       values: ['maintenance', 'repair', 'installation', 'inspection', 'cleaning', 'renovation', 'emergency', 'preventive'],
-      message: 'Work type must be one of: maintenance, repair, installation, inspection, cleaning, renovation, emergency, preventive'
+      message: 'Invalid work type'
     },
-    lowercase: true,
-    trim: true
+    trim: true,
+    lowercase: true
   },
   workSubType: {
     type: String,
     required: [true, 'Work sub-type is required'],
     enum: {
-      values: ['plumbing', 'electrical', 'hvac', 'painting', 'flooring', 'roofing', 'carpentry', 'appliance', 'landscaping', 'security', 'other'],
-      message: 'Work sub-type must be one of: plumbing, electrical, hvac, painting, flooring, roofing, carpentry, appliance, landscaping, security, other'
+      values: ['plumbing', 'electrical', 'hvac', 'painting', 'flooring', 'roofing', 'carpentry', 'appliance', 'landscaping', 'security', 'other', 'inspection', 'cleaning', 'lubrication', 'calibration', 'safety_check', 'structural', 'fixtures', 'systems', 'furniture', 'equipment', 'safety', 'compliance', 'quality', 'pre_purchase', 'routine', 'regular', 'deep', 'post_construction', 'carpet', 'window', 'kitchen', 'bathroom', 'remodeling', 'leak', 'power_outage', 'break_in', 'flood', 'fire', 'maintenance', 'testing', 'replacement'],
+      message: 'Invalid work sub-type'
     },
-    lowercase: true,
-    trim: true
+    trim: true,
+    lowercase: true
   },
   // Array of services with details and costs
   services: [{

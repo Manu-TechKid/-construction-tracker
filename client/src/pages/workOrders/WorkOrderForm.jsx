@@ -27,6 +27,8 @@ import {
   TableHead,
   TableRow,
   Paper,
+  Checkbox,
+  ListItemText,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -63,44 +65,27 @@ const APARTMENT_STATUS_OPTIONS = [
   'vacant', 'occupied', 'under_renovation', 'reserved'
 ];
 
+const workTypeSubtypes = {
+  maintenance: ['inspection', 'cleaning', 'lubrication', 'calibration', 'safety_check'],
+  repair: ['plumbing', 'electrical', 'hvac', 'appliance', 'structural'],
+  installation: ['fixtures', 'appliances', 'systems', 'furniture', 'equipment'],
+  inspection: ['safety', 'compliance', 'quality', 'pre_purchase', 'routine'],
+  cleaning: ['regular', 'deep', 'post_construction', 'carpet', 'window'],
+  renovation: ['kitchen', 'bathroom', 'flooring', 'painting', 'remodeling'],
+  emergency: ['leak', 'power_outage', 'break_in', 'flood', 'fire'],
+  preventive: ['maintenance', 'inspection', 'testing', 'calibration', 'replacement']
+};
+
 const validationSchema = Yup.object({
-  title: Yup.string()
-    .required('Title is required')
-    .max(100, 'Title cannot be longer than 100 characters'),
-  description: Yup.string()
-    .required('Description is required'),
-  building: Yup.string()
-    .required('Building is required'),
-  apartmentNumber: Yup.string()
-    .max(20, 'Apartment number cannot be longer than 20 characters'),
-  block: Yup.string()
-    .max(50, 'Block cannot be longer than 50 characters'),
-  apartmentStatus: Yup.string()
-    .oneOf(APARTMENT_STATUS_OPTIONS, 'Invalid apartment status'),
-  priority: Yup.string()
-    .oneOf(['low', 'medium', 'high', 'urgent'], 'Invalid priority'),
-  scheduledDate: Yup.date()
-    .required('Scheduled date is required'),
-  estimatedCompletionDate: Yup.date(),
-  estimatedCost: Yup.number()
-    .min(0, 'Estimated cost cannot be negative'),
-      services: Yup.array().of(
-        Yup.object({
-          type: Yup.string()
-            .oneOf(SERVICE_TYPES, 'Invalid service type')
-            .required('Service type is required'),
-          description: Yup.string()
-            .required('Service description is required'),
-          laborCost: Yup.number()
-            .min(0, 'Labor cost cannot be negative'),
-          materialCost: Yup.number()
-            .min(0, 'Material cost cannot be negative'),
-        })
-      ),
-      photos: Yup.array(),
-  assignedTo: Yup.array().of(
-    Yup.string().required('Worker ID is required')
-  ),
+  title: Yup.string().required('Title is required'),
+  description: Yup.string().required('Description is required'),
+  building: Yup.string().required('Building is required'),
+  workType: Yup.string().required('Work type is required'),
+  workSubType: Yup.string().required('Work sub-type is required'),
+  priority: Yup.string().oneOf(['low', 'medium', 'high', 'urgent']),
+  scheduledDate: Yup.date(),
+  estimatedCost: Yup.number().min(0),
+  assignedTo: Yup.array().of(Yup.string()),
 });
 
 const WorkOrderForm = () => {
@@ -121,6 +106,15 @@ const WorkOrderForm = () => {
 
   const buildings = buildingsData?.data?.buildings || [];
   const workers = workersData?.data?.users || [];
+
+  const workerOptions = React.useMemo(() => 
+    workers.map(worker => ({
+      id: worker._id,
+      label: `${worker.firstName} ${worker.lastName}`,
+      ...worker
+    })), 
+    [workers]
+  );
   
   // State for selected building
   const [selectedBuilding, setSelectedBuilding] = useState(null);
@@ -134,13 +128,15 @@ const WorkOrderForm = () => {
       apartmentNumber: '',
       block: '',
       apartmentStatus: 'occupied',
+      workType: '',
+      workSubType: '',
       priority: 'medium',
       scheduledDate: new Date(),
       estimatedCompletionDate: null,
       estimatedCost: 0,
-      services: [],
+      actualCost: 0,
       assignedTo: [],
-      photos: [],
+      photos: [], // Keep for photo handling
     },
     validationSchema,
     onSubmit: async (values) => {
@@ -162,19 +158,32 @@ const WorkOrderForm = () => {
             formData.append(key, JSON.stringify(values[key]));
           } else if (key === 'assignedTo') {
             // Transform assignedTo to match backend expectations
-            const transformedAssignedTo = values[key].map(workerId => ({
+            // assignedTo is now an array of strings (worker IDs)
+            const transformedAssignedTo = values.assignedTo.map(workerId => ({
               worker: workerId,
               assignedBy: user._id,
-              status: 'pending'
+              status: 'pending',
+              assignedAt: new Date().toISOString()
             }));
-            formData.append(key, JSON.stringify(transformedAssignedTo));
+            formData.append('assignedTo', JSON.stringify(transformedAssignedTo));
           } else if (values[key] !== null && values[key] !== undefined) {
             formData.append(key, values[key]);
           }
         });
         
-        // Add user info
-        formData.append('createdBy', user._id);
+        // Add a simplified service structure based on the description and costs
+        const service = {
+          type: values.workSubType || 'other',
+          description: values.description,
+          laborCost: values.estimatedCost || 0,
+          materialCost: 0,
+          status: 'pending'
+        };
+        formData.append('services', JSON.stringify([service]));
+
+        if (!isEdit) {
+          formData.append('createdBy', user._id);
+        }
         formData.append('updatedBy', user._id);
 
         if (isEdit && id) {
@@ -212,13 +221,15 @@ const WorkOrderForm = () => {
         apartmentNumber: workOrder.apartmentNumber || '',
         block: workOrder.block || '',
         apartmentStatus: workOrder.apartmentStatus || 'occupied',
+        workType: workOrder.workType || '',
+        workSubType: workOrder.workSubType || '',
         priority: workOrder.priority || 'medium',
         scheduledDate: workOrder.scheduledDate ? new Date(workOrder.scheduledDate) : new Date(),
         estimatedCompletionDate: workOrder.estimatedCompletionDate ? new Date(workOrder.estimatedCompletionDate) : null,
         estimatedCost: workOrder.estimatedCost || 0,
-        services: workOrder.services || [],
+        actualCost: workOrder.actualCost || 0,
         assignedTo: workOrder.assignedTo?.map(assignment => assignment.worker?._id || assignment.worker) || [],
-        photos: [], // Reset photos for edit mode
+        photos: workOrder.photos || [],
       });
     }
   }, [isEdit, workOrderData, buildings]);
@@ -325,126 +336,63 @@ const WorkOrderForm = () => {
         </Box>
 
         <form onSubmit={formik.handleSubmit}>
-          <Grid container spacing={3}>
-            {/* Basic Information */}
-            <Grid item xs={12} md={6}>
-              <Card>
-                <CardHeader title="Basic Information" />
-                <CardContent>
+          <Card>
+            <CardContent>
+              <Grid container spacing={3}>
+                {/* Title */}
+                <Grid item xs={12}>
                   <TextField
                     fullWidth
                     name="title"
-                    label="Title"
+                    label="Title *"
                     value={formik.values.title}
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
                     error={formik.touched.title && Boolean(formik.errors.title)}
                     helperText={formik.touched.title && formik.errors.title}
-                    margin="normal"
                   />
+                </Grid>
 
+                {/* Description */}
+                <Grid item xs={12}>
                   <TextField
                     fullWidth
                     multiline
                     rows={3}
                     name="description"
-                    label="Description"
+                    label="Description *"
                     value={formik.values.description}
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
                     error={formik.touched.description && Boolean(formik.errors.description)}
                     helperText={formik.touched.description && formik.errors.description}
-                    margin="normal"
                   />
+                </Grid>
 
-                  <FormControl 
-                    fullWidth 
-                    margin="normal"
-                    error={formik.touched.building && Boolean(formik.errors.building)}
-                  >
-                    <InputLabel>Building</InputLabel>
+                {/* Building */}
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth error={formik.touched.building && Boolean(formik.errors.building)}>
+                    <InputLabel>Building *</InputLabel>
                     <Select
                       name="building"
                       value={formik.values.building}
                       onChange={formik.handleChange}
                       onBlur={formik.handleBlur}
-                      label="Building"
+                      label="Building *"
                     >
                       {buildings.map((building) => (
                         <MenuItem key={building._id} value={building._id}>
-                          {building.name}
+                          {building.name} - {building.address}
                         </MenuItem>
                       ))}
                     </Select>
-                    <FormHelperText>
-                      {formik.touched.building && formik.errors.building}
-                    </FormHelperText>
+                    <FormHelperText>{formik.touched.building && formik.errors.building}</FormHelperText>
                   </FormControl>
+                </Grid>
 
-                  <Grid container spacing={2} sx={{ mt: 1 }}>
-                    <Grid item xs={6}>
-                      <FormControl fullWidth>
-                        <InputLabel>Apartment Number</InputLabel>
-                        <Select
-                          name="apartmentNumber"
-                          value={formik.values.apartmentNumber}
-                          onChange={(e) => {
-                            formik.setFieldValue('apartmentNumber', e.target.value);
-                            // Auto-fill block when apartment is selected
-                            const selectedApartment = availableApartments.find(apt => apt.number === e.target.value);
-                            if (selectedApartment) {
-                              formik.setFieldValue('block', selectedApartment.block);
-                              formik.setFieldValue('apartmentStatus', selectedApartment.status);
-                            }
-                          }}
-                          onBlur={formik.handleBlur}
-                          label="Apartment Number"
-                          disabled={!formik.values.building}
-                        >
-                          <MenuItem value="">Select Apartment</MenuItem>
-                          {availableApartments.map((apartment) => (
-                            <MenuItem key={apartment._id} value={apartment.number}>
-                              {apartment.number} - Block {apartment.block} - Floor {apartment.floor}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                        <FormHelperText>
-                          {!formik.values.building ? 'Select a building first' : 'Choose from available apartments'}
-                        </FormHelperText>
-                      </FormControl>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <TextField
-                        fullWidth
-                        name="block"
-                        label="Block"
-                        value={formik.values.block}
-                        onChange={formik.handleChange}
-                        onBlur={formik.handleBlur}
-                        error={formik.touched.block && Boolean(formik.errors.block)}
-                        helperText={formik.touched.block && formik.errors.block}
-                        disabled={true} // Auto-filled from apartment selection
-                      />
-                    </Grid>
-                  </Grid>
-
-                  <FormControl fullWidth margin="normal">
-                    <InputLabel>Apartment Status</InputLabel>
-                    <Select
-                      name="apartmentStatus"
-                      value={formik.values.apartmentStatus}
-                      onChange={formik.handleChange}
-                      label="Apartment Status"
-                    >
-                      {APARTMENT_STATUS_OPTIONS.map((status) => (
-                        <MenuItem key={status} value={status}>
-                          {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-
-                  <FormControl fullWidth margin="normal">
+                {/* Priority */}
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
                     <InputLabel>Priority</InputLabel>
                     <Select
                       name="priority"
@@ -458,328 +406,175 @@ const WorkOrderForm = () => {
                       <MenuItem value="urgent">Urgent</MenuItem>
                     </Select>
                   </FormControl>
-                </CardContent>
-              </Card>
-            </Grid>
+                </Grid>
 
-            {/* Scheduling & Costs */}
-            <Grid item xs={12} md={6}>
-              <Card>
-                <CardHeader title="Scheduling & Costs" />
-                <CardContent>
+                {/* Block, Apartment, Status */}
+                <Grid item xs={12} md={4}>
+                  <FormControl fullWidth>
+                    <InputLabel>Block</InputLabel>
+                    <Select
+                      name="block"
+                      value={formik.values.block}
+                      onChange={formik.handleChange}
+                      label="Block"
+                      disabled={!formik.values.building}
+                    >
+                      <MenuItem value=""><em>Select Block</em></MenuItem>
+                      {[...new Set((buildings.find(b => b._id === formik.values.building)?.apartments || []).map(apt => apt.block).filter(Boolean))].map(block => (
+                        <MenuItem key={block} value={block}>{block}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <FormControl fullWidth>
+                    <InputLabel>Apartment Number</InputLabel>
+                    <Select
+                      name="apartmentNumber"
+                      value={formik.values.apartmentNumber}
+                      onChange={formik.handleChange}
+                      label="Apartment Number"
+                      disabled={!formik.values.building}
+                    >
+                      <MenuItem value=""><em>Select Apartment</em></MenuItem>
+                      {(buildings.find(b => b._id === formik.values.building)?.apartments || [])
+                        .filter(apt => !formik.values.block || apt.block === formik.values.block)
+                        .map(apt => (
+                          <MenuItem key={apt.number} value={apt.number}>{apt.number}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <FormControl fullWidth>
+                    <InputLabel>Apartment Status</InputLabel>
+                    <Select
+                      name="apartmentStatus"
+                      value={formik.values.apartmentStatus}
+                      onChange={formik.handleChange}
+                      label="Apartment Status"
+                    >
+                      {APARTMENT_STATUS_OPTIONS.map(status => (
+                        <MenuItem key={status} value={status}>{status.replace('_', ' ')}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                {/* Work Type and Sub-Type */}
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth error={formik.touched.workType && Boolean(formik.errors.workType)}>
+                    <InputLabel>Work Type *</InputLabel>
+                    <Select
+                      name="workType"
+                      value={formik.values.workType}
+                      onChange={formik.handleChange}
+                      label="Work Type *"
+                    >
+                      {Object.keys(workTypeSubtypes).map(type => (
+                        <MenuItem key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</MenuItem>
+                      ))}
+                    </Select>
+                    <FormHelperText>{formik.touched.workType && formik.errors.workType}</FormHelperText>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth error={formik.touched.workSubType && Boolean(formik.errors.workSubType)}>
+                    <InputLabel>Work Sub-Type *</InputLabel>
+                    <Select
+                      name="workSubType"
+                      value={formik.values.workSubType}
+                      onChange={formik.handleChange}
+                      label="Work Sub-Type *"
+                      disabled={!formik.values.workType}
+                    >
+                      {(workTypeSubtypes[formik.values.workType] || []).map(subType => (
+                        <MenuItem key={subType} value={subType}>{subType.replace('_', ' ')}</MenuItem>
+                      ))}
+                    </Select>
+                    <FormHelperText>{formik.touched.workSubType && formik.errors.workSubType}</FormHelperText>
+                  </FormControl>
+                </Grid>
+
+                {/* Dates */}
+                <Grid item xs={12} md={6}>
                   <DatePicker
                     label="Scheduled Date"
                     value={formik.values.scheduledDate}
-                    onChange={(newValue) => formik.setFieldValue('scheduledDate', newValue)}
-                    renderInput={(params) => (
-                      <TextField 
-                        {...params} 
-                        fullWidth 
-                        margin="normal"
-                        error={formik.touched.scheduledDate && Boolean(formik.errors.scheduledDate)}
-                        helperText={formik.touched.scheduledDate && formik.errors.scheduledDate}
-                      />
-                    )}
+                    onChange={value => formik.setFieldValue('scheduledDate', value)}
+                    renderInput={(params) => <TextField {...params} fullWidth />}
                   />
-
+                </Grid>
+                <Grid item xs={12} md={6}>
                   <DatePicker
                     label="Estimated Completion Date"
                     value={formik.values.estimatedCompletionDate}
-                    onChange={(newValue) => formik.setFieldValue('estimatedCompletionDate', newValue)}
-                    renderInput={(params) => (
-                      <TextField 
-                        {...params} 
-                        fullWidth 
-                        margin="normal"
-                        error={formik.touched.estimatedCompletionDate && Boolean(formik.errors.estimatedCompletionDate)}
-                        helperText={formik.touched.estimatedCompletionDate && formik.errors.estimatedCompletionDate}
-                      />
-                    )}
+                    onChange={value => formik.setFieldValue('estimatedCompletionDate', value)}
+                    renderInput={(params) => <TextField {...params} fullWidth />}
                   />
+                </Grid>
 
+                {/* Costs */}
+                <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
                     name="estimatedCost"
-                    label="Estimated Cost ($)"
+                    label="Estimated Cost"
                     type="number"
                     value={formik.values.estimatedCost}
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
                     error={formik.touched.estimatedCost && Boolean(formik.errors.estimatedCost)}
                     helperText={formik.touched.estimatedCost && formik.errors.estimatedCost}
-                    margin="normal"
-                    inputProps={{ min: 0, step: 0.01 }}
+                    InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
                   />
-                </CardContent>
-              </Card>
-            </Grid>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    name="actualCost"
+                    label="Actual Cost"
+                    type="number"
+                    value={formik.values.actualCost}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    error={formik.touched.actualCost && Boolean(formik.errors.actualCost)}
+                    helperText={formik.touched.actualCost && formik.errors.actualCost}
+                    InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
+                  />
+                </Grid>
 
-            {/* Services */}
-            <Grid item xs={12}>
-              <Card>
-                <CardHeader 
-                  title="Services"
-                  action={
-                    <Button
-                      variant="outlined"
-                      startIcon={<AddIcon />}
-                      onClick={addService}
+                {/* Worker Assignment */}
+                <Grid item xs={12}>
+                  <FormControl fullWidth>
+                    <InputLabel>Assign Workers</InputLabel>
+                    <Select
+                      multiple
+                      name="assignedTo"
+                      value={formik.values.assignedTo}
+                      onChange={formik.handleChange}
+                      label="Assign Workers"
+                      renderValue={(selected) => (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {selected.map(workerId => {
+                            const worker = workers.find(w => w._id === workerId);
+                            return <Chip key={workerId} label={worker ? `${worker.firstName} ${worker.lastName}` : ''} size="small" />;
+                          })}
+                        </Box>
+                      )}
                     >
-                      Add Service
-                    </Button>
-                  }
-                />
-                <CardContent>
-                  {formik.values.services.length === 0 ? (
-                    <Typography color="text.secondary" align="center" py={4}>
-                      No services added yet. Click "Add Service" to get started.
-                    </Typography>
-                  ) : (
-                    <TableContainer component={Paper} variant="outlined">
-                      <Table>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>Type</TableCell>
-                            <TableCell>Description</TableCell>
-                            <TableCell width={120}>Labor Cost</TableCell>
-                            <TableCell width={120}>Material Cost</TableCell>
-                            <TableCell width={50}></TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {formik.values.services.map((service, index) => (
-                            <TableRow key={index}>
-                              <TableCell>
-                                <FormControl fullWidth size="small">
-                                  <Select
-                                    value={service.type}
-                                    onChange={(e) => updateService(index, 'type', e.target.value)}
-                                    displayEmpty
-                                  >
-                                    <MenuItem value="">Select Type</MenuItem>
-                                    {SERVICE_TYPES.map((type) => (
-                                      <MenuItem key={type} value={type}>
-                                        {type.charAt(0).toUpperCase() + type.slice(1)}
-                                      </MenuItem>
-                                    ))}
-                                  </Select>
-                                </FormControl>
-                              </TableCell>
-                              <TableCell>
-                                <TextField
-                                  fullWidth
-                                  size="small"
-                                  value={service.description}
-                                  onChange={(e) => updateService(index, 'description', e.target.value)}
-                                  placeholder="Service description"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <TextField
-                                  fullWidth
-                                  size="small"
-                                  type="number"
-                                  value={service.laborCost}
-                                  onChange={(e) => updateService(index, 'laborCost', parseFloat(e.target.value) || 0)}
-                                  inputProps={{ min: 0, step: 0.01 }}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <TextField
-                                  fullWidth
-                                  size="small"
-                                  type="number"
-                                  value={service.materialCost}
-                                  onChange={(e) => updateService(index, 'materialCost', parseFloat(e.target.value) || 0)}
-                                  inputProps={{ min: 0, step: 0.01 }}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <IconButton
-                                  size="small"
-                                  onClick={() => removeService(index)}
-                                  color="error"
-                                >
-                                  <DeleteIcon />
-                                </IconButton>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* Worker Assignment */}
-            <Grid item xs={12}>
-              <Card>
-                <CardHeader 
-                  title="Worker Assignment"
-                  action={
-                    <Button
-                      variant="outlined"
-                      startIcon={<AddIcon />}
-                      onClick={addWorker}
-                    >
-                      Assign Worker
-                    </Button>
-                  }
-                />
-                <CardContent>
-                  {formik.values.assignedTo.length === 0 ? (
-                    <Typography color="text.secondary" align="center" py={4}>
-                      No workers assigned yet. Click "Assign Worker" to get started.
-                    </Typography>
-                  ) : (
-                    <TableContainer component={Paper} variant="outlined">
-                      <Table>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>Worker</TableCell>
-                            <TableCell>Status</TableCell>
-                            <TableCell width={50}></TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {formik.values.assignedTo.map((assignment, index) => (
-                            <TableRow key={index}>
-                              <TableCell>
-                                <FormControl fullWidth size="small">
-                                  <Select
-                                    value={assignment.worker}
-                                    onChange={(e) => updateWorker(index, 'worker', e.target.value)}
-                                    displayEmpty
-                                  >
-                                    <MenuItem value="">Select Worker</MenuItem>
-                                    {workers.map((worker) => (
-                                      <MenuItem key={worker._id} value={worker._id}>
-                                        {worker.name}
-                                      </MenuItem>
-                                    ))}
-                                  </Select>
-                                </FormControl>
-                              </TableCell>
-                              <TableCell>
-                                <Chip
-                                  label={assignment.status?.charAt(0).toUpperCase() + assignment.status?.slice(1) || 'Pending'}
-                                  color="default"
-                                  size="small"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <IconButton
-                                  size="small"
-                                  onClick={() => removeWorker(index)}
-                                  color="error"
-                                >
-                                  <DeleteIcon />
-                                </IconButton>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* Photo Upload */}
-            <Grid item xs={12}>
-              <Card>
-                <CardHeader 
-                  title="Photos"
-                  action={
-                    <Button
-                      variant="outlined"
-                      component="label"
-                      startIcon={<PhotoCameraIcon />}
-                    >
-                      Upload Photos
-                      <input
-                        type="file"
-                        hidden
-                        multiple
-                        accept="image/*"
-                        onChange={handlePhotoUpload}
-                      />
-                    </Button>
-                  }
-                />
-                <CardContent>
-                  {formik.values.photos.length === 0 ? (
-                    <Box 
-                      sx={{ 
-                        border: '2px dashed #ccc', 
-                        borderRadius: 2, 
-                        p: 4, 
-                        textAlign: 'center',
-                        cursor: 'pointer'
-                      }}
-                      onClick={() => document.querySelector('input[type="file"]').click()}
-                    >
-                      <CloudUploadIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                      <Typography variant="h6" color="text.secondary" gutterBottom>
-                        Upload Photos
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Click here or use the button above to upload photos
-                      </Typography>
-                    </Box>
-                  ) : (
-                    <Grid container spacing={2}>
-                      {formik.values.photos.map((photo, index) => (
-                        <Grid item xs={12} sm={6} md={4} key={index}>
-                          <Card>
-                            <Box sx={{ position: 'relative' }}>
-                              <img
-                                src={photo.preview}
-                                alt={photo.name}
-                                style={{
-                                  width: '100%',
-                                  height: 200,
-                                  objectFit: 'cover',
-                                  borderRadius: '4px 4px 0 0'
-                                }}
-                              />
-                              <IconButton
-                                sx={{
-                                  position: 'absolute',
-                                  top: 8,
-                                  right: 8,
-                                  bgcolor: 'rgba(0,0,0,0.5)',
-                                  color: 'white',
-                                  '&:hover': {
-                                    bgcolor: 'rgba(0,0,0,0.7)',
-                                  }
-                                }}
-                                size="small"
-                                onClick={() => removePhoto(index)}
-                              >
-                                <DeleteIcon />
-                              </IconButton>
-                            </Box>
-                            <CardContent sx={{ p: 1 }}>
-                              <Typography variant="caption" noWrap>
-                                {photo.name}
-                              </Typography>
-                              <Typography variant="caption" display="block" color="text.secondary">
-                                {(photo.size / 1024 / 1024).toFixed(2)} MB
-                              </Typography>
-                            </CardContent>
-                          </Card>
-                        </Grid>
+                      {workers.map(worker => (
+                        <MenuItem key={worker._id} value={worker._id}>
+                          <Checkbox checked={formik.values.assignedTo.includes(worker._id)} />
+                          <ListItemText primary={`${worker.firstName} ${worker.lastName}`} />
+                        </MenuItem>
                       ))}
-                    </Grid>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
 
           {/* Action Buttons */}
           <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
