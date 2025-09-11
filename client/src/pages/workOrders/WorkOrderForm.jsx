@@ -156,7 +156,7 @@ const WorkOrderForm = () => {
                     <FormControl fullWidth disabled={!formik.values.building}>
                       <InputLabel>Block</InputLabel>
                       <Select id="block" name="block" value={formik.values.block} onChange={formik.handleChange}>
-                        {[...new Set(selectedBuildingData?.data?.apartments.map(a => a.block))].map((block) => (
+                        {[...new Set(selectedBuildingData?.data?.apartments?.map(a => a.block) ?? [])].map((block) => (
                           <MenuItem key={block} value={block}>{block}</MenuItem>
                         ))}
                       </Select>
@@ -167,8 +167,8 @@ const WorkOrderForm = () => {
                       <InputLabel>Apartment</InputLabel>
                       <Select id="apartmentNumber" name="apartmentNumber" value={formik.values.apartmentNumber} onChange={formik.handleChange}>
                         {selectedBuildingData?.data?.apartments
-                          .filter(a => a.block === formik.values.block)
-                          .map((apartment) => (
+                      ?.filter(a => a.block === formik.values.block)
+                      ?.map((apartment) => (
                             <MenuItem key={apartment._id} value={apartment.apartmentNumber}>
                               {apartment.apartmentNumber}
                             </MenuItem>

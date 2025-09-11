@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -7,10 +7,16 @@ import {
   Chip,
   CircularProgress,
   Alert,
+  TextField,
+  MenuItem,
+  Grid,
+  Card,
+  CardContent,
 } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon, Visibility as ViewIcon } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import { useGetWorkOrdersQuery } from '../../features/workOrders/workOrdersApiSlice';
+import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { format } from 'date-fns';
 
 const getStatusChipColor = (status) => {
@@ -37,6 +43,23 @@ const getPriorityChipColor = (priority) => {
 const WorkOrders = () => {
   const navigate = useNavigate();
   const { data: workOrdersData, isLoading, error } = useGetWorkOrdersQuery();
+  const { data: buildingsData } = useGetBuildingsQuery();
+
+  const [filters, setFilters] = useState({ building: '', status: '' });
+
+  const handleFilterChange = (e) => {
+    setFilters({ ...filters, [e.target.name]: e.target.value });
+  };
+
+  const workOrders = workOrdersData?.data || [];
+
+  const filteredWorkOrders = useMemo(() => {
+    return workOrders.filter(wo => {
+      const buildingMatch = filters.building ? wo.building?._id === filters.building : true;
+      const statusMatch = filters.status ? wo.status === filters.status : true;
+      return buildingMatch && statusMatch;
+    });
+  }, [workOrders, filters]);
 
   if (isLoading) {
     return <CircularProgress />;
@@ -46,7 +69,6 @@ const WorkOrders = () => {
     return <Alert severity="error">Error loading work orders.</Alert>;
   }
 
-  const workOrders = workOrdersData?.data || [];
 
   const columns = [
     { field: 'title', headerName: 'Title', flex: 1 },
@@ -114,14 +136,54 @@ const WorkOrders = () => {
         </Button>
       </Box>
 
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                fullWidth
+                label="Filter by Building"
+                name="building"
+                value={filters.building}
+                onChange={handleFilterChange}
+              >
+                <MenuItem value="">All Buildings</MenuItem>
+                {buildingsData?.data?.buildings.map(b => (
+                  <MenuItem key={b._id} value={b._id}>{b.name}</MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                fullWidth
+                label="Filter by Status"
+                name="status"
+                value={filters.status}
+                onChange={handleFilterChange}
+              >
+                <MenuItem value="">All Statuses</MenuItem>
+                <MenuItem value="pending">Pending</MenuItem>
+                <MenuItem value="in_progress">In Progress</MenuItem>
+                <MenuItem value="on_hold">On Hold</MenuItem>
+                <MenuItem value="completed">Completed</MenuItem>
+                <MenuItem value="cancelled">Cancelled</MenuItem>
+              </TextField>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+
       <DataGrid
-        rows={workOrders}
+        rows={filteredWorkOrders}
         columns={columns}
         getRowId={(row) => row._id}
         pageSize={10}
         rowsPerPageOptions={[10, 25, 50]}
         disableSelectionOnClick
         loading={isLoading}
+        autoHeight
       />
     </Box>
   );
