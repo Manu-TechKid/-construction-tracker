@@ -113,7 +113,7 @@ const WorkOrders = () => {
       headerName: 'Assigned To',
       flex: 1.5,
       valueGetter: (params) => 
-        params.row.assignedTo?.map(a => `${a.worker?.firstName} ${a.worker?.lastName}`).join(', ') || 'N/A',
+        params.row.assignedTo?.map(a => a.worker?.name || 'Unknown Worker').join(', ') || 'N/A',
     },
     {
       field: 'photos',

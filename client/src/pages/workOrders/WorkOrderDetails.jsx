@@ -123,6 +123,22 @@ const WorkOrderDetails = () => {
             <Typography><strong>Estimated Cost:</strong> ${workOrder.estimatedCost?.toFixed(2)}</Typography>
             <Typography><strong>Actual Cost:</strong> ${workOrder.actualCost?.toFixed(2)}</Typography>
             <Divider sx={{ my: 2 }} />
+            <Typography><strong>Assigned To:</strong></Typography>
+            <Box mt={1}>
+              {workOrder.assignedTo && workOrder.assignedTo.length > 0 ? (
+                workOrder.assignedTo.map((assignment, index) => (
+                  <Chip 
+                    key={index} 
+                    label={assignment.worker?.name || 'Unknown Worker'} 
+                    size="small" 
+                    sx={{ mr: 0.5, mb: 0.5 }} 
+                  />
+                ))
+              ) : (
+                <Typography variant="body2" color="text.secondary">No workers assigned</Typography>
+              )}
+            </Box>
+            <Divider sx={{ my: 2 }} />
             <Box mt={2}>
               <Button variant="contained" startIcon={<EditIcon />} onClick={() => navigate(`/work-orders/${id}/edit`)} fullWidth>Edit</Button>
               <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDelete} disabled={isDeleting} fullWidth sx={{ mt: 1 }}>Delete</Button>

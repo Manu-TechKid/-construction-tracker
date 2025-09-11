@@ -92,9 +92,12 @@ const WorkOrderForm = () => {
           }
         }
 
+        // Show success message and redirect
+        alert(isEdit ? 'Work order updated successfully!' : 'Work order created successfully!');
         navigate('/work-orders');
       } catch (error) {
         console.error('Failed to save work order:', error);
+        alert('Failed to save work order. Please try again.');
       }
     },
   });
