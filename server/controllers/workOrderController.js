@@ -84,6 +84,18 @@ exports.createWorkOrder = async (req, res, next) => {
       console.log('⚠️ Error parsing JSON fields:', parseError);
     }
 
+    // Handle photo uploads
+    let photoUrls = [];
+    if (req.files && req.files.photos) {
+      const photos = Array.isArray(req.files.photos) ? req.files.photos : [req.files.photos];
+      photoUrls = photos.map(photo => ({
+        url: `/uploads/${photo.filename}`,
+        description: photo.originalname,
+        uploadedBy: req.user._id,
+        uploadedAt: new Date()
+      }));
+    }
+
     // Create work order data with all fields
     const workOrderData = {
       title: title.trim(),
@@ -106,17 +118,41 @@ exports.createWorkOrder = async (req, res, next) => {
       }],
       assignedTo: parsedAssignedTo,
       notes: [],
-      photos: [],
+      photos: photoUrls,
       createdBy: req.user._id,
       updatedBy: req.user._id
     };
 
-    console.log('📝 Creating work order:', JSON.stringify(workOrderData, null, 2));
+    console.log('📝 Creating work order with data:');
+    console.log('- Title:', workOrderData.title);
+    console.log('- Building:', workOrderData.building);
+    console.log('- Services count:', workOrderData.services.length);
+    console.log('- Assigned workers:', workOrderData.assignedTo.length);
+    console.log('- Photos count:', workOrderData.photos.length);
+    
+    // Validate required fields before creation
+    if (!workOrderData.title || !workOrderData.building) {
+      throw new Error('Missing required fields: title and building are mandatory');
+    }
     
     // Create work order
     const workOrder = await WorkOrder.create(workOrderData);
     
     console.log('✅ Work order created successfully:', workOrder._id);
+    console.log('✅ All fields saved:', {
+      title: workOrder.title,
+      building: workOrder.building,
+      apartmentNumber: workOrder.apartmentNumber,
+      block: workOrder.block,
+      apartmentStatus: workOrder.apartmentStatus,
+      priority: workOrder.priority,
+      status: workOrder.status,
+      scheduledDate: workOrder.scheduledDate,
+      estimatedCost: workOrder.estimatedCost,
+      servicesCount: workOrder.services?.length || 0,
+      assignedToCount: workOrder.assignedTo?.length || 0,
+      photosCount: workOrder.photos?.length || 0
+    });
     
     return res.status(201).json({
       status: 'success',
@@ -300,8 +336,35 @@ exports.updateWorkOrder = async (req, res, next) => {
  */
 exports.deleteWorkOrder = async (req, res, next) => {
   try {
-    console.log('🗑️ Deleting work order:', req.params.id);
+    console.log('🗑️ DELETE REQUEST - Work Order ID:', req.params.id);
+    console.log('🗑️ User:', req.user ? { id: req.user._id, role: req.user.role } : 'No user');
     
+    // Validate work order ID
+    if (!req.params.id) {
+      console.error('❌ No work order ID provided');
+      return res.status(400).json({
+        status: 'error',
+        message: 'Work order ID is required',
+        timestamp: new Date().toISOString(),
+        version: 'DELETE-FIX-2024-01-11'
+      });
+    }
+
+    // Check if work order exists first
+    const existingWorkOrder = await WorkOrder.findById(req.params.id);
+    if (!existingWorkOrder) {
+      console.error('❌ Work order not found:', req.params.id);
+      return res.status(404).json({
+        status: 'error',
+        message: 'Work order not found',
+        timestamp: new Date().toISOString(),
+        version: 'DELETE-FIX-2024-01-11'
+      });
+    }
+
+    console.log('✅ Work order found, proceeding with soft delete');
+    
+    // Perform soft delete
     const workOrder = await WorkOrder.findByIdAndUpdate(
       req.params.id,
       { 
@@ -312,31 +375,32 @@ exports.deleteWorkOrder = async (req, res, next) => {
       { new: true }
     );
 
-    if (!workOrder) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Work order not found',
-        timestamp: new Date().toISOString(),
-        version: 'FINAL-FIX-2024-01-10'
-      });
-    }
+    console.log('✅ Work order soft deleted successfully:', workOrder._id);
 
     return res.status(200).json({
       status: 'success',
       message: 'Work order deleted successfully',
       timestamp: new Date().toISOString(),
-      version: 'FINAL-FIX-2024-01-10'
+      version: 'DELETE-FIX-2024-01-11',
+      data: {
+        _id: workOrder._id,
+        title: workOrder.title,
+        isDeleted: workOrder.isDeleted,
+        deletedAt: workOrder.deletedAt
+      }
     });
     
   } catch (error) {
-    console.error('❌ Error deleting work order:', error);
+    console.error('❌ DELETE ERROR:', error);
+    console.error('❌ Error stack:', error.stack);
     
     return res.status(500).json({
       status: 'error',
       message: 'Failed to delete work order',
       timestamp: new Date().toISOString(),
-      version: 'FINAL-FIX-2024-01-10',
-      error: error.message
+      version: 'DELETE-FIX-2024-01-11',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };

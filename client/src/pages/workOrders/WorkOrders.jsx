@@ -29,6 +29,7 @@ import {
   Alert,
   CircularProgress,
   Tooltip,
+  Autocomplete,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -78,17 +79,34 @@ const WorkOrders = () => {
   };
 
   const handleDeleteWorkOrder = async () => {
-    if (selectedWorkOrder) {
-      try {
-        await deleteWorkOrder(selectedWorkOrder._id).unwrap();
-        toast.success('Work order deleted successfully');
-        setDeleteDialogOpen(false);
-        handleMenuClose();
-      } catch (error) {
-        console.error('Error deleting work order:', error);
-        const errorMessage = error?.data?.message || error?.message || 'Failed to delete work order';
-        toast.error(errorMessage);
-      }
+    if (!selectedWorkOrder) {
+      console.error('No work order selected for deletion');
+      toast.error('No work order selected');
+      return;
+    }
+
+    console.log('🗑️ Attempting to delete work order:', selectedWorkOrder._id);
+    
+    try {
+      const result = await deleteWorkOrder(selectedWorkOrder._id).unwrap();
+      console.log('✅ Delete successful:', result);
+      toast.success('Work order deleted successfully');
+      setDeleteDialogOpen(false);
+      handleMenuClose();
+    } catch (error) {
+      console.error('❌ Delete failed:', error);
+      console.error('Error details:', {
+        status: error?.status,
+        data: error?.data,
+        message: error?.message
+      });
+      
+      const errorMessage = error?.data?.message || error?.message || 'Failed to delete work order';
+      toast.error(errorMessage);
+      
+      // Keep dialog open on error so user can retry
+      setDeleteDialogOpen(false);
+      handleMenuClose();
     }
   };
 
@@ -232,6 +250,7 @@ const WorkOrders = () => {
                 <TableCell>Title</TableCell>
                 <TableCell>Building</TableCell>
                 <TableCell>Apartment</TableCell>
+                <TableCell>Photos</TableCell>
                 <TableCell>Priority</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Scheduled Date</TableCell>
@@ -242,7 +261,7 @@ const WorkOrders = () => {
             <TableBody>
               {filteredWorkOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center">
+                  <TableCell colSpan={9} align="center">
                     <Box py={4}>
                       <AssignmentIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                       <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -286,6 +305,49 @@ const WorkOrders = () => {
                       <Typography variant="body2">
                         {workOrder.apartmentNumber || 'N/A'}
                       </Typography>
+                    </TableCell>
+                    <TableCell>
+                      {workOrder.photos && workOrder.photos.length > 0 ? (
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          {workOrder.photos.slice(0, 3).map((photo, index) => (
+                            <Box
+                              key={index}
+                              component="img"
+                              src={photo.url}
+                              alt={`Work order photo ${index + 1}`}
+                              sx={{
+                                width: 32,
+                                height: 32,
+                                objectFit: 'cover',
+                                borderRadius: 1,
+                                border: '1px solid',
+                                borderColor: 'divider'
+                              }}
+                            />
+                          ))}
+                          {workOrder.photos.length > 3 && (
+                            <Box
+                              sx={{
+                                width: 32,
+                                height: 32,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                bgcolor: 'grey.200',
+                                borderRadius: 1,
+                                fontSize: '0.75rem',
+                                fontWeight: 'bold'
+                              }}
+                            >
+                              +{workOrder.photos.length - 3}
+                            </Box>
+                          )}
+                        </Box>
+                      ) : (
+                        <Typography variant="caption" color="text.secondary">
+                          No photos
+                        </Typography>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Chip

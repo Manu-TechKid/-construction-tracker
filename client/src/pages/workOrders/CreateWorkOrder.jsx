@@ -121,6 +121,7 @@ const CreateWorkOrder = () => {
         status: 'pending',
       }],
       assignedTo: [],
+      photos: [], // Initialize photos array
     },
     validationSchema,
     onSubmit: async (values) => {
