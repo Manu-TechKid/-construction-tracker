@@ -5,6 +5,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import * as Yup from 'yup';
+import { toast } from 'react-toastify';
 import {
   Box,
   Button,
@@ -70,37 +71,46 @@ const WorkOrderForm = () => {
     }),
     onSubmit: async (values) => {
       try {
+        // Show immediate feedback
+        const message = isEdit ? 'Updating work order...' : 'Creating work order...';
+        toast.info(message);
+
         // Format the data correctly for the backend
         const formattedValues = {
           ...values,
-          // Ensure apartmentNumber is mapped correctly
           apartmentNumber: values.apartmentNumber || values.apartment,
-          // Ensure scheduledDate is properly formatted
           scheduledDate: values.scheduledDate instanceof Date ? values.scheduledDate.toISOString() : values.scheduledDate,
         };
 
         let workOrderId = id;
+        
+        // Execute main operation
         if (isEdit) {
           await updateWorkOrder({ id, ...formattedValues }).unwrap();
+          toast.success('Work order updated successfully!');
         } else {
           const newWorkOrder = await createWorkOrder(formattedValues).unwrap();
           workOrderId = newWorkOrder.data._id;
+          toast.success('Work order created successfully!');
         }
 
+        // Handle photo uploads asynchronously after redirect
         if (newPhotos.length > 0) {
-          for (const photo of newPhotos) {
-            await uploadPhoto({ workOrderId, photo }).unwrap();
-          }
+          // Upload photos in background
+          Promise.all(
+            newPhotos.map(photo => uploadPhoto({ workOrderId, photo }).unwrap())
+          ).catch(error => {
+            console.error('Photo upload failed:', error);
+            toast.error('Some photos failed to upload');
+          });
         }
 
-        // Show success message and redirect immediately
-        const message = isEdit ? 'Work order updated successfully!' : 'Work order created successfully!';
-        alert(message);
-        // Force immediate navigation
+        // Immediate navigation
         navigate('/work-orders', { replace: true });
+        
       } catch (error) {
         console.error('Failed to save work order:', error);
-        alert('Failed to save work order. Please try again.');
+        toast.error(error?.data?.message || 'Failed to save work order. Please try again.');
       }
     },
   });

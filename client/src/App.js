@@ -1,49 +1,46 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { Provider } from 'react-redux';
+import React, { useEffect, Suspense, lazy } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
 import { ThemeProvider } from '@mui/material/styles';
-import { CssBaseline } from '@mui/material';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import CssBaseline from '@mui/material/CssBaseline';
 import { ToastContainer } from 'react-toastify';
+import { CircularProgress, Box } from '@mui/material';
 import 'react-toastify/dist/ReactToastify.css';
 
-import { store } from './app/store';
-import { SettingsProvider } from './contexts/SettingsContext';
-import { BuildingProvider } from './contexts/BuildingContext';
-import { useSettings } from './contexts/SettingsContext';
-import { useAuth } from './hooks/useAuth';
-import { createAppTheme } from './theme/theme';
+import theme from './theme';
+import { selectCurrentToken, selectCurrentUser } from './features/auth/authSlice';
+import { useRefreshMutation } from './features/auth/authApiSlice';
+import { setCredentials } from './features/auth/authSlice';
 
 // Layout Components
-import DashboardLayout from './layouts/DashboardLayout';
-import AuthLayout from './layouts/AuthLayout';
+import Layout from './components/layout/Layout';
+import RoleBasedRoute from './components/auth/RoleBasedRoute';
 
-// Auth Components
+// Auth Components (keep these as regular imports for faster login)
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
-import ForgotPassword from './pages/auth/ForgotPassword';
 
-// Main Pages
-import Dashboard from './pages/dashboard/Dashboard';
-import Buildings from './pages/buildings/Buildings';
-import BuildingDetails from './pages/buildings/BuildingDetails';
-import CreateBuilding from './pages/buildings/CreateBuilding';
-import BuildingEdit from './pages/buildings/BuildingEdit';
-import WorkOrders from './pages/workOrders/WorkOrders';
-import WorkOrderForm from './pages/workOrders/WorkOrderForm';
-import WorkOrderDetails from './pages/workOrders/WorkOrderDetails';
-import WorkProgress from './pages/workOrders/WorkProgress';
-import Workers from './pages/workers/Workers';
-import CreateWorker from './pages/workers/CreateWorker';
-import Reminders from './pages/reminders/Reminders';
-import CreateReminder from './pages/reminders/CreateReminder';
-import Invoices from './pages/invoices/Invoices';
-import CreateInvoice from './pages/invoices/CreateInvoice';
-import InvoiceDetails from './pages/invoices/InvoiceDetails';
-import EditInvoice from './pages/invoices/EditInvoice';
-import Profile from './pages/profile/Profile';
-import Settings from './pages/settings/Settings';
+// Lazy load main pages for better performance
+const Dashboard = lazy(() => import('./pages/dashboard/Dashboard'));
+const Buildings = lazy(() => import('./pages/buildings/Buildings'));
+const BuildingDetails = lazy(() => import('./pages/buildings/BuildingDetails'));
+const CreateBuilding = lazy(() => import('./pages/buildings/CreateBuilding'));
+const BuildingEdit = lazy(() => import('./pages/buildings/BuildingEdit'));
+const WorkOrders = lazy(() => import('./pages/workOrders/WorkOrders'));
+const WorkOrderForm = lazy(() => import('./pages/workOrders/WorkOrderForm'));
+const WorkOrderDetails = lazy(() => import('./pages/workOrders/WorkOrderDetails'));
+const WorkProgress = lazy(() => import('./pages/workOrders/WorkProgress'));
+const Workers = lazy(() => import('./pages/workers/Workers'));
+const CreateWorker = lazy(() => import('./pages/workers/CreateWorker'));
+const Reminders = lazy(() => import('./pages/reminders/Reminders'));
+const CreateReminder = lazy(() => import('./pages/reminders/CreateReminder'));
+const EditReminder = lazy(() => import('./pages/reminders/EditReminder'));
+const Invoices = lazy(() => import('./pages/invoices/Invoices'));
+const CreateInvoice = lazy(() => import('./pages/invoices/CreateInvoice'));
+const InvoiceDetails = lazy(() => import('./pages/invoices/InvoiceDetails'));
+const EditInvoice = lazy(() => import('./pages/invoices/EditInvoice'));
+const Profile = lazy(() => import('./pages/profile/Profile'));
+const Settings = lazy(() => import('./pages/settings/Settings'));
 
 // New Components
 import NotesSheet from './components/notes/NotesSheet';
@@ -54,6 +51,18 @@ import WorkerApproval from './pages/admin/WorkerApproval';
 
 // Route Protection
 import ProtectedRoute from './components/auth/ProtectedRoute';
+
+// Loading component for lazy loaded routes
+const LoadingFallback = () => (
+  <Box 
+    display="flex" 
+    justifyContent="center" 
+    alignItems="center" 
+    minHeight="60vh"
+  >
+    <CircularProgress size={40} />
+  </Box>
+);
 import PublicRoute from './components/auth/PublicRoute';
 
 // Role-based route wrapper
@@ -290,6 +299,14 @@ const AppContent = () => {
                 element={
                   <RoleBasedRoute requiredPermissions={['create:reminders']}>
                     <CreateReminder />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="reminders/:id/edit" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['update:reminders']}>
+                    <EditReminder />
                   </RoleBasedRoute>
                 } 
               />

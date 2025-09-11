@@ -206,20 +206,31 @@ const WorkOrders = () => {
         const fullUrl = photoUrl?.startsWith('http') ? photoUrl : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${photoUrl}`;
         
         return (
-          <img 
-            src={fullUrl}
-            alt="Work Order" 
-            style={{ 
-              width: 40, 
-              height: 40, 
-              objectFit: 'cover', 
-              borderRadius: '4px',
-              border: '1px solid #ddd'
-            }} 
-            onError={(e) => {
-              e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0yMCAyNUMyMi43NjE0IDI1IDI1IDIyLjc2MTQgMjUgMjBDMjUgMTcuMjM4NiAyMi43NjE0IDE1IDIwIDE1QzE3LjIzODYgMTUgMTUgMTcuMjM4NiAxNSAyMEMxNSAyMi43NjE0IDE3LjIzODYgMjUgMjAgMjVaIiBmaWxsPSIjQzRDNEM0Ii8+CjxwYXRoIGQ9Ik0xMCAzMEgzMFYyN0gxMFYzMFoiIGZpbGw9IiNDNEM0QzQiLz4KPC9zdmc+';
-            }}
-          />
+          <Box sx={{ 
+            width: 40, 
+            height: 40, 
+            borderRadius: '4px',
+            border: '2px solid #e0e0e0',
+            overflow: 'hidden',
+            bgcolor: '#f5f5f5',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <img 
+              src={fullUrl}
+              alt="Work Order" 
+              style={{ 
+                width: '100%', 
+                height: '100%', 
+                objectFit: 'cover'
+              }} 
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.parentElement.innerHTML = '<span style="font-size: 10px; color: #666;">No Image</span>';
+              }}
+            />
+          </Box>
         );
       },
     },
