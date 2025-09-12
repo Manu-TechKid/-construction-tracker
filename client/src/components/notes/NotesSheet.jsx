@@ -472,7 +472,7 @@ const NotesSheet = () => {
                   >
                     {buildings.map((building) => (
                       <MenuItem key={building._id} value={building._id}>
-                        {building.name}
+                        {building.displayName || building.name}
                       </MenuItem>
                     ))}
                   </Select>

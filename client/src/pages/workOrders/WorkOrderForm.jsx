@@ -88,17 +88,25 @@ const WorkOrderForm = () => {
           workOrderId = newWorkOrder.data._id;
         }
 
+        // Upload photos asynchronously after navigation to improve perceived performance
         if (newPhotos.length > 0) {
-          for (const photo of newPhotos) {
-            await uploadPhoto({ workOrderId, photo }).unwrap();
-          }
+          // Upload photos in background
+          Promise.all(
+            newPhotos.map(photo => uploadPhoto({ workOrderId, photo }).unwrap())
+          ).catch(error => {
+            console.error('Photo upload failed:', error);
+            toast.error('Some photos failed to upload', {
+              position: "top-right",
+              autoClose: 3000,
+            });
+          });
         }
 
         // Show success message and redirect immediately
         const message = isEdit ? 'Work order updated successfully!' : 'Work order created successfully!';
         toast.success(message, {
           position: "top-right",
-          autoClose: 2000,
+          autoClose: 1500,
           hideProgressBar: false,
           closeOnClick: true,
           pauseOnHover: false,
@@ -106,9 +114,7 @@ const WorkOrderForm = () => {
         });
         
         // Immediate navigation without delay
-        setTimeout(() => {
-          navigate('/work-orders', { replace: true });
-        }, 100);
+        navigate('/work-orders', { replace: true });
       } catch (error) {
         console.error('Failed to save work order:', error);
         toast.error('Failed to save work order. Please try again.', {
@@ -223,7 +229,7 @@ const WorkOrderForm = () => {
                       <InputLabel>Building</InputLabel>
                       <Select id="building" name="building" value={formik.values.building} onChange={formik.handleChange}>
                         {buildingsData?.data?.buildings?.map((building) => (
-                          <MenuItem key={building._id} value={building._id}>{building.name}</MenuItem>
+                          <MenuItem key={building._id} value={building._id}>{building.displayName || building.name}</MenuItem>
                         ))}
                       </Select>
                     </FormControl>

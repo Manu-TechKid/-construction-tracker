@@ -45,11 +45,27 @@ const EditReminder = () => {
         ...formData
       }).unwrap();
       
-      toast.success('Reminder updated successfully');
-      navigate(`/reminders/${id}`);
+      toast.success('Reminder updated successfully!', {
+        position: "top-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: true,
+      });
+      
+      // Navigate back to reminders list for better UX
+      navigate('/reminders', { replace: true });
     } catch (error) {
       console.error('Failed to update reminder:', error);
-      toast.error(error?.data?.message || 'Failed to update reminder');
+      toast.error(error?.data?.message || 'Failed to update reminder', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     }
   };
 

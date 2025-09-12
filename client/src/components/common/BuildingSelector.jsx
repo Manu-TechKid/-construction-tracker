@@ -66,7 +66,7 @@ const BuildingSelector = ({
           {buildings.map((building) => (
             <MenuItem key={building._id} value={building._id}>
               <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                <Typography noWrap>{building.name}</Typography>
+                <Typography noWrap>{building.displayName || building.name}</Typography>
                 <Typography 
                   variant="caption" 
                   color="text.secondary" 

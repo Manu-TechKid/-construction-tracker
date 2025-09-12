@@ -217,7 +217,22 @@ const WorkOrders = () => {
         
         // Handle different photo URL formats
         const photoUrl = firstPhoto.url || firstPhoto.path || (typeof firstPhoto === 'string' ? firstPhoto : null);
-        const fullUrl = photoUrl?.startsWith('http') ? photoUrl : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${photoUrl}`;
+        
+        // Fix photo URL construction for production
+        let fullUrl;
+        if (photoUrl?.startsWith('http')) {
+          fullUrl = photoUrl;
+        } else if (photoUrl?.startsWith('/')) {
+          // For absolute paths, use the API base URL
+          const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
+          fullUrl = `${apiUrl}${photoUrl}`;
+        } else if (photoUrl) {
+          // For relative paths, construct proper URL
+          const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
+          fullUrl = `${apiUrl}/api/v1/uploads/photos/${photoUrl}`;
+        } else {
+          fullUrl = null;
+        }
         
         return (
           <Box sx={{ 
@@ -241,6 +256,7 @@ const WorkOrders = () => {
                 display: 'block'
               }} 
               onError={(e) => {
+                console.log('Image load error for:', fullUrl);
                 e.target.style.display = 'none';
                 e.target.parentElement.innerHTML = '<div style="font-size: 10px; color: #666; text-align: center;">No Image</div>';
               }}

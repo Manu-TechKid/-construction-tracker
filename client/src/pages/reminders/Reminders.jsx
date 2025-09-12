@@ -296,7 +296,7 @@ const Reminders = () => {
                       </TableCell>
                       <TableCell>
                         {typeof reminder.building === 'object' 
-                          ? reminder.building.name 
+                          ? (reminder.building.displayName || reminder.building.name) 
                           : 'N/A'}
                       </TableCell>
                       <TableCell>{reminder.apartment || 'N/A'}</TableCell>

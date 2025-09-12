@@ -410,7 +410,7 @@ const ReminderForm = ({
                       >
                         {buildingsData?.data?.buildings?.map((building) => (
                           <MenuItem key={building._id} value={building._id}>
-                            {building.name}
+                            {building.displayName || building.name}
                           </MenuItem>
                         ))}
                       </Select>
@@ -420,18 +420,7 @@ const ReminderForm = ({
                     </FormControl>
                   </Grid>
                   
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      id="apartment"
-                      name="apartment"
-                      label="Apartment/Unit (Optional)"
-                      value={formik.values.apartment}
-                      onChange={formik.handleChange}
-                      variant="outlined"
-                      margin="normal"
-                    />
-                  </Grid>
+                  {/* Apartment field removed - handled by apartment selection above */}
                   
                   <Grid item xs={12} md={6}>
                     <DatePicker

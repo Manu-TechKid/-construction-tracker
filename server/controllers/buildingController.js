@@ -42,10 +42,11 @@ exports.getAllBuildings = catchAsync(async (req, res, next) => {
     // Execute query with pagination
     const buildings = await query.skip(skip).limit(limit);
     
-    // Format buildings with display name
+    // Format buildings with display name - always use service manager name
     const formattedBuildings = buildings.map(building => {
         const buildingObj = building.toObject();
-        const adminName = building.administrator?.name || building.administratorName || 'No Administrator';
+        // Prioritize administrator.name (populated) over administratorName (string field)
+        const adminName = building.administrator?.name || building.administratorName || 'No Service Manager';
         buildingObj.displayName = `${building.name} - [${adminName}]`;
         return buildingObj;
     });

@@ -71,10 +71,12 @@ router.post('/photo', upload.single('photo'), catchAsync(async (req, res, next) 
     return next(new AppError('Work order not found', 404));
   }
 
-  // Create photo object
-  const photoUrl = `/uploads/photos/${req.file.filename}`;
+  // Create photo object with proper URL structure
+  const photoUrl = `/api/v1/uploads/photos/${req.file.filename}`;
   const photo = {
     url: photoUrl,
+    path: photoUrl, // Add path field for compatibility
+    filename: req.file.filename, // Add filename for direct access
     description: description || '',
     type: type || 'other',
     uploadedBy: req.user.id,

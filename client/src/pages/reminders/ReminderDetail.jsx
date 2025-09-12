@@ -249,7 +249,7 @@ const ReminderDetail = () => {
                 
                 {reminder.building && (
                   <Typography variant="subtitle1" color="textSecondary">
-                    {reminder.building.name} {reminder.apartment && `• ${reminder.apartment}`}
+                    {reminder.building.displayName || reminder.building.name} {reminder.apartment && `• ${reminder.apartment}`}
                   </Typography>
                 )}
                 

@@ -36,6 +36,7 @@ import {
   Info as InfoIcon,
 } from '@mui/icons-material';
 import { useCreateBuildingMutation, useUpdateBuildingMutation, useGetBuildingQuery } from '../../features/buildings/buildingsApiSlice';
+import { useGetUsersQuery } from '../../features/users/usersApiSlice';
 import { useAuth } from '../../hooks/useAuth';
 import { formatDate } from '../../utils/dateUtils';
 
@@ -43,6 +44,8 @@ import { formatDate } from '../../utils/dateUtils';
 const validationSchema = Yup.object({
   name: Yup.string().required('Building name is required'),
   address: Yup.string().required('Address is required'),
+  city: Yup.string().required('City is required'),
+  administrator: Yup.string().required('Service Manager is required'),
   status: Yup.string().required('Status is required'),
   description: Yup.string(),
   yearBuilt: Yup.number().min(1800, 'Invalid year').max(new Date().getFullYear(), 'Year cannot be in the future'),
@@ -68,11 +71,18 @@ const BuildingForm = ({ isEdit = false }) => {
   const building = buildingData?.data || {};
   const isLoading = isCreating || isUpdating || (isEdit && isLoadingBuilding);
   
+  // Get users for administrator dropdown
+  const { data: usersData } = useGetUsersQuery();
+  const users = usersData?.data?.users || [];
+  
   // Formik form
   const formik = useFormik({
     initialValues: {
       name: '',
       address: '',
+      city: '',
+      administrator: '',
+      administratorName: '',
       status: 'active',
       description: '',
       yearBuilt: new Date().getFullYear(),
@@ -105,12 +115,15 @@ const BuildingForm = ({ isEdit = false }) => {
     },
   });
   
-  // Set form values when building data is loaded (edit mode)
+  // Set initial values when building data is loaded
   useEffect(() => {
-    if (isEdit && building) {
+    if (isEdit && building && Object.keys(building).length > 0) {
       formik.setValues({
         name: building.name || '',
         address: building.address || '',
+        city: building.city || '',
+        administrator: building.administrator?._id || building.administrator || '',
+        administratorName: building.administrator?.name || building.administratorName || '',
         status: building.status || 'active',
         description: building.description || '',
         yearBuilt: building.yearBuilt || new Date().getFullYear(),
@@ -242,6 +255,53 @@ const BuildingForm = ({ isEdit = false }) => {
                             ),
                           }}
                         />
+                      </Grid>
+                      
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          id="city"
+                          name="city"
+                          label="City"
+                          value={formik.values.city}
+                          onChange={formik.handleChange}
+                          onBlur={formik.handleBlur}
+                          error={formik.touched.city && Boolean(formik.errors.city)}
+                          helperText={formik.touched.city && formik.errors.city}
+                          disabled={isLoading}
+                        />
+                      </Grid>
+                      
+                      <Grid item xs={12} sm={6}>
+                        <FormControl 
+                          fullWidth 
+                          error={formik.touched.administrator && Boolean(formik.errors.administrator)}
+                        >
+                          <InputLabel id="administrator-label">Service Manager *</InputLabel>
+                          <Select
+                            labelId="administrator-label"
+                            id="administrator"
+                            name="administrator"
+                            value={formik.values.administrator}
+                            onChange={(e) => {
+                              const selectedUser = users.find(user => user._id === e.target.value);
+                              formik.setFieldValue('administrator', e.target.value);
+                              formik.setFieldValue('administratorName', selectedUser?.name || '');
+                            }}
+                            onBlur={formik.handleBlur}
+                            label="Service Manager *"
+                            disabled={isLoading}
+                          >
+                            {users.map((user) => (
+                              <MenuItem key={user._id} value={user._id}>
+                                {user.name} ({user.email})
+                              </MenuItem>
+                            ))}
+                          </Select>
+                          {formik.touched.administrator && formik.errors.administrator && (
+                            <FormHelperText>{formik.errors.administrator}</FormHelperText>
+                          )}
+                        </FormControl>
                       </Grid>
                       
                       <Grid item xs={12} sm={6}>

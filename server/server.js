@@ -104,6 +104,14 @@ app.use(
 // Serving static files
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Serve uploaded photos with proper CORS headers
+app.use('/api/v1/uploads/photos', express.static(path.join(__dirname, 'public/uploads/photos'), {
+  setHeaders: (res, path) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
+
 // Test middleware
 app.use((req, res, next) => {
   req.requestTime = new Date().toISOString();
