@@ -171,42 +171,82 @@ const Workers = () => {
     try {
       setIsSubmitting(true);
       
-      // Basic validation
-      if (!workerForm.name || !workerForm.email) {
-        toast.error('Name and email are required');
+      // Enhanced validation
+      if (!workerForm.name?.trim()) {
+        toast.error('Name is required');
+        return;
+      }
+      
+      if (!workerForm.email?.trim()) {
+        toast.error('Email is required');
+        return;
+      }
+      
+      // Email format validation
+      const emailRegex = /^\S+@\S+\.\S+$/;
+      if (!emailRegex.test(workerForm.email.trim())) {
+        toast.error('Please enter a valid email address');
+        return;
+      }
+      
+      // Password validation for new workers
+      if (!editMode && !workerForm.password?.trim()) {
+        toast.error('Password is required for new workers');
+        return;
+      }
+      
+      // Validate numeric fields
+      if (workerForm.hourlyRate && (isNaN(workerForm.hourlyRate) || parseFloat(workerForm.hourlyRate) < 0)) {
+        toast.error('Hourly rate must be a valid positive number');
+        return;
+      }
+      
+      if (workerForm.contractRate && (isNaN(workerForm.contractRate) || parseFloat(workerForm.contractRate) < 0)) {
+        toast.error('Contract rate must be a valid positive number');
         return;
       }
 
       // Prepare worker data
       const workerData = {
-        ...workerForm,
+        name: workerForm.name.trim(),
+        email: workerForm.email.toLowerCase().trim(),
+        phone: workerForm.phone?.trim() || '',
         role: 'worker',
         workerProfile: {
           skills: workerForm.skills || [],
           paymentType: workerForm.paymentType || 'hourly',
           hourlyRate: workerForm.hourlyRate ? parseFloat(workerForm.hourlyRate) : 0,
           contractRate: workerForm.contractRate ? parseFloat(workerForm.contractRate) : 0,
-          notes: workerForm.notes || ''
+          notes: workerForm.notes?.trim() || ''
         }
       };
 
-      // Remove password if not in edit mode or if it's empty
-      if (editMode && !workerForm.password) {
-        delete workerData.password;
-      } else if (!editMode && !workerForm.password) {
-        toast.error('Password is required for new workers');
-        return;
+      // Handle password for edit vs create
+      if (editMode && workerForm.password?.trim()) {
+        workerData.password = workerForm.password.trim();
+      } else if (!editMode) {
+        workerData.password = workerForm.password.trim();
       }
 
-      // Make API call
+      // Make API call with timeout
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 30000)
+      );
+      
       if (editMode && selectedWorker?._id) {
-        await updateWorker({
-          id: selectedWorker._id,
-          ...workerData
-        }).unwrap();
+        await Promise.race([
+          updateWorker({
+            id: selectedWorker._id,
+            ...workerData
+          }).unwrap(),
+          timeoutPromise
+        ]);
         toast.success('Worker updated successfully');
       } else {
-        await createWorker(workerData).unwrap();
+        await Promise.race([
+          createWorker(workerData).unwrap(),
+          timeoutPromise
+        ]);
         toast.success('Worker created successfully');
       }
 
@@ -216,7 +256,17 @@ const Workers = () => {
       refetch();
     } catch (error) {
       console.error('Error saving worker:', error);
-      toast.error(error?.data?.message || 'Failed to save worker');
+      
+      // Handle specific error types
+      if (error.message === 'Request timeout') {
+        toast.error('Request timed out. Please check your connection and try again.');
+      } else if (error?.data?.message) {
+        toast.error(error.data.message);
+      } else if (error?.message) {
+        toast.error(error.message);
+      } else {
+        toast.error('Failed to save worker. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }

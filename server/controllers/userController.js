@@ -86,14 +86,9 @@ exports.getUser = catchAsync(async (req, res, next) => {
 // Create worker (by employer)
 exports.createWorker = catchAsync(async (req, res, next) => {
     console.log('Creating worker with data:', req.body);
+    console.log('User creating worker:', req.user.role, req.user.id);
     
-    // Check for duplicate email
-    const existingUser = await User.findOne({ email: req.body.email });
-    if (existingUser) {
-        return next(new AppError('A user with this email already exists', 400));
-    }
-
-    // Validate required fields
+    // Validate required fields first
     if (!req.body.name || !req.body.email) {
         return next(new AppError('Name and email are required', 400));
     }
@@ -102,17 +97,43 @@ exports.createWorker = catchAsync(async (req, res, next) => {
         return next(new AppError('Password is required', 400));
     }
 
+    // Validate email format
+    const emailRegex = /^\S+@\S+\.\S+$/;
+    if (!emailRegex.test(req.body.email)) {
+        return next(new AppError('Please provide a valid email address', 400));
+    }
+
+    // Check for duplicate email with case-insensitive search
+    const existingUser = await User.findOne({ 
+        email: { $regex: new RegExp('^' + req.body.email + '$', 'i') } 
+    });
+    if (existingUser) {
+        return next(new AppError('A user with this email already exists', 400));
+    }
+
+    // Validate numeric fields
+    const hourlyRate = req.body.workerProfile?.hourlyRate || req.body.hourlyRate;
+    const contractRate = req.body.workerProfile?.contractRate || req.body.contractRate;
+    
+    if (hourlyRate && (isNaN(hourlyRate) || hourlyRate < 0)) {
+        return next(new AppError('Hourly rate must be a valid positive number', 400));
+    }
+    
+    if (contractRate && (isNaN(contractRate) || contractRate < 0)) {
+        return next(new AppError('Contract rate must be a valid positive number', 400));
+    }
+
     const workerData = {
-        name: req.body.name,
-        email: req.body.email,
-        phone: req.body.phone,
+        name: req.body.name.trim(),
+        email: req.body.email.toLowerCase().trim(),
+        phone: req.body.phone ? req.body.phone.trim() : undefined,
         role: 'worker',
         password: req.body.password,
         workerProfile: {
             skills: req.body.workerProfile?.skills || req.body.skills || [],
             paymentType: req.body.workerProfile?.paymentType || req.body.paymentType || 'hourly',
-            hourlyRate: req.body.workerProfile?.hourlyRate || req.body.hourlyRate || 0,
-            contractRate: req.body.workerProfile?.contractRate || req.body.contractRate || 0,
+            hourlyRate: hourlyRate ? parseFloat(hourlyRate) : 0,
+            contractRate: contractRate ? parseFloat(contractRate) : 0,
             status: req.body.workerProfile?.status || req.body.status || 'active',
             notes: req.body.workerProfile?.notes || req.body.notes || '',
             createdBy: req.user.id, // Employer who created this worker
@@ -120,19 +141,35 @@ exports.createWorker = catchAsync(async (req, res, next) => {
         }
     };
     
-    const newWorker = await User.create(workerData);
-    
-    console.log('Worker created successfully:', newWorker._id);
-    
-    // Remove password from response
-    newWorker.password = undefined;
-    
-    res.status(201).json({
-        status: 'success',
-        data: {
-            worker: newWorker
+    try {
+        const newWorker = await User.create(workerData);
+        
+        console.log('Worker created successfully:', newWorker._id);
+        
+        // Remove password from response
+        newWorker.password = undefined;
+        
+        res.status(201).json({
+            status: 'success',
+            data: {
+                worker: newWorker
+            }
+        });
+    } catch (error) {
+        console.error('Database error creating worker:', error);
+        
+        // Handle specific MongoDB errors
+        if (error.code === 11000) {
+            return next(new AppError('A user with this email already exists', 400));
         }
-    });
+        
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(err => err.message);
+            return next(new AppError(`Validation error: ${messages.join(', ')}`, 400));
+        }
+        
+        return next(new AppError('Failed to create worker. Please try again.', 500));
+    }
 });
 
 // Update user
