@@ -148,7 +148,6 @@ const ReminderForm = ({
         
         console.log('Submitting reminder payload:', payload);
         await onSubmit(payload);
-        setSubmitting(false);
       } catch (error) {
         console.error('Form submission error:', error);
         setSubmitting(false);

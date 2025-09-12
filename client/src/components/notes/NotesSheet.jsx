@@ -158,7 +158,7 @@ const NotesSheet = () => {
 
     try {
       const noteData = {
-        title: formData.content.trim().substring(0, 50) + (formData.content.trim().length > 50 ? '...' : ''), // Generate title from content
+        title: formData.title.trim() || formData.content.trim().substring(0, 50) + (formData.content.trim().length > 50 ? '...' : ''), // Use title if provided, otherwise generate from content
         content: formData.content.trim(),
         building: formData.building,
         type: formData.type === 'visit' ? 'visit' : formData.type || 'general', // Ensure 'visit' is handled

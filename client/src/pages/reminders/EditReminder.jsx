@@ -70,11 +70,7 @@ const EditReminder = () => {
   };
 
   const handleCancel = (deleted = false) => {
-    if (deleted) {
-      navigate('/reminders');
-    } else {
-      navigate(`/reminders/${id}`);
-    }
+    navigate('/reminders');
   };
 
   if (isLoadingReminder || !initialValues) {
