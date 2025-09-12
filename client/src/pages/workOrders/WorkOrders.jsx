@@ -223,11 +223,15 @@ const WorkOrders = () => {
         if (photoUrl?.startsWith('http')) {
           fullUrl = photoUrl;
         } else if (photoUrl?.startsWith('/api/v1/uploads/photos/')) {
-          // For API paths, use the API base URL
+          // For API paths, use the API base URL but avoid double /api/v1/
           const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
           fullUrl = `${apiUrl}${photoUrl}`;
+        } else if (photoUrl?.startsWith('/uploads/photos/')) {
+          // For paths starting with /uploads/photos/, add /api/v1 prefix
+          const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
+          fullUrl = `${apiUrl}/api/v1${photoUrl}`;
         } else if (photoUrl?.startsWith('/')) {
-          // For other absolute paths, use the API base URL
+          // For other absolute paths, use as-is
           const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
           fullUrl = `${apiUrl}${photoUrl}`;
         } else if (photoUrl) {

@@ -155,11 +155,19 @@ exports.getReminder = catchAsync(async (req, res, next) => {
 // @route   PATCH /api/v1/reminders/:id
 // @access  Private
 exports.updateReminder = catchAsync(async (req, res, next) => {
+  console.log('Updating reminder with ID:', req.params.id);
+  console.log('Update data:', req.body);
+  
   const updates = { ...req.body };
   
   // If files were uploaded, add them to the photos array
   if (req.files && req.files.length > 0) {
     updates.$push = { photos: { $each: req.files.map(file => file.filename) } };
+  }
+
+  // Ensure required fields are present
+  if (!updates.title || !updates.description) {
+    return next(new AppError('Title and description are required', 400));
   }
 
   const reminder = await Reminder.findByIdAndUpdate(
@@ -169,11 +177,14 @@ exports.updateReminder = catchAsync(async (req, res, next) => {
       new: true,
       runValidators: true
     }
-  );
+  ).populate('building', 'name address')
+   .populate('createdBy', 'name email');
 
   if (!reminder) {
     return next(new AppError('No reminder found with that ID', 404));
   }
+
+  console.log('Reminder updated successfully:', reminder._id);
 
   res.status(200).json({
     status: 'success',

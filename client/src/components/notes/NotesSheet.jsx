@@ -181,7 +181,9 @@ const NotesSheet = () => {
       }
       handleCloseDialog();
       // Force refetch to ensure UI is updated
-      refetch();
+      if (refetch) {
+        refetch();
+      }
       toast.success('Note saved successfully');
     } catch (error) {
       console.error('Error saving note:', error);

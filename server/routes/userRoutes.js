@@ -24,6 +24,7 @@ router.delete('/deleteMe', userController.deleteMe);
 router.get('/workers', userController.getAllWorkers);
 router.get('/workers/available', userController.getAvailableWorkers);
 router.post('/workers', authController.restrictTo('admin', 'manager'), userController.createWorker);
+router.get('/workers/:id', userController.getUser);
 router.patch('/:id/approval', authController.restrictTo('admin', 'manager'), userController.updateWorkerApproval);
 router.patch('/:id/skills', authController.restrictTo('admin', 'manager', 'supervisor'), userController.updateWorkerSkills);
 router.patch('/:id/status', authController.restrictTo('admin', 'manager'), userController.updateWorkerStatus);

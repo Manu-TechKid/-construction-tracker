@@ -85,6 +85,8 @@ exports.getUser = catchAsync(async (req, res, next) => {
 
 // Create worker (by employer)
 exports.createWorker = catchAsync(async (req, res, next) => {
+    console.log('Creating worker with data:', req.body);
+    
     // Check for duplicate email
     const existingUser = await User.findOne({ email: req.body.email });
     if (existingUser) {
@@ -119,6 +121,8 @@ exports.createWorker = catchAsync(async (req, res, next) => {
     };
     
     const newWorker = await User.create(workerData);
+    
+    console.log('Worker created successfully:', newWorker._id);
     
     // Remove password from response
     newWorker.password = undefined;
