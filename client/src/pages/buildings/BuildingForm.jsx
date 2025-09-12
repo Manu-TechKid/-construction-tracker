@@ -36,7 +36,6 @@ import {
   Info as InfoIcon,
 } from '@mui/icons-material';
 import { useCreateBuildingMutation, useUpdateBuildingMutation, useGetBuildingQuery } from '../../features/buildings/buildingsApiSlice';
-import { useGetUsersQuery } from '../../features/users/usersApiSlice';
 import { useAuth } from '../../hooks/useAuth';
 import { formatDate } from '../../utils/dateUtils';
 
@@ -44,10 +43,9 @@ import { formatDate } from '../../utils/dateUtils';
 const validationSchema = Yup.object({
   name: Yup.string().required('Building name is required'),
   address: Yup.string().required('Address is required'),
-  city: Yup.string().required('City is required'),
-  administrator: Yup.string().required('Service Manager is required'),
   status: Yup.string().required('Status is required'),
   description: Yup.string(),
+  serviceManager: Yup.string().required('Service manager name is required'),
   yearBuilt: Yup.number().min(1800, 'Invalid year').max(new Date().getFullYear(), 'Year cannot be in the future'),
   floors: Yup.number().min(1, 'Must be at least 1').max(200, 'Must be 200 or less'),
   totalUnits: Yup.number().min(1, 'Must be at least 1'),
@@ -71,20 +69,14 @@ const BuildingForm = ({ isEdit = false }) => {
   const building = buildingData?.data || {};
   const isLoading = isCreating || isUpdating || (isEdit && isLoadingBuilding);
   
-  // Get users for administrator dropdown
-  const { data: usersData } = useGetUsersQuery();
-  const users = usersData?.data?.users || [];
-  
   // Formik form
   const formik = useFormik({
     initialValues: {
       name: '',
       address: '',
-      city: '',
-      administrator: '',
-      administratorName: '',
       status: 'active',
       description: '',
+      serviceManager: '',
       yearBuilt: new Date().getFullYear(),
       floors: 1,
       totalUnits: 1,
@@ -115,17 +107,15 @@ const BuildingForm = ({ isEdit = false }) => {
     },
   });
   
-  // Set initial values when building data is loaded
+  // Set form values when building data is loaded (edit mode)
   useEffect(() => {
-    if (isEdit && building && Object.keys(building).length > 0) {
+    if (isEdit && building) {
       formik.setValues({
         name: building.name || '',
         address: building.address || '',
-        city: building.city || '',
-        administrator: building.administrator?._id || building.administrator || '',
-        administratorName: building.administrator?.name || building.administratorName || '',
         status: building.status || 'active',
         description: building.description || '',
+        serviceManager: building.serviceManager || '',
         yearBuilt: building.yearBuilt || new Date().getFullYear(),
         floors: building.floors || 1,
         totalUnits: building.totalUnits || 1,
@@ -257,51 +247,20 @@ const BuildingForm = ({ isEdit = false }) => {
                         />
                       </Grid>
                       
-                      <Grid item xs={12} sm={6}>
+                      <Grid item xs={12}>
                         <TextField
                           fullWidth
-                          id="city"
-                          name="city"
-                          label="City"
-                          value={formik.values.city}
+                          id="serviceManager"
+                          name="serviceManager"
+                          label="Service Manager Name"
+                          value={formik.values.serviceManager}
                           onChange={formik.handleChange}
                           onBlur={formik.handleBlur}
-                          error={formik.touched.city && Boolean(formik.errors.city)}
-                          helperText={formik.touched.city && formik.errors.city}
+                          error={formik.touched.serviceManager && Boolean(formik.errors.serviceManager)}
+                          helperText={formik.touched.serviceManager && formik.errors.serviceManager}
                           disabled={isLoading}
+                          placeholder="Enter the name of the maintenance/service manager"
                         />
-                      </Grid>
-                      
-                      <Grid item xs={12} sm={6}>
-                        <FormControl 
-                          fullWidth 
-                          error={formik.touched.administrator && Boolean(formik.errors.administrator)}
-                        >
-                          <InputLabel id="administrator-label">Service Manager *</InputLabel>
-                          <Select
-                            labelId="administrator-label"
-                            id="administrator"
-                            name="administrator"
-                            value={formik.values.administrator}
-                            onChange={(e) => {
-                              const selectedUser = users.find(user => user._id === e.target.value);
-                              formik.setFieldValue('administrator', e.target.value);
-                              formik.setFieldValue('administratorName', selectedUser?.name || '');
-                            }}
-                            onBlur={formik.handleBlur}
-                            label="Service Manager *"
-                            disabled={isLoading}
-                          >
-                            {users.map((user) => (
-                              <MenuItem key={user._id} value={user._id}>
-                                {user.name} ({user.email})
-                              </MenuItem>
-                            ))}
-                          </Select>
-                          {formik.touched.administrator && formik.errors.administrator && (
-                            <FormHelperText>{formik.errors.administrator}</FormHelperText>
-                          )}
-                        </FormControl>
                       </Grid>
                       
                       <Grid item xs={12} sm={6}>

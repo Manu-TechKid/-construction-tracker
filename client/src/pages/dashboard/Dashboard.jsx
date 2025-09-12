@@ -92,7 +92,7 @@ const Dashboard = () => {
     const buildingWorkOrders = workOrdersData?.data?.filter(wo => wo.building?._id === building._id) || [];
     return {
       id: building._id,
-      name: building.displayName || building.name,
+      name: building.name,
       status: building.status || 'operational',
       workOrders: buildingWorkOrders.length,
     };

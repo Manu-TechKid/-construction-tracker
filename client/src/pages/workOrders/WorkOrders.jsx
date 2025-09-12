@@ -222,16 +222,29 @@ const WorkOrders = () => {
         let fullUrl;
         if (photoUrl?.startsWith('http')) {
           fullUrl = photoUrl;
+        } else if (photoUrl?.startsWith('/api/v1/uploads/photos/')) {
+          // For API paths, use the API base URL
+          const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
+          fullUrl = `${apiUrl}${photoUrl}`;
         } else if (photoUrl?.startsWith('/')) {
-          // For absolute paths, use the API base URL
+          // For other absolute paths, use the API base URL
           const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
           fullUrl = `${apiUrl}${photoUrl}`;
         } else if (photoUrl) {
-          // For relative paths, construct proper URL
+          // For relative paths (just filename), construct proper URL
           const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
           fullUrl = `${apiUrl}/api/v1/uploads/photos/${photoUrl}`;
         } else {
           fullUrl = null;
+        }
+        
+        // If fullUrl is still null, don't render image
+        if (!fullUrl) {
+          return (
+            <Box sx={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.100', borderRadius: '4px' }}>
+              <Typography variant="caption" color="textSecondary">No Photo</Typography>
+            </Box>
+          );
         }
         
         return (

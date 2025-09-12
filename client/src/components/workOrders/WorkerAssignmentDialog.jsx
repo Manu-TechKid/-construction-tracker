@@ -139,7 +139,7 @@ const WorkerAssignmentDialog = ({
         {workOrder && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
             {workOrder.workType?.toUpperCase()} - {workOrder.workSubType} 
-            {workOrder.building?.name && ` at ${workOrder.building.displayName || workOrder.building.name}`}
+            {workOrder.building?.name && ` at ${workOrder.building.name}`}
           </Typography>
         )}
       </DialogTitle>

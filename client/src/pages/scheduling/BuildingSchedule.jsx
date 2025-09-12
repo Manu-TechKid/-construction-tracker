@@ -485,7 +485,7 @@ const BuildingSchedule = () => {
                   >
                     {buildings.map((building) => (
                       <MenuItem key={building._id} value={building._id}>
-                        {building.displayName || building.name}
+                        {building.name}
                       </MenuItem>
                     ))}
                   </Select>

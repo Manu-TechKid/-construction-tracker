@@ -42,12 +42,11 @@ exports.getAllBuildings = catchAsync(async (req, res, next) => {
     // Execute query with pagination
     const buildings = await query.skip(skip).limit(limit);
     
-    // Format buildings with display name - always use service manager name
+    // Format buildings with display name using service manager
     const formattedBuildings = buildings.map(building => {
         const buildingObj = building.toObject();
-        // Prioritize administrator.name (populated) over administratorName (string field)
-        const adminName = building.administrator?.name || building.administratorName || 'No Service Manager';
-        buildingObj.displayName = `${building.name} - [${adminName}]`;
+        const serviceManagerName = building.serviceManager || 'No Service Manager';
+        buildingObj.displayName = `${building.name} - [${serviceManagerName}]`;
         return buildingObj;
     });
     
@@ -131,8 +130,8 @@ exports.createBuilding = catchAsync(async (req, res, next) => {
         console.log('Creating building with data:', req.body);
         
         // Validate required fields
-        if (!req.body.name || !req.body.address) {
-            return next(new AppError('Name and address are required', 400));
+        if (!req.body.name || !req.body.address || !req.body.serviceManager) {
+            return next(new AppError('Name, address, and service manager are required', 400));
         }
         
         const newBuilding = await Building.create({
@@ -141,6 +140,7 @@ exports.createBuilding = catchAsync(async (req, res, next) => {
             city: req.body.city || '',
             administrator: req.body.administrator || req.user._id,
             administratorName: req.body.administratorName || '',
+            serviceManager: req.body.serviceManager,
             createdBy: req.user ? req.user._id : null
         });
         

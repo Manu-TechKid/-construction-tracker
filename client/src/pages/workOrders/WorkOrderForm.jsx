@@ -229,7 +229,9 @@ const WorkOrderForm = () => {
                       <InputLabel>Building</InputLabel>
                       <Select id="building" name="building" value={formik.values.building} onChange={formik.handleChange}>
                         {buildingsData?.data?.buildings?.map((building) => (
-                          <MenuItem key={building._id} value={building._id}>{building.displayName || building.name}</MenuItem>
+                          <MenuItem key={building._id} value={building._id}>
+                            {building.serviceManager ? `${building.name} - [${building.serviceManager}]` : building.name}
+                          </MenuItem>
                         ))}
                       </Select>
                     </FormControl>

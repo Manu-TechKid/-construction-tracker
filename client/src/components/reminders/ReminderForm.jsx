@@ -410,7 +410,7 @@ const ReminderForm = ({
                       >
                         {buildingsData?.data?.buildings?.map((building) => (
                           <MenuItem key={building._id} value={building._id}>
-                            {building.displayName || building.name}
+                            {building.serviceManager ? `${building.name} - [${building.serviceManager}]` : building.name}
                           </MenuItem>
                         ))}
                       </Select>

@@ -26,6 +26,11 @@ const buildingSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
+    serviceManager: {
+        type: String,
+        required: [true, 'Service manager name is required'],
+        trim: true
+    },
     apartments: [{
         number: {
             type: String,

@@ -80,7 +80,7 @@ const Buildings = () => {
   // Filter buildings on frontend if backend filtering isn't working
   const filteredBuildings = buildings.filter(building => {
     const matchesSearch = !searchTerm || 
-      building.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      building.serviceManager ? `${building.name} - [${building.serviceManager}]` : building.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       building.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (building.city && building.city.toLowerCase().includes(searchTerm.toLowerCase()));
     
