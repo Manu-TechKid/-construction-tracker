@@ -45,7 +45,14 @@ const validationSchema = Yup.object({
 const CreateInvoice = () => {
   const navigate = useNavigate();
   const [selectedWorkOrders, setSelectedWorkOrders] = useState([]);
-  const { data: buildings = [], isLoading: isLoadingBuildings } = useGetBuildingsQuery();
+  const { data: buildingsResponse = {}, isLoading: isLoadingBuildings } = useGetBuildingsQuery();
+  const buildings = buildingsResponse.data?.buildings || [];
+  
+  // Debug log buildings data
+  useEffect(() => {
+    console.log('Buildings response:', buildingsResponse);
+    console.log('Buildings array:', buildings);
+  }, [buildingsResponse, buildings]);
   const [selectedBuildingId, setSelectedBuildingId] = useState('');
   
   // Fetch unbilled work orders when a building is selected
@@ -68,14 +75,19 @@ const CreateInvoice = () => {
   
   // Debug logs
   useEffect(() => {
+    console.log('=== DEBUG ===');
     console.log('Selected building ID:', selectedBuildingId);
+    console.log('Buildings loaded:', buildings.length > 0);
+    console.log('Loading buildings:', isLoadingBuildings);
+    console.log('Work orders data:', workOrders);
+    console.log('Loading work orders:', isLoadingWorkOrders);
+    console.log('Work orders error:', workOrdersError);
+    console.log('Form values:', formik.values);
+    
     if (workOrdersError) {
       console.error('Error fetching work orders:', workOrdersError);
     }
-    if (unbilledWorkOrdersData) {
-      console.log('Fetched work orders:', unbilledWorkOrdersData);
-    }
-  }, [selectedBuildingId, workOrdersError, unbilledWorkOrdersData]);
+  }, [selectedBuildingId, workOrdersError, unbilledWorkOrdersData, buildings, isLoadingBuildings, workOrders, isLoadingWorkOrders, formik.values]);
   
   const [createInvoice, { isLoading: isCreating }] = useCreateInvoiceMutation();
 
@@ -86,6 +98,7 @@ const CreateInvoice = () => {
       notes: '',
       workOrderIds: []
     },
+    enableReinitialize: true,
     validationSchema,
     onSubmit: async (values, { setSubmitting, setFieldError }) => {
       try {
@@ -111,24 +124,31 @@ const CreateInvoice = () => {
 
   // Handle building selection change
   const handleBuildingChange = (event) => {
-    const buildingId = event.target.value;
-    console.log('Building changed to:', buildingId);
-    formik.setFieldValue('buildingId', buildingId);
-    setSelectedBuildingId(buildingId);
-    setSelectedWorkOrders([]);
-    formik.setFieldValue('workOrderIds', []);
+    try {
+      const buildingId = event.target.value;
+      console.log('Building changed to:', buildingId);
+      setSelectedBuildingId(buildingId);
+      formik.setFieldValue('buildingId', buildingId);
+      formik.setFieldValue('workOrderIds', []); // Reset selected work orders when building changes
+    } catch (error) {
+      console.error('Error handling building change:', error);
+    }
   };
 
   const handleWorkOrderSelect = (workOrderId, isSelected) => {
-    let newSelected = [...(formik.values.workOrderIds || [])];
-    
-    if (isSelected) {
-      newSelected.push(workOrderId);
-    } else {
-      newSelected = newSelected.filter(id => id !== workOrderId);
+    try {
+      let newSelected = [...(formik.values.workOrderIds || [])];
+      
+      if (isSelected) {
+        newSelected.push(workOrderId);
+      } else {
+        newSelected = newSelected.filter(id => id !== workOrderId);
+      }
+      
+      formik.setFieldValue('workOrderIds', newSelected);
+    } catch (error) {
+      console.error('Error handling work order selection:', error);
     }
-    
-    formik.setFieldValue('workOrderIds', newSelected);
   };
 
   const calculateTotal = () => {
@@ -156,6 +176,15 @@ const CreateInvoice = () => {
       </Box>
     );
   }
+  
+  // Debug: Log the current state
+  console.log('Rendering with state:', {
+    buildings,
+    selectedBuildingId,
+    formikValues: formik.values,
+    formikErrors: formik.errors,
+    formikTouched: formik.touched
+  });
 
   return (
     <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
@@ -187,7 +216,7 @@ const CreateInvoice = () => {
                   onBlur={formik.handleBlur}
                   label="Building *"
                 >
-                  {buildings?.data?.map((building) => (
+                  {buildings?.map((building) => (
                     <MenuItem key={building._id} value={building._id}>
                       {building.name} - {building.address}
                     </MenuItem>

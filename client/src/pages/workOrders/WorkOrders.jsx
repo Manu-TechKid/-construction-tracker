@@ -218,34 +218,26 @@ const WorkOrders = () => {
         // Handle different photo URL formats
         const photoUrl = firstPhoto.url || firstPhoto.path || (typeof firstPhoto === 'string' ? firstPhoto : null);
         
-        // Fix photo URL construction for production
-        let fullUrl;
-        if (!photoUrl) {
-          fullUrl = null;
-        } else if (photoUrl.startsWith('http')) {
-          fullUrl = photoUrl;
-        } else {
+        // Fix photo URL construction
+        let fullUrl = null;
+        if (photoUrl) {
           const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
           
-          // Normalize the URL - remove any leading/trailing slashes
-          let normalizedUrl = photoUrl.replace(/^\/+|\/+$/g, '');
-          
-          // Remove any duplicate /api/v1 prefixes
-          normalizedUrl = normalizedUrl.replace(/^(api\/v1\/)+/, 'api/v1/');
-          
-          // If it's already a full path (starts with api/v1), use as is
-          if (normalizedUrl.startsWith('api/v1/')) {
-            fullUrl = `${apiUrl}/${normalizedUrl}`;
+          // If it's already a full URL, use it as is
+          if (photoUrl.startsWith('http')) {
+            fullUrl = photoUrl;
           } 
-          // If it's just a filename, construct the full path
-          else if (!normalizedUrl.includes('/')) {
-            fullUrl = `${apiUrl}/api/v1/uploads/photos/${normalizedUrl}`;
+          // If it's a path that already includes /api/v1, clean it up
+          else if (photoUrl.includes('api/v1')) {
+            // Remove any duplicate /api/v1 prefixes
+            const cleanPath = photoUrl.replace(/(\/api\/v1)+/g, '/api/v1');
+            fullUrl = `${apiUrl}${cleanPath.startsWith('/') ? '' : '/'}${cleanPath}`;
           }
-          // For any other relative paths, ensure they're properly prefixed
+          // For plain filenames, construct the full path
           else {
-            // Remove any leading slashes to prevent double slashes
-            normalizedUrl = normalizedUrl.replace(/^\/+/, '');
-            fullUrl = `${apiUrl}/api/v1/${normalizedUrl}`;
+            // Clean up the filename (remove any slashes)
+            const cleanFilename = photoUrl.replace(/^[\/\\]+|[\/\\]+$/g, '');
+            fullUrl = `${apiUrl}/api/v1/uploads/photos/${cleanFilename}`;
           }
         }
         
