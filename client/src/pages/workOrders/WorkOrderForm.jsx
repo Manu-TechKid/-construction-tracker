@@ -12,17 +12,21 @@ import {
   Card,
   CardHeader,
   CardContent,
+  Chip,
   CircularProgress,
   Container,
   Divider,
   FormControl,
   Grid,
+  IconButton,
   InputLabel,
   MenuItem,
   Select,
   TextField,
   Typography,
 } from '@mui/material';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { useGetBuildingsQuery, useGetBuildingQuery } from '../../features/buildings/buildingsApiSlice';
 import { useGetUsersQuery } from '../../features/users/usersApiSlice';
 import { useUploadPhotoMutation, useDeletePhotoMutation } from '../../features/uploads/uploadsApiSlice';
