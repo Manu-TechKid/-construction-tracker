@@ -216,30 +216,37 @@ const WorkOrders = () => {
         }
         
         // Handle different photo URL formats
-        const photoUrl = firstPhoto.url || firstPhoto.path || (typeof firstPhoto === 'string' ? firstPhoto : null);
-        
-        // Fix photo URL construction
-        let fullUrl = null;
-        if (photoUrl) {
+        const getPhotoUrl = (photo) => {
+          if (!photo) return null;
+          
           const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
+          let photoPath = photo.url || photo.path || photo;
+          
+          if (!photoPath) return null;
           
           // If it's already a full URL, use it as is
-          if (photoUrl.startsWith('http')) {
-            fullUrl = photoUrl;
-          } 
-          // If it's a path that already includes /api/v1, clean it up
-          else if (photoUrl.includes('api/v1')) {
-            // Remove any duplicate /api/v1 prefixes
-            const cleanPath = photoUrl.replace(/(\/api\/v1)+/g, '/api/v1');
-            fullUrl = `${apiUrl}${cleanPath.startsWith('/') ? '' : '/'}${cleanPath}`;
+          if (typeof photoPath === 'string' && photoPath.startsWith('http')) {
+            return photoPath;
           }
+          
+          // If it's a path that includes /uploads/, use it directly
+          if (typeof photoPath === 'string' && photoPath.includes('/uploads/')) {
+            // Remove any leading slashes or api/v1 prefixes
+            const cleanPath = photoPath.replace(/^[\/\\]+|^api\/v1[\/\\]?/i, '');
+            return `${apiUrl}/api/v1/${cleanPath}`.replace(/([^:]\/)\/+/g, '$1');
+          }
+          
           // For plain filenames, construct the full path
-          else {
-            // Clean up the filename (remove any slashes)
-            const cleanFilename = photoUrl.replace(/^[\/\\]+|[\/\\]+$/g, '');
-            fullUrl = `${apiUrl}/api/v1/uploads/photos/${cleanFilename}`;
+          if (typeof photoPath === 'string') {
+            const cleanFilename = photoPath.replace(/^[\/\\]+|[\/\\]+$/g, '');
+            return `${apiUrl}/api/v1/uploads/photos/${cleanFilename}`;
           }
-        }
+          
+          return null;
+        };
+        
+        const fullUrl = getPhotoUrl(firstPhoto);
+        console.log('Generated image URL:', { original: firstPhoto, fullUrl }); // Debug log
         
         // If fullUrl is still null, don't render image
         if (!fullUrl) {

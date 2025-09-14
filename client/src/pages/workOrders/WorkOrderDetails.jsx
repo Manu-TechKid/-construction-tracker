@@ -17,6 +17,35 @@ import { Edit as EditIcon, Delete as DeleteIcon, ArrowBack as ArrowBackIcon } fr
 import { useGetWorkOrderQuery, useDeleteWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 import { format } from 'date-fns';
 
+const getPhotoUrl = (photo) => {
+  if (!photo) return null;
+  
+  const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
+  let photoPath = photo.url || photo.path || photo;
+  
+  if (!photoPath) return null;
+  
+  // If it's already a full URL, use it as is
+  if (typeof photoPath === 'string' && photoPath.startsWith('http')) {
+    return photoPath;
+  }
+  
+  // If it's a path that includes /uploads/, use it directly
+  if (typeof photoPath === 'string' && (photoPath.includes('/uploads/') || photoPath.includes('uploads/'))) {
+    // Remove any leading slashes or api/v1 prefixes
+    const cleanPath = photoPath.replace(/^[\/\\]+|^api\/v1[\/\\]?/i, '');
+    return `${apiUrl}/api/v1/${cleanPath}`.replace(/([^:]\/)\/+/g, '$1');
+  }
+  
+  // For plain filenames, construct the full path
+  if (typeof photoPath === 'string') {
+    const cleanFilename = photoPath.replace(/^[\/\\]+|[\/\\]+$/g, '');
+    return `${apiUrl}/api/v1/uploads/photos/${cleanFilename}`;
+  }
+  
+  return null;
+};
+
 const getStatusChipColor = (status) => {
   switch (status) {
     case 'completed': return 'success';
@@ -96,9 +125,23 @@ const WorkOrderDetails = () => {
               <CardContent>
                 <Typography variant="h6" gutterBottom>Photos</Typography>
                 <Box display="flex" flexWrap="wrap" gap={2}>
-                  {workOrder.photos.map((photo, index) => (
-                    <img key={index} src={photo.url} alt={`work order photo ${index + 1}`} width="150" height="150" style={{ objectFit: 'cover', borderRadius: '4px' }} />
-                  ))}
+                  {workOrder.photos.map((photo, index) => {
+                    const photoUrl = getPhotoUrl(photo);
+                    return photoUrl ? (
+                      <img 
+                        key={index} 
+                        src={photoUrl} 
+                        alt={`work order photo ${index + 1}`} 
+                        width="150" 
+                        height="150" 
+                        style={{ objectFit: 'cover', borderRadius: '4px' }} 
+                        onError={(e) => {
+                          console.error('Error loading image:', photoUrl);
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    ) : null;
+                  })}
                 </Box>
               </CardContent>
             </Card>
