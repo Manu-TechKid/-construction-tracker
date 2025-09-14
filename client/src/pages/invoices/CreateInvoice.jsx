@@ -50,13 +50,21 @@ const CreateInvoice = () => {
   
   // Fetch unbilled work orders when a building is selected
   const { 
-    data: unbilledWorkOrdersData, 
+    data: unbilledWorkOrdersData = { data: [] }, 
     isLoading: isLoadingWorkOrders,
     error: workOrdersError 
   } = useGetUnbilledWorkOrdersQuery(
     selectedBuildingId || '',
-    { skip: !selectedBuildingId }
+    { 
+      skip: !selectedBuildingId,
+      refetchOnMountOrArgChange: true
+    }
   );
+
+  // Ensure workOrders is always an array
+  const workOrders = Array.isArray(unbilledWorkOrdersData?.data) 
+    ? unbilledWorkOrdersData.data 
+    : [];
   
   // Debug logs
   useEffect(() => {
@@ -228,16 +236,40 @@ const CreateInvoice = () => {
                 Select Work Orders to Invoice
               </Typography>
 
-              {formik.values.buildingId ? (
-                isLoadingWorkOrders ? (
-                  <Box display="flex" justifyContent="center" p={3}>
-                    <CircularProgress />
-                  </Box>
-                ) : workOrdersError ? (
-                  <Alert severity="error">
-                    Error loading work orders: {workOrdersError?.data?.message || 'Unknown error'}
-                  </Alert>
-                ) : unbilledWorkOrdersData?.data?.length > 0 ? (
+              {(() => {
+                if (!formik.values.buildingId) {
+                  return (
+                    <Alert severity="info">
+                      Please select a building to view available work orders.
+                    </Alert>
+                  );
+                }
+                
+                if (isLoadingWorkOrders) {
+                  return (
+                    <Box display="flex" justifyContent="center" p={3}>
+                      <CircularProgress />
+                    </Box>
+                  );
+                }
+                
+                if (workOrdersError) {
+                  return (
+                    <Alert severity="error">
+                      Error loading work orders: {workOrdersError?.data?.message || 'Unknown error'}
+                    </Alert>
+                  );
+                }
+                
+                if (workOrders.length === 0) {
+                  return (
+                    <Alert severity="info">
+                      No unbilled work orders found for this building.
+                    </Alert>
+                  );
+                }
+                
+                return (
                   <TableContainer component={Paper} variant="outlined">
                     <Table size="small">
                       <TableHead>
@@ -246,17 +278,17 @@ const CreateInvoice = () => {
                             <Checkbox
                               indeterminate={
                                 formik.values.workOrderIds.length > 0 &&
-                                formik.values.workOrderIds.length < unbilledWorkOrdersData.data?.length
+                                formik.values.workOrderIds.length < workOrders.length
                               }
                               checked={
-                                unbilledWorkOrdersData.data?.length > 0 &&
-                                formik.values.workOrderIds.length === unbilledWorkOrdersData.data.length
+                                workOrders.length > 0 &&
+                                formik.values.workOrderIds.length === workOrders.length
                               }
                               onChange={(e) => {
                                 if (e.target.checked) {
                                   formik.setFieldValue(
                                     'workOrderIds',
-                                    unbilledWorkOrdersData.data.map(wo => wo._id)
+                                    workOrders.map(wo => wo?._id).filter(Boolean)
                                   );
                                 } else {
                                   formik.setFieldValue('workOrderIds', []);
@@ -270,9 +302,11 @@ const CreateInvoice = () => {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {unbilledWorkOrdersData.data.map((workOrder) => {
-                          const workOrderTotal = workOrder.services?.reduce((sum, service) => {
-                            return sum + (service.laborCost || 0) + (service.materialCost || 0);
+                        {workOrders.map((workOrder) => {
+                          if (!workOrder) return null;
+                          const workOrderTotal = workOrder?.services?.reduce((sum, service) => {
+                            if (!service) return sum;
+                            return sum + (Number(service.laborCost) || 0) + (Number(service.materialCost) || 0);
                           }, 0) || 0;
 
                           return (
@@ -301,18 +335,8 @@ const CreateInvoice = () => {
                       </TableBody>
                     </Table>
                   </TableContainer>
-                ) : (
-                  <Alert severity="info">
-                    {unbilledWorkOrdersData?.data?.length === 0 
-                      ? 'No unbilled work orders found for this building.'
-                      : 'Select a building to view available work orders.'}
-                  </Alert>
-                )
-              ) : (
-                <Alert severity="info">
-                  Please select a building to view available work orders.
-                </Alert>
-              )}
+                );
+              })()}
 
               {formik.values.workOrderIds.length > 0 && (
                 <Box mt={3} p={2} bgcolor="grey.50" borderRadius={1}>

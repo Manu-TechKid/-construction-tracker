@@ -226,18 +226,27 @@ const WorkOrders = () => {
           fullUrl = photoUrl;
         } else {
           const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
-          // Normalize the URL to remove any duplicate /api/v1
-          let normalizedUrl = photoUrl;
-          if (normalizedUrl.startsWith('/api/v1/api/v1/')) {
-            normalizedUrl = normalizedUrl.replace('/api/v1/api/v1/', '/api/v1/');
+          
+          // Normalize the URL - remove any leading/trailing slashes
+          let normalizedUrl = photoUrl.replace(/^\/+|\/+$/g, '');
+          
+          // Remove any duplicate /api/v1 prefixes
+          normalizedUrl = normalizedUrl.replace(/^(api\/v1\/)+/, 'api/v1/');
+          
+          // If it's already a full path (starts with api/v1), use as is
+          if (normalizedUrl.startsWith('api/v1/')) {
+            fullUrl = `${apiUrl}/${normalizedUrl}`;
+          } 
+          // If it's just a filename, construct the full path
+          else if (!normalizedUrl.includes('/')) {
+            fullUrl = `${apiUrl}/api/v1/uploads/photos/${normalizedUrl}`;
           }
-          // Ensure the URL starts with a single /api/v1/
-          if (!normalizedUrl.startsWith('/api/v1/') && !normalizedUrl.startsWith('http')) {
-            normalizedUrl = normalizedUrl.startsWith('/') 
-              ? `/api/v1${normalizedUrl}` 
-              : `/api/v1/uploads/photos/${normalizedUrl}`;
+          // For any other relative paths, ensure they're properly prefixed
+          else {
+            // Remove any leading slashes to prevent double slashes
+            normalizedUrl = normalizedUrl.replace(/^\/+/, '');
+            fullUrl = `${apiUrl}/api/v1/${normalizedUrl}`;
           }
-          fullUrl = `${apiUrl}${normalizedUrl}`;
         }
         
         // If fullUrl is still null, don't render image
