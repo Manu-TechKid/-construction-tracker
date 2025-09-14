@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -45,51 +45,21 @@ const validationSchema = Yup.object({
 const CreateInvoice = () => {
   const navigate = useNavigate();
   const [selectedWorkOrders, setSelectedWorkOrders] = useState([]);
+  const { data: buildingsResponse = {}, isLoading: isLoadingBuildings, error: buildingsError } = useGetBuildingsQuery();
+  const buildings = buildingsResponse.data?.buildings || [];
+  
+  // Debug logging
+  console.log('Buildings response:', buildingsResponse);
+  console.log('Buildings data:', buildings);
+  console.log('Buildings loading:', isLoadingBuildings);
+  console.log('Buildings error:', buildingsError);
+  
+  // Debug log buildings data
+  useEffect(() => {
+    console.log('Buildings response:', buildingsResponse);
+    console.log('Buildings array:', buildings);
+  }, [buildingsResponse, buildings]);
   const [selectedBuildingId, setSelectedBuildingId] = useState('');
-  const [initialLoad, setInitialLoad] = useState(true);
-  
-  // Safely get buildings data
-  const { 
-    data: buildingsResponse, 
-    isLoading: isLoadingBuildings, 
-    error: buildingsError,
-    refetch: refetchBuildings
-  } = useGetBuildingsQuery(undefined, {
-    // Don't retry on 401/403 errors
-    skip: false,
-    refetchOnMountOrArgChange: true
-  });
-  
-  // Safely extract buildings array with null checks
-  const buildings = React.useMemo(() => {
-    try {
-      if (!buildingsResponse?.data?.buildings) return [];
-      return Array.isArray(buildingsResponse.data.buildings) 
-        ? buildingsResponse.data.buildings 
-        : [];
-    } catch (error) {
-      console.error('Error parsing buildings data:', error);
-      return [];
-    }
-  }, [buildingsResponse]);
-  
-  // Set initial load to false after first render
-  useEffect(() => {
-    setInitialLoad(false);
-  }, []);
-  
-  // Debug logging with error handling
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Buildings response:', buildingsResponse);
-      console.log('Buildings data:', buildings);
-      console.log('Buildings loading:', isLoadingBuildings);
-      
-      if (buildingsError) {
-        console.error('Error loading buildings:', buildingsError);
-      }
-    }
-  }, [buildingsResponse, buildings, isLoadingBuildings, buildingsError]);
   
   // Fetch unbilled work orders when a building is selected
   const { 
@@ -280,331 +250,262 @@ const CreateInvoice = () => {
     formikTouched: formik.touched
   });
 
-  // Show loading state
-  if (initialLoad || isLoadingBuildings) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
-        <Box sx={{ textAlign: 'center' }}>
-          <CircularProgress size={60} thickness={4} />
-          <Typography variant="body1" sx={{ mt: 2 }}>Loading invoice form...</Typography>
-        </Box>
-      </Container>
-    );
-  }
-
-  // Handle error state
-  if (buildingsError) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
-        <Alert 
-          severity="error" 
-          sx={{ mb: 2 }}
-          action={
-            <Button 
-              color="inherit" 
-              size="small"
-              onClick={() => refetchBuildings()}
-              disabled={isLoadingBuildings}
-            >
-              {isLoadingBuildings ? 'Retrying...' : 'Retry'}
-            </Button>
-          }
-        >
-          <Box>
-            <Typography variant="subtitle1" fontWeight="bold">Error loading buildings</Typography>
-            <Typography variant="body2" sx={{ mt: 0.5 }}>
-              {buildingsError?.data?.message || 'Failed to load building information. Please try again.'}
-            </Typography>
-          </Box>
-        </Alert>
-        <Button 
-          variant="outlined" 
-          color="primary"
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate(-1)}
-          sx={{ mt: 2 }}
-        >
-          Go Back
-        </Button>
-      </Container>
-    );
-  }
-  
-  // Handle case where buildings array is empty
-  if (!buildings || buildings.length === 0) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          No buildings found. Please add a building before creating an invoice.
-        </Alert>
-        <Button 
-          variant="contained" 
-          color="primary"
-          onClick={() => navigate('/buildings/new')}
-          sx={{ mt: 2 }}
-        >
-          Add New Building
-        </Button>
-      </Container>
-    );
-  }
-
   return (
     <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
-        <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Button
-            startIcon={<ArrowBackIcon />}
-            onClick={() => navigate('/invoices')}
-            disabled={formik.isSubmitting}
-          >
-            Back to Invoices
-          </Button>
-          <Typography variant="h4" component="h1">
-            Create New Invoice
-          </Typography>
-        </Box>
+      <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate('/invoices')}
+          disabled={formik.isSubmitting}
+        >
+          Back to Invoices
+        </Button>
+        <Typography variant="h4" component="h1">
+          Create New Invoice
+        </Typography>
+      </Box>
 
-        <Card>
-          <CardContent>
-            <form onSubmit={formik.handleSubmit}>
-              <Box display="grid" gap={3}>
-                <FormControl fullWidth error={formik.touched.buildingId && Boolean(formik.errors.buildingId)}>
-                  <InputLabel id="building-label">Building *</InputLabel>
-                  <Select
-                    labelId="building-label"
-                    id="buildingId"
-                    name="buildingId"
-                    value={formik.values.buildingId}
-                    onChange={handleBuildingChange}
-                    onBlur={formik.handleBlur}
-                    label="Building *"
-                    disabled={isLoadingBuildings}
-                  >
-                    {buildings?.map((building) => (
-                      <MenuItem key={building._id} value={building._id}>
-                        {building.name} - {building.address}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {formik.touched.buildingId && formik.errors.buildingId && (
-                    <Typography color="error" variant="caption">
-                      {formik.errors.buildingId}
-                    </Typography>
-                  )}
-                </FormControl>
-
-                <LocalizationProvider dateAdapter={AdapterDateFns}>
-                  <DatePicker
-                    label="Due Date *"
-                    value={formik.values.dueDate}
-                    onChange={(date) => formik.setFieldValue('dueDate', date)}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        fullWidth
-                        error={formik.touched.dueDate && Boolean(formik.errors.dueDate)}
-                        helperText={formik.touched.dueDate && formik.errors.dueDate}
-                      />
-                    )}
-                  />
-                </LocalizationProvider>
-
-                <TextField
-                  fullWidth
-                  id="notes"
-                  name="notes"
-                  label="Notes"
-                  multiline
-                  rows={3}
-                  value={formik.values.notes}
-                  onChange={formik.handleChange}
+      <Card>
+        <CardContent>
+          <form onSubmit={formik.handleSubmit}>
+            <Box display="grid" gap={3}>
+              <FormControl fullWidth error={formik.touched.buildingId && Boolean(formik.errors.buildingId)}>
+                <InputLabel id="building-label">Building *</InputLabel>
+                <Select
+                  labelId="building-label"
+                  id="buildingId"
+                  name="buildingId"
+                  value={formik.values.buildingId}
+                  onChange={handleBuildingChange}
                   onBlur={formik.handleBlur}
-                  error={formik.touched.notes && Boolean(formik.errors.notes)}
-                  helperText={formik.touched.notes && formik.errors.notes}
-                />
-
-                <Divider sx={{ my: 2 }} />
-
-                <Typography variant="h6" gutterBottom>
-                  Select Work Orders to Invoice
-                </Typography>
-                
-                {isLoadingWorkOrders && selectedBuildingId && (
-                  <Box display="flex" alignItems="center" sx={{ my: 2 }}>
-                    <CircularProgress size={20} />
-                    <Typography variant="body2" sx={{ ml: 1 }}>Loading work orders...</Typography>
-                  </Box>
-                )}
-                
-                {isWorkOrdersError && (
-                  <Alert severity="error" sx={{ my: 2 }}>
-                    Error loading work orders: {workOrdersError?.data?.message || 'Unknown error'}
-                    <Box mt={1}>
-                      <Button 
-                        variant="outlined" 
-                        size="small" 
-                        onClick={() => refetchWorkOrders()}
-                        sx={{ mt: 1 }}
-                      >
-                        Retry
-                      </Button>
-                    </Box>
-                  </Alert>
-                )}
-
-                {(() => {
-                  if (!formik.values.buildingId) {
-                    return (
-                      <Alert severity="info">
-                        Please select a building to view available work orders.
-                      </Alert>
-                    );
-                  }
-                  
-                  if (isLoadingWorkOrders) {
-                    return (
-                      <Box display="flex" justifyContent="center" p={3}>
-                        <CircularProgress />
-                      </Box>
-                    );
-                  }
-                  
-                  if (workOrdersError) {
-                    return (
-                      <Alert severity="error">
-                        Error loading work orders: {workOrdersError?.data?.message || 'Unknown error'}
-                      </Alert>
-                    );
-                  }
-                  
-                  if (workOrders.length === 0) {
-                    return (
-                      <Alert severity="info">
-                        No unbilled work orders found for this building.
-                      </Alert>
-                    );
-                  }
-                  
-                  return (
-                    <TableContainer component={Paper} variant="outlined">
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell padding="checkbox">
-                              <Checkbox
-                                indeterminate={
-                                  formik.values.workOrderIds.length > 0 &&
-                                  formik.values.workOrderIds.length < workOrders.length
-                                }
-                                checked={
-                                  workOrders.length > 0 &&
-                                  formik.values.workOrderIds.length === workOrders.length
-                                }
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    formik.setFieldValue(
-                                      'workOrderIds',
-                                      workOrders.map(wo => wo?._id).filter(Boolean)
-                                    );
-                                  } else {
-                                    formik.setFieldValue('workOrderIds', []);
-                                  }
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell>Work Order</TableCell>
-                            <TableCell>Apartment</TableCell>
-                            <TableCell align="right">Total Cost</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {workOrders.map((workOrder) => {
-                            if (!workOrder) return null;
-                            const workOrderTotal = workOrder?.services?.reduce((sum, service) => {
-                              if (!service) return sum;
-                              return sum + (Number(service.laborCost) || 0) + (Number(service.materialCost) || 0);
-                            }, 0) || 0;
-
-                            return (
-                              <TableRow key={workOrder._id} hover>
-                                <TableCell padding="checkbox">
-                                  <Checkbox
-                                    checked={formik.values.workOrderIds.includes(workOrder._id)}
-                                    onChange={(e) => handleWorkOrderSelect(workOrder._id, e.target.checked)}
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                  <Typography variant="body2">
-                                    {workOrder.title || `Work Order #${workOrder.workOrderNumber || workOrder._id.substring(18, 24)}`}
-                                  </Typography>
-                                  <Typography variant="caption" color="textSecondary">
-                                    {workOrder.description?.substring(0, 50)}{workOrder.description?.length > 50 ? '...' : ''}
-                                  </Typography>
-                                </TableCell>
-                                <TableCell>{workOrder.apartmentNumber || 'N/A'}</TableCell>
-                                <TableCell align="right">
-                                  ${workOrderTotal.toFixed(2)}
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  );
-                })()}
-
-                {formik.values.workOrderIds.length > 0 && (
-                  <Box mt={3} p={2} bgcolor="grey.50" borderRadius={1}>
-                    <Typography variant="h6" gutterBottom>
-                      Invoice Summary
-                    </Typography>
-                    <Box display="flex" justifyContent="space-between" mb={1}>
-                      <Typography>Subtotal:</Typography>
-                      <Typography>${subtotal.toFixed(2)}</Typography>
-                    </Box>
-                    <Box display="flex" justifyContent="space-between" mb={1}>
-                      <Typography>Tax ({(taxRate * 100)}%):</Typography>
-                      <Typography>${tax.toFixed(2)}</Typography>
-                    </Box>
-                    <Divider sx={{ my: 1 }} />
-                    <Box display="flex" justifyContent="space-between" fontWeight="bold">
-                      <Typography>Total:</Typography>
-                      <Typography>${total.toFixed(2)}</Typography>
-                    </Box>
-                  </Box>
-                )}
-
-                {formik.touched.workOrderIds && formik.errors.workOrderIds && (
+                  label="Building *"
+                  disabled={isLoadingBuildings}
+                >
+                  {buildings?.map((building) => (
+                    <MenuItem key={building._id} value={building._id}>
+                      {building.name} - {building.address}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {formik.touched.buildingId && formik.errors.buildingId && (
                   <Typography color="error" variant="caption">
-                    {formik.errors.workOrderIds}
+                    {formik.errors.buildingId}
                   </Typography>
                 )}
+              </FormControl>
 
-                <Box display="flex" justifyContent="flex-end" mt={3} gap={2}>
-                  <Button
-                    variant="outlined"
-                    onClick={() => navigate('/invoices')}
-                    disabled={formik.isSubmitting}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    color="primary"
-                    startIcon={isCreating ? <CircularProgress size={20} /> : <SaveIcon />}
-                    disabled={isCreating || formik.values.workOrderIds.length === 0}
-                  >
-                    {isCreating ? 'Creating...' : 'Create Invoice'}
-                  </Button>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <DatePicker
+                  label="Due Date *"
+                  value={formik.values.dueDate}
+                  onChange={(date) => formik.setFieldValue('dueDate', date)}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      fullWidth
+                      error={formik.touched.dueDate && Boolean(formik.errors.dueDate)}
+                      helperText={formik.touched.dueDate && formik.errors.dueDate}
+                    />
+                  )}
+                />
+              </LocalizationProvider>
+
+              <TextField
+                fullWidth
+                id="notes"
+                name="notes"
+                label="Notes"
+                multiline
+                rows={3}
+                value={formik.values.notes}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.notes && Boolean(formik.errors.notes)}
+                helperText={formik.touched.notes && formik.errors.notes}
+              />
+
+              <Divider sx={{ my: 2 }} />
+
+              <Typography variant="h6" gutterBottom>
+                Select Work Orders to Invoice
+              </Typography>
+              
+              {isLoadingWorkOrders && selectedBuildingId && (
+                <Box display="flex" alignItems="center" sx={{ my: 2 }}>
+                  <CircularProgress size={20} />
+                  <Typography variant="body2" sx={{ ml: 1 }}>Loading work orders...</Typography>
                 </Box>
-              </Box>
-            </form>
-          </CardContent>
-        </Card>
-      </Container>
-  );
-};
+              )}
+              
+              {isWorkOrdersError && (
+                <Alert severity="error" sx={{ my: 2 }}>
+                  Error loading work orders: {workOrdersError?.data?.message || 'Unknown error'}
+                  <Box mt={1}>
+                    <Button 
+                      variant="outlined" 
+                      size="small" 
+                      onClick={() => refetchWorkOrders()}
+                      sx={{ mt: 1 }}
+                    >
+                      Retry
+                    </Button>
+                  </Box>
+                </Alert>
+              )}
+
+              {(() => {
+                if (!formik.values.buildingId) {
+                  return (
+                    <Alert severity="info">
+                      Please select a building to view available work orders.
+                    </Alert>
+                  );
+                }
+                
+                if (isLoadingWorkOrders) {
+                  return (
+                    <Box display="flex" justifyContent="center" p={3}>
+                      <CircularProgress />
+                    </Box>
+                  );
+                }
+                
+                if (workOrdersError) {
+                  return (
+                    <Alert severity="error">
+                      Error loading work orders: {workOrdersError?.data?.message || 'Unknown error'}
+                    </Alert>
+                  );
+                }
+                
+                if (workOrders.length === 0) {
+                  return (
+                    <Alert severity="info">
+                      No unbilled work orders found for this building.
+                    </Alert>
+                  );
+                }
+                
+                return (
+                  <TableContainer component={Paper} variant="outlined">
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell padding="checkbox">
+                            <Checkbox
+                              indeterminate={
+                                formik.values.workOrderIds.length > 0 &&
+                                formik.values.workOrderIds.length < workOrders.length
+                              }
+                              checked={
+                                workOrders.length > 0 &&
+                                formik.values.workOrderIds.length === workOrders.length
+                              }
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  formik.setFieldValue(
+                                    'workOrderIds',
+                                    workOrders.map(wo => wo?._id).filter(Boolean)
+                                  );
+                                } else {
+                                  formik.setFieldValue('workOrderIds', []);
+                                }
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>Work Order</TableCell>
+                          <TableCell>Apartment</TableCell>
+                          <TableCell align="right">Total Cost</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {workOrders.map((workOrder) => {
+                          if (!workOrder) return null;
+                          const workOrderTotal = workOrder?.services?.reduce((sum, service) => {
+                            if (!service) return sum;
+                            return sum + (Number(service.laborCost) || 0) + (Number(service.materialCost) || 0);
+                          }, 0) || 0;
+
+                          return (
+                            <TableRow key={workOrder._id} hover>
+                              <TableCell padding="checkbox">
+                                <Checkbox
+                                  checked={formik.values.workOrderIds.includes(workOrder._id)}
+                                  onChange={(e) => handleWorkOrderSelect(workOrder._id, e.target.checked)}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2">
+                                  {workOrder.title || `Work Order #${workOrder.workOrderNumber || workOrder._id.substring(18, 24)}`}
+                                </Typography>
+                                <Typography variant="caption" color="textSecondary">
+                                  {workOrder.description?.substring(0, 50)}{workOrder.description?.length > 50 ? '...' : ''}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>{workOrder.apartmentNumber || 'N/A'}</TableCell>
+                              <TableCell align="right">
+                                ${workOrderTotal.toFixed(2)}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                );
+              })()}
+
+              {formik.values.workOrderIds.length > 0 && (
+                <Box mt={3} p={2} bgcolor="grey.50" borderRadius={1}>
+                  <Typography variant="h6" gutterBottom>
+                        Invoice Summary
+                      </Typography>
+                      <Box display="flex" justifyContent="space-between" mb={1}>
+                        <Typography>Subtotal:</Typography>
+                        <Typography>${subtotal.toFixed(2)}</Typography>
+                      </Box>
+                      <Box display="flex" justifyContent="space-between" mb={1}>
+                        <Typography>Tax ({(taxRate * 100)}%):</Typography>
+                        <Typography>${tax.toFixed(2)}</Typography>
+                      </Box>
+                      <Divider sx={{ my: 1 }} />
+                      <Box display="flex" justifyContent="space-between" fontWeight="bold">
+                        <Typography>Total:</Typography>
+                        <Typography>${total.toFixed(2)}</Typography>
+                      </Box>
+                    </Box>
+                  )}
+
+                  {formik.touched.workOrderIds && formik.errors.workOrderIds && (
+                    <Typography color="error" variant="caption">
+                      {formik.errors.workOrderIds}
+                    </Typography>
+                  )}
+
+                  <Box display="flex" justifyContent="flex-end" mt={3} gap={2}>
+                    <Button
+                      variant="outlined"
+                      onClick={() => navigate('/invoices')}
+                      disabled={formik.isSubmitting}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      color="primary"
+                      startIcon={isCreating ? <CircularProgress size={20} /> : <SaveIcon />}
+                      disabled={isCreating || formik.values.workOrderIds.length === 0}
+                    >
+                      {isCreating ? 'Creating...' : 'Create Invoice'}
+                    </Button>
+                  </Box>
+                </Box>
+              </form>
+            </CardContent>
+          </Card>
+        </Container>
+      );
+    };
 
 export default CreateInvoice;

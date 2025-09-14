@@ -72,16 +72,18 @@ router.post('/photo', upload.single('photo'), catchAsync(async (req, res, next) 
   }
 
   // Create photo object with proper URL structure
-  const photoUrl = `/uploads/photos/${req.file.filename}`;
+  // Store just the filename in the database, we'll construct full URLs when needed
   const photo = {
-    url: photoUrl,
-    path: photoUrl, // Add path field for compatibility
-    filename: req.file.filename, // Add filename for direct access
+    filename: req.file.filename,
+    path: `uploads/photos/${req.file.filename}`, // Relative path for server-side reference
     description: description || '',
     type: type || 'other',
     uploadedBy: req.user.id,
     uploadedAt: new Date()
   };
+  
+  // Add url field for backward compatibility
+  photo.url = photo.path;
 
   // Add photo to work order
   workOrder.photos.push(photo);

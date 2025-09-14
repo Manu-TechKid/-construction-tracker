@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getPhotoUrl } from '../../utils/photoUtils';
 import {
   Box,
   Typography,
@@ -203,103 +202,86 @@ const WorkOrders = () => {
     },
     {
       field: 'photos',
-      headerName: 'Photos',
-      flex: 0.6,
-      minWidth: 80,
+      headerName: 'Photo',
+      flex: 0.5,
       sortable: false,
       renderCell: (params) => {
-        const photos = Array.isArray(params.row.photos) ? params.row.photos : [];
-        const photoCount = photos.length;
-        
-        if (photoCount === 0) {
+        const firstPhoto = params.row.photos?.[0];
+        if (!firstPhoto) {
           return (
-            <Box 
-              sx={{ 
-                width: 50, 
-                height: 50, 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                bgcolor: 'grey.100', 
-                borderRadius: '4px',
-                border: '1px dashed #ddd'
-              }}
-            >
+            <Box sx={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.100', borderRadius: '4px' }}>
               <Typography variant="caption" color="textSecondary">No Photo</Typography>
             </Box>
           );
         }
         
-        const firstPhoto = photos[0];
+        // Handle photo URL construction
+        const getPhotoUrl = (photo) => {
+          if (!photo) return null;
+          
+          const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
+          
+          // Handle different possible photo path sources
+          let photoPath = photo.filename || photo.path || photo.url || photo;
+          if (!photoPath) return null;
+          
+          // If it's already a full URL, use it as is
+          if (typeof photoPath === 'string' && photoPath.startsWith('http')) {
+            return photoPath;
+          }
+          
+          // Clean up the path
+          let cleanPath = photoPath.toString()
+            .replace(/^[\/\\]+/, '') // Remove leading slashes
+            .replace(/\/+/g, '/'); // Replace multiple slashes with single
+          
+          // If the path already includes uploads/photos, use it as is
+          if (cleanPath.includes('uploads/photos/')) {
+            return `${apiUrl}/api/v1/${cleanPath}`;
+          }
+          
+          // If it's just a filename, construct the full path
+          return `${apiUrl}/api/v1/uploads/photos/${cleanPath}`;
+        };
+        
         const fullUrl = getPhotoUrl(firstPhoto);
         
+        // If fullUrl is still null, don't render image
+        if (!fullUrl) {
+          return (
+            <Box sx={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.100', borderRadius: '4px' }}>
+              <Typography variant="caption" color="textSecondary">No Photo</Typography>
+            </Box>
+          );
+        }
+        
         return (
-          <Box 
-            sx={{ 
-              position: 'relative',
-              width: 60, 
-              height: 60, 
-              borderRadius: '6px',
-              overflow: 'hidden',
-              border: '1px solid #e0e0e0',
-              backgroundColor: '#f8f9fa',
-              transition: 'all 0.2s ease-in-out',
-              '&:hover': {
-                transform: 'scale(1.05)',
-                boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                zIndex: 1
-              }
-            }}
-            title={`${photoCount} photo${photoCount !== 1 ? 's' : ''} - Click to view`}
-          >
-            {/* Main Photo */}
-            <Box
-              component="img"
-              src={fullUrl || '/img/placeholder.jpg'}
-              alt="Work Order"
-              sx={{
-                width: '100%',
-                height: '100%',
+          <Box sx={{ 
+            width: 40, 
+            height: 40, 
+            borderRadius: '4px',
+            overflow: 'hidden',
+            border: '2px solid #e0e0e0',
+            backgroundColor: '#f5f5f5',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <img 
+              src={fullUrl}
+              alt="Work Order" 
+              style={{ 
+                width: '100%', 
+                height: '100%', 
                 objectFit: 'cover',
-                display: 'block',
-                '&:hover': {
-                  cursor: 'pointer',
-                  opacity: 0.9
-                }
-              }}
+                display: 'block'
+              }} 
               onError={(e) => {
                 console.log('Image load error for:', fullUrl);
-                e.target.src = '/img/placeholder.jpg';
-              }}
-              onClick={() => {
-                // TODO: Open photo gallery/modal
-                console.log('View photos for work order:', params.row._id);
+                e.target.style.display = 'none';
+                e.target.parentElement.innerHTML = '<div style="font-size: 10px; color: #666; text-align: center;">No Image</div>';
               }}
             />
-            
-            {/* Photo count badge */}
-            {photoCount > 1 && (
-              <Box
-                sx={{
-                  position: 'absolute',
-                  bottom: 4,
-                  right: 4,
-                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                  color: 'white',
-                  borderRadius: '50%',
-                  width: 20,
-                  height: 20,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.7rem',
-                  fontWeight: 'bold',
-                  pointerEvents: 'none'
-                }}
-              >
-                +{photoCount - 1}
-              </Box>
-            )}
           </Box>
         );
       },

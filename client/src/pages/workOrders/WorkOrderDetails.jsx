@@ -21,8 +21,9 @@ const getPhotoUrl = (photo) => {
   if (!photo) return null;
   
   const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
-  let photoPath = photo.url || photo.path || photo;
   
+  // Handle different possible photo path sources
+  let photoPath = photo.filename || photo.path || photo.url || photo;
   if (!photoPath) return null;
   
   // If it's already a full URL, use it as is
@@ -30,29 +31,18 @@ const getPhotoUrl = (photo) => {
     return photoPath;
   }
   
-  // Clean up the path - remove any leading/trailing slashes and duplicate /api/v1 prefixes
-  const cleanPath = typeof photoPath === 'string' ? 
-    photoPath
-      .replace(/^[\/\\]+/, '') // Remove leading slashes
-      .replace(/\/+/g, '/') // Replace multiple slashes with single
-      .replace(/^api\/v1\//i, '') // Remove leading api/v1/
-      .replace(/^uploads\//, '') // Remove leading uploads/
-      .replace(/^photos\//, '') // Remove leading photos/
-    : '';
+  // Clean up the path
+  let cleanPath = photoPath.toString()
+    .replace(/^[\/\\]+/, '') // Remove leading slashes
+    .replace(/\/+/g, '/'); // Replace multiple slashes with single
   
-  if (!cleanPath) return null;
+  // If the path already includes uploads/photos, use it as is
+  if (cleanPath.includes('uploads/photos/')) {
+    return `${apiUrl}/api/v1/${cleanPath}`;
+  }
   
-  // Construct the final URL
-  const finalUrl = `${apiUrl}/api/v1/uploads/photos/${cleanPath}`;
-  
-  // Debug log
-  console.log('Generated image URL (Details):', { 
-    original: photoPath, 
-    cleanPath,
-    finalUrl 
-  });
-  
-  return finalUrl;
+  // If it's just a filename, construct the full path
+  return `${apiUrl}/api/v1/uploads/photos/${cleanPath}`;
 };
 
 const getStatusChipColor = (status) => {
