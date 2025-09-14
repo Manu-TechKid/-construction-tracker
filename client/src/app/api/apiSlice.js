@@ -2,10 +2,10 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 // Compute API base URL
 // - If REACT_APP_API_URL is provided, use it (useful for local dev)
-// - Otherwise, default to same-origin '/api/v1' so the built client on Render calls the backend it was served from
+// - Otherwise, default to same-origin so the built client on Render calls the backend it was served from
 const apiBaseUrl =
   process.env.REACT_APP_API_URL ||
-  (typeof window !== 'undefined' ? `${window.location.origin}/api/v1` : '/api/v1');
+  (typeof window !== 'undefined' ? window.location.origin : '');
 
 // Create base query with auth headers
 const baseQuery = fetchBaseQuery({
