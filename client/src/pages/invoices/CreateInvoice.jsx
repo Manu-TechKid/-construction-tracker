@@ -49,24 +49,25 @@ const CreateInvoice = () => {
   const [selectedBuildingId, setSelectedBuildingId] = useState('');
   
   // Fetch unbilled work orders when a building is selected
-  const { data: unbilledWorkOrders = [], isLoading: isLoadingWorkOrders } = useGetUnbilledWorkOrdersQuery(
-    selectedBuildingId || null,
-    { 
-      skip: !selectedBuildingId,
-      // Add debug logging
-      onSuccess: (data) => {
-        console.log('Fetched work orders:', data);
-      },
-      onError: (error) => {
-        console.error('Error fetching work orders:', error);
-      }
-    }
+  const { 
+    data: unbilledWorkOrdersData, 
+    isLoading: isLoadingWorkOrders,
+    error: workOrdersError 
+  } = useGetUnbilledWorkOrdersQuery(
+    selectedBuildingId || '',
+    { skip: !selectedBuildingId }
   );
   
-  // Debug log when selectedBuildingId changes
+  // Debug logs
   useEffect(() => {
     console.log('Selected building ID:', selectedBuildingId);
-  }, [selectedBuildingId]);
+    if (workOrdersError) {
+      console.error('Error fetching work orders:', workOrdersError);
+    }
+    if (unbilledWorkOrdersData) {
+      console.log('Fetched work orders:', unbilledWorkOrdersData);
+    }
+  }, [selectedBuildingId, workOrdersError, unbilledWorkOrdersData]);
   
   const [createInvoice, { isLoading: isCreating }] = useCreateInvoiceMutation();
 
@@ -103,6 +104,7 @@ const CreateInvoice = () => {
   // Handle building selection change
   const handleBuildingChange = (event) => {
     const buildingId = event.target.value;
+    console.log('Building changed to:', buildingId);
     formik.setFieldValue('buildingId', buildingId);
     setSelectedBuildingId(buildingId);
     setSelectedWorkOrders([]);
@@ -122,9 +124,9 @@ const CreateInvoice = () => {
   };
 
   const calculateTotal = () => {
-    if (!unbilledWorkOrders?.data) return 0;
+    if (!unbilledWorkOrdersData?.data) return 0;
     
-    return unbilledWorkOrders.data
+    return unbilledWorkOrdersData.data
       .filter(wo => formik.values.workOrderIds.includes(wo._id))
       .reduce((sum, wo) => {
         const workOrderTotal = wo.services?.reduce((workOrderSum, service) => {
@@ -177,7 +179,7 @@ const CreateInvoice = () => {
                   onBlur={formik.handleBlur}
                   label="Building *"
                 >
-                  {buildings.data?.map((building) => (
+                  {buildings?.data?.map((building) => (
                     <MenuItem key={building._id} value={building._id}>
                       {building.name} - {building.address}
                     </MenuItem>
@@ -231,7 +233,11 @@ const CreateInvoice = () => {
                   <Box display="flex" justifyContent="center" p={3}>
                     <CircularProgress />
                   </Box>
-                ) : unbilledWorkOrders?.data?.length > 0 ? (
+                ) : workOrdersError ? (
+                  <Alert severity="error">
+                    Error loading work orders: {workOrdersError?.data?.message || 'Unknown error'}
+                  </Alert>
+                ) : unbilledWorkOrdersData?.data?.length > 0 ? (
                   <TableContainer component={Paper} variant="outlined">
                     <Table size="small">
                       <TableHead>
@@ -240,17 +246,17 @@ const CreateInvoice = () => {
                             <Checkbox
                               indeterminate={
                                 formik.values.workOrderIds.length > 0 &&
-                                formik.values.workOrderIds.length < unbilledWorkOrders.data.length
+                                formik.values.workOrderIds.length < unbilledWorkOrdersData.data?.length
                               }
                               checked={
-                                unbilledWorkOrders.data.length > 0 &&
-                                formik.values.workOrderIds.length === unbilledWorkOrders.data.length
+                                unbilledWorkOrdersData.data?.length > 0 &&
+                                formik.values.workOrderIds.length === unbilledWorkOrdersData.data.length
                               }
                               onChange={(e) => {
                                 if (e.target.checked) {
                                   formik.setFieldValue(
                                     'workOrderIds',
-                                    unbilledWorkOrders.data.map(wo => wo._id)
+                                    unbilledWorkOrdersData.data.map(wo => wo._id)
                                   );
                                 } else {
                                   formik.setFieldValue('workOrderIds', []);
@@ -264,7 +270,7 @@ const CreateInvoice = () => {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {unbilledWorkOrders.data.map((workOrder) => {
+                        {unbilledWorkOrdersData.data.map((workOrder) => {
                           const workOrderTotal = workOrder.services?.reduce((sum, service) => {
                             return sum + (service.laborCost || 0) + (service.materialCost || 0);
                           }, 0) || 0;
@@ -297,7 +303,7 @@ const CreateInvoice = () => {
                   </TableContainer>
                 ) : (
                   <Alert severity="info">
-                    {unbilledWorkOrders?.data?.length === 0 
+                    {unbilledWorkOrdersData?.data?.length === 0 
                       ? 'No unbilled work orders found for this building.'
                       : 'Select a building to view available work orders.'}
                   </Alert>
