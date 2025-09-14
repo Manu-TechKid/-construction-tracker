@@ -26,6 +26,7 @@ import {
 import { useGetBuildingsQuery, useGetBuildingQuery } from '../../features/buildings/buildingsApiSlice';
 import { useGetUsersQuery } from '../../features/users/usersApiSlice';
 import { useUploadPhotoMutation, useDeletePhotoMutation } from '../../features/uploads/uploadsApiSlice';
+import { getPhotoUrl, validatePhotoFile } from '../../utils/photoUtils';
 import {
   useCreateWorkOrderMutation,
   useGetWorkOrderQuery,
@@ -71,35 +72,45 @@ const WorkOrderForm = () => {
     }),
     onSubmit: async (values) => {
       try {
-        // Format the data correctly for the backend
-        const formattedValues = {
+        const workOrderData = {
           ...values,
-          // Ensure apartmentNumber is mapped correctly
-          apartmentNumber: values.apartmentNumber || values.apartment,
-          // Ensure scheduledDate is properly formatted
-          scheduledDate: values.scheduledDate instanceof Date ? values.scheduledDate.toISOString() : values.scheduledDate,
+          scheduledDate: new Date(values.scheduledDate).toISOString(),
         };
 
-        let workOrderId = id;
+        let workOrderId;
         if (isEdit) {
-          await updateWorkOrder({ id, ...formattedValues }).unwrap();
+          const result = await updateWorkOrder({ id, ...workOrderData }).unwrap();
+          workOrderId = id;
         } else {
-          const newWorkOrder = await createWorkOrder(formattedValues).unwrap();
-          workOrderId = newWorkOrder.data._id;
+          const result = await createWorkOrder(workOrderData).unwrap();
+          workOrderId = result.data._id;
         }
-
-        // Upload photos asynchronously after navigation to improve perceived performance
+        
+        // Upload new photos after work order is created/updated
         if (newPhotos.length > 0) {
-          // Upload photos in background
-          Promise.all(
-            newPhotos.map(photo => uploadPhoto({ workOrderId, photo }).unwrap())
-          ).catch(error => {
-            console.error('Photo upload failed:', error);
-            toast.error('Some photos failed to upload', {
-              position: "top-right",
-              autoClose: 3000,
+          toast.info(`Uploading ${newPhotos.length} photo(s)...`, { autoClose: false, toastId: 'upload-progress' });
+          
+          try {
+            const uploadPromises = newPhotos.map(photo => {
+              const formData = new FormData();
+              formData.append('photo', photo);
+              return uploadPhoto({ workOrderId, photo }).unwrap();
             });
-          });
+            
+            const results = await Promise.all(uploadPromises);
+            toast.dismiss('upload-progress');
+            toast.success(`Successfully uploaded ${results.length} photo(s)`);
+            
+            // Add the new photos to existing photos
+            const uploadedPhotos = results.map(result => result.data);
+            setExistingPhotos(prev => [...prev, ...uploadedPhotos]);
+            setNewPhotos([]);
+            
+          } catch (error) {
+            console.error('Error uploading photos:', error);
+            toast.dismiss('upload-progress');
+            toast.error('Work order saved, but some photos failed to upload');
+          }
         }
 
         // Show success message and redirect immediately
@@ -139,19 +150,51 @@ const WorkOrderForm = () => {
   const [uploadPhoto, { isLoading: isUploading }] = useUploadPhotoMutation();
   const [deletePhoto] = useDeletePhotoMutation();
 
-  const handlePhotoChange = (e) => {
-    if (e.target.files) {
-      setNewPhotos([...newPhotos, ...Array.from(e.target.files)]);
+  const handlePhotoChange = async (e) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    const files = Array.from(e.target.files);
+    const validFiles = [];
+    const invalidFiles = [];
+    
+    // Validate each file
+    files.forEach(file => {
+      const validation = validatePhotoFile(file);
+      if (validation.valid) {
+        validFiles.push(file);
+      } else {
+        invalidFiles.push({ file, error: validation.error });
+      }
+    });
+    
+    // Show toast for invalid files
+    if (invalidFiles.length > 0) {
+      const errorMessage = `Couldn't upload ${invalidFiles.length} file(s). ${invalidFiles[0].error}`;
+      toast.error(errorMessage, { autoClose: 5000 });
     }
+    
+    // Add valid files to the new photos
+    if (validFiles.length > 0) {
+      setNewPhotos(prev => [...prev, ...validFiles]);
+    }
+    
+    // Reset file input
+    e.target.value = null;
   };
 
   const handleRemoveNewPhoto = (index) => {
-    setNewPhotos(newPhotos.filter((_, i) => i !== index));
+    setNewPhotos(prev => prev.filter((_, i) => i !== index));
+    toast.info('Photo removed from upload queue');
   };
-
+  
   const handleRemoveExistingPhoto = async (photoId) => {
-    await deletePhoto({ workOrderId: id, photoId });
-    setExistingPhotos(existingPhotos.filter(p => p._id !== photoId));
+    try {
+      await deletePhoto({ workOrderId: id, photoId });
+      setExistingPhotos(existingPhotos.filter(p => p._id !== photoId));
+    } catch (error) {
+      console.error('Failed to delete photo:', error);
+      toast.error('Failed to remove photo. Please try again.');
+    }
   };
 
   useEffect(() => {
@@ -287,24 +330,196 @@ const WorkOrderForm = () => {
               <CardHeader title="Photos" />
               <Divider />
               <CardContent>
-                <Button variant="contained" component="label">
-                  Upload Photos
-                  <input type="file" hidden multiple onChange={handlePhotoChange} accept="image/*" />
-                </Button>
-                <Box mt={2} display="flex" flexWrap="wrap" gap={2}>
-                  {existingPhotos.map((photo) => (
-                    <Box key={photo._id} position="relative">
-                      <img src={photo.url} alt="existing" width="100" height="100" style={{ objectFit: 'cover' }} />
-                      <Button size="small" onClick={() => handleRemoveExistingPhoto(photo._id)} sx={{ position: 'absolute', top: 0, right: 0 }}>X</Button>
-                    </Box>
-                  ))}
-                  {newPhotos.map((photo, index) => (
-                    <Box key={index} position="relative">
-                      <img src={URL.createObjectURL(photo)} alt="preview" width="100" height="100" style={{ objectFit: 'cover' }} />
-                      <Button size="small" onClick={() => handleRemoveNewPhoto(index)} sx={{ position: 'absolute', top: 0, right: 0 }}>X</Button>
-                    </Box>
-                  ))}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Button 
+                    variant="contained" 
+                    component="label"
+                    startIcon={<CloudUploadIcon />}
+                    disabled={isCreating || isUpdating}
+                  >
+                    Upload Photos
+                    <input 
+                      type="file" 
+                      hidden 
+                      multiple 
+                      onChange={handlePhotoChange} 
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                    />
+                  </Button>
+                  {newPhotos.length > 0 && (
+                    <Typography variant="caption" color="textSecondary">
+                      {newPhotos.length} photo(s) ready to upload
+                    </Typography>
+                  )}
                 </Box>
+                <Grid container spacing={2} sx={{ mt: 2 }}>
+                  {existingPhotos.map((photo) => {
+                    const photoUrl = getPhotoUrl(photo);
+                    return (
+                      <Grid item key={photo._id} xs={6} sm={4} md={3}>
+                        <Box sx={{ position: 'relative', paddingTop: '100%' }}>
+                          <Box
+                            component="img"
+                            src={photoUrl || '/img/placeholder.jpg'}
+                            alt="Work order"
+                            sx={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              borderRadius: '6px',
+                              border: '1px solid #e0e0e0',
+                              '&:hover': {
+                                cursor: 'pointer',
+                                opacity: 0.9,
+                              }
+                            }}
+                            onError={(e) => {
+                              console.error('Error loading image:', photo.url);
+                              e.target.src = '/img/placeholder.jpg';
+                            }}
+                            onClick={() => {
+                              // TODO: Open photo in lightbox/modal
+                              console.log('View photo:', photo._id);
+                            }}
+                          />
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveExistingPhoto(photo._id);
+                            }}
+                            sx={{
+                              position: 'absolute',
+                              top: 4,
+                              right: 4,
+                              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                              '&:hover': {
+                                backgroundColor: '#fff',
+                              },
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" color="error" />
+                          </IconButton>
+                        </Box>
+                      </Grid>
+                    );
+                  })}
+                  
+                  {newPhotos.map((photo, index) => (
+                    <Grid item key={`new-${index}`} xs={6} sm={4} md={3}>
+                      <Box sx={{ position: 'relative', paddingTop: '100%' }}>
+                        <Box
+                          component="img"
+                          src={URL.createObjectURL(photo)}
+                          alt="New upload preview"
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            borderRadius: '6px',
+                            border: '1px dashed #1976d2',
+                            opacity: 0.9,
+                            '&:hover': {
+                              opacity: 1,
+                            }
+                          }}
+                        />
+                        <Chip
+                          label="New"
+                          size="small"
+                          color="primary"
+                          sx={{
+                            position: 'absolute',
+                            top: 4,
+                            left: 4,
+                            fontSize: '0.6rem',
+                            height: 20,
+                            fontWeight: 'bold',
+                            backgroundColor: 'rgba(25, 118, 210, 0.9)',
+                            color: '#fff',
+                          }}
+                        />
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveNewPhoto(index);
+                          }}
+                          sx={{
+                            position: 'absolute',
+                            top: 4,
+                            right: 4,
+                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                            '&:hover': {
+                              backgroundColor: '#fff',
+                            },
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" color="error" />
+                        </IconButton>
+                      </Box>
+                    </Grid>
+                  ))}
+                  
+                  <Grid item xs={6} sm={4} md={3}>
+                    <Button
+                      component="label"
+                      variant="outlined"
+                      sx={{
+                        width: '100%',
+                        height: '100%',
+                        minHeight: 120,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 1,
+                        borderStyle: 'dashed',
+                        '&:hover': {
+                          borderStyle: 'dashed',
+                          backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                        }
+                      }}
+                      disabled={isCreating || isUpdating}
+                    >
+                      <CloudUploadIcon />
+                      <Typography variant="caption" textAlign="center">
+                        {newPhotos.length > 0 ? 'Add More' : 'Add Photos'}
+                      </Typography>
+                      <input 
+                        type="file" 
+                        hidden 
+                        multiple 
+                        onChange={handlePhotoChange} 
+                        accept="image/jpeg,image/png,image/gif,image/webp"
+                      />
+                    </Button>
+                  </Grid>
+                </Grid>
+                
+                {newPhotos.length > 0 && (
+                  <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip 
+                      label={`${newPhotos.length} photo(s) ready to upload`} 
+                      size="small" 
+                      color="primary" 
+                      variant="outlined"
+                    />
+                    <Button 
+                      size="small" 
+                      onClick={() => setNewPhotos([])}
+                      disabled={isCreating || isUpdating}
+                    >
+                      Clear All
+                    </Button>
+                  </Box>
+                )}
               </CardContent>
             </Card>
           </Grid>
