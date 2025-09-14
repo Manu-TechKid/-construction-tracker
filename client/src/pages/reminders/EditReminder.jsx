@@ -40,27 +40,47 @@ const EditReminder = () => {
 
   const handleSubmit = async (formData) => {
     try {
-      await updateReminder({
+      // Format the data before sending
+      const updateData = {
+        ...formData,
+        dueDate: formData.dueDate.toISOString(), // Ensure proper date format
+        // Ensure building is sent as ID only
+        building: typeof formData.building === 'object' ? formData.building._id : formData.building,
+        // Filter out any empty strings or null values
+        ...Object.fromEntries(
+          Object.entries(formData).filter(([_, v]) => v !== '' && v !== null)
+        )
+      };
+
+      const result = await updateReminder({
         id,
-        ...formData
+        ...updateData
       }).unwrap();
       
-      toast.success('Reminder updated successfully!', {
-        position: "top-right",
-        autoClose: 2000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: false,
-        draggable: true,
-      });
-      
-      // Navigate back to reminders list for better UX
-      navigate('/reminders', { replace: true });
+      if (result.success) {
+        toast.success('Reminder updated successfully!', {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+        
+        // Navigate back to reminders list after showing the success message
+        setTimeout(() => {
+          navigate('/reminders', { replace: true });
+        }, 1500);
+      }
     } catch (error) {
       console.error('Failed to update reminder:', error);
-      toast.error(error?.data?.message || 'Failed to update reminder', {
+      const errorMessage = error?.data?.message || 
+                         error?.error || 
+                         'Failed to update reminder. Please try again.';
+      
+      toast.error(errorMessage, {
         position: "top-right",
-        autoClose: 3000,
+        autoClose: 5000,
         hideProgressBar: false,
         closeOnClick: true,
         pauseOnHover: true,
