@@ -45,8 +45,14 @@ const validationSchema = Yup.object({
 const CreateInvoice = () => {
   const navigate = useNavigate();
   const [selectedWorkOrders, setSelectedWorkOrders] = useState([]);
-  const { data: buildingsResponse = {}, isLoading: isLoadingBuildings } = useGetBuildingsQuery();
+  const { data: buildingsResponse = {}, isLoading: isLoadingBuildings, error: buildingsError } = useGetBuildingsQuery();
   const buildings = buildingsResponse.data?.buildings || [];
+  
+  // Debug logging
+  console.log('Buildings response:', buildingsResponse);
+  console.log('Buildings data:', buildings);
+  console.log('Buildings loading:', isLoadingBuildings);
+  console.log('Buildings error:', buildingsError);
   
   // Debug log buildings data
   useEffect(() => {
@@ -59,7 +65,9 @@ const CreateInvoice = () => {
   const { 
     data: unbilledWorkOrdersData = { data: [] }, 
     isLoading: isLoadingWorkOrders,
-    error: workOrdersError 
+    error: workOrdersError,
+    refetch: refetchWorkOrders,
+    isError: isWorkOrdersError
   } = useGetUnbilledWorkOrdersQuery(
     selectedBuildingId || '',
     { 
@@ -67,6 +75,24 @@ const CreateInvoice = () => {
       refetchOnMountOrArgChange: true
     }
   );
+  
+  // Log work orders data for debugging
+  useEffect(() => {
+    if (unbilledWorkOrdersData) {
+      console.log('Unbilled work orders data:', unbilledWorkOrdersData);
+    }
+    if (workOrdersError) {
+      console.error('Error fetching work orders:', workOrdersError);
+    }
+  }, [unbilledWorkOrdersData, workOrdersError]);
+
+  // Debug logging for work orders
+  useEffect(() => {
+    console.log('Selected Building ID:', selectedBuildingId);
+    console.log('Unbilled Work Orders Data:', unbilledWorkOrdersData);
+    console.log('Work Orders Loading:', isLoadingWorkOrders);
+    console.log('Work Orders Error:', workOrdersError);
+  }, [selectedBuildingId, unbilledWorkOrdersData, isLoadingWorkOrders, workOrdersError]);
 
   // Ensure workOrders is always an array
   const workOrders = Array.isArray(unbilledWorkOrdersData?.data) 
@@ -171,9 +197,47 @@ const CreateInvoice = () => {
 
   if (isLoadingBuildings) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <CircularProgress />
-      </Box>
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+          <CircularProgress />
+          <Typography sx={{ ml: 2 }}>Loading buildings...</Typography>
+        </Box>
+      </Container>
+    );
+  }
+
+  if (buildingsError) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Alert severity="error" sx={{ mt: 2 }}>
+          Error loading buildings: {buildingsError?.data?.message || 'Unknown error'}
+          <Box mt={1}>
+            <Button variant="outlined" onClick={() => window.location.reload()} sx={{ mt: 1 }}>
+              Retry
+            </Button>
+          </Box>
+        </Alert>
+      </Container>
+    );
+  }
+
+  if (!buildings || buildings.length === 0) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Alert severity="warning" sx={{ mt: 2 }}>
+          No buildings found. Please add a building first.
+          <Box mt={1}>
+            <Button 
+              variant="contained" 
+              color="primary" 
+              onClick={() => navigate('/buildings/new')}
+              sx={{ mt: 1 }}
+            >
+              Add Building
+            </Button>
+          </Box>
+        </Alert>
+      </Container>
     );
   }
   
@@ -215,6 +279,7 @@ const CreateInvoice = () => {
                   onChange={handleBuildingChange}
                   onBlur={formik.handleBlur}
                   label="Building *"
+                  disabled={isLoadingBuildings}
                 >
                   {buildings?.map((building) => (
                     <MenuItem key={building._id} value={building._id}>
@@ -264,6 +329,29 @@ const CreateInvoice = () => {
               <Typography variant="h6" gutterBottom>
                 Select Work Orders to Invoice
               </Typography>
+              
+              {isLoadingWorkOrders && selectedBuildingId && (
+                <Box display="flex" alignItems="center" sx={{ my: 2 }}>
+                  <CircularProgress size={20} />
+                  <Typography variant="body2" sx={{ ml: 1 }}>Loading work orders...</Typography>
+                </Box>
+              )}
+              
+              {isWorkOrdersError && (
+                <Alert severity="error" sx={{ my: 2 }}>
+                  Error loading work orders: {workOrdersError?.data?.message || 'Unknown error'}
+                  <Box mt={1}>
+                    <Button 
+                      variant="outlined" 
+                      size="small" 
+                      onClick={() => refetchWorkOrders()}
+                      sx={{ mt: 1 }}
+                    >
+                      Retry
+                    </Button>
+                  </Box>
+                </Alert>
+              )}
 
               {(() => {
                 if (!formik.values.buildingId) {

@@ -229,24 +229,28 @@ const WorkOrders = () => {
             return photoPath;
           }
           
-          // If it's a path that includes /uploads/, use it directly
-          if (typeof photoPath === 'string' && photoPath.includes('/uploads/')) {
-            // Remove any leading slashes or api/v1 prefixes
-            const cleanPath = photoPath.replace(/^[\/\\]+|^api\/v1[\/\\]?/i, '');
-            return `${apiUrl}/api/v1/${cleanPath}`.replace(/([^:]\/)\/+/g, '$1');
-          }
+          // Clean up the path - remove any leading/trailing slashes and duplicate /api/v1 prefixes
+          const cleanPath = photoPath
+            .replace(/^[\/\\]+/, '') // Remove leading slashes
+            .replace(/\/+/g, '/') // Replace multiple slashes with single
+            .replace(/^api\/v1\//i, '') // Remove leading api/v1/
+            .replace(/^uploads\//, '') // Remove leading uploads/
+            .replace(/^photos\//, ''); // Remove leading photos/
           
-          // For plain filenames, construct the full path
-          if (typeof photoPath === 'string') {
-            const cleanFilename = photoPath.replace(/^[\/\\]+|[\/\\]+$/g, '');
-            return `${apiUrl}/api/v1/uploads/photos/${cleanFilename}`;
-          }
+          // Construct the final URL
+          const finalUrl = `${apiUrl}/api/v1/uploads/photos/${cleanPath}`;
           
-          return null;
+          // Debug log
+          console.log('Generated image URL:', { 
+            original: photoPath, 
+            cleanPath,
+            finalUrl 
+          });
+          
+          return finalUrl;
         };
         
         const fullUrl = getPhotoUrl(firstPhoto);
-        console.log('Generated image URL:', { original: firstPhoto, fullUrl }); // Debug log
         
         // If fullUrl is still null, don't render image
         if (!fullUrl) {
