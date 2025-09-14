@@ -72,7 +72,7 @@ router.post('/photo', upload.single('photo'), catchAsync(async (req, res, next) 
   }
 
   // Create photo object with proper URL structure
-  const photoUrl = `/api/v1/uploads/photos/${req.file.filename}`;
+  const photoUrl = `/uploads/photos/${req.file.filename}`;
   const photo = {
     url: photoUrl,
     path: photoUrl, // Add path field for compatibility

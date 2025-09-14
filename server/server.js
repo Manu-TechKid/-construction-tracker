@@ -101,11 +101,17 @@ app.use(
   })
 );
 
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, 'public/uploads/photos');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 // Serving static files
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Serve uploaded photos with proper CORS headers
-app.use('/api/v1/uploads/photos', express.static(path.join(__dirname, 'public/uploads/photos'), {
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads'), {
   setHeaders: (res, path) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
