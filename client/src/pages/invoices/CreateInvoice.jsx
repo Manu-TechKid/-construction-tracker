@@ -46,10 +46,28 @@ const CreateInvoice = () => {
   const navigate = useNavigate();
   const [selectedWorkOrders, setSelectedWorkOrders] = useState([]);
   const { data: buildings = [], isLoading: isLoadingBuildings } = useGetBuildingsQuery();
+  const [selectedBuildingId, setSelectedBuildingId] = useState('');
+  
+  // Fetch unbilled work orders when a building is selected
   const { data: unbilledWorkOrders = [], isLoading: isLoadingWorkOrders } = useGetUnbilledWorkOrdersQuery(
-    formik.values.buildingId,
-    { skip: !formik.values.buildingId }
+    selectedBuildingId || null,
+    { 
+      skip: !selectedBuildingId,
+      // Add debug logging
+      onSuccess: (data) => {
+        console.log('Fetched work orders:', data);
+      },
+      onError: (error) => {
+        console.error('Error fetching work orders:', error);
+      }
+    }
   );
+  
+  // Debug log when selectedBuildingId changes
+  useEffect(() => {
+    console.log('Selected building ID:', selectedBuildingId);
+  }, [selectedBuildingId]);
+  
   const [createInvoice, { isLoading: isCreating }] = useCreateInvoiceMutation();
 
   const formik = useFormik({
@@ -82,13 +100,14 @@ const CreateInvoice = () => {
     }
   });
 
-  // Update selected work orders when building changes
-  useEffect(() => {
-    if (formik.values.buildingId) {
-      setSelectedWorkOrders([]);
-      formik.setFieldValue('workOrderIds', []);
-    }
-  }, [formik.values.buildingId]);
+  // Handle building selection change
+  const handleBuildingChange = (event) => {
+    const buildingId = event.target.value;
+    formik.setFieldValue('buildingId', buildingId);
+    setSelectedBuildingId(buildingId);
+    setSelectedWorkOrders([]);
+    formik.setFieldValue('workOrderIds', []);
+  };
 
   const handleWorkOrderSelect = (workOrderId, isSelected) => {
     let newSelected = [...(formik.values.workOrderIds || [])];
@@ -154,7 +173,7 @@ const CreateInvoice = () => {
                   id="buildingId"
                   name="buildingId"
                   value={formik.values.buildingId}
-                  onChange={formik.handleChange}
+                  onChange={handleBuildingChange}
                   onBlur={formik.handleBlur}
                   label="Building *"
                 >
@@ -278,7 +297,9 @@ const CreateInvoice = () => {
                   </TableContainer>
                 ) : (
                   <Alert severity="info">
-                    No unbilled work orders found for this building.
+                    {unbilledWorkOrders?.data?.length === 0 
+                      ? 'No unbilled work orders found for this building.'
+                      : 'Select a building to view available work orders.'}
                   </Alert>
                 )
               ) : (
