@@ -220,26 +220,24 @@ const WorkOrders = () => {
         
         // Fix photo URL construction for production
         let fullUrl;
-        if (photoUrl?.startsWith('http')) {
-          fullUrl = photoUrl;
-        } else if (photoUrl?.startsWith('/api/v1/uploads/photos/')) {
-          // For API paths, use the API base URL but avoid double /api/v1/
-          const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
-          fullUrl = `${apiUrl}${photoUrl}`;
-        } else if (photoUrl?.startsWith('/uploads/photos/')) {
-          // For paths starting with /uploads/photos/, add /api/v1 prefix
-          const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
-          fullUrl = `${apiUrl}/api/v1${photoUrl}`;
-        } else if (photoUrl?.startsWith('/')) {
-          // For other absolute paths, use as-is
-          const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
-          fullUrl = `${apiUrl}${photoUrl}`;
-        } else if (photoUrl) {
-          // For relative paths (just filename), construct proper URL
-          const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
-          fullUrl = `${apiUrl}/api/v1/uploads/photos/${photoUrl}`;
-        } else {
+        if (!photoUrl) {
           fullUrl = null;
+        } else if (photoUrl.startsWith('http')) {
+          fullUrl = photoUrl;
+        } else {
+          const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
+          // Normalize the URL to remove any duplicate /api/v1
+          let normalizedUrl = photoUrl;
+          if (normalizedUrl.startsWith('/api/v1/api/v1/')) {
+            normalizedUrl = normalizedUrl.replace('/api/v1/api/v1/', '/api/v1/');
+          }
+          // Ensure the URL starts with a single /api/v1/
+          if (!normalizedUrl.startsWith('/api/v1/') && !normalizedUrl.startsWith('http')) {
+            normalizedUrl = normalizedUrl.startsWith('/') 
+              ? `/api/v1${normalizedUrl}` 
+              : `/api/v1/uploads/photos/${normalizedUrl}`;
+          }
+          fullUrl = `${apiUrl}${normalizedUrl}`;
         }
         
         // If fullUrl is still null, don't render image
