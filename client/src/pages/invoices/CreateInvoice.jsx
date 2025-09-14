@@ -94,10 +94,28 @@ const CreateInvoice = () => {
     console.log('Work Orders Error:', workOrdersError);
   }, [selectedBuildingId, unbilledWorkOrdersData, isLoadingWorkOrders, workOrdersError]);
 
-  // Ensure workOrders is always an array
-  const workOrders = Array.isArray(unbilledWorkOrdersData?.data) 
-    ? unbilledWorkOrdersData.data 
-    : [];
+  // Ensure workOrders is always an array and handle potential null/undefined
+  const workOrders = (() => {
+    try {
+      if (!unbilledWorkOrdersData) return [];
+      
+      // Handle different possible response structures
+      if (Array.isArray(unbilledWorkOrdersData)) {
+        return unbilledWorkOrdersData;
+      } 
+      
+      if (unbilledWorkOrdersData.data) {
+        return Array.isArray(unbilledWorkOrdersData.data) 
+          ? unbilledWorkOrdersData.data 
+          : [unbilledWorkOrdersData.data].filter(Boolean);
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Error processing work orders data:', error);
+      return [];
+    }
+  })();
   
   // Debug logs
   useEffect(() => {
@@ -120,44 +138,65 @@ const CreateInvoice = () => {
   const formik = useFormik({
     initialValues: {
       buildingId: '',
-      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       notes: '',
       workOrderIds: []
     },
     enableReinitialize: true,
     validationSchema,
-    onSubmit: async (values, { setSubmitting, setFieldError }) => {
+    onSubmit: async (values, { setSubmitting, setStatus, setFieldError }) => {
       try {
+        // Validate work orders
+        if (!values.workOrderIds || values.workOrderIds.length === 0) {
+          setFieldError('workOrderIds', 'Please select at least one work order');
+          return;
+        }
+
         const result = await createInvoice({
-          buildingId: values.buildingId,
-          workOrderIds: values.workOrderIds,
-          dueDate: values.dueDate,
-          notes: values.notes
+          ...values,
+          dueDate: values.dueDate?.toISOString?.() || new Date().toISOString()
         }).unwrap();
 
-        if (result.success) {
+        if (result?.data?._id) {
           toast.success('Invoice created successfully!');
-          navigate('/invoices');
+          navigate(`/invoices/${result.data._id}`);
+        } else {
+          throw new Error('Invalid response from server');
         }
-      } catch (error) {
-        console.error('Failed to create invoice:', error);
-        toast.error(error?.data?.message || 'Failed to create invoice');
+      } catch (err) {
+        console.error('Error creating invoice:', err);
+        const errorMessage = err?.data?.message || err?.message || 'Failed to create invoice';
+        toast.error(errorMessage);
+        setStatus({ error: errorMessage });
       } finally {
         setSubmitting(false);
       }
     }
   });
 
-  // Handle building selection change
+  // Handle building selection change with error handling
   const handleBuildingChange = (event) => {
     try {
-      const buildingId = event.target.value;
-      console.log('Building changed to:', buildingId);
+      const buildingId = event?.target?.value;
+      if (!buildingId) return;
+      
+      console.log('Building selected:', buildingId);
       setSelectedBuildingId(buildingId);
       formik.setFieldValue('buildingId', buildingId);
-      formik.setFieldValue('workOrderIds', []); // Reset selected work orders when building changes
+      formik.setFieldValue('workOrderIds', []); // Reset work order selections
+      
+      // Force refetch of work orders when building changes
+      if (buildingId) {
+        console.log('Refetching work orders for building:', buildingId);
+        refetchWorkOrders().then(() => {
+          console.log('Work orders refetched successfully');
+        }).catch(err => {
+          console.error('Error refetching work orders:', err);
+        });
+      }
     } catch (error) {
       console.error('Error handling building change:', error);
+      toast.error('Failed to load work orders for selected building');
     }
   };
 
