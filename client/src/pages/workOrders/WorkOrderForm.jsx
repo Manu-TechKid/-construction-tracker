@@ -266,32 +266,37 @@ const WorkOrderForm = () => {
                   </Grid>
                   <Grid item xs={12} sm={4}>
                     <FormControl fullWidth disabled={!formik.values.building}>
-                      <InputLabel>Block</InputLabel>
+                      <InputLabel>Filter by Block (Optional)</InputLabel>
                       <Select 
                         id="block" 
                         name="block" 
                         value={formik.values.block} 
                         onChange={(e) => {
                           formik.setFieldValue('block', e.target.value);
-                          formik.setFieldValue('apartmentNumber', ''); // Reset apartment when block changes
+                          formik.setFieldValue('apartmentNumber', '');
                         }}
+                        displayEmpty
                       >
-                        <MenuItem value="">All Blocks</MenuItem>
+                        <MenuItem value="">
+                          <em>All Blocks</em>
+                        </MenuItem>
                         {[
                           ...new Set(
                             selectedBuildingData?.data?.apartments
                               ?.map(a => a.block)
                               .filter(block => block) // Filter out undefined/null blocks
-                              .sort() || []
+                              .sort((a, b) => a.localeCompare(b, undefined, { numeric: true })) || []
                           )
                         ].map((block) => (
-                          <MenuItem key={block} value={block}>Block {block}</MenuItem>
+                          <MenuItem key={block} value={block}>
+                            Block {block}
+                          </MenuItem>
                         ))}
                       </Select>
                     </FormControl>
                   </Grid>
                   <Grid item xs={12} sm={4}>
-                    <FormControl fullWidth disabled={!formik.values.block}>
+                    <FormControl fullWidth disabled={!formik.values.building}>
                       <InputLabel>Apartment</InputLabel>
                       <Select 
                         id="apartmentNumber" 
@@ -301,26 +306,43 @@ const WorkOrderForm = () => {
                         MenuProps={{
                           PaperProps: {
                             style: {
-                              maxHeight: 300, // Limit dropdown height
+                              maxHeight: 300,
                             },
                           },
                         }}
+                        displayEmpty
+                        renderValue={(selected) => {
+                          if (!selected) return <em>Select an apartment</em>;
+                          const apartment = selectedBuildingData?.data?.apartments?.find(a => a.number === selected);
+                          return apartment ? `${apartment.number}${apartment.block ? ` (Block ${apartment.block})` : ''}` : selected;
+                        }}
                       >
+                        <MenuItem value="" disabled>
+                          <em>Select an apartment</em>
+                        </MenuItem>
                         {selectedBuildingData?.data?.apartments
                           ?.filter(a => {
                             // If no block is selected, show all apartments
-                            if (!formik.values.block) return true;
-                            // If apartment has no block, only show it if no block is selected
-                            if (!a.block) return formik.values.block === '';
+                            if (!formik.values.block || formik.values.block === '') return true;
+                            // If apartment has no block, don't show it when a block is selected
+                            if (!a.block) return false;
                             // Otherwise, match the block
                             return a.block === formik.values.block;
                           })
-                          .sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true }))
+                          .sort((a, b) => {
+                            // Sort by block first, then by apartment number
+                            const blockCompare = (a.block || '').localeCompare(b.block || '');
+                            if (blockCompare !== 0) return blockCompare;
+                            return a.number.localeCompare(b.number, undefined, { numeric: true });
+                          })
                           .map((apartment) => (
                             <MenuItem key={apartment._id} value={apartment.number}>
-                              {apartment.number} {apartment.block ? `(Block ${apartment.block})` : ''}
+                              {apartment.number} {apartment.block && `(Block ${apartment.block})`}
                             </MenuItem>
                           ))}
+                        {selectedBuildingData?.data?.apartments?.length === 0 && (
+                          <MenuItem disabled>No apartments found</MenuItem>
+                        )}
                       </Select>
                     </FormControl>
                   </Grid>
