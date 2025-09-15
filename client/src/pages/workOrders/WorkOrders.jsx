@@ -215,41 +215,60 @@ const WorkOrders = () => {
           );
         }
         
-        // Handle photo URL construction
+        // Handle photo URL construction with better error handling
         const getPhotoUrl = (photo) => {
-          if (!photo) return null;
-          
-          const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
-          
-          // Handle different possible photo path sources
-          let photoPath = photo.filename || photo.path || photo.url || photo;
-          if (!photoPath) return null;
-          
-          // If it's already a full URL, use it as is
-          if (typeof photoPath === 'string' && photoPath.startsWith('http')) {
-            return photoPath;
+          try {
+            if (!photo) return null;
+            
+            const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
+            
+            // Handle different possible photo path sources
+            let photoPath = photo.filename || photo.path || photo.url || photo;
+            if (!photoPath) return null;
+            
+            // If it's already a full URL, use it as is
+            if (typeof photoPath === 'string' && photoPath.startsWith('http')) {
+              return photoPath;
+            }
+            
+            // Ensure photoPath is a string
+            const pathString = String(photoPath || '').trim();
+            if (!pathString) return null;
+            
+            // Clean up the path
+            let cleanPath = pathString
+              .replace(/^[\/\\]+/, '') // Remove leading slashes
+              .replace(/\/+/g, '/') // Replace multiple slashes with single
+              .replace(/^api\/v1\//i, '') // Remove any api/v1/ prefix
+              .replace(/^\//, ''); // Remove leading slash if still present
+            
+            // If the path already includes uploads/photos, use it as is
+            if (cleanPath.includes('uploads/photos/')) {
+              return `${apiUrl}/api/v1/${cleanPath.replace(/^\/+/g, '')}`;
+            }
+            
+            // If it's just a filename, construct the full path
+            return `${apiUrl}/api/v1/uploads/photos/${cleanPath}`;
+          } catch (error) {
+            console.error('Error processing photo URL:', { photo, error });
+            return null;
           }
-          
-          // Clean up the path
-          let cleanPath = photoPath.toString()
-            .replace(/^[\/\\]+/, '') // Remove leading slashes
-            .replace(/\/+/g, '/'); // Replace multiple slashes with single
-          
-          // If the path already includes uploads/photos, use it as is
-          if (cleanPath.includes('uploads/photos/')) {
-            return `${apiUrl}/api/v1/${cleanPath}`;
-          }
-          
-          // If it's just a filename, construct the full path
-          return `${apiUrl}/api/v1/uploads/photos/${cleanPath}`;
         };
         
         const fullUrl = getPhotoUrl(firstPhoto);
         
-        // If fullUrl is still null, don't render image
+        // If fullUrl is invalid, show placeholder
         if (!fullUrl) {
           return (
-            <Box sx={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.100', borderRadius: '4px' }}>
+            <Box sx={{ 
+              width: 40, 
+              height: 40, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              bgcolor: 'grey.100', 
+              borderRadius: '4px' 
+            }}>
               <Typography variant="caption" color="textSecondary">No Photo</Typography>
             </Box>
           );
@@ -265,7 +284,8 @@ const WorkOrders = () => {
             backgroundColor: '#f5f5f5',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            position: 'relative'
           }}>
             <img 
               src={fullUrl}
@@ -277,9 +297,28 @@ const WorkOrders = () => {
                 display: 'block'
               }} 
               onError={(e) => {
-                console.log('Image load error for:', fullUrl);
+                // Fallback to placeholder on error
                 e.target.style.display = 'none';
-                e.target.parentElement.innerHTML = '<div style="font-size: 10px; color: #666; text-align: center;">No Image</div>';
+                const parent = e.target.parentElement;
+                if (parent) {
+                  parent.innerHTML = `
+                    <div style="
+                      position: absolute;
+                      top: 0;
+                      left: 0;
+                      right: 0;
+                      bottom: 0;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      font-size: 10px;
+                      color: #666;
+                      text-align: center;
+                      padding: 2px;
+                      background: #f5f5f5;
+                    ">No Image</div>
+                  `;
+                }
               }}
             />
           </Box>

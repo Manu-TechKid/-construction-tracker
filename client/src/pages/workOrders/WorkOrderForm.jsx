@@ -90,16 +90,44 @@ const WorkOrderForm = () => {
 
         // Upload photos asynchronously after navigation to improve perceived performance
         if (newPhotos.length > 0) {
-          // Upload photos in background
-          Promise.all(
-            newPhotos.map(photo => uploadPhoto({ workOrderId, photo }).unwrap())
-          ).catch(error => {
-            console.error('Photo upload failed:', error);
-            toast.error('Some photos failed to upload', {
+          try {
+            // Upload photos in background
+            const uploadPromises = newPhotos.map(photo => 
+              uploadPhoto({ workOrderId, photo }).unwrap()
+                .catch(error => {
+                  console.error('Photo upload failed:', { photoName: photo.name, error });
+                  // Return null for failed uploads to continue with other photos
+                  return null;
+                })
+            );
+
+            // Track successful and failed uploads
+            const results = await Promise.all(uploadPromises);
+            const successfulUploads = results.filter(Boolean).length;
+            const failedUploads = newPhotos.length - successfulUploads;
+
+            // Show appropriate toast message
+            if (successfulUploads > 0 && failedUploads === 0) {
+              toast.success(`Successfully uploaded ${successfulUploads} photo(s)`, {
+                position: "top-right",
+                autoClose: 3000,
+              });
+            } else if (failedUploads > 0) {
+              toast.warning(
+                `Uploaded ${successfulUploads} photo(s), failed to upload ${failedUploads} photo(s)`,
+                {
+                  position: "top-right",
+                  autoClose: 5000,
+                }
+              );
+            }
+          } catch (error) {
+            console.error('Error during photo uploads:', error);
+            toast.error('Error uploading some photos. Please try again later.', {
               position: "top-right",
-              autoClose: 3000,
+              autoClose: 4000,
             });
-          });
+          }
         }
 
         // Show success message and redirect immediately

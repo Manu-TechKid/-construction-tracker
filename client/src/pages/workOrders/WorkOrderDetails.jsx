@@ -18,31 +18,42 @@ import { useGetWorkOrderQuery, useDeleteWorkOrderMutation } from '../../features
 import { format } from 'date-fns';
 
 const getPhotoUrl = (photo) => {
-  if (!photo) return null;
-  
-  const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
-  
-  // Handle different possible photo path sources
-  let photoPath = photo.filename || photo.path || photo.url || photo;
-  if (!photoPath) return null;
-  
-  // If it's already a full URL, use it as is
-  if (typeof photoPath === 'string' && photoPath.startsWith('http')) {
-    return photoPath;
+  try {
+    if (!photo) return null;
+    
+    const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
+    
+    // Handle different possible photo path sources
+    let photoPath = photo.filename || photo.path || photo.url || photo;
+    if (!photoPath) return null;
+    
+    // If it's already a full URL, use it as is
+    if (typeof photoPath === 'string' && photoPath.startsWith('http')) {
+      return photoPath;
+    }
+    
+    // Ensure photoPath is a string
+    const pathString = String(photoPath || '').trim();
+    if (!pathString) return null;
+    
+    // Clean up the path
+    let cleanPath = pathString
+      .replace(/^[\/\\]+/, '') // Remove leading slashes
+      .replace(/\/+/g, '/') // Replace multiple slashes with single
+      .replace(/^api\/v1\//i, '') // Remove any api/v1/ prefix
+      .replace(/^\//, ''); // Remove leading slash if still present
+    
+    // If the path already includes uploads/photos, use it as is
+    if (cleanPath.includes('uploads/photos/')) {
+      return `${apiUrl}/api/v1/${cleanPath.replace(/^\/+/g, '')}`;
+    }
+    
+    // If it's just a filename, construct the full path
+    return `${apiUrl}/api/v1/uploads/photos/${cleanPath}`;
+  } catch (error) {
+    console.error('Error processing photo URL:', { photo, error });
+    return null;
   }
-  
-  // Clean up the path
-  let cleanPath = photoPath.toString()
-    .replace(/^[\/\\]+/, '') // Remove leading slashes
-    .replace(/\/+/g, '/'); // Replace multiple slashes with single
-  
-  // If the path already includes uploads/photos, use it as is
-  if (cleanPath.includes('uploads/photos/')) {
-    return `${apiUrl}/api/v1/${cleanPath}`;
-  }
-  
-  // If it's just a filename, construct the full path
-  return `${apiUrl}/api/v1/uploads/photos/${cleanPath}`;
 };
 
 const getStatusChipColor = (status) => {
