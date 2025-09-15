@@ -267,9 +267,25 @@ const WorkOrderForm = () => {
                   <Grid item xs={12} sm={4}>
                     <FormControl fullWidth disabled={!formik.values.building}>
                       <InputLabel>Block</InputLabel>
-                      <Select id="block" name="block" value={formik.values.block} onChange={formik.handleChange}>
-                        {[...new Set(selectedBuildingData?.data?.apartments?.map(a => a.block) ?? [])].map((block) => (
-                          <MenuItem key={block} value={block}>{block}</MenuItem>
+                      <Select 
+                        id="block" 
+                        name="block" 
+                        value={formik.values.block} 
+                        onChange={(e) => {
+                          formik.setFieldValue('block', e.target.value);
+                          formik.setFieldValue('apartmentNumber', ''); // Reset apartment when block changes
+                        }}
+                      >
+                        <MenuItem value="">All Blocks</MenuItem>
+                        {[
+                          ...new Set(
+                            selectedBuildingData?.data?.apartments
+                              ?.map(a => a.block)
+                              .filter(block => block) // Filter out undefined/null blocks
+                              .sort() || []
+                          )
+                        ].map((block) => (
+                          <MenuItem key={block} value={block}>Block {block}</MenuItem>
                         ))}
                       </Select>
                     </FormControl>
@@ -277,12 +293,34 @@ const WorkOrderForm = () => {
                   <Grid item xs={12} sm={4}>
                     <FormControl fullWidth disabled={!formik.values.block}>
                       <InputLabel>Apartment</InputLabel>
-                      <Select id="apartmentNumber" name="apartmentNumber" value={formik.values.apartmentNumber} onChange={formik.handleChange}>
-                        {selectedBuildingData?.data?.apartments?.filter(a => a.block === formik.values.block)?.map((apartment) => (
+                      <Select 
+                        id="apartmentNumber" 
+                        name="apartmentNumber" 
+                        value={formik.values.apartmentNumber} 
+                        onChange={formik.handleChange}
+                        MenuProps={{
+                          PaperProps: {
+                            style: {
+                              maxHeight: 300, // Limit dropdown height
+                            },
+                          },
+                        }}
+                      >
+                        {selectedBuildingData?.data?.apartments
+                          ?.filter(a => {
+                            // If no block is selected, show all apartments
+                            if (!formik.values.block) return true;
+                            // If apartment has no block, only show it if no block is selected
+                            if (!a.block) return formik.values.block === '';
+                            // Otherwise, match the block
+                            return a.block === formik.values.block;
+                          })
+                          .sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true }))
+                          .map((apartment) => (
                             <MenuItem key={apartment._id} value={apartment.number}>
-                              {apartment.number}
+                              {apartment.number} {apartment.block ? `(Block ${apartment.block})` : ''}
                             </MenuItem>
-                        ))}
+                          ))}
                       </Select>
                     </FormControl>
                   </Grid>

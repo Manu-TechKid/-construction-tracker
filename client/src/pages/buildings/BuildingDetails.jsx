@@ -125,8 +125,10 @@ const ApartmentsTab = ({ building }) => {
   const [selectedApartment, setSelectedApartment] = useState(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [apartmentToDelete, setApartmentToDelete] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   
   const [deleteApartment] = useDeleteApartmentMutation();
+  const { refetch: refetchBuilding } = useGetBuildingQuery(building._id);
   
   const handleViewApartmentReminders = (apartmentId, apartmentNumber) => {
     // Update URL with apartment ID and switch to reminders tab
@@ -176,8 +178,9 @@ const ApartmentsTab = ({ building }) => {
     setSelectedApartment(null);
     
     if (shouldRefresh) {
-      // The invalidation in the mutation will trigger a refetch
-      // No need to do anything else here
+      // Force a refresh of the building data to get the latest apartments
+      refetchBuilding();
+      setRefreshKey(prev => prev + 1); // Force re-render
     }
   };
 
@@ -394,6 +397,7 @@ const ApartmentsTab = ({ building }) => {
       {/* Apartment Form Dialog */}
       {building && (
         <ApartmentForm
+          key={`apartment-form-${refreshKey}`}
           open={isFormOpen}
           onClose={handleFormClose}
           buildingId={building._id}
@@ -462,7 +466,8 @@ const BuildingDetails = () => {
     data: buildingData, 
     isLoading, 
     isError, 
-    error 
+    error,
+    refetch: refetchBuilding 
   } = useGetBuildingQuery(id);
   
   const building = buildingData?.data || buildingData;
@@ -492,6 +497,10 @@ const BuildingDetails = () => {
   // Handle tab change
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
+    // Refresh building data when switching tabs to ensure we have the latest data
+    if (newValue === 1) { // Assuming 1 is the index of the apartments tab
+      refetchBuilding();
+    }
     // Update URL hash without page reload
     let hash = '#';
     if (newValue === 3) hash = '#reminders';

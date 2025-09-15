@@ -30,7 +30,7 @@ const validationSchema = Yup.object({
   floor: Yup.string().required('Floor is required'),
   status: Yup.string().required('Status is required'),
   type: Yup.string().required('Type is required'),
-  area: Yup.number().min(1, 'Area must be greater than 0').required('Area is required'),
+  area: Yup.number().min(0, 'Area must be 0 or greater').nullable().default(null),
   bedrooms: Yup.number().min(0, 'Must be 0 or more').required('Number of bedrooms is required'),
   bathrooms: Yup.number().min(1, 'At least one bathroom is required').required('Number of bathrooms is required'),
   notes: Yup.string(),
@@ -49,7 +49,7 @@ const ApartmentForm = ({ open, onClose, buildingId, apartment = null }) => {
       floor: apartment?.floor || '',
       status: apartment?.status || 'vacant',
       type: apartment?.type || 'standard',
-      area: apartment?.area || '',
+      area: apartment?.area ?? '',
       bedrooms: apartment?.bedrooms || 1,
       bathrooms: apartment?.bathrooms || 1,
       notes: apartment?.notes || '',
@@ -71,7 +71,7 @@ const ApartmentForm = ({ open, onClose, buildingId, apartment = null }) => {
         
         const apartmentData = {
           ...values,
-          area: parseFloat(values.area),
+          area: values.area ? parseFloat(values.area) : null,
           bedrooms: parseInt(values.bedrooms),
           bathrooms: parseInt(values.bathrooms),
         };
@@ -251,15 +251,15 @@ const ApartmentForm = ({ open, onClose, buildingId, apartment = null }) => {
                 fullWidth
                 id="area"
                 name="area"
-                label="Area (m²) *"
+                label="Area (m²)"
                 type="number"
                 value={formik.values.area}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
                 error={formik.touched.area && Boolean(formik.errors.area)}
-                helperText={formik.touched.area && formik.errors.area}
-                variant="outlined"
-                inputProps={{ min: 1, step: 0.1 }}
+                helperText={(formik.touched.area && formik.errors.area) || 'Optional'}
+                disabled={formik.isSubmitting}
+                inputProps={{ min: 0, step: '0.01' }}
               />
             </Grid>
 
