@@ -235,16 +235,17 @@ const WorkOrders = () => {
             const pathString = String(photoPath || '').trim();
             if (!pathString) return null;
             
-            // Clean up the path and remove any duplicate API prefixes
+            // Clean up the path and remove any duplicate segments
             let cleanPath = pathString
               .replace(/^[\/\\]+/, '') // Remove leading slashes
               .replace(/\/+/g, '/') // Replace multiple slashes with single
               .replace(/^api\/v1\//i, '') // Remove any api/v1/ prefix
               .replace(/^uploads\//i, '') // Remove any uploads/ prefix
-              .replace(/^\/?(uploads\/photos\/)?/i, '') // Remove any uploads/photos/ prefix
+              .replace(/^\/?(uploads\/photos?\/)+/i, '') // Remove any uploads/photo(s)/ prefix
+              .replace(/^photos?\//i, '') // Remove any remaining photo(s)/ prefix
               .replace(/^\//, ''); // Remove leading slash if still present
             
-            // Construct the clean URL with a single /api/v1/uploads/photos/ segment
+            // Construct the clean URL with exactly one /photos/ segment
             return `${apiUrl}/api/v1/uploads/photos/${cleanPath}`;
           } catch (error) {
             console.error('Error processing photo URL:', { photo, error });
