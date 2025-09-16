@@ -28,6 +28,9 @@ import {
   DialogContent,
   DialogActions,
   Alert,
+  Menu,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -35,9 +38,13 @@ import {
   Search as SearchIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Notifications as NotificationsIcon
+  Notifications as NotificationsIcon,
+  Schedule as PendingIcon,
+  PlayArrow as InProgressIcon,
+  CheckCircle as CompletedIcon,
+  Warning as OverdueIcon
 } from '@mui/icons-material';
-import { useGetRemindersQuery, useDeleteReminderMutation } from '../../features/reminders/remindersApiSlice';
+import { useGetRemindersQuery, useDeleteReminderMutation, useUpdateReminderMutation } from '../../features/reminders/remindersApiSlice';
 import { selectCurrentUser } from '../../features/auth/authSlice';
 import { toast } from 'react-toastify';
 
@@ -66,6 +73,8 @@ const Reminders = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [reminderToDelete, setReminderToDelete] = useState(null);
+  const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
+  const [selectedReminder, setSelectedReminder] = useState(null);
 
   // Fetch reminders with filters
   const { 
@@ -82,6 +91,7 @@ const Reminders = () => {
   });
 
   const [deleteReminder, { isLoading: isDeleting }] = useDeleteReminderMutation();
+  const [updateReminder] = useUpdateReminderMutation();
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -138,6 +148,40 @@ const Reminders = () => {
   const handleCancelDelete = () => {
     setDeleteDialogOpen(false);
     setReminderToDelete(null);
+  };
+
+  const handleStatusClick = (event, reminder) => {
+    event.stopPropagation();
+    setStatusMenuAnchor(event.currentTarget);
+    setSelectedReminder(reminder);
+  };
+
+  const handleStatusClose = () => {
+    setStatusMenuAnchor(null);
+    setSelectedReminder(null);
+  };
+
+  const handleStatusUpdate = async (newStatus) => {
+    if (!selectedReminder) return;
+    
+    try {
+      await updateReminder({
+        id: selectedReminder._id,
+        status: newStatus
+      }).unwrap();
+      
+      toast.success(`Reminder status updated to ${newStatus}`, {
+        position: "top-right",
+        autoClose: 2000,
+      });
+      handleStatusClose();
+    } catch (error) {
+      console.error('Failed to update status:', error);
+      toast.error('Failed to update reminder status', {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    }
   };
 
   // Loading state
@@ -308,6 +352,14 @@ const Reminders = () => {
                           label={reminder.status} 
                           color={statusColors[reminder.status] || 'default'}
                           size="small"
+                          onClick={(event) => handleStatusClick(event, reminder)}
+                          sx={{ 
+                            cursor: 'pointer',
+                            '&:hover': {
+                              opacity: 0.8,
+                              transform: 'scale(1.05)'
+                            }
+                          }}
                         />
                       </TableCell>
                       <TableCell>
@@ -408,6 +460,46 @@ const Reminders = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Status Update Menu */}
+      <Menu
+        anchorEl={statusMenuAnchor}
+        open={Boolean(statusMenuAnchor)}
+        onClose={handleStatusClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+      >
+        <MenuItem onClick={() => handleStatusUpdate('pending')}>
+          <ListItemIcon>
+            <PendingIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Pending</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleStatusUpdate('in-progress')}>
+          <ListItemIcon>
+            <InProgressIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>In Progress</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleStatusUpdate('completed')}>
+          <ListItemIcon>
+            <CompletedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Completed</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleStatusUpdate('overdue')}>
+          <ListItemIcon>
+            <OverdueIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Overdue</ListItemText>
+        </MenuItem>
+      </Menu>
     </Container>
   );
 };

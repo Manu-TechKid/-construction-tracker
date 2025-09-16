@@ -46,12 +46,9 @@ const validationSchema = Yup.object({
   description: Yup.string().required('Description is required'),
   building: Yup.string().required('Building is required'),
   type: Yup.string().oneOf(['building', 'apartment']).default('building'),
-  apartment: Yup.object().when('type', {
+  apartment: Yup.string().when('type', {
     is: 'apartment',
-    then: (schema) => schema.shape({
-      number: Yup.string().required('Apartment number is required'),
-      _id: Yup.string().required('Apartment ID is required')
-    }),
+    then: (schema) => schema.required('Apartment is required'),
     otherwise: (schema) => schema.nullable()
   }),
   dueDate: Yup.date().required('Due date is required').min(new Date(), 'Due date must be in the future'),
@@ -111,7 +108,7 @@ const ReminderForm = ({
       }
     }
   }, [apartmentId, buildingsData, buildingId]);
-  const [photos, setPhotos] = useState([]);
+  // Photo functionality removed
   const [noteText, setNoteText] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -143,7 +140,7 @@ const ReminderForm = ({
 
         // Add apartment data if type is apartment
         if (values.type === 'apartment' && values.apartment) {
-          payload.apartment = values.apartment;
+          payload.apartment = typeof values.apartment === 'string' ? values.apartment : values.apartment.number;
         }
         
         console.log('Submitting reminder payload:', payload);
@@ -156,21 +153,7 @@ const ReminderForm = ({
     },
   });
 
-  // Handle photo upload
-  const handlePhotoUpload = (event) => {
-    const newPhotos = Array.from(event.target.files).map((file) => ({
-      file,
-      preview: URL.createObjectURL(file),
-    }));
-    setPhotos([...photos, ...newPhotos]);
-  };
-
-  // Handle photo deletion
-  const handlePhotoDelete = (index) => {
-    const newPhotos = [...photos];
-    newPhotos.splice(index, 1);
-    setPhotos(newPhotos);
-  };
+  // Photo functionality removed
 
   // Add a new note
   const handleAddNote = () => {
@@ -200,12 +183,7 @@ const ReminderForm = ({
     onCancel(true); // Pass true to indicate deletion
   };
 
-  // Clean up object URLs on unmount
-  useEffect(() => {
-    return () => {
-      photos.forEach((photo) => URL.revokeObjectURL(photo.preview));
-    };
-  }, [photos]);
+  // Photo cleanup removed
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -281,78 +259,7 @@ const ReminderForm = ({
                     </Grid>
                   )}
 
-                  <Grid item xs={12}>
-                    <Typography variant="h6" gutterBottom>
-                      Photos
-                    </Typography>
-                    <Box sx={{ mb: 2 }}>
-                      <input
-                        accept="image/*"
-                        style={{ display: 'none' }}
-                        id="photo-upload"
-                        multiple
-                        type="file"
-                        onChange={handlePhotoUpload}
-                      />
-                      <label htmlFor="photo-upload">
-                        <Button
-                          variant="outlined"
-                          component="span"
-                          startIcon={<PhotoCameraIcon />}
-                          fullWidth
-                          sx={{ mb: 2 }}
-                        >
-                          Upload Photos
-                        </Button>
-                      </label>
-                    </Box>
-                    
-                    {photos.length > 0 && (
-                      <Grid container spacing={2}>
-                        {photos.map((photo, index) => (
-                          <Grid item xs={6} sm={4} md={3} key={index}>
-                            <Paper
-                              sx={{
-                                position: 'relative',
-                                paddingTop: '100%',
-                                overflow: 'hidden',
-                                borderRadius: 1,
-                              }}
-                            >
-                              <Box
-                                component="img"
-                                src={photo.preview}
-                                alt={`Photo ${index + 1}`}
-                                sx={{
-                                  position: 'absolute',
-                                  top: 0,
-                                  left: 0,
-                                  width: '100%',
-                                  height: '100%',
-                                  objectFit: 'cover',
-                                }}
-                              />
-                              <IconButton
-                                size="small"
-                                sx={{
-                                  position: 'absolute',
-                                  top: 4,
-                                  right: 4,
-                                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                                  '&:hover': {
-                                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                                  },
-                                }}
-                                onClick={() => handlePhotoDelete(index)}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Paper>
-                          </Grid>
-                        ))}
-                      </Grid>
-                    )}
-                  </Grid>
+                  {/* Photo functionality removed - was not working properly */}
                   
                   <Grid item xs={12}>
                     <TextField

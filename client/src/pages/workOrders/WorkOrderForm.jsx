@@ -43,8 +43,7 @@ const WorkOrderForm = () => {
   const navigate = useNavigate();
   const isEdit = Boolean(id);
 
-  const [newPhotos, setNewPhotos] = useState([]);
-  const [existingPhotos, setExistingPhotos] = useState([]);
+  // Removed photo functionality - not working properly
 
   const formik = useFormik({
     initialValues: {
@@ -88,47 +87,7 @@ const WorkOrderForm = () => {
           workOrderId = newWorkOrder.data._id;
         }
 
-        // Upload photos asynchronously after navigation to improve perceived performance
-        if (newPhotos.length > 0) {
-          try {
-            // Upload photos in background
-            const uploadPromises = newPhotos.map(photo => 
-              uploadPhoto({ workOrderId, photo }).unwrap()
-                .catch(error => {
-                  console.error('Photo upload failed:', { photoName: photo.name, error });
-                  // Return null for failed uploads to continue with other photos
-                  return null;
-                })
-            );
-
-            // Track successful and failed uploads
-            const results = await Promise.all(uploadPromises);
-            const successfulUploads = results.filter(Boolean).length;
-            const failedUploads = newPhotos.length - successfulUploads;
-
-            // Show appropriate toast message
-            if (successfulUploads > 0 && failedUploads === 0) {
-              toast.success(`Successfully uploaded ${successfulUploads} photo(s)`, {
-                position: "top-right",
-                autoClose: 3000,
-              });
-            } else if (failedUploads > 0) {
-              toast.warning(
-                `Uploaded ${successfulUploads} photo(s), failed to upload ${failedUploads} photo(s)`,
-                {
-                  position: "top-right",
-                  autoClose: 5000,
-                }
-              );
-            }
-          } catch (error) {
-            console.error('Error during photo uploads:', error);
-            toast.error('Error uploading some photos. Please try again later.', {
-              position: "top-right",
-              autoClose: 4000,
-            });
-          }
-        }
+        // Photo upload functionality removed - was not working properly
 
         // Show success message and redirect immediately
         const message = isEdit ? 'Work order updated successfully!' : 'Work order created successfully!';
@@ -164,23 +123,7 @@ const WorkOrderForm = () => {
 
   const [createWorkOrder, { isLoading: isCreating }] = useCreateWorkOrderMutation();
   const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
-  const [uploadPhoto, { isLoading: isUploading }] = useUploadPhotoMutation();
-  const [deletePhoto] = useDeletePhotoMutation();
-
-  const handlePhotoChange = (e) => {
-    if (e.target.files) {
-      setNewPhotos([...newPhotos, ...Array.from(e.target.files)]);
-    }
-  };
-
-  const handleRemoveNewPhoto = (index) => {
-    setNewPhotos(newPhotos.filter((_, i) => i !== index));
-  };
-
-  const handleRemoveExistingPhoto = async (photoId) => {
-    await deletePhoto({ workOrderId: id, photoId });
-    setExistingPhotos(existingPhotos.filter(p => p._id !== photoId));
-  };
+  // Photo functionality removed
 
   useEffect(() => {
     if (isEdit && workOrderData?.data) {
@@ -206,9 +149,7 @@ const WorkOrderForm = () => {
       
       formik.setValues(safeFormData);
 
-      if (workOrderData.data.photos) {
-        setExistingPhotos(workOrderData.data.photos);
-      }
+      // Photo functionality removed - was not working properly
     }
   }, [isEdit, workOrderData]);
 
