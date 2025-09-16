@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -31,6 +31,11 @@ import {
   Menu,
   ListItemIcon,
   ListItemText,
+  Paper,
+  FormControl,
+  InputLabel,
+  Select,
+  Divider
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -42,11 +47,15 @@ import {
   Schedule as PendingIcon,
   PlayArrow as InProgressIcon,
   CheckCircle as CompletedIcon,
-  Warning as OverdueIcon
+  Warning as OverdueIcon,
+  MoreVert as MoreVertIcon,
+  Visibility as ViewIcon
 } from '@mui/icons-material';
 import { useGetRemindersQuery, useDeleteReminderMutation, useUpdateReminderMutation } from '../../features/reminders/remindersApiSlice';
+import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { selectCurrentUser } from '../../features/auth/authSlice';
 import { toast } from 'react-toastify';
+import { format, isAfter, isBefore, isToday } from 'date-fns';
 
 const statusColors = {
   pending: 'warning',
@@ -61,37 +70,85 @@ const priorityColors = {
   high: 'error'
 };
 
+const getStatusIcon = (status) => {
+  switch (status) {
+    case 'pending': return <PendingIcon />;
+    case 'in-progress': return <InProgressIcon />;
+    case 'completed': return <CompletedIcon />;
+    case 'overdue': return <OverdueIcon />;
+    default: return <PendingIcon />;
+  }
+};
+
 const Reminders = () => {
-  const user = useSelector(selectCurrentUser);
   const navigate = useNavigate();
+  const currentUser = useSelector(selectCurrentUser);
   
-  // State for filters and pagination
+  // State management
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [priorityFilter, setPriorityFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('');
+  const [buildingFilter, setBuildingFilter] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [reminderToDelete, setReminderToDelete] = useState(null);
-  const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
+  const [anchorEl, setAnchorEl] = useState(null);
   const [selectedReminder, setSelectedReminder] = useState(null);
 
-  // Fetch reminders with filters
-  const { 
-    data: remindersData, 
-    isLoading, 
-    isError, 
-    error 
-  } = useGetRemindersQuery({
+  // API queries
+  const { data: remindersData, isLoading, error, refetch } = useGetRemindersQuery({
     page: page + 1,
     limit: rowsPerPage,
-    status: statusFilter === 'all' ? '' : statusFilter,
-    priority: priorityFilter === 'all' ? '' : priorityFilter,
-    search: searchTerm
+    search: searchTerm,
+    status: statusFilter,
+    priority: priorityFilter,
+    building: buildingFilter
   });
-
+  
+  const { data: buildingsData } = useGetBuildingsQuery();
   const [deleteReminder, { isLoading: isDeleting }] = useDeleteReminderMutation();
   const [updateReminder] = useUpdateReminderMutation();
+
+  const reminders = remindersData?.data?.reminders || [];
+  const totalCount = remindersData?.data?.totalCount || 0;
+  const buildings = buildingsData?.data?.buildings || [];
+
+  // Enhanced filtering and sorting
+  const filteredReminders = useMemo(() => {
+    let filtered = reminders;
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(reminder => 
+        reminder.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        reminder.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        reminder.building?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply status filter
+    if (statusFilter) {
+      filtered = filtered.filter(reminder => {
+        if (statusFilter === 'overdue') {
+          return isAfter(new Date(), new Date(reminder.dueDate)) && reminder.status !== 'completed';
+        }
+        return reminder.status === statusFilter;
+      });
+    }
+
+    // Apply priority filter
+    if (priorityFilter) {
+      filtered = filtered.filter(reminder => reminder.priority === priorityFilter);
+    }
+
+    // Apply building filter
+    if (buildingFilter) {
+      filtered = filtered.filter(reminder => reminder.building?._id === buildingFilter);
+    }
+
+    return filtered;
+  }, [reminders, searchTerm, statusFilter, priorityFilter, buildingFilter]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -102,328 +159,303 @@ const Reminders = () => {
     setPage(0);
   };
 
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    if (name === 'status') {
-      setStatusFilter(value);
-    } else if (name === 'priority') {
-      setPriorityFilter(value);
+  const handleMenuOpen = (event, reminder) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedReminder(reminder);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedReminder(null);
+  };
+
+  const handleEdit = () => {
+    if (selectedReminder) {
+      navigate(`/reminders/${selectedReminder._id}/edit`);
     }
-    setPage(0);
+    handleMenuClose();
   };
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    const searchValue = e.target.search.value;
-    setSearchTerm(searchValue);
+  const handleView = () => {
+    if (selectedReminder) {
+      navigate(`/reminders/${selectedReminder._id}`);
+    }
+    handleMenuClose();
   };
 
-  const handleClearFilters = () => {
-    setStatusFilter('all');
-    setPriorityFilter('all');
-    setSearchTerm('');
-    setPage(0);
-  };
-
-  const handleDeleteClick = (reminder) => {
-    setReminderToDelete(reminder);
+  const handleDeleteClick = () => {
+    setReminderToDelete(selectedReminder);
     setDeleteDialogOpen(true);
+    handleMenuClose();
   };
 
-  const handleConfirmDelete = async () => {
-    if (!reminderToDelete) return;
-    
-    try {
-      await deleteReminder(reminderToDelete._id).unwrap();
-      toast.success('Reminder deleted successfully');
-      setDeleteDialogOpen(false);
-      setReminderToDelete(null);
-    } catch (error) {
-      console.error('Failed to delete reminder:', error);
-      const errorMessage = error?.data?.message || error?.message || 'Failed to delete reminder';
-      toast.error(errorMessage);
+  const handleDeleteConfirm = async () => {
+    if (reminderToDelete) {
+      try {
+        await deleteReminder(reminderToDelete._id).unwrap();
+        toast.success('Reminder deleted successfully!');
+        refetch();
+      } catch (error) {
+        console.error('Error deleting reminder:', error);
+        toast.error('Failed to delete reminder');
+      }
     }
-  };
-
-  const handleCancelDelete = () => {
     setDeleteDialogOpen(false);
     setReminderToDelete(null);
   };
 
-  const handleStatusClick = (event, reminder) => {
-    event.stopPropagation();
-    setStatusMenuAnchor(event.currentTarget);
-    setSelectedReminder(reminder);
-  };
-
-  const handleStatusClose = () => {
-    setStatusMenuAnchor(null);
-    setSelectedReminder(null);
-  };
-
-  const handleStatusUpdate = async (newStatus) => {
-    if (!selectedReminder) return;
-    
+  const handleStatusChange = async (reminderId, newStatus) => {
     try {
-      await updateReminder({
-        id: selectedReminder._id,
-        status: newStatus
-      }).unwrap();
-      
-      toast.success(`Reminder status updated to ${newStatus}`, {
-        position: "top-right",
-        autoClose: 2000,
-      });
-      handleStatusClose();
+      await updateReminder({ id: reminderId, status: newStatus }).unwrap();
+      toast.success('Reminder status updated!');
+      refetch();
     } catch (error) {
-      console.error('Failed to update status:', error);
-      toast.error('Failed to update reminder status', {
-        position: "top-right",
-        autoClose: 3000,
-      });
+      console.error('Error updating reminder status:', error);
+      toast.error('Failed to update reminder status');
     }
   };
 
-  // Loading state
+  const getReminderStatus = (reminder) => {
+    if (reminder.status === 'completed') return 'completed';
+    if (isAfter(new Date(), new Date(reminder.dueDate))) return 'overdue';
+    return reminder.status;
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('');
+    setPriorityFilter('');
+    setBuildingFilter('');
+    setPage(0);
+  };
+
   if (isLoading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+      <Container>
+        <Box display="flex" justifyContent="center" mt={4}>
           <CircularProgress />
         </Box>
       </Container>
     );
   }
 
-  // Error state
   if (error) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error?.message || 'Failed to load reminders'}
+      <Container>
+        <Alert severity="error" sx={{ mt: 2 }}>
+          Error loading reminders: {error.message}
         </Alert>
       </Container>
     );
   }
 
-  const { reminders, total } = remindersData?.data || { reminders: [], total: 0 };
-
   return (
     <Container maxWidth="xl">
-      <Box sx={{ mb: 4 }}>
+      <Box sx={{ mb: 3 }}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h4" component="h1">
             Reminders
+            <Badge badgeContent={totalCount} color="primary" sx={{ ml: 2 }} />
           </Typography>
           <Button
             variant="contained"
-            color="primary"
             startIcon={<AddIcon />}
-            onClick={() => {
-              try {
-                navigate('/reminders/create');
-                toast.info('Opening reminder creation form...');
-              } catch (error) {
-                console.error('Navigation error:', error);
-                toast.error('Failed to open reminder form');
-              }
-            }}
+            onClick={() => navigate('/reminders/create')}
           >
-            New Reminder
+            Create Reminder
           </Button>
         </Box>
 
         {/* Filters */}
         <Card sx={{ mb: 3 }}>
           <CardContent>
-            <form onSubmit={handleSearch}>
-              <Grid container spacing={2} alignItems="center">
-                <Grid item xs={12} md={3}>
-                  <TextField
-                    fullWidth
-                    name="search"
-                    label="Search reminders..."
-                    variant="outlined"
-                    size="small"
-                    InputProps={{
-                      endAdornment: <SearchIcon color="action" />,
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12} md={2}>
-                  <TextField
-                    select
-                    fullWidth
-                    name="status"
-                    label="Status"
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  fullWidth
+                  label="Search"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  InputProps={{
+                    startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={2}>
+                <FormControl fullWidth>
+                  <InputLabel>Status</InputLabel>
+                  <Select
                     value={statusFilter}
-                    onChange={handleFilterChange}
-                    size="small"
+                    label="Status"
+                    onChange={(e) => setStatusFilter(e.target.value)}
                   >
-                    <MenuItem value="all">All Status</MenuItem>
+                    <MenuItem value="">All</MenuItem>
                     <MenuItem value="pending">Pending</MenuItem>
                     <MenuItem value="in-progress">In Progress</MenuItem>
                     <MenuItem value="completed">Completed</MenuItem>
                     <MenuItem value="overdue">Overdue</MenuItem>
-                  </TextField>
-                </Grid>
-                <Grid item xs={12} md={2}>
-                  <TextField
-                    select
-                    fullWidth
-                    name="priority"
-                    label="Priority"
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6} md={2}>
+                <FormControl fullWidth>
+                  <InputLabel>Priority</InputLabel>
+                  <Select
                     value={priorityFilter}
-                    onChange={handleFilterChange}
-                    size="small"
+                    label="Priority"
+                    onChange={(e) => setPriorityFilter(e.target.value)}
                   >
-                    <MenuItem value="all">All Priorities</MenuItem>
+                    <MenuItem value="">All</MenuItem>
                     <MenuItem value="low">Low</MenuItem>
                     <MenuItem value="medium">Medium</MenuItem>
                     <MenuItem value="high">High</MenuItem>
-                  </TextField>
-                </Grid>
-                <Grid item xs={12} md={2}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    startIcon={<FilterListIcon />}
-                    onClick={handleClearFilters}
-                    size="small"
-                  >
-                    Clear Filters
-                  </Button>
-                </Grid>
+                  </Select>
+                </FormControl>
               </Grid>
-            </form>
+              <Grid item xs={12} sm={6} md={3}>
+                <FormControl fullWidth>
+                  <InputLabel>Building</InputLabel>
+                  <Select
+                    value={buildingFilter}
+                    label="Building"
+                    onChange={(e) => setBuildingFilter(e.target.value)}
+                  >
+                    <MenuItem value="">All Buildings</MenuItem>
+                    {buildings.map((building) => (
+                      <MenuItem key={building._id} value={building._id}>
+                        {building.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6} md={2}>
+                <Button
+                  variant="outlined"
+                  onClick={clearFilters}
+                  startIcon={<FilterListIcon />}
+                  fullWidth
+                >
+                  Clear Filters
+                </Button>
+              </Grid>
+            </Grid>
           </CardContent>
         </Card>
 
         {/* Reminders Table */}
         <Card>
-          <TableContainer>
+          <TableContainer component={Paper}>
             <Table>
               <TableHead>
                 <TableRow>
                   <TableCell>Title</TableCell>
                   <TableCell>Building</TableCell>
-                  <TableCell>Apartment</TableCell>
                   <TableCell>Due Date</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>Priority</TableCell>
-                  <TableCell>Actions</TableCell>
+                  <TableCell>Category</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {reminders.length > 0 ? (
-                  reminders.map((reminder) => (
-                    <TableRow 
-                      key={reminder._id}
-                      hover
-                      sx={{ cursor: 'pointer' }}
-                      onClick={() => navigate(`/reminders/${reminder._id}`)}
-                    >
-                      <TableCell>
-                        <Box display="flex" alignItems="center">
-                          <Badge
-                            color="primary"
-                            variant="dot"
-                            invisible={!reminder.isDueSoon}
-                            sx={{ mr: 1 }}
-                          >
-                            <NotificationsIcon color="action" />
-                          </Badge>
-                          <Typography variant="body2">
-                            {reminder.title}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        {typeof reminder.building === 'object' 
-                          ? reminder.building.name 
-                          : 'N/A'}
-                      </TableCell>
-                      <TableCell>{reminder.apartment || 'N/A'}</TableCell>
-                      <TableCell>
-                        {new Date(reminder.dueDate).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={reminder.status} 
-                          color={statusColors[reminder.status] || 'default'}
-                          size="small"
-                          onClick={(event) => handleStatusClick(event, reminder)}
-                          sx={{ 
-                            cursor: 'pointer',
-                            '&:hover': {
-                              opacity: 0.8,
-                              transform: 'scale(1.05)'
-                            }
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={reminder.priority} 
-                          color={priorityColors[reminder.priority] || 'default'}
-                          size="small"
-                          variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Tooltip title="Edit">
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/reminders/${reminder._id}/edit`);
-                            }}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete">
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteClick(reminder);
-                            }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
+                {filteredReminders.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} align="center">
-                      <Box py={4}>
-                        <NotificationsIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                        <Typography variant="h6" color="textSecondary" gutterBottom>
-                          No reminders found
-                        </Typography>
-                        <Button
-                          variant="contained"
-                          startIcon={<AddIcon />}
-                          onClick={() => navigate('/reminders/create')}
-                          sx={{ mt: 2 }}
-                        >
-                          Create Your First Reminder
-                        </Button>
-                      </Box>
+                      <Typography variant="body2" color="text.secondary">
+                        No reminders found
+                      </Typography>
                     </TableCell>
                   </TableRow>
+                ) : (
+                  filteredReminders.map((reminder) => {
+                    const status = getReminderStatus(reminder);
+                    const isOverdue = status === 'overdue';
+                    const isDueToday = isToday(new Date(reminder.dueDate));
+                    
+                    return (
+                      <TableRow key={reminder._id} hover>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="subtitle2">
+                              {reminder.title}
+                            </Typography>
+                            {reminder.description && (
+                              <Typography variant="body2" color="text.secondary" noWrap>
+                                {reminder.description.substring(0, 50)}...
+                              </Typography>
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {reminder.building?.name || 'N/A'}
+                          </Typography>
+                          {reminder.apartment && (
+                            <Typography variant="caption" color="text.secondary">
+                              Apt: {reminder.apartment}
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Typography 
+                            variant="body2" 
+                            color={isOverdue ? 'error' : isDueToday ? 'warning.main' : 'text.primary'}
+                          >
+                            {format(new Date(reminder.dueDate), 'MMM dd, yyyy')}
+                          </Typography>
+                          {isDueToday && (
+                            <Typography variant="caption" color="warning.main">
+                              Due Today
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            icon={getStatusIcon(status)}
+                            label={status.replace('-', ' ').toUpperCase()}
+                            color={statusColors[status]}
+                            size="small"
+                            onClick={() => {
+                              const nextStatus = status === 'pending' ? 'in-progress' : 
+                                               status === 'in-progress' ? 'completed' : 'pending';
+                              handleStatusChange(reminder._id, nextStatus);
+                            }}
+                            sx={{ cursor: 'pointer' }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={reminder.priority.toUpperCase()}
+                            color={priorityColors[reminder.priority]}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
+                            {reminder.category || 'Other'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <IconButton
+                            onClick={(e) => handleMenuOpen(e, reminder)}
+                            size="small"
+                          >
+                            <MoreVertIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
           </TableContainer>
+          
           <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
+            rowsPerPageOptions={[5, 10, 25, 50]}
             component="div"
-            count={total}
+            count={totalCount}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
@@ -432,74 +464,53 @@ const Reminders = () => {
         </Card>
       </Box>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={handleCancelDelete}
-        maxWidth="sm"
-        fullWidth
+      {/* Action Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
       >
+        <MenuItem onClick={handleView}>
+          <ListItemIcon>
+            <ViewIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>View Details</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handleEdit}>
+          <ListItemIcon>
+            <EditIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Edit</ListItemText>
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={handleDeleteClick} sx={{ color: 'error.main' }}>
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" color="error" />
+          </ListItemIcon>
+          <ListItemText>Delete</ListItemText>
+        </MenuItem>
+      </Menu>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
         <DialogTitle>Delete Reminder</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete the reminder "{reminderToDelete?.title}"? This action cannot be undone.
+            Are you sure you want to delete the reminder "{reminderToDelete?.title}"?
+            This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCancelDelete} disabled={isDeleting}>
-            Cancel
-          </Button>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
           <Button 
-            onClick={handleConfirmDelete} 
-            color="error"
-            variant="contained"
+            onClick={handleDeleteConfirm} 
+            color="error" 
             disabled={isDeleting}
-            startIcon={isDeleting ? <CircularProgress size={16} /> : null}
           >
             {isDeleting ? 'Deleting...' : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Status Update Menu */}
-      <Menu
-        anchorEl={statusMenuAnchor}
-        open={Boolean(statusMenuAnchor)}
-        onClose={handleStatusClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'left',
-        }}
-      >
-        <MenuItem onClick={() => handleStatusUpdate('pending')}>
-          <ListItemIcon>
-            <PendingIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Pending</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => handleStatusUpdate('in-progress')}>
-          <ListItemIcon>
-            <InProgressIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>In Progress</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => handleStatusUpdate('completed')}>
-          <ListItemIcon>
-            <CompletedIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Completed</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => handleStatusUpdate('overdue')}>
-          <ListItemIcon>
-            <OverdueIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Overdue</ListItemText>
-        </MenuItem>
-      </Menu>
     </Container>
   );
 };

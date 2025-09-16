@@ -211,14 +211,30 @@ const WorkOrders = () => {
         }
         
         const firstPhoto = photos[0];
-        const photoUrl = firstPhoto.url || firstPhoto.path || firstPhoto;
-        const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
+        let photoUrl = '';
+        
+        // Handle different photo data structures
+        if (typeof firstPhoto === 'string') {
+          photoUrl = firstPhoto;
+        } else if (firstPhoto?.url) {
+          photoUrl = firstPhoto.url;
+        } else if (firstPhoto?.path) {
+          photoUrl = firstPhoto.path;
+        } else if (firstPhoto?.filename) {
+          photoUrl = firstPhoto.filename;
+        }
+        
+        // Clean the photo URL - remove any leading slashes or path prefixes
+        photoUrl = photoUrl.replace(/^.*[\\\/]/, '').replace(/^uploads[\\\/]photos[\\\/]/, '');
+        
+        const baseUrl = process.env.REACT_APP_API_URL || window.location.origin;
+        const fullPhotoUrl = `${baseUrl}/uploads/photos/${photoUrl}`;
         
         return (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Box
               component="img"
-              src={`${apiUrl}/uploads/photos/${photoUrl}`}
+              src={fullPhotoUrl}
               alt="Work order photo"
               sx={{
                 width: 40,
@@ -228,7 +244,9 @@ const WorkOrders = () => {
                 border: '1px solid #ddd'
               }}
               onError={(e) => {
-                e.target.style.display = 'none';
+                console.log('Photo load error for:', fullPhotoUrl);
+                e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjVmNWY1Ii8+CjxwYXRoIGQ9Ik0yMCAyNUMyMi43NjE0IDI1IDI1IDIyLjc2MTQgMjUgMjBDMjUgMTcuMjM4NiAyMi43NjE0IDE1IDIwIDE1QzE3LjIzODYgMTUgMTUgMTcuMjM4NiAxNSAyMEMxNSAyMi43NjE0IDE3LjIzODYgMjUgMjAgMjVaIiBmaWxsPSIjY2NjIi8+Cjwvc3ZnPgo=';
+                e.target.style.border = '1px solid #ddd';
               }}
             />
             {photos.length > 1 && (
