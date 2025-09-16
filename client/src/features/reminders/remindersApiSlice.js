@@ -40,11 +40,15 @@ export const remindersApiSlice = apiSlice.injectEndpoints({
     }),
     
     updateReminder: builder.mutation({
-      query: ({ id, ...updates }) => ({
-        url: `/reminders/${id}`,
-        method: 'PATCH',
-        body: updates,
-      }),
+      query: ({ id, ...updates }) => {
+        console.log('updateReminder called with:', { id, updates });
+        console.log('API endpoint will be:', `/reminders/${id}`);
+        return {
+          url: `/reminders/${id}`,
+          method: 'PATCH',
+          body: updates,
+        };
+      },
       invalidatesTags: (result, error, { id }) => [
         { type: 'Reminder', id },
         'Reminder',
