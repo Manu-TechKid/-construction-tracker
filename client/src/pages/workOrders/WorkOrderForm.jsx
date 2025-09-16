@@ -89,7 +89,11 @@ const WorkOrderForm = () => {
           workOrderId = newWorkOrder.data._id;
         }
 
-        // Photo upload functionality removed - was not working properly
+        // Handle photo uploads if any exist
+        if (photos && photos.length > 0) {
+          // Photos are already handled by PhotoUpload component
+          console.log(`${photos.length} photos will be managed by PhotoUpload component`);
+        }
 
         // Show success message and redirect immediately
         const message = isEdit ? 'Work order updated successfully!' : 'Work order created successfully!';
@@ -151,7 +155,10 @@ const WorkOrderForm = () => {
       
       formik.setValues(safeFormData);
 
-      // Photo functionality removed - was not working properly
+      // Load existing photos for edit mode
+      if (formData.photos && Array.isArray(formData.photos)) {
+        setPhotos(formData.photos);
+      }
     }
   }, [isEdit, workOrderData]);
 

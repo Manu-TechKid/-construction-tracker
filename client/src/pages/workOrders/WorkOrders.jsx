@@ -188,6 +188,46 @@ const WorkOrders = () => {
       ),
     },
     {
+      field: 'photos',
+      headerName: 'Photos',
+      width: 100,
+      renderCell: (params) => {
+        const photos = params.row.photos || [];
+        if (photos.length === 0) {
+          return <Typography variant="body2" color="textSecondary">No photos</Typography>;
+        }
+        
+        const firstPhoto = photos[0];
+        const photoUrl = firstPhoto.url || firstPhoto.path || firstPhoto;
+        const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
+        
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box
+              component="img"
+              src={`${apiUrl}/uploads/photos/${photoUrl}`}
+              alt="Work order photo"
+              sx={{
+                width: 40,
+                height: 40,
+                objectFit: 'cover',
+                borderRadius: 1,
+                border: '1px solid #ddd'
+              }}
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
+            />
+            {photos.length > 1 && (
+              <Typography variant="caption" color="textSecondary">
+                +{photos.length - 1}
+              </Typography>
+            )}
+          </Box>
+        );
+      },
+    },
+    {
       field: 'scheduledDate',
       headerName: 'Scheduled Date',
       width: 150,
