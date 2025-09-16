@@ -165,11 +165,24 @@ const WorkOrders = () => {
           color={getStatusChipColor(params.value)}
           size="small"
           onClick={(event) => handleStatusClick(event, params.row)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              handleStatusClick(event, params.row);
+            }
+          }}
           sx={{ 
             cursor: 'pointer',
             '&:hover': {
               opacity: 0.8,
               transform: 'scale(1.05)'
+            },
+            '&:focus': {
+              outline: '2px solid',
+              outlineColor: 'primary.main',
+              outlineOffset: '2px'
             }
           }}
         />
