@@ -37,20 +37,31 @@ exports.getInvoice = catchAsync(async (req, res, next) => {
     });
 });
 
-// Create invoice from completed work orders
+// Create invoice from work orders
 exports.createInvoice = catchAsync(async (req, res, next) => {
     const { buildingId, workOrderIds, dueDate, notes } = req.body;
 
-    // Get completed work orders that haven't been invoiced
+    // Validate required fields
+    if (!buildingId) {
+        return next(new AppError('Building ID is required', 400));
+    }
+    if (!workOrderIds || workOrderIds.length === 0) {
+        return next(new AppError('At least one work order must be selected', 400));
+    }
+
+    // Get work orders that haven't been invoiced yet
     const workOrders = await WorkOrder.find({
         _id: { $in: workOrderIds },
         building: buildingId,
-        status: 'completed',
-        billingStatus: 'pending'
+        $or: [
+            { billingStatus: { $exists: false } },
+            { billingStatus: 'pending' },
+            { billingStatus: null }
+        ]
     }).populate('building', 'name address');
 
     if (workOrders.length === 0) {
-        return next(new AppError('No eligible work orders found for invoicing', 400));
+        return next(new AppError('No eligible work orders found for invoicing. Work orders may already be invoiced.', 400));
     }
 
     // Calculate totals
@@ -162,18 +173,25 @@ exports.markAsPaid = catchAsync(async (req, res, next) => {
 exports.getUnbilledWorkOrders = catchAsync(async (req, res, next) => {
     const { buildingId } = req.params;
 
+    if (!buildingId) {
+        return next(new AppError('Building ID is required', 400));
+    }
+
+    // Find work orders that haven't been invoiced yet
     const workOrders = await WorkOrder.find({
         building: buildingId,
-        status: 'completed',
-        billingStatus: 'pending'
-    }).populate('building', 'name address');
+        $or: [
+            { billingStatus: { $exists: false } },
+            { billingStatus: 'pending' },
+            { billingStatus: null }
+        ]
+    }).populate('building', 'name address')
+      .sort('-createdAt');
 
     res.status(200).json({
         status: 'success',
         results: workOrders.length,
-        data: {
-            workOrders
-        }
+        data: workOrders
     });
 });
 

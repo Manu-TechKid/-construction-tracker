@@ -338,14 +338,13 @@ const CreateInvoice = () => {
                   label="Due Date *"
                   value={formik.values.dueDate}
                   onChange={(date) => formik.setFieldValue('dueDate', date)}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      fullWidth
-                      error={formik.touched.dueDate && Boolean(formik.errors.dueDate)}
-                      helperText={formik.touched.dueDate && formik.errors.dueDate}
-                    />
-                  )}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      error: formik.touched.dueDate && Boolean(formik.errors.dueDate),
+                      helperText: formik.touched.dueDate && formik.errors.dueDate
+                    }
+                  }}
                 />
               </LocalizationProvider>
 

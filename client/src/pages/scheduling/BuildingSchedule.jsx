@@ -161,15 +161,39 @@ const BuildingSchedule = () => {
 
   const handleSubmit = async () => {
     try {
+      // Validate required fields
+      if (!formData.title?.trim()) {
+        toast.error('Title is required');
+        return;
+      }
+      if (!formData.startDate || !formData.endDate) {
+        toast.error('Start date and end date are required');
+        return;
+      }
+      if (!selectedBuilding?._id) {
+        toast.error('Building selection is required');
+        return;
+      }
+
       const scheduleData = {
-        ...formData,
+        title: formData.title.trim(),
+        description: formData.description?.trim() || '',
+        type: formData.type,
         building: selectedBuilding._id,
-        createdBy: user.id,
+        apartment: formData.apartment?.trim() || '',
+        assignedWorkers: formData.assignedWorkers || [],
+        startDate: formData.startDate.toISOString(),
+        endDate: formData.endDate.toISOString(),
+        status: formData.status,
         estimatedCost: parseFloat(formData.estimatedCost) || 0,
         estimatedHours: parseFloat(formData.estimatedHours) || 0,
-        startDate: formData.startDate.toISOString(),
-        endDate: formData.endDate.toISOString()
+        notes: formData.notes?.trim() || ''
       };
+
+      // Only add createdBy for new schedules
+      if (!editingSchedule) {
+        scheduleData.createdBy = user.id;
+      }
 
       if (editingSchedule) {
         await updateSchedule({ 
@@ -186,7 +210,8 @@ const BuildingSchedule = () => {
       refetch();
     } catch (error) {
       console.error('Error saving schedule:', error);
-      toast.error(error?.data?.message || 'Failed to save schedule');
+      const errorMessage = error?.data?.message || error?.message || 'Failed to save schedule';
+      toast.error(errorMessage);
     }
   };
 
@@ -577,7 +602,7 @@ const BuildingSchedule = () => {
             {editingSchedule && hasPermission(['delete:schedules']) && (
               <Button 
                 onClick={() => {
-                  handleDeleteSchedule(editingSchedule.id);
+                  handleDeleteSchedule(editingSchedule._id);
                   handleCloseDialog();
                 }} 
                 color="error"
