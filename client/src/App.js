@@ -52,6 +52,7 @@ import BuildingSchedule from './pages/scheduling/BuildingSchedule';
 import WorkerDashboard from './pages/workers/WorkerDashboard';
 import EditWorker from './pages/workers/EditWorker';
 import WorkerApproval from './pages/admin/WorkerApproval';
+import ApartmentSearch from './pages/search/ApartmentSearch';
 
 // Route Protection
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -321,6 +322,12 @@ const AppContent = () => {
                     <BuildingSchedule />
                   </RoleBasedRoute>
                 } 
+              />
+
+              {/* Apartment Search - accessible to all authenticated users */}
+              <Route 
+                path="apartment-search" 
+                element={<ApartmentSearch />} 
               />
 
               {/* Worker Approval */}

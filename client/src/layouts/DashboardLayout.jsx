@@ -34,6 +34,7 @@ import {
   Logout as LogoutIcon,
   Work as WorkIcon,
   CheckCircle as ApprovalIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
@@ -198,6 +199,14 @@ const DashboardLayout = () => {
         permission: 'read:schedules'
       });
     }
+
+    // Apartment Search - available to all users
+    items.push({
+      text: 'Apartment Search',
+      icon: <SearchIcon />,
+      path: '/apartment-search',
+      permission: 'read:all'
+    });
 
     return items;
   };

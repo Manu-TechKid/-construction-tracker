@@ -420,6 +420,7 @@ const BuildingSchedule = () => {
                   label="Title"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  required
                 />
               </Grid>
               
@@ -462,7 +463,7 @@ const BuildingSchedule = () => {
                   label="Start Date"
                   value={formData.startDate}
                   onChange={(newValue) => setFormData({ ...formData, startDate: newValue })}
-                  renderInput={(params) => <TextField {...params} fullWidth />}
+                  slotProps={{ textField: { fullWidth: true } }}
                 />
               </Grid>
               
@@ -471,7 +472,40 @@ const BuildingSchedule = () => {
                   label="End Date"
                   value={formData.endDate}
                   onChange={(newValue) => setFormData({ ...formData, endDate: newValue })}
-                  renderInput={(params) => <TextField {...params} fullWidth />}
+                  slotProps={{ textField: { fullWidth: true } }}
+                />
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Apartment Number"
+                  value={formData.apartment}
+                  onChange={(e) => setFormData({ ...formData, apartment: e.target.value })}
+                  placeholder="e.g., 420"
+                />
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Estimated Hours"
+                  type="number"
+                  value={formData.estimatedHours}
+                  onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value })}
+                />
+              </Grid>
+              
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Estimated Cost"
+                  type="number"
+                  value={formData.estimatedCost}
+                  onChange={(e) => setFormData({ ...formData, estimatedCost: e.target.value })}
+                  InputProps={{
+                    startAdornment: '$'
+                  }}
                 />
               </Grid>
               
@@ -518,6 +552,17 @@ const BuildingSchedule = () => {
                   label="Description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                />
+              </Grid>
+              
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={2}
+                  label="Notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 />
               </Grid>
             </Grid>

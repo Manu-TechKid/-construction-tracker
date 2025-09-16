@@ -21,6 +21,7 @@ const scheduleRoutes = require('./routes/scheduleRoutes');
 const noteRoutes = require('./routes/noteRoutes');
 const reminderRoutes = require('./routes/reminderRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const searchRoutes = require('./routes/searchRoutes');
 
 // Import routes
 const AppError = require('./utils/appError');
@@ -144,6 +145,7 @@ app.use('/api/v1/schedules', scheduleRoutes);
 app.use('/api/v1/notes', noteRoutes);
 app.use('/api/v1/reminders', reminderRoutes);
 app.use('/api/v1/uploads', uploadRoutes);
+app.use('/api/v1/search', searchRoutes);
 
 // Health check endpoints
 app.get('/api/v1/health', (req, res) => {
