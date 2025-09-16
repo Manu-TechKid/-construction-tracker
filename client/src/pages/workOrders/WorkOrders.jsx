@@ -206,6 +206,13 @@ const WorkOrders = () => {
       width: 100,
       renderCell: (params) => {
         const photos = params.row.photos || [];
+        console.log('WorkOrder photos data:', {
+          workOrderId: params.row._id,
+          photos: photos,
+          photosLength: photos.length,
+          firstPhoto: photos[0]
+        });
+        
         if (photos.length === 0) {
           return <Typography variant="body2" color="textSecondary">No photos</Typography>;
         }
@@ -222,6 +229,8 @@ const WorkOrders = () => {
           photoUrl = firstPhoto.path;
         } else if (firstPhoto?.filename) {
           photoUrl = firstPhoto.filename;
+        } else if (firstPhoto?.src) {
+          photoUrl = firstPhoto.src;
         }
         
         // Clean the photo URL - remove any leading slashes or path prefixes

@@ -72,13 +72,15 @@ const WorkOrderForm = () => {
     }),
     onSubmit: async (values) => {
       try {
-        // Format the data correctly for the backend
+        // Format the data correctly for the backend, including photos
         const formattedValues = {
           ...values,
           // Ensure apartmentNumber is mapped correctly
           apartmentNumber: values.apartmentNumber || values.apartment,
           // Ensure scheduledDate is properly formatted
           scheduledDate: values.scheduledDate instanceof Date ? values.scheduledDate.toISOString() : values.scheduledDate,
+          // Include photos in the work order data
+          photos: photos || []
         };
 
         let workOrderId = id;
@@ -89,11 +91,7 @@ const WorkOrderForm = () => {
           workOrderId = newWorkOrder.data._id;
         }
 
-        // Handle photo uploads if any exist
-        if (photos && photos.length > 0) {
-          // Photos are already handled by PhotoUpload component
-          console.log(`${photos.length} photos will be managed by PhotoUpload component`);
-        }
+        console.log(`Work order saved with ${photos?.length || 0} photos`);
 
         // Show success message and redirect immediately
         const message = isEdit ? 'Work order updated successfully!' : 'Work order created successfully!';
