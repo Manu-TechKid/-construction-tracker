@@ -9,7 +9,7 @@ const {
   getUpcomingReminders
 } = require('../controllers/reminderController');
 const { uploadReminderPhotos, deleteReminderPhoto } = require('../controllers/photoController');
-const { protect, restrictTo } = require('../middleware/authMiddleware');
+const { protect, restrictTo } = require('../controllers/authController');
 const upload = require('../middleware/upload');
 
 const router = express.Router();

@@ -11,7 +11,7 @@ const {
   getWorkOrdersByBuilding
 } = require('../controllers/workOrderController');
 const { uploadWorkOrderPhotos, deleteWorkOrderPhoto } = require('../controllers/photoController');
-const { protect, restrictTo } = require('../middleware/authMiddleware');
+const { protect, restrictTo } = require('../controllers/authController');
 const upload = require('../middleware/upload');
 
 // All routes are protected
