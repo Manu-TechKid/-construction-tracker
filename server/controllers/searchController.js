@@ -43,24 +43,22 @@ exports.searchApartment = catchAsync(async (req, res, next) => {
     }
   }
 
-  // Build base query
-  let baseQuery = {
-    'apartment.number': apartmentNumber
-  };
-
-  if (buildingId) {
-    baseQuery.building = buildingId;
-  }
-
-  if (status) {
-    baseQuery.status = status;
-  }
-
   const results = [];
 
   try {
-    // Search Work Orders
-    let workOrderQuery = { ...baseQuery };
+    // Search Work Orders (apartmentNumber field)
+    let workOrderQuery = {
+      apartmentNumber: apartmentNumber
+    };
+
+    if (buildingId) {
+      workOrderQuery.building = buildingId;
+    }
+
+    if (status) {
+      workOrderQuery.status = status;
+    }
+
     if (serviceType) {
       workOrderQuery.workType = serviceType;
     }
@@ -85,37 +83,55 @@ exports.searchApartment = catchAsync(async (req, res, next) => {
         date: wo.createdAt,
         cost: wo.estimatedCost || wo.actualCost,
         building: wo.building,
-        apartment: wo.apartment,
+        apartment: { number: wo.apartmentNumber },
         workers: wo.assignedTo?.map(a => a.worker).filter(Boolean) || []
       });
     });
 
-    // Search Invoices
-    let invoiceQuery = { ...baseQuery };
+    // Search Invoices (through related work orders)
+    let invoiceQuery = {};
+    if (buildingId) {
+      invoiceQuery.building = buildingId;
+    }
     if (dateFilter && Object.keys(dateFilter).length > 0) {
       invoiceQuery.createdAt = dateFilter;
     }
 
+    // Find invoices that have work orders with matching apartment numbers
     const invoices = await Invoice.find(invoiceQuery)
-      .populate('building', 'name address')
-      .populate('workOrders', 'title workType')
+      .populate({
+        path: 'building',
+        select: 'name address'
+      })
+      .populate({
+        path: 'workOrders.workOrder',
+        select: 'title workType apartmentNumber',
+        match: { apartmentNumber: apartmentNumber }
+      })
       .sort({ createdAt: -1 })
       .limit(50);
 
     invoices.forEach(invoice => {
-      results.push({
-        id: invoice._id,
-        type: 'invoice',
-        title: `Invoice #${invoice.invoiceNumber}`,
-        description: invoice.description,
-        serviceType: invoice.workOrders?.[0]?.workType,
-        status: invoice.status,
-        date: invoice.createdAt,
-        cost: invoice.totalAmount,
-        building: invoice.building,
-        apartment: { number: invoice.apartmentNumber },
-        workers: []
-      });
+      // Only include invoices that have matching work orders
+      const matchingWorkOrders = invoice.workOrders?.filter(wo => 
+        wo.workOrder && wo.workOrder.apartmentNumber === apartmentNumber
+      );
+      
+      if (matchingWorkOrders && matchingWorkOrders.length > 0) {
+        results.push({
+          id: invoice._id,
+          type: 'invoice',
+          title: `Invoice #${invoice.invoiceNumber}`,
+          description: `Invoice for ${matchingWorkOrders.length} work order(s)`,
+          serviceType: matchingWorkOrders[0]?.workOrder?.workType,
+          status: invoice.status,
+          date: invoice.createdAt,
+          cost: invoice.total,
+          building: invoice.building,
+          apartment: { number: apartmentNumber },
+          workers: []
+        });
+      }
     });
 
     // Search Schedules
@@ -158,7 +174,7 @@ exports.searchApartment = catchAsync(async (req, res, next) => {
       });
     });
 
-    // Search Reminders
+    // Search Reminders (apartment.number field)
     let reminderQuery = {
       'apartment.number': apartmentNumber
     };
@@ -232,17 +248,17 @@ exports.getApartmentHistory = catchAsync(async (req, res, next) => {
   };
 
   try {
-    // Base query
-    let baseQuery = {
-      'apartment.number': apartmentNumber
+    // Work Orders query (apartmentNumber field)
+    let workOrderQuery = {
+      apartmentNumber: apartmentNumber
     };
 
     if (buildingId) {
-      baseQuery.building = buildingId;
+      workOrderQuery.building = buildingId;
     }
 
     // Get work orders
-    const workOrders = await WorkOrder.find(baseQuery)
+    const workOrders = await WorkOrder.find(workOrderQuery)
       .populate('building', 'name address')
       .populate('assignedTo.worker', 'name email')
       .sort({ createdAt: -1 });
@@ -268,17 +284,31 @@ exports.getApartmentHistory = catchAsync(async (req, res, next) => {
       }
     });
 
-    // Get invoices
-    let invoiceQuery = { ...baseQuery };
+    // Get invoices (through work orders)
+    let invoiceQuery = {};
+    if (buildingId) {
+      invoiceQuery.building = buildingId;
+    }
+
     const invoices = await Invoice.find(invoiceQuery)
       .populate('building', 'name address')
+      .populate({
+        path: 'workOrders.workOrder',
+        select: 'apartmentNumber',
+        match: { apartmentNumber: apartmentNumber }
+      })
       .sort({ createdAt: -1 });
 
-    history.invoices = invoices;
+    // Filter invoices that have matching work orders
+    const matchingInvoices = invoices.filter(invoice => 
+      invoice.workOrders?.some(wo => wo.workOrder && wo.workOrder.apartmentNumber === apartmentNumber)
+    );
+
+    history.invoices = matchingInvoices;
 
     // Add invoice costs
-    invoices.forEach(invoice => {
-      if (invoice.totalAmount) totalCost += invoice.totalAmount;
+    matchingInvoices.forEach(invoice => {
+      if (invoice.total) totalCost += invoice.total;
     });
 
     // Get schedules
@@ -342,7 +372,7 @@ exports.globalSearch = catchAsync(async (req, res, next) => {
         $or: [
           { title: searchRegex },
           { description: searchRegex },
-          { 'apartment.number': searchRegex }
+          { apartmentNumber: searchRegex }
         ]
       })
       .populate('building', 'name address')
@@ -356,7 +386,7 @@ exports.globalSearch = catchAsync(async (req, res, next) => {
           title: wo.title,
           description: wo.description,
           building: wo.building,
-          apartment: wo.apartment,
+          apartment: { number: wo.apartmentNumber },
           relevance: 'high'
         });
       });
