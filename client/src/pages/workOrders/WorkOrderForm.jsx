@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useFormik } from 'formik';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -311,32 +311,7 @@ const WorkOrderForm = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12}>
-            <Card>
-              <CardHeader title="Photos" />
-              <Divider />
-              <CardContent>
-                <Button variant="contained" component="label">
-                  Upload Photos
-                  <input type="file" hidden multiple onChange={handlePhotoChange} accept="image/*" />
-                </Button>
-                <Box mt={2} display="flex" flexWrap="wrap" gap={2}>
-                  {existingPhotos.map((photo) => (
-                    <Box key={photo._id} position="relative">
-                      <img src={photo.url} alt="existing" width="100" height="100" style={{ objectFit: 'cover' }} />
-                      <Button size="small" onClick={() => handleRemoveExistingPhoto(photo._id)} sx={{ position: 'absolute', top: 0, right: 0 }}>X</Button>
-                    </Box>
-                  ))}
-                  {newPhotos.map((photo, index) => (
-                    <Box key={index} position="relative">
-                      <img src={URL.createObjectURL(photo)} alt="preview" width="100" height="100" style={{ objectFit: 'cover' }} />
-                      <Button size="small" onClick={() => handleRemoveNewPhoto(index)} sx={{ position: 'absolute', top: 0, right: 0 }}>X</Button>
-                    </Box>
-                  ))}
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
+          {/* Photo functionality removed - was not working properly */}
           <Grid item xs={12}>
             <Card>
               <CardHeader title="Assignment & Priority" />
