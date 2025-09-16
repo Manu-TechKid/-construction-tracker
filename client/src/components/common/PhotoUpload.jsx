@@ -92,7 +92,7 @@ const PhotoUpload = ({ photos = [], onPhotosChange, maxPhotos = 10, workOrderId 
     try {
       if (workOrderId && photo.isUploaded && photo._id) {
         // Delete from server
-        await photoService.deletePhoto(workOrderId, photo._id);
+        await photoService.deleteWorkOrderPhoto(workOrderId, photo._id);
       }
       
       // Remove from local state

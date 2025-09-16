@@ -217,16 +217,23 @@ const CreateInvoice = () => {
   };
 
   const calculateTotal = () => {
-    if (!unbilledWorkOrdersData?.data) return 0;
-    
-    return unbilledWorkOrdersData.data
-      .filter(wo => formik.values.workOrderIds.includes(wo._id))
-      .reduce((sum, wo) => {
-        const workOrderTotal = wo.services?.reduce((workOrderSum, service) => {
-          return workOrderSum + (service.laborCost || 0) + (service.materialCost || 0);
-        }, 0) || 0;
-        return sum + workOrderTotal;
-      }, 0);
+    try {
+      if (!workOrders || workOrders.length === 0) return 0;
+      
+      return workOrders
+        .filter(wo => wo && formik.values.workOrderIds.includes(wo._id))
+        .reduce((sum, wo) => {
+          if (!wo) return sum;
+          const workOrderTotal = wo.services?.reduce((workOrderSum, service) => {
+            if (!service) return workOrderSum;
+            return workOrderSum + (service.laborCost || 0) + (service.materialCost || 0);
+          }, 0) || 0;
+          return sum + workOrderTotal;
+        }, 0);
+    } catch (error) {
+      console.error('Error calculating total:', error);
+      return 0;
+    }
   };
 
   const taxRate = 0.1; // 10% tax

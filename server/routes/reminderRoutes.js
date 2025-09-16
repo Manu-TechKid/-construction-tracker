@@ -1,38 +1,45 @@
 const express = require('express');
-const reminderController = require('../controllers/reminderController');
-const authController = require('../controllers/authController');
-const { upload } = require('../utils/multer');
+const {
+  createReminder,
+  getAllReminders,
+  getReminder,
+  updateReminder,
+  deleteReminder,
+  addNote,
+  getUpcomingReminders
+} = require('../controllers/reminderController');
+const { uploadReminderPhotos, deleteReminderPhoto } = require('../controllers/photoController');
+const { protect, restrictTo } = require('../middleware/authMiddleware');
+const upload = require('../middleware/upload');
 
 const router = express.Router();
 
 // Protect all routes after this middleware
-router.use(authController.protect);
+router.use(protect);
 
 // Routes for reminders
 router
   .route('/')
-  .get(reminderController.getAllReminders)
-  .post(
-    upload.reminder.array('photos', 10),
-    reminderController.createReminder
-  );
+  .get(getAllReminders)
+  .post(createReminder);
 
 router
   .route('/upcoming')
-  .get(reminderController.getUpcomingReminders);
+  .get(getUpcomingReminders);
 
 router
   .route('/:id')
-  .get(reminderController.getReminder)
-  .patch(
-    upload.reminder.array('photos', 10),
-    reminderController.updateReminder
-  )
-  .delete(reminderController.deleteReminder);
+  .get(getReminder)
+  .patch(updateReminder)
+  .delete(deleteReminder);
+
+// Photo upload routes
+router.post('/:id/photos', upload.array('photos', 5), uploadReminderPhotos);
+router.delete('/:id/photos/:photoId', deleteReminderPhoto);
 
 // Route for adding notes to a reminder
 router
   .route('/:id/notes')
-  .post(reminderController.addNote);
+  .post(addNote);
 
 module.exports = router;

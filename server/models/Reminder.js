@@ -70,7 +70,14 @@ const reminderSchema = new mongoose.Schema({
       }
     }
   ],
-  photos: [String],
+  photos: [
+    {
+      url: { type: String, required: true },
+      description: { type: String, trim: true },
+      uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      uploadedAt: { type: Date, default: Date.now },
+    },
+  ],
   category: {
     type: String,
     enum: ['maintenance', 'inspection', 'repair', 'update', 'other'],

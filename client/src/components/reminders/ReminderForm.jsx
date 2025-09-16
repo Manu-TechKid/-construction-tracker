@@ -1,45 +1,48 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
+import { toast } from 'react-toastify';
 import {
   Box,
   Button,
   Card,
   CardContent,
+  Container,
+  FormControl,
   Grid,
+  InputLabel,
+  MenuItem,
+  Select,
   TextField,
   Typography,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Select,
   FormHelperText,
   IconButton,
-  Divider,
-  CircularProgress,
-  Paper,
-  Avatar,
   List,
   ListItem,
-  ListItemAvatar,
   ListItemText,
+  ListItemAvatar,
   ListItemSecondaryAction,
+  Avatar,
+  Divider,
+  CircularProgress,
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
   DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import {
+  ArrowBack as ArrowBackIcon,
+  Save as SaveIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
-  Close as CloseIcon,
-  PhotoCamera as PhotoCameraIcon,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
+import PhotoUpload from '../common/PhotoUpload';
 
 const validationSchema = Yup.object({
   title: Yup.string().required('Title is required'),
@@ -108,7 +111,7 @@ const ReminderForm = ({
       }
     }
   }, [apartmentId, buildingsData, buildingId]);
-  // Photo functionality removed
+  const [photos, setPhotos] = useState([]);
   const [noteText, setNoteText] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -259,7 +262,14 @@ const ReminderForm = ({
                     </Grid>
                   )}
 
-                  {/* Photo functionality removed - was not working properly */}
+                  <Grid item xs={12}>
+                    <PhotoUpload 
+                      photos={photos}
+                      onPhotosChange={setPhotos}
+                      maxPhotos={10}
+                      reminderId={isEdit ? initialValues._id : null}
+                    />
+                  </Grid>
                   
                   <Grid item xs={12}>
                     <TextField

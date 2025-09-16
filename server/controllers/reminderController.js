@@ -165,9 +165,10 @@ exports.updateReminder = catchAsync(async (req, res, next) => {
     updates.$push = { photos: { $each: req.files.map(file => file.filename) } };
   }
 
-  // Ensure required fields are present
-  if (!updates.title || !updates.description) {
-    return next(new AppError('Title and description are required', 400));
+  // For status-only updates, don't require title and description
+  // Only validate required fields if this is a full update (has title or description)
+  if ((updates.title || updates.description) && (!updates.title || !updates.description)) {
+    return next(new AppError('Title and description are required for content updates', 400));
   }
 
   const reminder = await Reminder.findByIdAndUpdate(

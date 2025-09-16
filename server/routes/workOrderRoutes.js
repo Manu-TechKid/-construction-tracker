@@ -3,11 +3,16 @@ const router = express.Router();
 const {
   createWorkOrder,
   getAllWorkOrders,
-  getWorkOrderById,
+  getWorkOrder,
   updateWorkOrder,
   deleteWorkOrder,
+  addNote,
+  updateStatus,
+  getWorkOrdersByBuilding
 } = require('../controllers/workOrderController');
-const { protect } = require('../controllers/authController');
+const { uploadWorkOrderPhotos, deleteWorkOrderPhoto } = require('../controllers/photoController');
+const { protect, restrictTo } = require('../middleware/authMiddleware');
+const upload = require('../middleware/upload');
 
 // All routes are protected
 router.use(protect);
@@ -17,8 +22,19 @@ router.route('/')
   .get(getAllWorkOrders);
 
 router.route('/:id')
-  .get(getWorkOrderById)
+  .get(getWorkOrder)
   .patch(updateWorkOrder)
   .delete(deleteWorkOrder);
+
+// Photo upload routes
+router.post('/:id/photos', upload.array('photos', 5), uploadWorkOrderPhotos);
+router.delete('/:id/photos/:photoId', deleteWorkOrderPhoto);
+
+// Notes and status routes
+router.post('/:id/notes', addNote);
+router.patch('/:id/status', updateStatus);
+
+// Building-specific work orders
+router.get('/building/:buildingId', getWorkOrdersByBuilding);
 
 module.exports = router;

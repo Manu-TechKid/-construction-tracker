@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useFormik } from 'formik';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -23,9 +23,10 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { ArrowBack as ArrowBackIcon, Save as SaveIcon } from '@mui/icons-material';
+import PhotoUpload from '../../components/common/PhotoUpload';
 import { useGetBuildingsQuery, useGetBuildingQuery } from '../../features/buildings/buildingsApiSlice';
 import { useGetUsersQuery } from '../../features/users/usersApiSlice';
-import { useUploadPhotoMutation, useDeletePhotoMutation } from '../../features/uploads/uploadsApiSlice';
 import {
   useCreateWorkOrderMutation,
   useGetWorkOrderQuery,
@@ -34,14 +35,15 @@ import {
 
 const workSubTypes = {
   maintenance: ['General Maintenance', 'Preventive Maintenance', 'Inspection'],
-  repair: ['Plumbing', 'Electrical', 'Structural', 'Appliance'],
+  repair: ['Plumbing', 'Electrical', 'HVAC', 'Appliance'],
   installation: ['New Appliance', 'Fixture Installation', 'System Upgrade'],
 };
 
 const WorkOrderForm = () => {
-  const { id } = useParams();
   const navigate = useNavigate();
+  const { id } = useParams();
   const isEdit = Boolean(id);
+  const [photos, setPhotos] = useState([]);
 
   // Removed photo functionality - not working properly
 
@@ -311,7 +313,14 @@ const WorkOrderForm = () => {
               </CardContent>
             </Card>
           </Grid>
-          {/* Photo functionality removed - was not working properly */}
+          <Grid item xs={12}>
+            <PhotoUpload 
+              photos={photos}
+              onPhotosChange={setPhotos}
+              maxPhotos={10}
+              workOrderId={id}
+            />
+          </Grid>
           <Grid item xs={12}>
             <Card>
               <CardHeader title="Assignment & Priority" />

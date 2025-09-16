@@ -2,22 +2,49 @@ import { apiSlice } from '../app/api/apiSlice';
 
 // Photo upload service for work orders
 export const photoService = {
-  // Upload photo to work order
-  uploadPhoto: async (workOrderId, file, description = '') => {
+  // Upload photos to work order
+  uploadWorkOrderPhotos: async (workOrderId, files, description = '') => {
     const formData = new FormData();
-    formData.append('photo', file);
+    files.forEach(file => {
+      formData.append('photos', file);
+    });
     formData.append('description', description);
-    formData.append('workOrderId', workOrderId);
 
     try {
-      const response = await fetch('/api/v1/upload/photo', {
+      const response = await fetch(`/api/v1/work-orders/${workOrderId}/photos`, {
         method: 'POST',
         body: formData,
         credentials: 'include'
       });
 
       if (!response.ok) {
-        throw new Error('Failed to upload photo');
+        throw new Error('Failed to upload photos');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Photo upload error:', error);
+      throw error;
+    }
+  },
+
+  // Upload photos to reminder
+  uploadReminderPhotos: async (reminderId, files, description = '') => {
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('photos', file);
+    });
+    formData.append('description', description);
+
+    try {
+      const response = await fetch(`/api/v1/reminders/${reminderId}/photos`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload photos');
       }
 
       return await response.json();
@@ -28,9 +55,28 @@ export const photoService = {
   },
 
   // Delete photo from work order
-  deletePhoto: async (workOrderId, photoId) => {
+  deleteWorkOrderPhoto: async (workOrderId, photoId) => {
     try {
       const response = await fetch(`/api/v1/work-orders/${workOrderId}/photos/${photoId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete photo');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Photo delete error:', error);
+      throw error;
+    }
+  },
+
+  // Delete photo from reminder
+  deleteReminderPhoto: async (reminderId, photoId) => {
+    try {
+      const response = await fetch(`/api/v1/reminders/${reminderId}/photos/${photoId}`, {
         method: 'DELETE',
         credentials: 'include'
       });
