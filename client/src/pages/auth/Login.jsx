@@ -12,6 +12,8 @@ import {
   Stack,
   Divider,
   Link,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { useLoginMutation } from '../../features/auth/authApiSlice';
 import { useDispatch } from 'react-redux';
@@ -20,6 +22,8 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [showPassword] = useState(false);
   const [login, { isLoading, error }] = useLoginMutation();
   const [formErrors, setFormErrors] = useState(null);
@@ -46,12 +50,30 @@ const Login = () => {
     onSubmit: async (values) => {
       try {
         setFormErrors(null);
-        await login(values).unwrap();
+        console.log('Attempting login for:', values.email);
+        
+        const result = await login(values).unwrap();
+        console.log('Login successful:', result);
+        
         // Redirect to the originally requested page or dashboard
         navigate(from, { replace: true });
       } catch (err) {
         console.error('Login error:', err);
-        setFormErrors(err?.data?.message || 'Login failed. Please try again.');
+        
+        // Better error handling for mobile
+        let errorMessage = 'Login failed. Please try again.';
+        
+        if (err?.status === 401) {
+          errorMessage = 'Invalid email or password.';
+        } else if (err?.status === 429) {
+          errorMessage = 'Too many login attempts. Please wait and try again.';
+        } else if (err?.status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        } else if (err?.data?.message) {
+          errorMessage = err.data.message;
+        }
+        
+        setFormErrors(errorMessage);
       }
     },
   });
@@ -59,8 +81,25 @@ const Login = () => {
   // simplified UI to ensure everything renders clearly
 
   return (
-    <Box>
-      <Typography component="h1" variant="h5" sx={{ mb: 2, textAlign: 'center' }}>
+    <Box sx={{ 
+      width: '100%', 
+      maxWidth: isMobile ? '100%' : 400,
+      mx: 'auto',
+      p: isMobile ? 2 : 3,
+      minHeight: isMobile ? '100vh' : 'auto',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: isMobile ? 'center' : 'flex-start'
+    }}>
+      <Typography 
+        component="h1" 
+        variant={isMobile ? "h6" : "h5"} 
+        sx={{ 
+          mb: 3, 
+          textAlign: 'center',
+          fontWeight: 'bold'
+        }}
+      >
         Sign in to your account
       </Typography>
 
@@ -71,7 +110,7 @@ const Login = () => {
       )}
 
       <form onSubmit={formik.handleSubmit}>
-        <Stack spacing={2}>
+        <Stack spacing={isMobile ? 3 : 2}>
           <TextField
             fullWidth
             id="email"
@@ -83,10 +122,14 @@ const Login = () => {
             error={formik.touched.email && Boolean(formik.errors.email)}
             helperText={formik.touched.email && formik.errors.email}
             autoComplete="email"
-            autoFocus
+            autoFocus={!isMobile}
+            size={isMobile ? "medium" : "medium"}
+            sx={{
+              '& .MuiInputBase-input': {
+                fontSize: isMobile ? '16px' : '14px', // Prevents zoom on iOS
+              }
+            }}
           />
-
-          <Divider flexItem />
 
           <TextField
             fullWidth
@@ -100,10 +143,34 @@ const Login = () => {
             error={formik.touched.password && Boolean(formik.errors.password)}
             helperText={formik.touched.password && formik.errors.password}
             autoComplete="current-password"
+            sx={{
+              '& .MuiInputBase-input': {
+                fontSize: isMobile ? '16px' : '14px', // Prevents zoom on iOS
+              }
+            }}
           />
 
-          <Button type="submit" fullWidth variant="contained" disabled={isLoading} sx={{ py: 1.5 }}>
-            {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
+          <Button 
+            type="submit" 
+            fullWidth 
+            variant="contained" 
+            disabled={isLoading || formik.isSubmitting} 
+            size={isMobile ? "large" : "medium"}
+            sx={{ 
+              py: isMobile ? 2 : 1.5,
+              fontSize: isMobile ? '18px' : '14px',
+              mt: 2,
+              position: 'relative'
+            }}
+          >
+            {(isLoading || formik.isSubmitting) ? (
+              <>
+                <CircularProgress size={24} color="inherit" sx={{ mr: 1 }} />
+                {isMobile ? 'Signing In...' : 'Loading...'}
+              </>
+            ) : (
+              'Sign In'
+            )}
           </Button>
 
           <Box textAlign="center" sx={{ mt: 2 }}>

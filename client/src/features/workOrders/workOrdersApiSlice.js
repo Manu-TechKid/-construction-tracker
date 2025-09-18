@@ -34,6 +34,13 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: (result, error, id) => [{ type: 'WorkOrder', id: 'LIST' }],
     }),
+    getWorkerAssignments: builder.query({
+      query: (workerId) => `/users/${workerId}/assignments`,
+      providesTags: (result, error, workerId) => [
+        { type: 'WorkOrder', id: 'WORKER_ASSIGNMENTS' },
+        { type: 'User', id: workerId }
+      ],
+    }),
   }),
 });
 
@@ -43,4 +50,5 @@ export const {
   useCreateWorkOrderMutation,
   useUpdateWorkOrderMutation,
   useDeleteWorkOrderMutation,
+  useGetWorkerAssignmentsQuery,
 } = workOrdersApiSlice;
