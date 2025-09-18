@@ -1,15 +1,11 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
-// Compute API base URL
-// - If REACT_APP_API_URL is provided, use it (useful for local dev)
-// - Otherwise, default to same-origin so the built client on Render calls the backend it was served from
-const apiBaseUrl =
-  process.env.REACT_APP_API_URL ||
-  (typeof window !== 'undefined' ? window.location.origin : '');
+// API configuration
+const API_BASE_URL = 'https://construction-tracker-webapp.onrender.com';
 
 // Create base query with auth headers
 const baseQuery = fetchBaseQuery({
-  baseUrl: apiBaseUrl,
+  baseUrl: API_BASE_URL,
   prepareHeaders: (headers, { getState }) => {
     const token = getState().auth.token;
     if (token) {
