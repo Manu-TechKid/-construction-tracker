@@ -6,9 +6,9 @@ services:
     nodeVersion: 20.9.0
     buildCommand: |
       npm install
-      cd server && npm install
-      cd ../client && npm install && npm run build
-    startCommand: npm start
+      cd client && npm install
+      npm run build
+    startCommand: node server/server.js
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
@@ -24,4 +24,4 @@ services:
       - key: JWT_COOKIE_EXPIRES_IN
         value: "90"
       - key: REACT_APP_API_URL
-        value: https://construction-tracker-webapp.onrender.com
+        value: https://construction-tracker.onrender.com
