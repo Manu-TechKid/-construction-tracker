@@ -304,105 +304,22 @@ exports.deleteUser = catchAsync(async (req, res, next) => {
 exports.getWorkerAssignments = catchAsync(async (req, res, next) => {
     const workerId = req.params.id;
     
-    console.log('=== Worker Assignments Debug ===');
-    console.log('Worker ID:', workerId);
-    console.log('Worker ID type:', typeof workerId);
-    
-    // First, let's see all work orders with assignments
-    const allWorkOrders = await WorkOrder.find({})
-        .populate('assignedTo.worker', 'name email')
-        .select('title assignedTo');
-    
-    console.log('All work orders with assignments:');
-    allWorkOrders.forEach(wo => {
-        console.log(`- ${wo.title}:`, wo.assignedTo.map(a => ({
-            workerId: a.worker._id.toString(),
-            workerName: a.worker.name
-        })));
-    });
-    
-    // Try multiple query approaches to find work orders
-    let workOrders = await WorkOrder.find({
+    // Simple, direct query for work orders assigned to this worker
+    const workOrders = await WorkOrder.find({
         'assignedTo.worker': workerId
     })
     .populate('building', 'name address city')
-    .populate('assignedTo.worker', 'name email phone workerProfile')
+    .populate('assignedTo.worker', 'name email')
     .populate('createdBy', 'name email')
     .sort('-scheduledDate');
     
-    // If no results, try with ObjectId conversion
-    if (workOrders.length === 0) {
-        const mongoose = require('mongoose');
-        try {
-            const objectId = new mongoose.Types.ObjectId(workerId);
-            workOrders = await WorkOrder.find({
-                'assignedTo.worker': objectId
-            })
-            .populate('building', 'name address city')
-            .populate('assignedTo.worker', 'name email phone workerProfile')
-            .populate('createdBy', 'name email')
-            .sort('-scheduledDate');
-            console.log('Found with ObjectId conversion:', workOrders.length);
-        } catch (err) {
-            console.log('ObjectId conversion failed:', err.message);
-        }
-    }
-    
-    // If still no results, try a broader search
-    if (workOrders.length === 0) {
-        const allWorkOrdersWithWorker = await WorkOrder.find({
-            'assignedTo.0': { $exists: true }
-        })
-        .populate('assignedTo.worker', 'name email')
-        .select('title assignedTo');
-        
-        workOrders = allWorkOrdersWithWorker.filter(wo => 
-            wo.assignedTo.some(assignment => 
-                assignment.worker._id.toString() === workerId
-            )
-        );
-        
-        if (workOrders.length > 0) {
-            // Re-populate with full data
-            const workOrderIds = workOrders.map(wo => wo._id);
-            workOrders = await WorkOrder.find({ _id: { $in: workOrderIds } })
-                .populate('building', 'name address city')
-                .populate('assignedTo.worker', 'name email phone workerProfile')
-                .populate('createdBy', 'name email')
-                .sort('-scheduledDate');
-            console.log('Found with manual filtering:', workOrders.length);
-        }
-    }
-    
-    console.log('Found work orders for worker:', workOrders.length);
-    console.log('Work orders:', workOrders.map(wo => ({
-        id: wo._id,
-        title: wo.title,
-        assignedTo: wo.assignedTo.map(a => ({ worker: a.worker._id, name: a.worker.name }))
-    })));
-    
-    // Add assignment details for each work order
-    const workOrdersWithAssignments = workOrders.map(workOrder => {
-        const workerAssignment = workOrder.assignedTo.find(
-            assignment => assignment.worker._id.toString() === workerId
-        );
-        
-        return {
-            ...workOrder.toObject(),
-            myAssignment: workerAssignment,
-            teamMembers: workOrder.assignedTo.filter(
-                assignment => assignment.worker._id.toString() !== workerId
-            ).map(assignment => assignment.worker)
-        };
-    });
-    
     // Calculate statistics
     const stats = {
-        total: workOrdersWithAssignments.length,
-        pending: workOrdersWithAssignments.filter(wo => wo.status === 'pending').length,
-        inProgress: workOrdersWithAssignments.filter(wo => wo.status === 'in_progress').length,
-        completed: workOrdersWithAssignments.filter(wo => wo.status === 'completed').length,
-        completedToday: workOrdersWithAssignments.filter(wo => 
+        total: workOrders.length,
+        pending: workOrders.filter(wo => wo.status === 'pending').length,
+        inProgress: workOrders.filter(wo => wo.status === 'in_progress').length,
+        completed: workOrders.filter(wo => wo.status === 'completed').length,
+        completedToday: workOrders.filter(wo => 
             wo.status === 'completed' && 
             new Date(wo.updatedAt).toDateString() === new Date().toDateString()
         ).length
@@ -410,9 +327,9 @@ exports.getWorkerAssignments = catchAsync(async (req, res, next) => {
     
     res.status(200).json({
         status: 'success',
-        results: workOrdersWithAssignments.length,
+        results: workOrders.length,
         data: {
-            workOrders: workOrdersWithAssignments,
+            workOrders,
             stats
         }
     });
