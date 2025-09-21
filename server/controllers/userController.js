@@ -304,6 +304,26 @@ exports.deleteUser = catchAsync(async (req, res, next) => {
 exports.getWorkerAssignments = catchAsync(async (req, res, next) => {
     const workerId = req.params.id;
     
+    console.log('=== Worker Assignments Debug ===');
+    console.log('Requested Worker ID:', workerId);
+    console.log('Worker ID type:', typeof workerId);
+    
+    // First, let's see all work orders with assignments to debug
+    const allWorkOrders = await WorkOrder.find({})
+        .populate('assignedTo.worker', 'name email')
+        .select('title assignedTo status');
+    
+    console.log('Total work orders in DB:', allWorkOrders.length);
+    console.log('Work orders with assignments:');
+    allWorkOrders.forEach(wo => {
+        if (wo.assignedTo && wo.assignedTo.length > 0) {
+            console.log(`- ${wo.title}:`, wo.assignedTo.map(a => ({
+                workerId: a.worker._id.toString(),
+                workerName: a.worker.name
+            })));
+        }
+    });
+    
     // Simple, direct query for work orders assigned to this worker
     const workOrders = await WorkOrder.find({
         'assignedTo.worker': workerId
@@ -312,6 +332,51 @@ exports.getWorkerAssignments = catchAsync(async (req, res, next) => {
     .populate('assignedTo.worker', 'name email')
     .populate('createdBy', 'name email')
     .sort('-scheduledDate');
+    
+    console.log('Found work orders for worker:', workOrders.length);
+    
+    // Try alternative query if no results
+    if (workOrders.length === 0) {
+        console.log('Trying alternative query methods...');
+        
+        // Try with ObjectId conversion
+        const mongoose = require('mongoose');
+        let alternativeResults = [];
+        
+        if (mongoose.Types.ObjectId.isValid(workerId)) {
+            alternativeResults = await WorkOrder.find({
+                'assignedTo.worker': new mongoose.Types.ObjectId(workerId)
+            })
+            .populate('building', 'name address city')
+            .populate('assignedTo.worker', 'name email')
+            .populate('createdBy', 'name email')
+            .sort('-scheduledDate');
+            
+            console.log('Alternative query results:', alternativeResults.length);
+        }
+        
+        // Manual filtering approach
+        const manualResults = allWorkOrders.filter(wo => 
+            wo.assignedTo.some(assignment => 
+                assignment.worker._id.toString() === workerId.toString()
+            )
+        );
+        
+        console.log('Manual filtering results:', manualResults.length);
+        
+        if (manualResults.length > 0) {
+            // Get full data for manual results
+            const workOrderIds = manualResults.map(wo => wo._id);
+            const fullWorkOrders = await WorkOrder.find({ _id: { $in: workOrderIds } })
+                .populate('building', 'name address city')
+                .populate('assignedTo.worker', 'name email')
+                .populate('createdBy', 'name email')
+                .sort('-scheduledDate');
+            
+            console.log('Using manual filtering results');
+            workOrders.push(...fullWorkOrders);
+        }
+    }
     
     // Calculate statistics
     const stats = {
@@ -324,6 +389,9 @@ exports.getWorkerAssignments = catchAsync(async (req, res, next) => {
             new Date(wo.updatedAt).toDateString() === new Date().toDateString()
         ).length
     };
+    
+    console.log('Final stats:', stats);
+    console.log('=== End Debug ===');
     
     res.status(200).json({
         status: 'success',

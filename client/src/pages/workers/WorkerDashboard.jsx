@@ -38,10 +38,20 @@ const WorkerDashboard = () => {
   const [completeDialog, setCompleteDialog] = useState({ open: false, workOrder: null });
   const [completionNotes, setCompletionNotes] = useState('');
   
+  // Debug logging
+  console.log('=== Worker Dashboard Debug ===');
+  console.log('Current user:', user);
+  console.log('User ID:', user?.id);
+  console.log('User role:', user?.role);
+  
   // Fetch worker's assigned work orders
   const { data: assignmentsData, isLoading, refetch, error } = useGetWorkerAssignmentsQuery(user?.id, {
     skip: !user?.id,
   });
+  
+  console.log('Assignments data:', assignmentsData);
+  console.log('Loading:', isLoading);
+  console.log('Error:', error);
   
   const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
   
