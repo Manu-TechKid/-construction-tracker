@@ -70,6 +70,19 @@ const WorkerDashboard = () => {
     console.log('User Role:', user?.role);
     console.log('Assignments Data:', assignmentsData);
     console.log('Error:', error);
+    
+    // Test endpoint to see all data
+    if (user?.id) {
+      fetch('/api/v1/users/test/assignments')
+        .then(res => res.json())
+        .then(data => {
+          console.log('=== TEST ENDPOINT DATA ===');
+          console.log('All workers:', data.data?.workers);
+          console.log('All work orders:', data.data?.workOrders);
+          console.log('Current user in workers list:', data.data?.workers?.find(w => w._id === user.id));
+        })
+        .catch(err => console.log('Test endpoint error:', err));
+    }
   }, [user, assignmentsData, error]);
   
   // Extract data with fallbacks
@@ -214,13 +227,26 @@ const WorkerDashboard = () => {
               Welcome back, {user?.name}! You have {stats.pending + stats.inProgress} active tasks.
             </Typography>
           </Box>
-          <IconButton 
-            onClick={refetch} 
-            sx={{ color: 'white' }}
-            disabled={isLoading}
-          >
-            <RefreshIcon />
-          </IconButton>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button 
+              variant="outlined" 
+              size="small" 
+              sx={{ color: 'white', borderColor: 'white' }}
+              onClick={() => {
+                console.log('Manual refresh clicked');
+                refetch();
+              }}
+            >
+              Refresh Data
+            </Button>
+            <IconButton 
+              onClick={refetch} 
+              sx={{ color: 'white' }}
+              disabled={isLoading}
+            >
+              <RefreshIcon />
+            </IconButton>
+          </Box>
         </Box>
       </Paper>
 

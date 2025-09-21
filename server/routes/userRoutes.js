@@ -30,6 +30,40 @@ router.patch('/:id/skills', authController.restrictTo('admin', 'manager', 'super
 router.patch('/:id/status', authController.restrictTo('admin', 'manager'), userController.updateWorkerStatus);
 router.get('/:id/assignments', userController.getWorkerAssignments);
 
+// Test endpoint to debug worker assignments
+router.get('/test/assignments', async (req, res) => {
+    try {
+        const WorkOrder = require('../models/WorkOrder');
+        const User = require('../models/User');
+        
+        // Get all workers
+        const workers = await User.find({ role: 'worker' }).select('name email');
+        
+        // Get all work orders with assignments
+        const workOrders = await WorkOrder.find({})
+            .populate('assignedTo.worker', 'name email role')
+            .select('title assignedTo status');
+        
+        res.json({
+            success: true,
+            data: {
+                workers: workers,
+                workOrders: workOrders.map(wo => ({
+                    title: wo.title,
+                    status: wo.status,
+                    assignedTo: wo.assignedTo.map(a => ({
+                        workerId: a.worker._id,
+                        workerName: a.worker.name,
+                        workerRole: a.worker.role
+                    }))
+                }))
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Admin routes - restrict to admin and manager
 router.use(authController.restrictTo('admin', 'manager'));
 
