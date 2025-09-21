@@ -63,6 +63,15 @@ const WorkerDashboard = () => {
   
   const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
   
+  // Debug logging
+  useEffect(() => {
+    console.log('Worker Dashboard Debug:');
+    console.log('User ID:', user?.id);
+    console.log('User Role:', user?.role);
+    console.log('Assignments Data:', assignmentsData);
+    console.log('Error:', error);
+  }, [user, assignmentsData, error]);
+  
   // Extract data with fallbacks
   const workOrders = assignmentsData?.data?.workOrders || [];
   const stats = assignmentsData?.data?.stats || {

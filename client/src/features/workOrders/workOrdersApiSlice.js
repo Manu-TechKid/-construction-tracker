@@ -17,7 +17,10 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
         method: 'POST',
         body: workOrder,
       }),
-      invalidatesTags: [{ type: 'WorkOrder', id: 'LIST' }],
+      invalidatesTags: [
+        { type: 'WorkOrder', id: 'LIST' },
+        { type: 'WorkOrder', id: 'WORKER_ASSIGNMENTS' }
+      ],
     }),
     updateWorkOrder: builder.mutation({
       query: ({ id, ...workOrder }) => ({
@@ -25,7 +28,11 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
         method: 'PATCH',
         body: workOrder,
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'WorkOrder', id }],
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'WorkOrder', id },
+        { type: 'WorkOrder', id: 'LIST' },
+        { type: 'WorkOrder', id: 'WORKER_ASSIGNMENTS' }
+      ],
     }),
     deleteWorkOrder: builder.mutation({
       query: (id) => ({
