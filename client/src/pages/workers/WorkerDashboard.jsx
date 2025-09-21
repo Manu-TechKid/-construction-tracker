@@ -129,6 +129,39 @@ const WorkerDashboard = () => {
         <Typography variant="body1" color="text.secondary">
           Welcome back, {user?.name}!
         </Typography>
+        <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+          <Button 
+            variant="outlined" 
+            onClick={() => {
+              console.log('Manual refresh triggered');
+              refetch();
+            }}
+            startIcon={<RefreshIcon />}
+          >
+            Refresh Data
+          </Button>
+          <Button 
+            variant="outlined" 
+            color="secondary"
+            onClick={async () => {
+              try {
+                const response = await fetch(`/api/v1/users/${user?.id}/assignments`, {
+                  headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                  }
+                });
+                const data = await response.json();
+                console.log('Direct API call result:', data);
+                alert(`API Response: ${JSON.stringify(data, null, 2)}`);
+              } catch (error) {
+                console.error('Direct API call error:', error);
+                alert(`API Error: ${error.message}`);
+              }
+            }}
+          >
+            Test API Call
+          </Button>
+        </Box>
       </Box>
 
       {/* Summary Cards */}

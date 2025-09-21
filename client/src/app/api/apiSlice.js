@@ -7,8 +7,8 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 const apiBaseUrl =
   process.env.REACT_APP_API_URL ||
   (typeof window !== 'undefined' && window.location.hostname === 'localhost' 
-    ? 'https://construction-tracker-server.webapp.onrender.com/api/v1'
-    : (typeof window !== 'undefined' ? window.location.origin : ''));
+    ? 'https://construction-tracker-webapp.onrender.com/api/v1'
+    : (typeof window !== 'undefined' ? window.location.origin + '/api/v1' : ''));
 
 console.log('API Base URL:', apiBaseUrl);
 
