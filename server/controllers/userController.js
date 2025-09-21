@@ -302,18 +302,50 @@ exports.deleteUser = catchAsync(async (req, res, next) => {
 
 // Get worker assignments
 exports.getWorkerAssignments = catchAsync(async (req, res, next) => {
+    const workerId = req.params.id;
+    
+    // Find work orders where this worker is assigned
     const workOrders = await WorkOrder.find({
-        'assignedTo.worker': req.params.id
+        'assignedTo.worker': workerId
     })
-    .populate('building')
-    .populate('assignedTo.worker', 'name email')
-    .sort('-createdAt');
+    .populate('building', 'name address city')
+    .populate('assignedTo.worker', 'name email phone workerProfile')
+    .populate('createdBy', 'name email')
+    .sort('-scheduledDate');
+    
+    // Add assignment details for each work order
+    const workOrdersWithAssignments = workOrders.map(workOrder => {
+        const workerAssignment = workOrder.assignedTo.find(
+            assignment => assignment.worker._id.toString() === workerId
+        );
+        
+        return {
+            ...workOrder.toObject(),
+            myAssignment: workerAssignment,
+            teamMembers: workOrder.assignedTo.filter(
+                assignment => assignment.worker._id.toString() !== workerId
+            ).map(assignment => assignment.worker)
+        };
+    });
+    
+    // Calculate statistics
+    const stats = {
+        total: workOrdersWithAssignments.length,
+        pending: workOrdersWithAssignments.filter(wo => wo.status === 'pending').length,
+        inProgress: workOrdersWithAssignments.filter(wo => wo.status === 'in_progress').length,
+        completed: workOrdersWithAssignments.filter(wo => wo.status === 'completed').length,
+        completedToday: workOrdersWithAssignments.filter(wo => 
+            wo.status === 'completed' && 
+            new Date(wo.updatedAt).toDateString() === new Date().toDateString()
+        ).length
+    };
     
     res.status(200).json({
         status: 'success',
-        results: workOrders.length,
+        results: workOrdersWithAssignments.length,
         data: {
-            workOrders
+            workOrders: workOrdersWithAssignments,
+            stats
         }
     });
 });
