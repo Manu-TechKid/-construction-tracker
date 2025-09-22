@@ -17,18 +17,24 @@ import {
   TextField,
   useTheme,
   useMediaQuery,
-  CircularProgress
+  CircularProgress,
+  Tabs,
+  Tab,
+  Paper
 } from '@mui/material';
 import {
   CheckCircle as CompleteIcon,
   Assignment as TaskIcon,
   Schedule as ScheduleIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  AccessTime as TimeIcon,
+  Dashboard as DashboardIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { useGetWorkerAssignmentsQuery, useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 import { toast } from 'react-toastify';
 import { formatDate } from '../../utils/dateUtils';
+import EnhancedTimeTracker from '../../components/timeTracking/EnhancedTimeTracker';
 
 const WorkerDashboard = () => {
   const { user } = useAuth();
@@ -37,6 +43,7 @@ const WorkerDashboard = () => {
   
   const [completeDialog, setCompleteDialog] = useState({ open: false, workOrder: null });
   const [completionNotes, setCompletionNotes] = useState('');
+  const [selectedTab, setSelectedTab] = useState(0);
   
   // Fetch worker's assigned work orders with real-time polling
   const { data: assignmentsData, isLoading, refetch, error } = useGetWorkerAssignmentsQuery(user?.id, {
@@ -145,102 +152,131 @@ const WorkerDashboard = () => {
         </Button>
       </Box>
 
-      {/* Summary Cards */}
-      <Grid container spacing={isMobile ? 2 : 3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={4}>
-          <Card sx={{ textAlign: 'center', p: 2 }}>
-            <TaskIcon color="primary" sx={{ fontSize: 40, mb: 1 }} />
-            <Typography variant="h4" color="primary">
-              {pendingOrders.length}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Pending Tasks
-            </Typography>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <Card sx={{ textAlign: 'center', p: 2 }}>
-            <CompleteIcon color="success" sx={{ fontSize: 40, mb: 1 }} />
-            <Typography variant="h4" color="success.main">
-              {completedToday.length}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Completed Today
-            </Typography>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <Card sx={{ textAlign: 'center', p: 2 }}>
-            <ScheduleIcon color="warning" sx={{ fontSize: 40, mb: 1 }} />
-            <Typography variant="h4" color="warning.main">
-              {workOrders.length}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Total Assignments
-            </Typography>
-          </Card>
-        </Grid>
-      </Grid>
+      {/* Tabs */}
+      <Paper sx={{ mb: 3 }}>
+        <Tabs 
+          value={selectedTab} 
+          onChange={(e, newValue) => setSelectedTab(newValue)}
+          variant={isMobile ? 'fullWidth' : 'standard'}
+        >
+          <Tab 
+            label="My Tasks" 
+            icon={<DashboardIcon />}
+            iconPosition="start"
+          />
+          <Tab 
+            label="Time Tracking" 
+            icon={<TimeIcon />}
+            iconPosition="start"
+          />
+        </Tabs>
+      </Paper>
 
-      {/* Pending Tasks */}
-      <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
-        My Tasks ({pendingOrders.length})
-      </Typography>
-      
-      {pendingOrders.length === 0 ? (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          No pending tasks assigned. Great job!
-        </Alert>
-      ) : (
-        <Grid container spacing={isMobile ? 2 : 3}>
-          {pendingOrders.map((workOrder) => (
-            <Grid item xs={12} sm={6} md={4} key={workOrder._id}>
-              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography variant="h6" gutterBottom noWrap>
-                    {workOrder.title}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    {workOrder.description}
-                  </Typography>
-                  
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="caption" display="block">
-                      <strong>Building:</strong> {workOrder.building?.name}
-                    </Typography>
-                    <Typography variant="caption" display="block">
-                      <strong>Apartment:</strong> {workOrder.apartmentNumber || 'N/A'}
-                    </Typography>
-                    <Typography variant="caption" display="block">
-                      <strong>Block:</strong> {workOrder.block || 'N/A'}
-                    </Typography>
-                    <Typography variant="caption" display="block">
-                      <strong>Due:</strong> {formatDate(workOrder.scheduledDate)}
-                    </Typography>
-                  </Box>
-                  
-                  <Chip 
-                    label={workOrder.priority} 
-                    color={workOrder.priority === 'high' ? 'error' : workOrder.priority === 'medium' ? 'warning' : 'default'}
-                    size="small"
-                  />
-                </CardContent>
-                <CardActions>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    color="success"
-                    startIcon={<CompleteIcon />}
-                    onClick={() => handleCompleteTask(workOrder)}
-                    size={isMobile ? "large" : "medium"}
-                  >
-                    Mark Complete
-                  </Button>
-                </CardActions>
+      {/* Tab Content */}
+      {selectedTab === 0 && (
+        <>
+          {/* Summary Cards */}
+          <Grid container spacing={isMobile ? 2 : 3} sx={{ mb: 4 }}>
+            <Grid item xs={12} sm={4}>
+              <Card sx={{ textAlign: 'center', p: 2 }}>
+                <TaskIcon color="primary" sx={{ fontSize: 40, mb: 1 }} />
+                <Typography variant="h4" color="primary">
+                  {pendingOrders.length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Pending Tasks
+                </Typography>
               </Card>
             </Grid>
-          ))}
-        </Grid>
+            <Grid item xs={12} sm={4}>
+              <Card sx={{ textAlign: 'center', p: 2 }}>
+                <CompleteIcon color="success" sx={{ fontSize: 40, mb: 1 }} />
+                <Typography variant="h4" color="success.main">
+                  {completedToday.length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Completed Today
+                </Typography>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Card sx={{ textAlign: 'center', p: 2 }}>
+                <ScheduleIcon color="warning" sx={{ fontSize: 40, mb: 1 }} />
+                <Typography variant="h4" color="warning.main">
+                  {workOrders.length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Total Assignments
+                </Typography>
+              </Card>
+            </Grid>
+          </Grid>
+
+          {/* Pending Tasks */}
+          <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+            My Tasks ({pendingOrders.length})
+          </Typography>
+          
+          {pendingOrders.length === 0 ? (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              No pending tasks assigned. Great job!
+            </Alert>
+          ) : (
+            <Grid container spacing={isMobile ? 2 : 3}>
+              {pendingOrders.map((workOrder) => (
+                <Grid item xs={12} sm={6} md={4} key={workOrder._id}>
+                  <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <CardContent sx={{ flexGrow: 1 }}>
+                      <Typography variant="h6" gutterBottom noWrap>
+                        {workOrder.title}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        {workOrder.description}
+                      </Typography>
+                      
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="caption" display="block">
+                          <strong>Building:</strong> {workOrder.building?.name}
+                        </Typography>
+                        <Typography variant="caption" display="block">
+                          <strong>Apartment:</strong> {workOrder.apartmentNumber || 'N/A'}
+                        </Typography>
+                        <Typography variant="caption" display="block">
+                          <strong>Block:</strong> {workOrder.block || 'N/A'}
+                        </Typography>
+                        <Typography variant="caption" display="block">
+                          <strong>Due:</strong> {formatDate(workOrder.scheduledDate)}
+                        </Typography>
+                      </Box>
+                      
+                      <Chip 
+                        label={workOrder.priority} 
+                        color={workOrder.priority === 'high' ? 'error' : workOrder.priority === 'medium' ? 'warning' : 'default'}
+                        size="small"
+                      />
+                    </CardContent>
+                    <CardActions>
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        color="success"
+                        startIcon={<CompleteIcon />}
+                        onClick={() => handleCompleteTask(workOrder)}
+                        size={isMobile ? "large" : "medium"}
+                      >
+                        Mark Complete
+                      </Button>
+                    </CardActions>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+        </>
+      )}
+
+      {selectedTab === 1 && (
+        <EnhancedTimeTracker />
       )}
 
       {/* Completion Dialog */}

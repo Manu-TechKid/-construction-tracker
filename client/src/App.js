@@ -52,6 +52,7 @@ import BuildingSchedule from './pages/scheduling/BuildingSchedule';
 import WorkerDashboard from './pages/workers/WorkerDashboard';
 import EditWorker from './pages/workers/EditWorker';
 import WorkerApproval from './pages/admin/WorkerApproval';
+import ProjectsPendingApproval from './pages/admin/ProjectsPendingApproval';
 import ApartmentSearch from './pages/search/ApartmentSearch';
 
 // Route Protection
@@ -336,6 +337,16 @@ const AppContent = () => {
                 element={
                   <RoleBasedRoute requiredPermissions={['approve:workers']}>
                     <WorkerApproval />
+                  </RoleBasedRoute>
+                } 
+              />
+
+              {/* Projects Pending Approval */}
+              <Route 
+                path="projects-pending-approval" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['view:costs', 'manage:users']}>
+                    <ProjectsPendingApproval />
                   </RoleBasedRoute>
                 } 
               />

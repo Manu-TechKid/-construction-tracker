@@ -12,7 +12,8 @@ const ROLE_PERMISSIONS = {
     'read:reminders', 'create:reminders', 'update:reminders', 'delete:reminders',
     'read:schedules', 'create:schedules', 'update:schedules', 'delete:schedules',
     'read:notes', 'create:notes', 'update:notes', 'delete:notes',
-    'assign:workers', 'manage:users', 'view:costs', 'view:reports', 'approve:workers'
+    'read:timetracking', 'create:timetracking', 'update:timetracking', 'delete:timetracking',
+    'approve:timetracking', 'assign:workers', 'manage:users', 'view:costs', 'view:reports', 'approve:workers'
   ],
   manager: [
     'read:buildings', 'create:buildings', 'update:buildings', 'delete:buildings',
@@ -22,6 +23,7 @@ const ROLE_PERMISSIONS = {
     'read:reminders', 'create:reminders', 'update:reminders', 'delete:reminders',
     'read:schedules', 'create:schedules', 'update:schedules', 'delete:schedules',
     'read:notes', 'create:notes', 'update:notes', 'delete:notes',
+    'read:timetracking', 'create:timetracking', 'update:timetracking', 'approve:timetracking',
     'assign:workers', 'view:costs', 'view:reports', 'approve:workers'
   ],
   supervisor: [
@@ -30,11 +32,13 @@ const ROLE_PERMISSIONS = {
     'read:reminders', 'create:reminders', 'update:reminders',
     'read:schedules', 'create:schedules', 'update:schedules',
     'read:notes', 'create:notes', 'update:notes',
+    'read:timetracking', 'create:timetracking', 'update:timetracking',
     'assign:workers', 'view:costs'
   ],
   worker: [
     'read:workorders', 'update:workorders:own',
     'read:schedules:own', 'read:notes:own', 'create:notes:own',
+    'read:timetracking:own', 'create:timetracking:own', 'update:timetracking:own',
     'view:dashboard:worker'
   ]
 };

@@ -22,6 +22,7 @@ const noteRoutes = require('./routes/noteRoutes');
 const reminderRoutes = require('./routes/reminderRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const searchRoutes = require('./routes/searchRoutes');
+const timeTrackingRoutes = require('./routes/timeTrackingRoutes');
 
 // Import routes
 const AppError = require('./utils/appError');
@@ -102,10 +103,16 @@ app.use(
   })
 );
 
-// Create uploads directory if it doesn't exist
+// Create uploads directories if they don't exist
 const uploadsDir = path.join(__dirname, 'public/uploads/photos');
+const timeTrackingUploadsDir = path.join(__dirname, 'public/uploads/time-tracking');
+
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+if (!fs.existsSync(timeTrackingUploadsDir)) {
+  fs.mkdirSync(timeTrackingUploadsDir, { recursive: true });
 }
 
 // Serving static files
@@ -146,6 +153,7 @@ app.use('/api/v1/notes', noteRoutes);
 app.use('/api/v1/reminders', reminderRoutes);
 app.use('/api/v1/uploads', uploadRoutes);
 app.use('/api/v1/search', searchRoutes);
+app.use('/api/v1/time-tracking', timeTrackingRoutes);
 
 // Health check endpoints
 app.get('/api/v1/health', (req, res) => {

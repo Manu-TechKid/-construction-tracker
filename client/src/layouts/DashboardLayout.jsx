@@ -35,6 +35,8 @@ import {
   Work as WorkIcon,
   CheckCircle as ApprovalIcon,
   Search as SearchIcon,
+  AccessTime as TimeIcon,
+  Approval as ProjectApprovalIcon,
 } from '@mui/icons-material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
@@ -157,6 +159,16 @@ const DashboardLayout = () => {
         icon: <ApprovalIcon />,
         path: '/worker-approval',
         permission: 'approve:workers'
+      });
+    }
+
+    // Projects Pending Approval - for admins/managers
+    if (!isWorker && hasPermission(['view:costs', 'manage:users'])) {
+      items.push({
+        text: 'Projects Pending Approval',
+        icon: <ProjectApprovalIcon />,
+        path: '/projects-pending-approval',
+        permission: 'view:costs'
       });
     }
 
