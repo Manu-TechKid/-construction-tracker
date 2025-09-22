@@ -1,6 +1,8 @@
 const WorkOrder = require('../models/WorkOrder');
 const Building = require('../models/Building');
 const User = require('../models/User');
+const WorkType = require('../models/WorkType');
+const WorkSubType = require('../models/WorkSubType');
 
 // @desc    Create a new work order
 // @route   POST /api/v1/work-orders
@@ -18,6 +20,18 @@ exports.createWorkOrder = async (req, res) => {
     const buildingExists = await Building.findById(building);
     if (!buildingExists) {
       return res.status(404).json({ message: 'Building not found.' });
+    }
+
+    // Verify work type exists
+    const workTypeExists = await WorkType.findById(workType);
+    if (!workTypeExists) {
+      return res.status(404).json({ message: 'Work type not found.' });
+    }
+
+    // Verify work sub-type exists
+    const workSubTypeExists = await WorkSubType.findById(workSubType);
+    if (!workSubTypeExists) {
+      return res.status(404).json({ message: 'Work sub-type not found.' });
     }
 
     const workOrderData = { ...req.body, createdBy: req.user._id };
@@ -41,6 +55,8 @@ exports.getAllWorkOrders = async (req, res) => {
   try {
     const workOrders = await WorkOrder.find()
       .populate('building', 'name')
+      .populate('workType', 'name code color')
+      .populate('workSubType', 'name code estimatedDuration estimatedCost')
       .populate('assignedTo.worker', 'name email')
       .populate('createdBy', 'name email');
       
@@ -57,6 +73,8 @@ exports.getWorkOrderById = async (req, res) => {
   try {
     const workOrder = await WorkOrder.findById(req.params.id)
       .populate('building', 'name address')
+      .populate('workType', 'name code color')
+      .populate('workSubType', 'name code estimatedDuration estimatedCost')
       .populate('assignedTo.worker', 'name email')
       .populate('createdBy', 'name email');
 
@@ -82,6 +100,22 @@ exports.updateWorkOrder = async (req, res) => {
     }
 
     const updateData = { ...req.body, updatedBy: req.user._id };
+
+    // Validate work type if provided
+    if (updateData.workType) {
+      const workTypeExists = await WorkType.findById(updateData.workType);
+      if (!workTypeExists) {
+        return res.status(404).json({ message: 'Work type not found.' });
+      }
+    }
+
+    // Validate work sub-type if provided
+    if (updateData.workSubType) {
+      const workSubTypeExists = await WorkSubType.findById(updateData.workSubType);
+      if (!workSubTypeExists) {
+        return res.status(404).json({ message: 'Work sub-type not found.' });
+      }
+    }
 
     if (updateData.assignedTo && Array.isArray(updateData.assignedTo)) {
       updateData.assignedTo = updateData.assignedTo.map(workerId => ({ worker: workerId }));

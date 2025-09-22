@@ -220,6 +220,16 @@ const DashboardLayout = () => {
       permission: 'read:all'
     });
 
+    // System Setup - Admin only
+    if (hasPermission(['manage:system'])) {
+      items.push({
+        text: 'System Setup',
+        icon: <SettingsIcon />,
+        path: '/setup',
+        permission: 'manage:system'
+      });
+    }
+
     return items;
   };
 

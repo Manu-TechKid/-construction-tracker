@@ -32,12 +32,11 @@ import {
   useGetWorkOrderQuery,
   useUpdateWorkOrderMutation,
 } from '../../features/workOrders/workOrdersApiSlice';
-
-const workSubTypes = {
-  maintenance: ['General Maintenance', 'Preventive Maintenance', 'Inspection'],
-  repair: ['Plumbing', 'Electrical', 'HVAC', 'Appliance'],
-  installation: ['New Appliance', 'Fixture Installation', 'System Upgrade'],
-};
+import {
+  useGetWorkTypesQuery,
+  useGetWorkSubTypesQuery,
+  useGetDropdownOptionsQuery
+} from '../../features/setup/setupApiSlice';
 
 const WorkOrderForm = () => {
   const navigate = useNavigate();
@@ -124,6 +123,12 @@ const WorkOrderForm = () => {
   const { data: usersData, isLoading: isLoadingUsers } = useGetUsersQuery({ role: 'worker' });
   const { data: workOrderData, isLoading: isLoadingWorkOrder } = useGetWorkOrderQuery(id, { skip: !isEdit });
   const { data: selectedBuildingData } = useGetBuildingQuery(formik.values.building, { skip: !formik.values.building });
+  
+  // Setup data queries
+  const { data: workTypesData, isLoading: isLoadingWorkTypes } = useGetWorkTypesQuery();
+  const { data: workSubTypesData, isLoading: isLoadingWorkSubTypes } = useGetWorkSubTypesQuery(formik.values.workType);
+  const { data: priorityOptionsData } = useGetDropdownOptionsQuery('priority');
+  const { data: statusOptionsData } = useGetDropdownOptionsQuery('status');
 
   const [createWorkOrder, { isLoading: isCreating }] = useCreateWorkOrderMutation();
   const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
@@ -160,7 +165,7 @@ const WorkOrderForm = () => {
     }
   }, [isEdit, workOrderData]);
 
-  if (isLoadingWorkOrder || isLoadingBuildings || isLoadingUsers) {
+  if (isLoadingWorkOrder || isLoadingBuildings || isLoadingUsers || isLoadingWorkTypes) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
         <CircularProgress />
@@ -297,10 +302,20 @@ const WorkOrderForm = () => {
                   <Grid item xs={12} sm={6}>
                     <FormControl fullWidth>
                       <InputLabel>Work Type</InputLabel>
-                      <Select id="workType" name="workType" value={formik.values.workType} onChange={formik.handleChange}>
-                        <MenuItem value="maintenance">Maintenance</MenuItem>
-                        <MenuItem value="repair">Repair</MenuItem>
-                        <MenuItem value="installation">Installation</MenuItem>
+                      <Select 
+                        id="workType" 
+                        name="workType" 
+                        value={formik.values.workType} 
+                        onChange={(e) => {
+                          formik.setFieldValue('workType', e.target.value);
+                          formik.setFieldValue('workSubType', ''); // Reset sub-type when work type changes
+                        }}
+                      >
+                        {workTypesData?.data?.workTypes?.map((workType) => (
+                          <MenuItem key={workType._id} value={workType._id}>
+                            {workType.name}
+                          </MenuItem>
+                        ))}
                       </Select>
                     </FormControl>
                   </Grid>
@@ -308,8 +323,8 @@ const WorkOrderForm = () => {
                     <FormControl fullWidth disabled={!formik.values.workType}>
                       <InputLabel>Work Sub-Type</InputLabel>
                       <Select id="workSubType" name="workSubType" value={formik.values.workSubType} onChange={formik.handleChange}>
-                        {formik.values.workType && workSubTypes[formik.values.workType]?.map(subType => (
-                          <MenuItem key={subType} value={subType}>{subType}</MenuItem>
+                        {workSubTypesData?.data?.workSubTypes?.map(subType => (
+                          <MenuItem key={subType._id} value={subType._id}>{subType.name}</MenuItem>
                         ))}
                       </Select>
                     </FormControl>
@@ -346,10 +361,11 @@ const WorkOrderForm = () => {
                     <FormControl fullWidth>
                       <InputLabel>Priority</InputLabel>
                       <Select id="priority" name="priority" value={formik.values.priority} onChange={formik.handleChange}>
-                        <MenuItem value="low">Low</MenuItem>
-                        <MenuItem value="medium">Medium</MenuItem>
-                        <MenuItem value="high">High</MenuItem>
-                        <MenuItem value="urgent">Urgent</MenuItem>
+                        {priorityOptionsData?.data?.options?.map((option) => (
+                          <MenuItem key={option.value} value={option.value}>
+                            {option.label}
+                          </MenuItem>
+                        ))}
                       </Select>
                     </FormControl>
                   </Grid>
@@ -357,11 +373,11 @@ const WorkOrderForm = () => {
                     <FormControl fullWidth>
                       <InputLabel>Status</InputLabel>
                       <Select id="status" name="status" value={formik.values.status} onChange={formik.handleChange}>
-                        <MenuItem value="pending">Pending</MenuItem>
-                        <MenuItem value="in_progress">In Progress</MenuItem>
-                        <MenuItem value="completed">Completed</MenuItem>
-                        <MenuItem value="on_hold">On Hold</MenuItem>
-                        <MenuItem value="cancelled">Cancelled</MenuItem>
+                        {statusOptionsData?.data?.options?.map((option) => (
+                          <MenuItem key={option.value} value={option.value}>
+                            {option.label}
+                          </MenuItem>
+                        ))}
                       </Select>
                     </FormControl>
                   </Grid>

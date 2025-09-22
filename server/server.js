@@ -23,6 +23,7 @@ const reminderRoutes = require('./routes/reminderRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 const timeTrackingRoutes = require('./routes/timeTrackingRoutes');
+const setupRoutes = require('./routes/setupRoutes');
 
 // Import routes
 const AppError = require('./utils/appError');
@@ -154,6 +155,7 @@ app.use('/api/v1/reminders', reminderRoutes);
 app.use('/api/v1/uploads', uploadRoutes);
 app.use('/api/v1/search', searchRoutes);
 app.use('/api/v1/time-tracking', timeTrackingRoutes);
+app.use('/api/v1/setup', setupRoutes);
 
 // Health check endpoints
 app.get('/api/v1/health', (req, res) => {

@@ -26,12 +26,13 @@ const workOrderSchema = new mongoose.Schema({
     trim: true,
   },
   workType: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'WorkType',
     required: [true, 'Work type is required'],
-    enum: ['maintenance', 'repair', 'installation', 'inspection', 'cleaning', 'renovation', 'emergency', 'preventive'],
   },
   workSubType: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'WorkSubType',
     required: [true, 'Work sub-type is required'],
   },
   priority: {

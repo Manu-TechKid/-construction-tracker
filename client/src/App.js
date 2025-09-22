@@ -53,6 +53,7 @@ import WorkerDashboard from './pages/workers/WorkerDashboard';
 import EditWorker from './pages/workers/EditWorker';
 import WorkerApproval from './pages/admin/WorkerApproval';
 import ProjectsPendingApproval from './pages/admin/ProjectsPendingApproval';
+import Setup from './pages/admin/Setup';
 import ApartmentSearch from './pages/search/ApartmentSearch';
 
 // Route Protection
@@ -347,6 +348,16 @@ const AppContent = () => {
                 element={
                   <RoleBasedRoute requiredPermissions={['view:costs', 'manage:users']}>
                     <ProjectsPendingApproval />
+                  </RoleBasedRoute>
+                } 
+              />
+
+              {/* System Setup - Admin Only */}
+              <Route 
+                path="setup" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['manage:system']}>
+                    <Setup />
                   </RoleBasedRoute>
                 } 
               />
