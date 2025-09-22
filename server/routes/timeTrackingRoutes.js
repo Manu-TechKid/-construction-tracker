@@ -1,7 +1,7 @@
 const express = require('express');
 const timeTrackingController = require('../controllers/timeTrackingController');
 const authController = require('../controllers/authController');
-const { restrictTo } = require('../middleware/roleMiddleware');
+const { restrictToRoles } = require('../middleware/roleMiddleware');
 
 const router = express.Router();
 
@@ -39,7 +39,7 @@ router.get('/sessions', timeTrackingController.getTimeSessions);
 router.get('/stats', timeTrackingController.getTimeStats);
 
 // Admin/Manager only routes
-router.use(restrictTo('admin', 'manager'));
+router.use(restrictToRoles('admin', 'manager'));
 
 // Approval management
 router.get('/pending-approvals', timeTrackingController.getPendingApprovals);
