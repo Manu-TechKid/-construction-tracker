@@ -106,13 +106,13 @@ export const setupApiSlice = createApi({
     // Migration endpoints
     runSetupMigration: builder.mutation({
       query: () => ({
-        url: '/migration/run-setup-migration',
+        url: '/setup/run-migration',
         method: 'POST',
       }),
       invalidatesTags: ['WorkType', 'WorkSubType', 'DropdownConfig'],
     }),
     getMigrationStatus: builder.query({
-      query: () => '/migration/migration-status',
+      query: () => '/setup/migration-status',
     }),
   }),
 });

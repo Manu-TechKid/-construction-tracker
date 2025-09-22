@@ -37,4 +37,8 @@ router.route('/dropdown-configs/:id')
 // Get dropdown options by category
 router.get('/dropdown-options/:category', setupController.getDropdownOptions);
 
+// Migration endpoints
+router.post('/run-migration', restrictToRoles('admin'), setupController.runSetupMigration);
+router.get('/migration-status', restrictToRoles('admin'), setupController.getMigrationStatus);
+
 module.exports = router;

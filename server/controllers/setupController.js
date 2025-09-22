@@ -3,6 +3,7 @@ const WorkSubType = require('../models/WorkSubType');
 const DropdownConfig = require('../models/DropdownConfig');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
+const { migrateSetupData } = require('../migrations/setupDataMigration');
 
 // Work Types CRUD
 exports.getAllWorkTypes = catchAsync(async (req, res, next) => {
@@ -74,4 +75,37 @@ exports.getDropdownOptions = catchAsync(async (req, res, next) => {
   if (!dropdownConfig) return next(new AppError('Dropdown config not found', 404));
   const options = dropdownConfig.options.filter(opt => opt.isActive).sort((a, b) => a.sortOrder - b.sortOrder);
   res.status(200).json({ status: 'success', data: { options } });
+});
+
+// Migration endpoints
+exports.runSetupMigration = catchAsync(async (req, res, next) => {
+  console.log('Starting setup migration via API endpoint...');
+  
+  const result = await migrateSetupData();
+  
+  res.status(200).json({
+    success: true,
+    message: 'Setup migration completed successfully!',
+    data: {
+      workTypes: result.workTypes,
+      workSubTypes: result.workSubTypes,
+      dropdownConfigs: result.dropdownConfigs
+    }
+  });
+});
+
+exports.getMigrationStatus = catchAsync(async (req, res, next) => {
+  const workTypesCount = await WorkType.countDocuments();
+  const workSubTypesCount = await WorkSubType.countDocuments();
+  const dropdownConfigsCount = await DropdownConfig.countDocuments();
+  
+  res.status(200).json({
+    success: true,
+    data: {
+      workTypes: workTypesCount,
+      workSubTypes: workSubTypesCount,
+      dropdownConfigs: dropdownConfigsCount,
+      migrationNeeded: workTypesCount === 0 && workSubTypesCount === 0 && dropdownConfigsCount === 0
+    }
+  });
 });
