@@ -467,3 +467,177 @@ exports.getPhotoStats = catchAsync(async (req, res, next) => {
     }
   });
 });
+
+// @desc    Get site photo by ID
+// @route   GET /api/v1/photos/site/photo/:photoId
+// @access  Private
+exports.getSitePhotoById = catchAsync(async (req, res, next) => {
+  const photo = await SitePhoto.findById(req.params.photoId)
+    .populate('building', 'name address')
+    .populate('createdBy', 'name email');
+
+  if (!photo) {
+    return next(new AppError('Photo not found', 404));
+  }
+
+  res.status(200).json({
+    status: 'success',
+    data: { photo }
+  });
+});
+
+// @desc    Update site photo
+// @route   PUT /api/v1/photos/site/photo/:photoId
+// @access  Private
+exports.updateSitePhoto = catchAsync(async (req, res, next) => {
+  const { photoId } = req.params;
+  const { notes, annotations, zoom, panOffset, mode } = req.body;
+
+  const photo = await SitePhoto.findById(photoId);
+  if (!photo) {
+    return next(new AppError('Photo not found', 404));
+  }
+
+  // Update fields
+  if (notes !== undefined) photo.notes = notes;
+  if (mode !== undefined) photo.mode = mode;
+  if (zoom !== undefined) photo.zoom = parseFloat(zoom);
+  
+  if (annotations) {
+    try {
+      photo.annotations = typeof annotations === 'string' ? JSON.parse(annotations) : annotations;
+    } catch (error) {
+      photo.annotations = [];
+    }
+  }
+
+  if (panOffset) {
+    try {
+      photo.panOffset = typeof panOffset === 'string' ? JSON.parse(panOffset) : panOffset;
+    } catch (error) {
+      photo.panOffset = { x: 0, y: 0 };
+    }
+  }
+
+  // Handle file uploads if present
+  if (req.files) {
+    if (req.files.originalPhoto) {
+      photo.originalPhoto = `/uploads/site-photos/${req.files.originalPhoto[0].filename}`;
+    }
+    if (req.files.annotatedPhoto) {
+      photo.annotatedPhoto = `/uploads/site-photos/${req.files.annotatedPhoto[0].filename}`;
+    }
+  }
+
+  await photo.save();
+  await photo.populate('building', 'name address');
+  await photo.populate('createdBy', 'name email');
+
+  res.status(200).json({
+    status: 'success',
+    data: { photo }
+  });
+});
+
+// @desc    Delete site photo
+// @route   DELETE /api/v1/photos/site/photo/:photoId
+// @access  Private
+exports.deleteSitePhoto = catchAsync(async (req, res, next) => {
+  const photo = await SitePhoto.findById(req.params.photoId);
+  
+  if (!photo) {
+    return next(new AppError('Photo not found', 404));
+  }
+
+  // Delete files from filesystem
+  if (photo.originalPhoto) {
+    const originalPath = path.join(__dirname, '../public', photo.originalPhoto);
+    if (fs.existsSync(originalPath)) {
+      fs.unlinkSync(originalPath);
+    }
+  }
+  
+  if (photo.annotatedPhoto) {
+    const annotatedPath = path.join(__dirname, '../public', photo.annotatedPhoto);
+    if (fs.existsSync(annotatedPath)) {
+      fs.unlinkSync(annotatedPath);
+    }
+  }
+
+  await SitePhoto.findByIdAndDelete(req.params.photoId);
+
+  res.status(204).json({
+    status: 'success',
+    data: null
+  });
+});
+
+// @desc    Get photos by type
+// @route   GET /api/v1/photos/site/:buildingId/type/:type
+// @access  Private
+exports.getPhotosByType = catchAsync(async (req, res, next) => {
+  const { buildingId, type } = req.params;
+
+  const photos = await SitePhoto.find({ 
+    building: buildingId, 
+    mode: type 
+  })
+    .populate('building', 'name address')
+    .populate('createdBy', 'name email')
+    .sort({ timestamp: -1 });
+
+  res.status(200).json({
+    status: 'success',
+    results: photos.length,
+    data: { photos }
+  });
+});
+
+// @desc    Bulk upload photos
+// @route   POST /api/v1/photos/site/bulk
+// @access  Private
+exports.bulkUploadPhotos = catchAsync(async (req, res, next) => {
+  // This is a placeholder for bulk upload functionality
+  res.status(200).json({
+    status: 'success',
+    message: 'Bulk upload functionality not yet implemented'
+  });
+});
+
+// @desc    Export building photos
+// @route   POST /api/v1/photos/site/:buildingId/export
+// @access  Private
+exports.exportBuildingPhotos = catchAsync(async (req, res, next) => {
+  // This is a placeholder for export functionality
+  res.status(200).json({
+    status: 'success',
+    message: 'Export functionality not yet implemented'
+  });
+});
+
+// @desc    Get all photos (admin)
+// @route   GET /api/v1/photos/admin/all
+// @access  Admin
+exports.getAllPhotos = catchAsync(async (req, res, next) => {
+  const photos = await SitePhoto.find()
+    .populate('building', 'name address')
+    .populate('createdBy', 'name email')
+    .sort({ timestamp: -1 });
+
+  res.status(200).json({
+    status: 'success',
+    results: photos.length,
+    data: { photos }
+  });
+});
+
+// @desc    Cleanup orphaned photos (admin)
+// @route   DELETE /api/v1/photos/admin/cleanup
+// @access  Admin
+exports.cleanupOrphanedPhotos = catchAsync(async (req, res, next) => {
+  // This is a placeholder for cleanup functionality
+  res.status(200).json({
+    status: 'success',
+    message: 'Cleanup functionality not yet implemented'
+  });
+});
