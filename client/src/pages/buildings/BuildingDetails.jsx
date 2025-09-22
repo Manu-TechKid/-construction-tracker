@@ -45,6 +45,7 @@ import {
   CalendarToday as CalendarIcon,
   Description as DescriptionIcon,
   Notifications as ReminderIcon,
+  PhotoCamera as PhotoCameraIcon,
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import ApartmentForm from '../../components/apartments/ApartmentForm';
@@ -572,16 +573,27 @@ const BuildingDetails = () => {
             </Box>
           </Box>
           
-          {hasPermission('update:buildings') && (
+          <Box sx={{ display: 'flex', gap: 2 }}>
             <Button
-              variant="contained"
+              variant="outlined"
               color="primary"
-              startIcon={<EditIcon />}
-              onClick={handleEditBuilding}
+              startIcon={<PhotoCameraIcon />}
+              onClick={() => navigate(`/buildings/${building._id}/site-visit`)}
             >
-              Edit Building
+              Site Visit
             </Button>
-          )}
+            
+            {hasPermission('update:buildings') && (
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<EditIcon />}
+                onClick={handleEditBuilding}
+              >
+                Edit Building
+              </Button>
+            )}
+          </Box>
         </Box>
         
         <Card variant="outlined">

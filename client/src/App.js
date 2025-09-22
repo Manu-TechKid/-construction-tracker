@@ -54,6 +54,7 @@ import EditWorker from './pages/workers/EditWorker';
 import WorkerApproval from './pages/admin/WorkerApproval';
 import ProjectsPendingApproval from './pages/admin/ProjectsPendingApproval';
 import Setup from './pages/admin/Setup';
+import SiteVisit from './pages/estimates/SiteVisit';
 import ApartmentSearch from './pages/search/ApartmentSearch';
 
 // Route Protection
@@ -174,6 +175,14 @@ const AppContent = () => {
                 element={
                   <RoleBasedRoute requiredPermissions={['read:buildings']}>
                     <BuildingDetails />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="buildings/:buildingId/site-visit" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['read:buildings']}>
+                    <SiteVisit />
                   </RoleBasedRoute>
                 } 
               />
