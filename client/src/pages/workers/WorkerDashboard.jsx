@@ -50,8 +50,31 @@ const WorkerDashboard = () => {
   });
   
   console.log('Assignments data:', assignmentsData);
-  console.log('Loading:', isLoading);
-  console.log('Error:', error);
+  console.log('API Error:', error);
+  
+  // Test debug endpoint
+  React.useEffect(() => {
+    if (user?.id) {
+      fetch('/api/v1/users/debug/assignments', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token')}`
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        console.log('=== DEBUG ENDPOINT RESPONSE ===');
+        console.log('Current user from backend:', data.data?.currentUser);
+        console.log('All workers:', data.data?.allWorkers);
+        console.log('All work orders:', data.data?.allWorkOrders);
+        console.log('Work orders assigned to current user:', 
+          data.data?.allWorkOrders?.filter(wo => 
+            wo.assignedTo.some(a => a.workerId === user.id)
+          )
+        );
+      })
+      .catch(err => console.log('Debug endpoint error:', err));
+    }
+  }, [user]);
   
   const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
   
@@ -129,39 +152,6 @@ const WorkerDashboard = () => {
         <Typography variant="body1" color="text.secondary">
           Welcome back, {user?.name}!
         </Typography>
-        <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
-          <Button 
-            variant="outlined" 
-            onClick={() => {
-              console.log('Manual refresh triggered');
-              refetch();
-            }}
-            startIcon={<RefreshIcon />}
-          >
-            Refresh Data
-          </Button>
-          <Button 
-            variant="outlined" 
-            color="secondary"
-            onClick={async () => {
-              try {
-                const response = await fetch(`/api/v1/users/${user?.id}/assignments`, {
-                  headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                  }
-                });
-                const data = await response.json();
-                console.log('Direct API call result:', data);
-                alert(`API Response: ${JSON.stringify(data, null, 2)}`);
-              } catch (error) {
-                console.error('Direct API call error:', error);
-                alert(`API Error: ${error.message}`);
-              }
-            }}
-          >
-            Test API Call
-          </Button>
-        </Box>
       </Box>
 
       {/* Summary Cards */}
