@@ -40,7 +40,14 @@ const ROLE_PERMISSIONS = {
 };
 
 export const useAuth = () => {
-  const user = useSelector(selectCurrentUser);
+  const rawUser = useSelector(selectCurrentUser);
+  
+  // Normalize user object to have both id and _id for compatibility
+  const user = rawUser ? {
+    ...rawUser,
+    id: rawUser._id || rawUser.id, // Ensure id field exists
+    _id: rawUser._id || rawUser.id  // Ensure _id field exists
+  } : null;
 
   const hasPermission = (requiredPermissions) => {
     if (!user || !user.role) return false;

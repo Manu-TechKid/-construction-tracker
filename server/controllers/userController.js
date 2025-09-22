@@ -304,28 +304,7 @@ exports.deleteUser = catchAsync(async (req, res, next) => {
 exports.getWorkerAssignments = catchAsync(async (req, res, next) => {
     const workerId = req.params.id;
     
-    console.log('=== Worker Assignments Debug ===');
-    console.log('Requested Worker ID:', workerId);
-    console.log('Worker ID type:', typeof workerId);
-    
-    // First, let's see what work orders exist and their assignments
-    const allWorkOrders = await WorkOrder.find({})
-        .populate('assignedTo.worker', 'name email')
-        .select('title assignedTo status');
-    
-    console.log('Total work orders in database:', allWorkOrders.length);
-    console.log('Work orders with assignments:');
-    allWorkOrders.forEach((wo, index) => {
-        if (wo.assignedTo && wo.assignedTo.length > 0) {
-            console.log(`${index + 1}. ${wo.title} (${wo.status}):`);
-            wo.assignedTo.forEach(assignment => {
-                console.log(`   - Worker ID: ${assignment.worker._id} (${assignment.worker.name})`);
-                console.log(`   - Match: ${assignment.worker._id.toString() === workerId}`);
-            });
-        }
-    });
-    
-    // Simple, direct query for work orders assigned to this worker
+    // Find work orders assigned to this worker
     const workOrders = await WorkOrder.find({
         'assignedTo.worker': workerId
     })
@@ -333,8 +312,6 @@ exports.getWorkerAssignments = catchAsync(async (req, res, next) => {
     .populate('assignedTo.worker', 'name email')
     .populate('createdBy', 'name email')
     .sort('-scheduledDate');
-    
-    console.log('Found work orders for worker:', workOrders.length);
     
     // Calculate statistics
     const stats = {

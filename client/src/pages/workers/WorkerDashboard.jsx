@@ -38,43 +38,10 @@ const WorkerDashboard = () => {
   const [completeDialog, setCompleteDialog] = useState({ open: false, workOrder: null });
   const [completionNotes, setCompletionNotes] = useState('');
   
-  // Debug logging
-  console.log('=== Worker Dashboard Debug ===');
-  console.log('Current user:', user);
-  console.log('User ID:', user?.id);
-  console.log('User role:', user?.role);
-  
   // Fetch worker's assigned work orders
   const { data: assignmentsData, isLoading, refetch, error } = useGetWorkerAssignmentsQuery(user?.id, {
     skip: !user?.id,
   });
-  
-  console.log('Assignments data:', assignmentsData);
-  console.log('API Error:', error);
-  
-  // Test debug endpoint
-  React.useEffect(() => {
-    if (user?.id) {
-      fetch('/api/v1/users/debug/assignments', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token')}`
-        }
-      })
-      .then(res => res.json())
-      .then(data => {
-        console.log('=== DEBUG ENDPOINT RESPONSE ===');
-        console.log('Current user from backend:', data.data?.currentUser);
-        console.log('All workers:', data.data?.allWorkers);
-        console.log('All work orders:', data.data?.allWorkOrders);
-        console.log('Work orders assigned to current user:', 
-          data.data?.allWorkOrders?.filter(wo => 
-            wo.assignedTo.some(a => a.workerId === user.id)
-          )
-        );
-      })
-      .catch(err => console.log('Debug endpoint error:', err));
-    }
-  }, [user]);
   
   const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
   
