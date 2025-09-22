@@ -1,7 +1,7 @@
 const express = require('express');
 const setupController = require('../controllers/setupController');
 const authController = require('../controllers/authController');
-const { restrictTo } = require('../middleware/roleMiddleware');
+const { restrictToRoles } = require('../middleware/roleMiddleware');
 
 const router = express.Router();
 
@@ -11,28 +11,28 @@ router.use(authController.protect);
 // Work Types routes
 router.route('/work-types')
   .get(setupController.getAllWorkTypes)
-  .post(restrictTo('admin'), setupController.createWorkType);
+  .post(restrictToRoles('admin'), setupController.createWorkType);
 
 router.route('/work-types/:id')
-  .put(restrictTo('admin'), setupController.updateWorkType)
-  .delete(restrictTo('admin'), setupController.deleteWorkType);
+  .put(restrictToRoles('admin'), setupController.updateWorkType)
+  .delete(restrictToRoles('admin'), setupController.deleteWorkType);
 
 // Work Sub-Types routes
 router.route('/work-subtypes')
   .get(setupController.getAllWorkSubTypes)
-  .post(restrictTo('admin'), setupController.createWorkSubType);
+  .post(restrictToRoles('admin'), setupController.createWorkSubType);
 
 router.route('/work-subtypes/:id')
-  .put(restrictTo('admin'), setupController.updateWorkSubType)
-  .delete(restrictTo('admin'), setupController.deleteWorkSubType);
+  .put(restrictToRoles('admin'), setupController.updateWorkSubType)
+  .delete(restrictToRoles('admin'), setupController.deleteWorkSubType);
 
 // Dropdown Configurations routes
 router.route('/dropdown-configs')
   .get(setupController.getAllDropdownConfigs)
-  .post(restrictTo('admin'), setupController.createDropdownConfig);
+  .post(restrictToRoles('admin'), setupController.createDropdownConfig);
 
 router.route('/dropdown-configs/:id')
-  .put(restrictTo('admin'), setupController.updateDropdownConfig);
+  .put(restrictToRoles('admin'), setupController.updateDropdownConfig);
 
 // Get dropdown options by category
 router.get('/dropdown-options/:category', setupController.getDropdownOptions);
