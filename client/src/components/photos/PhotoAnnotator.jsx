@@ -24,7 +24,7 @@ import {
 import {
   PhotoCamera,
   Edit as DrawIcon,
-  StraightIcon as LineIcon,
+  Timeline as LineIcon,
   CropFree as RectangleIcon,
   RadioButtonUnchecked as CircleIcon,
   FormatShapes as ShapeIcon,
