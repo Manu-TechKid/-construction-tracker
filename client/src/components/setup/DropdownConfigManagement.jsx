@@ -11,7 +11,8 @@ import { toast } from 'react-toastify';
 import {
   useGetDropdownConfigsQuery,
   useCreateDropdownConfigMutation,
-  useUpdateDropdownConfigMutation
+  useUpdateDropdownConfigMutation,
+  useDeleteDropdownConfigMutation
 } from '../../features/setup/setupApiSlice';
 
 const DropdownConfigManagement = () => {
@@ -27,6 +28,7 @@ const DropdownConfigManagement = () => {
   const { data: dropdownConfigsData, isLoading } = useGetDropdownConfigsQuery();
   const [createDropdownConfig] = useCreateDropdownConfigMutation();
   const [updateDropdownConfig] = useUpdateDropdownConfigMutation();
+  const [deleteDropdownConfig] = useDeleteDropdownConfigMutation();
 
   const categories = [
     'priority', 'status', 'apartment_status', 'building_type',
@@ -59,6 +61,17 @@ const DropdownConfigManagement = () => {
     setFormData(config);
     setEditingId(config._id);
     setOpen(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this dropdown configuration?')) {
+      try {
+        await deleteDropdownConfig(id).unwrap();
+        toast.success('Dropdown config deleted successfully');
+      } catch (error) {
+        toast.error('Failed to delete dropdown config');
+      }
+    }
   };
 
   const addOption = () => {
@@ -110,6 +123,9 @@ const DropdownConfigManagement = () => {
                 <TableCell>
                   <IconButton onClick={() => handleEdit(config)} size="small">
                     <Edit />
+                  </IconButton>
+                  <IconButton onClick={() => handleDelete(config._id)} size="small" color="error">
+                    <Delete />
                   </IconButton>
                 </TableCell>
               </TableRow>

@@ -32,18 +32,24 @@ exports.deleteWorkType = catchAsync(async (req, res, next) => {
 exports.getAllWorkSubTypes = catchAsync(async (req, res, next) => {
   const filter = { isActive: true };
   if (req.query.workType) filter.workType = req.query.workType;
-  const workSubTypes = await WorkSubType.find(filter).populate('workType').sort({ sortOrder: 1 });
+  const workSubTypes = await WorkSubType.find(filter)
+    .populate('workType', 'name code color icon')
+    .populate('createdBy', 'name')
+    .populate('updatedBy', 'name')
+    .sort({ sortOrder: 1, name: 1 });
   res.status(200).json({ status: 'success', data: { workSubTypes } });
 });
 
 exports.createWorkSubType = catchAsync(async (req, res, next) => {
   const workSubType = await WorkSubType.create({ ...req.body, createdBy: req.user.id });
+  await workSubType.populate('workType', 'name code color icon');
   res.status(201).json({ status: 'success', data: { workSubType } });
 });
 
 exports.updateWorkSubType = catchAsync(async (req, res, next) => {
   const workSubType = await WorkSubType.findByIdAndUpdate(req.params.id, { ...req.body, updatedBy: req.user.id }, { new: true });
   if (!workSubType) return next(new AppError('Work sub-type not found', 404));
+  await workSubType.populate('workType', 'name code color icon');
   res.status(200).json({ status: 'success', data: { workSubType } });
 });
 
@@ -68,6 +74,12 @@ exports.updateDropdownConfig = catchAsync(async (req, res, next) => {
   const dropdownConfig = await DropdownConfig.findByIdAndUpdate(req.params.id, { ...req.body, updatedBy: req.user.id }, { new: true });
   if (!dropdownConfig) return next(new AppError('Dropdown config not found', 404));
   res.status(200).json({ status: 'success', data: { dropdownConfig } });
+});
+
+exports.deleteDropdownConfig = catchAsync(async (req, res, next) => {
+  const dropdownConfig = await DropdownConfig.findByIdAndUpdate(req.params.id, { isActive: false, updatedBy: req.user.id });
+  if (!dropdownConfig) return next(new AppError('Dropdown config not found', 404));
+  res.status(204).json({ status: 'success', data: null });
 });
 
 exports.getDropdownOptions = catchAsync(async (req, res, next) => {

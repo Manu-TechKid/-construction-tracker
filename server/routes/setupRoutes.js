@@ -32,7 +32,8 @@ router.route('/dropdown-configs')
   .post(restrictToRoles('admin'), setupController.createDropdownConfig);
 
 router.route('/dropdown-configs/:id')
-  .put(restrictToRoles('admin'), setupController.updateDropdownConfig);
+  .put(restrictToRoles('admin'), setupController.updateDropdownConfig)
+  .delete(restrictToRoles('admin'), setupController.deleteDropdownConfig);
 
 // Get dropdown options by category
 router.get('/dropdown-options/:category', setupController.getDropdownOptions);

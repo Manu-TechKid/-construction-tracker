@@ -96,6 +96,13 @@ export const setupApiSlice = createApi({
       }),
       invalidatesTags: ['DropdownConfig'],
     }),
+    deleteDropdownConfig: builder.mutation({
+      query: (id) => ({
+        url: `/setup/dropdown-configs/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['DropdownConfig'],
+    }),
 
     // Get dropdown options by category
     getDropdownOptions: builder.query({
@@ -129,6 +136,7 @@ export const {
   useGetDropdownConfigsQuery,
   useCreateDropdownConfigMutation,
   useUpdateDropdownConfigMutation,
+  useDeleteDropdownConfigMutation,
   useGetDropdownOptionsQuery,
   useRunSetupMigrationMutation,
   useGetMigrationStatusQuery,
