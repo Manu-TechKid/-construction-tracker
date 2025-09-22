@@ -38,9 +38,12 @@ const WorkerDashboard = () => {
   const [completeDialog, setCompleteDialog] = useState({ open: false, workOrder: null });
   const [completionNotes, setCompletionNotes] = useState('');
   
-  // Fetch worker's assigned work orders
+  // Fetch worker's assigned work orders with real-time polling
   const { data: assignmentsData, isLoading, refetch, error } = useGetWorkerAssignmentsQuery(user?.id, {
     skip: !user?.id,
+    pollingInterval: 30000, // Poll every 30 seconds for real-time updates
+    refetchOnMountOrArgChange: true, // Always refetch when component mounts
+    refetchOnFocus: true, // Refetch when window gains focus
   });
   
   const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
@@ -56,10 +59,18 @@ const WorkerDashboard = () => {
   };
   
   const pendingOrders = workOrders.filter(wo => wo.status === 'pending' || wo.status === 'in_progress');
-  const completedToday = workOrders.filter(wo => 
-    wo.status === 'completed' && 
-    new Date(wo.updatedAt).toDateString() === new Date().toDateString()
-  );
+  
+  // Calculate completed today more accurately
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  const completedToday = workOrders.filter(wo => {
+    if (wo.status !== 'completed') return false;
+    const updatedDate = new Date(wo.updatedAt);
+    return updatedDate >= today && updatedDate < tomorrow;
+  });
   
   
 
@@ -112,13 +123,26 @@ const WorkerDashboard = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 2, mb: 4, px: isMobile ? 1 : 3 }}>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant={isMobile ? "h5" : "h4"} component="h1" gutterBottom>
-          My Dashboard
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Welcome back, {user?.name}!
-        </Typography>
+      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box>
+          <Typography variant={isMobile ? "h5" : "h4"} component="h1" gutterBottom>
+            My Dashboard
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Welcome back, {user?.name}!
+          </Typography>
+        </Box>
+        <Button
+          variant="outlined"
+          startIcon={<RefreshIcon />}
+          onClick={() => {
+            refetch();
+            toast.info('Refreshing assignments...');
+          }}
+          disabled={isLoading}
+        >
+          Refresh
+        </Button>
       </Box>
 
       {/* Summary Cards */}

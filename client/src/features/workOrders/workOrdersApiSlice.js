@@ -31,7 +31,9 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
       invalidatesTags: (result, error, { id }) => [
         { type: 'WorkOrder', id },
         { type: 'WorkOrder', id: 'LIST' },
-        { type: 'WorkOrder', id: 'WORKER_ASSIGNMENTS' }
+        { type: 'WorkOrder', id: 'WORKER_ASSIGNMENTS' },
+        // Invalidate all user assignments since we don't know which workers are affected
+        { type: 'User', id: 'LIST' }
       ],
     }),
     deleteWorkOrder: builder.mutation({

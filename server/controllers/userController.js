@@ -314,15 +314,21 @@ exports.getWorkerAssignments = catchAsync(async (req, res, next) => {
     .sort('-scheduledDate');
     
     // Calculate statistics
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1); // Start of tomorrow
+    
     const stats = {
         total: workOrders.length,
         pending: workOrders.filter(wo => wo.status === 'pending').length,
         inProgress: workOrders.filter(wo => wo.status === 'in_progress').length,
         completed: workOrders.filter(wo => wo.status === 'completed').length,
-        completedToday: workOrders.filter(wo => 
-            wo.status === 'completed' && 
-            new Date(wo.updatedAt).toDateString() === new Date().toDateString()
-        ).length
+        completedToday: workOrders.filter(wo => {
+            if (wo.status !== 'completed') return false;
+            const updatedDate = new Date(wo.updatedAt);
+            return updatedDate >= today && updatedDate < tomorrow;
+        }).length
     };
     
     res.status(200).json({
