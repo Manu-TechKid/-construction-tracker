@@ -5,41 +5,30 @@ const { restrictToRoles } = require('../middleware/roleMiddleware');
 
 const router = express.Router();
 
-// Protect all routes
-router.use(authController.protect);
+// Work Types routes - GET is public, POST/PUT/DELETE require auth
+router.get('/work-types', setupController.getAllWorkTypes);
+router.post('/work-types', authController.protect, restrictToRoles('admin'), setupController.createWorkType);
 
-// Work Types routes
-router.route('/work-types')
-  .get(setupController.getAllWorkTypes)
-  .post(restrictToRoles('admin'), setupController.createWorkType);
+router.put('/work-types/:id', authController.protect, restrictToRoles('admin'), setupController.updateWorkType);
+router.delete('/work-types/:id', authController.protect, restrictToRoles('admin'), setupController.deleteWorkType);
 
-router.route('/work-types/:id')
-  .put(restrictToRoles('admin'), setupController.updateWorkType)
-  .delete(restrictToRoles('admin'), setupController.deleteWorkType);
+// Work Sub-Types routes - GET is public, POST/PUT/DELETE require auth
+router.get('/work-subtypes', setupController.getAllWorkSubTypes);
+router.post('/work-subtypes', authController.protect, restrictToRoles('admin'), setupController.createWorkSubType);
+router.put('/work-subtypes/:id', authController.protect, restrictToRoles('admin'), setupController.updateWorkSubType);
+router.delete('/work-subtypes/:id', authController.protect, restrictToRoles('admin'), setupController.deleteWorkSubType);
 
-// Work Sub-Types routes
-router.route('/work-subtypes')
-  .get(setupController.getAllWorkSubTypes)
-  .post(restrictToRoles('admin'), setupController.createWorkSubType);
+// Dropdown Configurations routes - GET is public, POST/PUT/DELETE require auth
+router.get('/dropdown-configs', setupController.getAllDropdownConfigs);
+router.post('/dropdown-configs', authController.protect, restrictToRoles('admin'), setupController.createDropdownConfig);
+router.put('/dropdown-configs/:id', authController.protect, restrictToRoles('admin'), setupController.updateDropdownConfig);
+router.delete('/dropdown-configs/:id', authController.protect, restrictToRoles('admin'), setupController.deleteDropdownConfig);
 
-router.route('/work-subtypes/:id')
-  .put(restrictToRoles('admin'), setupController.updateWorkSubType)
-  .delete(restrictToRoles('admin'), setupController.deleteWorkSubType);
-
-// Dropdown Configurations routes
-router.route('/dropdown-configs')
-  .get(setupController.getAllDropdownConfigs)
-  .post(restrictToRoles('admin'), setupController.createDropdownConfig);
-
-router.route('/dropdown-configs/:id')
-  .put(restrictToRoles('admin'), setupController.updateDropdownConfig)
-  .delete(restrictToRoles('admin'), setupController.deleteDropdownConfig);
-
-// Get dropdown options by category
+// Get dropdown options by category - public access
 router.get('/dropdown-options/:category', setupController.getDropdownOptions);
 
-// Migration endpoints
-router.post('/run-migration', restrictToRoles('admin'), setupController.runSetupMigration);
-router.get('/migration-status', restrictToRoles('admin'), setupController.getMigrationStatus);
+// Migration endpoints - require auth
+router.post('/run-migration', authController.protect, restrictToRoles('admin'), setupController.runSetupMigration);
+router.get('/migration-status', authController.protect, restrictToRoles('admin'), setupController.getMigrationStatus);
 
 module.exports = router;

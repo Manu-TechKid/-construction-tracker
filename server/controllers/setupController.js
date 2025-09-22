@@ -12,7 +12,11 @@ exports.getAllWorkTypes = catchAsync(async (req, res, next) => {
 });
 
 exports.createWorkType = catchAsync(async (req, res, next) => {
-  const workType = await WorkType.create({ ...req.body, createdBy: req.user.id });
+  const workTypeData = { ...req.body };
+  if (req.user && req.user.id) {
+    workTypeData.createdBy = req.user.id;
+  }
+  const workType = await WorkType.create(workTypeData);
   res.status(201).json({ status: 'success', data: { workType } });
 });
 
@@ -41,7 +45,11 @@ exports.getAllWorkSubTypes = catchAsync(async (req, res, next) => {
 });
 
 exports.createWorkSubType = catchAsync(async (req, res, next) => {
-  const workSubType = await WorkSubType.create({ ...req.body, createdBy: req.user.id });
+  const workSubTypeData = { ...req.body };
+  if (req.user && req.user.id) {
+    workSubTypeData.createdBy = req.user.id;
+  }
+  const workSubType = await WorkSubType.create(workSubTypeData);
   await workSubType.populate('workType', 'name code color icon');
   res.status(201).json({ status: 'success', data: { workSubType } });
 });
@@ -66,7 +74,11 @@ exports.getAllDropdownConfigs = catchAsync(async (req, res, next) => {
 });
 
 exports.createDropdownConfig = catchAsync(async (req, res, next) => {
-  const dropdownConfig = await DropdownConfig.create({ ...req.body, createdBy: req.user.id });
+  const dropdownConfigData = { ...req.body };
+  if (req.user && req.user.id) {
+    dropdownConfigData.createdBy = req.user.id;
+  }
+  const dropdownConfig = await DropdownConfig.create(dropdownConfigData);
   res.status(201).json({ status: 'success', data: { dropdownConfig } });
 });
 

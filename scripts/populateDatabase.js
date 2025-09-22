@@ -1,7 +1,9 @@
 const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config();
+
+// Load environment variables from the root directory
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 // Import models
 const WorkType = require('../server/models/WorkType');
@@ -14,7 +16,10 @@ const jsonData = JSON.parse(fs.readFileSync(path.join(__dirname, '../mongodb-atl
 // Connect to MongoDB
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI, {
+    const mongoUri = process.env.MONGO_URI || 'mongodb+srv://construction_admin:YQVjoW3YhYWkfmul@cluster0.0ewapuy.mongodb.net/construction_tracker?retryWrites=true&w=majority&appName=Cluster0';
+    console.log('Connecting to MongoDB with URI:', mongoUri.replace(/\/\/.*@/, '//***:***@'));
+    
+    await mongoose.connect(mongoUri, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
@@ -52,10 +57,19 @@ const importData = async () => {
     });
 
     // 2. Insert Work Sub-Types with proper workType references
-    const workSubTypesData = jsonData.workSubTypes.map(subType => ({
-      ...subType,
-      workType: workTypeMap[subType.workType.replace('_ID_HERE', '').toLowerCase()]
-    }));
+    const workSubTypesData = jsonData.workSubTypes.map(subType => {
+      let workTypeCode = '';
+      if (subType.workType.includes('MAINTENANCE')) workTypeCode = 'maintenance';
+      else if (subType.workType.includes('REPAIR')) workTypeCode = 'repair';
+      else if (subType.workType.includes('CLEANING')) workTypeCode = 'cleaning';
+      else if (subType.workType.includes('INSPECTION')) workTypeCode = 'inspection';
+      else if (subType.workType.includes('RENOVATION')) workTypeCode = 'renovation';
+      
+      return {
+        ...subType,
+        workType: workTypeMap[workTypeCode]
+      };
+    });
     
     const workSubTypes = await WorkSubType.insertMany(workSubTypesData);
     console.log(`Inserted ${workSubTypes.length} work sub-types`);
