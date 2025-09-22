@@ -29,17 +29,28 @@ const WorkSubTypesManagement = () => {
   const [deleteWorkSubType] = useDeleteWorkSubTypeMutation();
 
   const handleSubmit = async () => {
+    // Validate required fields
+    if (!formData.name || !formData.code || !formData.workType) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
     try {
+      console.log('Submitting form data:', formData);
+      
       if (editingId) {
-        await updateWorkSubType({ id: editingId, ...formData }).unwrap();
+        const result = await updateWorkSubType({ id: editingId, ...formData }).unwrap();
+        console.log('Update result:', result);
         toast.success('Work sub-type updated successfully');
       } else {
-        await createWorkSubType(formData).unwrap();
+        const result = await createWorkSubType(formData).unwrap();
+        console.log('Create result:', result);
         toast.success('Work sub-type created successfully');
       }
       handleClose();
     } catch (error) {
-      toast.error('Failed to save work sub-type');
+      console.error('Error saving work sub-type:', error);
+      toast.error(`Failed to save work sub-type: ${error.data?.message || error.message}`);
     }
   };
 
@@ -61,9 +72,25 @@ const WorkSubTypesManagement = () => {
   };
 
   const handleEdit = (workSubType) => {
+    console.log('Editing work sub-type:', workSubType);
+    
+    // Handle workType field properly - it could be an object with _id or just a string ID
+    let workTypeId = '';
+    if (workSubType.workType) {
+      if (typeof workSubType.workType === 'object' && workSubType.workType._id) {
+        workTypeId = workSubType.workType._id;
+      } else if (typeof workSubType.workType === 'string') {
+        workTypeId = workSubType.workType;
+      }
+    }
+    
     setFormData({
-      ...workSubType,
-      workType: workSubType.workType._id || workSubType.workType
+      name: workSubType.name || '',
+      code: workSubType.code || '',
+      workType: workTypeId,
+      description: workSubType.description || '',
+      estimatedDuration: workSubType.estimatedDuration || 1,
+      estimatedCost: workSubType.estimatedCost || 0
     });
     setEditingId(workSubType._id);
     setOpen(true);
@@ -119,11 +146,12 @@ const WorkSubTypesManagement = () => {
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>{editingId ? 'Edit Work Sub-Type' : 'Add Work Sub-Type'}</DialogTitle>
         <DialogContent>
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Work Type</InputLabel>
+          <FormControl fullWidth margin="normal" required>
+            <InputLabel>Work Type *</InputLabel>
             <Select
               value={formData.workType}
               onChange={(e) => setFormData({ ...formData, workType: e.target.value })}
+              required
             >
               {workTypesData?.data?.workTypes?.map((workType) => (
                 <MenuItem key={workType._id} value={workType._id}>
@@ -133,12 +161,14 @@ const WorkSubTypesManagement = () => {
             </Select>
           </FormControl>
           <TextField
-            fullWidth margin="normal" label="Name" value={formData.name}
+            fullWidth margin="normal" label="Name *" value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            required
           />
           <TextField
-            fullWidth margin="normal" label="Code" value={formData.code}
+            fullWidth margin="normal" label="Code *" value={formData.code}
             onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+            required
           />
           <TextField
             fullWidth margin="normal" label="Description" multiline rows={2}
