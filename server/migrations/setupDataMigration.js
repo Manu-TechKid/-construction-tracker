@@ -2,14 +2,24 @@ const mongoose = require('mongoose');
 const WorkType = require('../models/WorkType');
 const WorkSubType = require('../models/WorkSubType');
 const DropdownConfig = require('../models/DropdownConfig');
+const User = require('../models/User');
 
 // Migration script to populate setup data
 const migrateSetupData = async () => {
   try {
     console.log('Starting setup data migration...');
 
-    // Create default admin user ID (you'll need to replace this with actual admin ID)
-    const adminUserId = new mongoose.Types.ObjectId();
+    // Find an admin user or create a default one
+    let adminUser = await User.findOne({ role: 'admin' });
+    if (!adminUser) {
+      // If no admin exists, find any user and use their ID
+      adminUser = await User.findOne();
+      if (!adminUser) {
+        // Create a default admin user ID if no users exist
+        adminUser = { _id: new mongoose.Types.ObjectId() };
+      }
+    }
+    const adminUserId = adminUser._id;
 
     // 1. Create Work Types
     const workTypesData = [

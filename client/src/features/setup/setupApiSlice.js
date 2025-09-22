@@ -102,6 +102,18 @@ export const setupApiSlice = createApi({
       query: (category) => `/dropdown-options/${category}`,
       providesTags: (result, error, category) => [{ type: 'DropdownConfig', id: category }],
     }),
+
+    // Migration endpoints
+    runSetupMigration: builder.mutation({
+      query: () => ({
+        url: '/migration/run-setup-migration',
+        method: 'POST',
+      }),
+      invalidatesTags: ['WorkType', 'WorkSubType', 'DropdownConfig'],
+    }),
+    getMigrationStatus: builder.query({
+      query: () => '/migration/migration-status',
+    }),
   }),
 });
 
@@ -118,4 +130,6 @@ export const {
   useCreateDropdownConfigMutation,
   useUpdateDropdownConfigMutation,
   useGetDropdownOptionsQuery,
+  useRunSetupMigrationMutation,
+  useGetMigrationStatusQuery,
 } = setupApiSlice;
