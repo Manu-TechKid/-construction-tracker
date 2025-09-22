@@ -43,7 +43,7 @@ import {
   Share
 } from '@mui/icons-material';
 // import { toast } from 'react-toastify';
-import { useGetBuildingByIdQuery } from '../../features/buildings/buildingsApiSlice';
+import { useGetBuildingQuery } from '../../features/buildings/buildingsApiSlice';
 import { 
   useGetSitePhotosQuery,
   useCreateSitePhotoMutation,
@@ -67,7 +67,7 @@ const SiteVisit = () => {
   const { 
     data: building, 
     isLoading: buildingLoading 
-  } = useGetBuildingByIdQuery(buildingId);
+  } = useGetBuildingQuery(buildingId);
 
   const { 
     data: sitePhotos = [], 
