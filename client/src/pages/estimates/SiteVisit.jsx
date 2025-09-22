@@ -57,6 +57,8 @@ const SiteVisit = () => {
   const { buildingId } = useParams();
   const navigate = useNavigate();
   
+  console.log('SiteVisit component loaded, buildingId:', buildingId);
+  
   const [visitType, setVisitType] = useState('estimate');
   const [showAnnotator, setShowAnnotator] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
@@ -66,14 +68,20 @@ const SiteVisit = () => {
 
   const { 
     data: building, 
-    isLoading: buildingLoading 
+    isLoading: buildingLoading,
+    error: buildingError 
   } = useGetBuildingQuery(buildingId);
+  
+  console.log('Building data:', { building, buildingLoading, buildingError });
 
   const { 
     data: sitePhotos = [], 
     isLoading: photosLoading,
+    error: photosError,
     refetch: refetchPhotos
-  } = useGetSitePhotosQuery(buildingId);
+  } = useGetSitePhotosQuery(buildingId, {
+    skip: !buildingId
+  });
 
   const [createSitePhoto] = useCreateSitePhotoMutation();
   const [updateSitePhoto] = useUpdateSitePhotoMutation();
@@ -166,7 +174,7 @@ const SiteVisit = () => {
     });
   };
 
-  if (buildingLoading || photosLoading) {
+  if (buildingLoading) {
     return <LoadingSpinner />;
   }
 
@@ -178,255 +186,100 @@ const SiteVisit = () => {
     );
   }
 
+  if (photosError) {
+    console.error('Photos API Error:', photosError);
+  }
+
   return (
     <Box sx={{ p: 3 }}>
+      {/* Debug Info */}
+      <Alert severity="info" sx={{ mb: 2 }}>
+        Debug: Building ID: {buildingId}, Building loaded: {building ? 'Yes' : 'No'}
+        {buildingError && `, Error: ${buildingError.message || 'Unknown error'}`}
+      </Alert>
+      
       {/* Header */}
       <Box sx={{ mb: 3 }}>
-        <Breadcrumbs sx={{ mb: 2 }}>
-          <Link 
-            color="inherit" 
-            href="/buildings" 
-            onClick={(e) => {
-              e.preventDefault();
-              navigate('/buildings');
-            }}
-          >
-            Buildings
-          </Link>
-          <Link 
-            color="inherit" 
-            href={`/buildings/${buildingId}`}
-            onClick={(e) => {
-              e.preventDefault();
-              navigate(`/buildings/${buildingId}`);
-            }}
-          >
-            {building.name}
-          </Link>
-          <Typography color="text.primary">Site Visit</Typography>
-        </Breadcrumbs>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box>
-            <Typography variant="h4" gutterBottom>
-              Site Visit - {building.name}
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-              <Chip 
-                icon={<LocationIcon />} 
-                label={building.address} 
-                variant="outlined" 
-              />
-              <Chip 
-                icon={<TimeIcon />} 
-                label={formatDate(new Date())} 
-                variant="outlined" 
-              />
-            </Box>
-          </Box>
-          
-          <Button
-            variant="contained"
-            startIcon={<ArrowBack />}
-            onClick={() => navigate(`/buildings/${buildingId}`)}
-          >
-            Back to Building
-          </Button>
-        </Box>
+        <Typography variant="h4" gutterBottom>
+          Site Visit - {building?.name || 'Loading...'}
+        </Typography>
+        
+        <Button
+          variant="contained"
+          startIcon={<ArrowBack />}
+          onClick={() => navigate(`/buildings/${buildingId}`)}
+          sx={{ mb: 2 }}
+        >
+          Back to Building
+        </Button>
       </Box>
 
-      {/* Visit Type Selection */}
+      {/* Simple Visit Type Selection */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" gutterBottom>
-          Visit Type
+          Visit Type: {visitType}
         </Typography>
-        <Grid container spacing={2}>
-          {visitTypes.map((type) => (
-            <Grid item xs={12} md={4} key={type.value}>
-              <Card 
-                sx={{ 
-                  cursor: 'pointer',
-                  border: visitType === type.value ? 2 : 1,
-                  borderColor: visitType === type.value ? `${type.color}.main` : 'divider'
-                }}
-                onClick={() => setVisitType(type.value)}
-              >
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <Box sx={{ color: `${type.color}.main`, mb: 1 }}>
-                    {type.icon}
-                  </Box>
-                  <Typography variant="h6" gutterBottom>
-                    {type.label}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {type.description}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button 
+            variant={visitType === 'estimate' ? 'contained' : 'outlined'}
+            onClick={() => setVisitType('estimate')}
+          >
+            Estimate
+          </Button>
+          <Button 
+            variant={visitType === 'inspection' ? 'contained' : 'outlined'}
+            onClick={() => setVisitType('inspection')}
+          >
+            Inspection
+          </Button>
+          <Button 
+            variant={visitType === 'progress' ? 'contained' : 'outlined'}
+            onClick={() => setVisitType('progress')}
+          >
+            Progress
+          </Button>
+        </Box>
       </Paper>
 
-      {/* Photos by Type */}
-      {visitTypes.map((type) => {
-        const photos = getPhotosByType(type.value);
-        return (
-          <Paper key={type.value} sx={{ p: 3, mb: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Box sx={{ color: `${type.color}.main` }}>
-                  {type.icon}
-                </Box>
-                <Typography variant="h6">
-                  {type.label} Photos ({photos.length})
-                </Typography>
-              </Box>
-              
-              <Button
-                variant="contained"
-                color={type.color}
-                startIcon={<PhotoCamera />}
-                onClick={() => {
-                  setVisitType(type.value);
-                  setSelectedPhoto(null);
-                  setShowAnnotator(true);
-                }}
-              >
-                Take {type.label} Photo
-              </Button>
-            </Box>
-
-            {photos.length === 0 ? (
-              <Box 
-                sx={{ 
-                  textAlign: 'center', 
-                  py: 4, 
-                  color: 'text.secondary',
-                  border: '2px dashed',
-                  borderColor: 'divider',
-                  borderRadius: 1
-                }}
-              >
-                <PhotoCamera sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
-                <Typography variant="h6" gutterBottom>
-                  No {type.label.toLowerCase()} photos yet
-                </Typography>
-                <Typography variant="body2">
-                  Take your first {type.label.toLowerCase()} photo to get started
-                </Typography>
-              </Box>
-            ) : (
-              <Grid container spacing={2}>
-                {photos.map((photo) => (
-                  <Grid item xs={12} sm={6} md={4} lg={3} key={photo.id}>
-                    <Card>
-                      <CardMedia
-                        component="img"
-                        height="200"
-                        image={photo.annotatedPhoto || photo.originalPhoto}
-                        alt="Site photo"
-                      />
-                      <CardContent>
-                        <Typography variant="body2" color="text.secondary" gutterBottom>
-                          {formatDate(photo.timestamp)}
-                        </Typography>
-                        {photo.notes && (
-                          <Typography variant="body2" noWrap>
-                            {photo.notes}
-                          </Typography>
-                        )}
-                        {photo.annotations && photo.annotations.length > 0 && (
-                          <Chip 
-                            label={`${photo.annotations.length} annotations`}
-                            size="small"
-                            sx={{ mt: 1 }}
-                          />
-                        )}
-                      </CardContent>
-                      <CardActions>
-                        <Tooltip title="View/Edit">
-                          <IconButton 
-                            size="small"
-                            onClick={() => {
-                              setSelectedPhoto(photo);
-                              setVisitType(photo.mode);
-                              setShowAnnotator(true);
-                            }}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete">
-                          <IconButton 
-                            size="small"
-                            color="error"
-                            onClick={() => handleDeletePhoto(photo.id)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Tooltip>
-                      </CardActions>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-            )}
-          </Paper>
-        );
-      })}
+      {/* Photo Section */}
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Photos {photosLoading && '(Loading...)'}
+        </Typography>
+        
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => setShowAnnotator(true)}
+          sx={{ mb: 2 }}
+        >
+          Take Photo & Annotate
+        </Button>
+        
+        {sitePhotos && sitePhotos.length > 0 ? (
+          <Typography>Found {sitePhotos.length} photos</Typography>
+        ) : (
+          <Typography color="text.secondary">No photos yet</Typography>
+        )}
+      </Paper>
 
       {/* Photo Annotator Dialog */}
-      <Dialog 
-        open={showAnnotator} 
-        onClose={() => setShowAnnotator(false)}
-        maxWidth="xl"
-        fullWidth
-        PaperProps={{
-          sx: { height: '90vh' }
-        }}
-      >
-        <DialogContent sx={{ p: 0 }}>
-          <PhotoAnnotator
-            buildingId={buildingId}
-            mode={visitType}
-            initialPhoto={selectedPhoto?.originalPhoto}
-            onSave={handlePhotoSave}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Start Visit Dialog */}
-      <Dialog open={showVisitDialog} onClose={() => setShowVisitDialog(false)}>
-        <DialogTitle>Start New {visitTypes.find(t => t.value === visitType)?.label} Visit</DialogTitle>
-        <DialogContent>
-          <TextField
-            fullWidth
-            multiline
-            rows={4}
-            label="Visit Notes"
-            value={visitNotes}
-            onChange={(e) => setVisitNotes(e.target.value)}
-            placeholder="Add notes about this visit..."
-            sx={{ mt: 2 }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowVisitDialog(false)}>Cancel</Button>
-          <Button onClick={handleStartNewVisit} variant="contained">
-            Start Visit
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Floating Action Button */}
-      <Fab
-        color="primary"
-        sx={{ position: 'fixed', bottom: 16, right: 16 }}
-        onClick={() => setShowVisitDialog(true)}
-      >
-        <AddIcon />
-      </Fab>
+      {showAnnotator && (
+        <Dialog 
+          open={showAnnotator} 
+          onClose={() => setShowAnnotator(false)}
+          maxWidth="lg"
+          fullWidth
+        >
+          <DialogTitle>Photo Annotation</DialogTitle>
+          <DialogContent>
+            <Typography>Photo annotator will be loaded here</Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setShowAnnotator(false)}>Close</Button>
+          </DialogActions>
+        </Dialog>
+      )}
     </Box>
   );
 };
