@@ -42,7 +42,7 @@ import {
   Save,
   Share
 } from '@mui/icons-material';
-import { toast } from 'react-toastify';
+// import { toast } from 'react-toastify';
 import { useGetBuildingByIdQuery } from '../../features/buildings/buildingsApiSlice';
 import { 
   useGetSitePhotosQuery,
@@ -111,18 +111,18 @@ const SiteVisit = () => {
           id: selectedPhoto.id,
           ...photoData
         }).unwrap();
-        toast.success('Photo updated successfully!');
+        console.log('Photo updated successfully!');
       } else {
         // Create new photo
         await createSitePhoto(photoData).unwrap();
-        toast.success('Photo saved successfully!');
+        console.log('Photo saved successfully!');
       }
       
       setShowAnnotator(false);
       setSelectedPhoto(null);
       refetchPhotos();
     } catch (error) {
-      toast.error('Failed to save photo');
+      console.error('Failed to save photo');
       console.error('Error saving photo:', error);
     }
   };
@@ -131,10 +131,10 @@ const SiteVisit = () => {
     if (window.confirm('Are you sure you want to delete this photo?')) {
       try {
         await deleteSitePhoto(photoId).unwrap();
-        toast.success('Photo deleted successfully!');
+        console.log('Photo deleted successfully!');
         refetchPhotos();
       } catch (error) {
-        toast.error('Failed to delete photo');
+        console.error('Failed to delete photo');
         console.error('Error deleting photo:', error);
       }
     }

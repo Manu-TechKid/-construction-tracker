@@ -7,7 +7,6 @@ const catchAsync = require('../utils/catchAsync');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const PDFDocument = require('pdfkit');
 
 // Configure multer for site photo uploads
 const storage = multer.diskStorage({
