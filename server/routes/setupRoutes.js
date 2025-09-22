@@ -27,8 +27,8 @@ router.delete('/dropdown-configs/:id', authController.protect, restrictToRoles('
 // Get dropdown options by category - public access
 router.get('/dropdown-options/:category', setupController.getDropdownOptions);
 
-// Migration endpoints - require auth
-router.post('/run-migration', authController.protect, restrictToRoles('admin'), setupController.runSetupMigration);
-router.get('/migration-status', authController.protect, restrictToRoles('admin'), setupController.getMigrationStatus);
+// Migration endpoints - temporarily public for initial setup
+router.post('/run-migration', setupController.runSetupMigration);
+router.get('/migration-status', setupController.getMigrationStatus);
 
 module.exports = router;

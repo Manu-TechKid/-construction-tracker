@@ -107,7 +107,7 @@ const migrateSetupData = async () => {
       // Maintenance sub-types
       {
         name: 'General Maintenance',
-        code: 'general_maintenance',
+        code: 'general_maint',
         workType: createdWorkTypes.find(wt => wt.code === 'maintenance')._id,
         description: 'General maintenance tasks',
         estimatedDuration: 2,
@@ -116,7 +116,7 @@ const migrateSetupData = async () => {
       },
       {
         name: 'Preventive Maintenance',
-        code: 'preventive_maintenance',
+        code: 'preventive_maint',
         workType: createdWorkTypes.find(wt => wt.code === 'maintenance')._id,
         description: 'Scheduled preventive maintenance',
         estimatedDuration: 3,
@@ -175,7 +175,7 @@ const migrateSetupData = async () => {
       },
       {
         name: 'Fixture Installation',
-        code: 'fixture_installation',
+        code: 'fixture_install',
         workType: createdWorkTypes.find(wt => wt.code === 'installation')._id,
         description: 'Install fixtures and fittings',
         estimatedDuration: 2,
