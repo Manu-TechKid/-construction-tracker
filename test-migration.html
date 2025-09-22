@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Run Migration</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        .result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+    </style>
+</head>
+<body>
+    <h1>Construction Tracker - Run Migration</h1>
+    
+    <div>
+        <label>JWT Token (from browser cookies or login):</label><br>
+        <input type="text" id="token" placeholder="Your JWT token here" style="width: 500px;">
+    </div>
+    
+    <br>
+    
+    <button onclick="runMigration()">Run Setup Migration</button>
+    <button onclick="checkStatus()">Check Migration Status</button>
+    
+    <div id="result"></div>
+
+    <script>
+        const API_BASE = 'https://construction-tracker-webapp.onrender.com/api/v1';
+        
+        async function runMigration() {
+            const token = document.getElementById('token').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!token) {
+                resultDiv.innerHTML = '<div class="result error">Please enter your JWT token first</div>';
+                return;
+            }
+            
+            try {
+                resultDiv.innerHTML = '<div class="result">Running migration...</div>';
+                
+                const response = await fetch(`${API_BASE}/migration/run-setup-migration`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            <h3>Migration Successful!</h3>
+                            <p>Work Types: ${data.data.workTypes}</p>
+                            <p>Work Sub-Types: ${data.data.workSubTypes}</p>
+                            <p>Dropdown Configs: ${data.data.dropdownConfigs}</p>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">Error: ${data.message}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">Network Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function checkStatus() {
+            const token = document.getElementById('token').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!token) {
+                resultDiv.innerHTML = '<div class="result error">Please enter your JWT token first</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/migration/migration-status`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            <h3>Migration Status</h3>
+                            <p>Work Types: ${data.data.workTypes}</p>
+                            <p>Work Sub-Types: ${data.data.workSubTypes}</p>
+                            <p>Dropdown Configs: ${data.data.dropdownConfigs}</p>
+                            <p>Migration Needed: ${data.data.migrationNeeded ? 'YES' : 'NO'}</p>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">Error: ${data.message}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">Network Error: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

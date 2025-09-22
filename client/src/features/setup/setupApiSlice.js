@@ -1,7 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 const baseQuery = fetchBaseQuery({
-  baseUrl: '/api/v1/setup',
+  baseUrl: '/api/v1',
   credentials: 'include',
   prepareHeaders: (headers, { getState }) => {
     const token = getState().auth.token;
@@ -19,12 +19,12 @@ export const setupApiSlice = createApi({
   endpoints: (builder) => ({
     // Work Types
     getWorkTypes: builder.query({
-      query: () => '/work-types',
+      query: () => '/setup/work-types',
       providesTags: ['WorkType'],
     }),
     createWorkType: builder.mutation({
       query: (data) => ({
-        url: '/work-types',
+        url: '/setup/work-types',
         method: 'POST',
         body: data,
       }),
@@ -32,7 +32,7 @@ export const setupApiSlice = createApi({
     }),
     updateWorkType: builder.mutation({
       query: ({ id, ...data }) => ({
-        url: `/work-types/${id}`,
+        url: `/setup/work-types/${id}`,
         method: 'PUT',
         body: data,
       }),
@@ -40,7 +40,7 @@ export const setupApiSlice = createApi({
     }),
     deleteWorkType: builder.mutation({
       query: (id) => ({
-        url: `/work-types/${id}`,
+        url: `/setup/work-types/${id}`,
         method: 'DELETE',
       }),
       invalidatesTags: ['WorkType'],
@@ -48,12 +48,12 @@ export const setupApiSlice = createApi({
 
     // Work Sub-Types
     getWorkSubTypes: builder.query({
-      query: (workTypeId) => workTypeId ? `/work-subtypes?workType=${workTypeId}` : '/work-subtypes',
+      query: (workTypeId) => workTypeId ? `/setup/work-subtypes?workType=${workTypeId}` : '/setup/work-subtypes',
       providesTags: ['WorkSubType'],
     }),
     createWorkSubType: builder.mutation({
       query: (data) => ({
-        url: '/work-subtypes',
+        url: '/setup/work-subtypes',
         method: 'POST',
         body: data,
       }),
@@ -61,7 +61,7 @@ export const setupApiSlice = createApi({
     }),
     updateWorkSubType: builder.mutation({
       query: ({ id, ...data }) => ({
-        url: `/work-subtypes/${id}`,
+        url: `/setup/work-subtypes/${id}`,
         method: 'PUT',
         body: data,
       }),
@@ -69,7 +69,7 @@ export const setupApiSlice = createApi({
     }),
     deleteWorkSubType: builder.mutation({
       query: (id) => ({
-        url: `/work-subtypes/${id}`,
+        url: `/setup/work-subtypes/${id}`,
         method: 'DELETE',
       }),
       invalidatesTags: ['WorkSubType'],
@@ -77,12 +77,12 @@ export const setupApiSlice = createApi({
 
     // Dropdown Configurations
     getDropdownConfigs: builder.query({
-      query: () => '/dropdown-configs',
+      query: () => '/setup/dropdown-configs',
       providesTags: ['DropdownConfig'],
     }),
     createDropdownConfig: builder.mutation({
       query: (data) => ({
-        url: '/dropdown-configs',
+        url: '/setup/dropdown-configs',
         method: 'POST',
         body: data,
       }),
@@ -90,7 +90,7 @@ export const setupApiSlice = createApi({
     }),
     updateDropdownConfig: builder.mutation({
       query: ({ id, ...data }) => ({
-        url: `/dropdown-configs/${id}`,
+        url: `/setup/dropdown-configs/${id}`,
         method: 'PUT',
         body: data,
       }),
@@ -99,7 +99,7 @@ export const setupApiSlice = createApi({
 
     // Get dropdown options by category
     getDropdownOptions: builder.query({
-      query: (category) => `/dropdown-options/${category}`,
+      query: (category) => `/setup/dropdown-options/${category}`,
       providesTags: (result, error, category) => [{ type: 'DropdownConfig', id: category }],
     }),
 
