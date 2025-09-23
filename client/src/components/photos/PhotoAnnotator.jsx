@@ -37,7 +37,8 @@ import {
   Clear,
   ZoomIn,
   ZoomOut,
-  CenterFocusStrong as CenterIcon
+  CenterFocusStrong as CenterIcon,
+  Remove as EraserIcon
 } from '@mui/icons-material';
 
 const PhotoAnnotator = ({ 
@@ -67,6 +68,7 @@ const PhotoAnnotator = ({
 
   const tools = [
     { id: 'pen', icon: <DrawIcon />, label: 'Draw' },
+    { id: 'eraser', icon: <EraserIcon />, label: 'Eraser' },
     { id: 'line', icon: <LineIcon />, label: 'Line' },
     { id: 'rectangle', icon: <RectangleIcon />, label: 'Rectangle' },
     { id: 'circle', icon: <CircleIcon />, label: 'Circle' },
@@ -91,28 +93,37 @@ const PhotoAnnotator = ({
   const drawCanvas = () => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    
+
+    // Set canvas size to match display size for crisp rendering
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+
+    ctx.scale(dpr, dpr);
+
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+
     if (photo) {
       const img = new Image();
       img.onload = () => {
         // Save context
         ctx.save();
-        
+
         // Apply zoom and pan
         ctx.scale(zoom, zoom);
         ctx.translate(panOffset.x, panOffset.y);
-        
+
         // Draw image
-        ctx.drawImage(img, 0, 0, canvas.width / zoom, canvas.height / zoom);
-        
+        ctx.drawImage(img, 0, 0, canvas.width / zoom / dpr, canvas.height / zoom / dpr);
+
         // Draw annotations
         annotations.forEach(annotation => {
           drawAnnotation(ctx, annotation);
         });
-        
+
         // Restore context
         ctx.restore();
       };
@@ -140,17 +151,33 @@ const PhotoAnnotator = ({
         ctx.stroke();
         break;
 
+      case 'eraser':
+        // Use destination-out composite operation for erasing
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
+        annotation.points.forEach((point, index) => {
+          if (index === 0) {
+            ctx.moveTo(point.x, point.y);
+          } else {
+            ctx.lineTo(point.x, point.y);
+          }
+        });
+        ctx.stroke();
+        // Reset composite operation
+        ctx.globalCompositeOperation = 'source-over';
+        break;
+
       case 'line':
         ctx.beginPath();
         ctx.moveTo(annotation.startX, annotation.startY);
         ctx.lineTo(annotation.endX, annotation.endY);
         ctx.stroke();
-        
+
         // Draw measurement if exists
         if (annotation.measurement) {
           const midX = (annotation.startX + annotation.endX) / 2;
           const midY = (annotation.startY + annotation.endY) / 2;
-          
+
           ctx.fillStyle = '#ffffff';
           ctx.fillRect(midX - 30, midY - 10, 60, 20);
           ctx.fillStyle = annotation.color;
@@ -162,9 +189,9 @@ const PhotoAnnotator = ({
 
       case 'rectangle':
         ctx.strokeRect(
-          annotation.x, 
-          annotation.y, 
-          annotation.width, 
+          annotation.x,
+          annotation.y,
+          annotation.width,
           annotation.height
         );
         break;
@@ -172,10 +199,10 @@ const PhotoAnnotator = ({
       case 'circle':
         ctx.beginPath();
         ctx.arc(
-          annotation.x, 
-          annotation.y, 
-          annotation.radius, 
-          0, 
+          annotation.x,
+          annotation.y,
+          annotation.radius,
+          0,
           2 * Math.PI
         );
         ctx.stroke();
@@ -193,19 +220,19 @@ const PhotoAnnotator = ({
         ctx.moveTo(annotation.startX, annotation.startY);
         ctx.lineTo(annotation.endX, annotation.endY);
         ctx.stroke();
-        
+
         // Draw measurement arrows
         drawArrow(ctx, annotation.startX, annotation.startY, annotation.endX, annotation.endY);
         drawArrow(ctx, annotation.endX, annotation.endY, annotation.startX, annotation.startY);
-        
+
         // Draw measurement text
         const midX = (annotation.startX + annotation.endX) / 2;
         const midY = (annotation.startY + annotation.endY) / 2;
-        
+
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(midX - 40, midY - 15, 80, 30);
         ctx.strokeRect(midX - 40, midY - 15, 80, 30);
-        
+
         ctx.fillStyle = annotation.color;
         ctx.font = 'bold 14px Arial';
         ctx.textAlign = 'center';
@@ -235,12 +262,13 @@ const PhotoAnnotator = ({
   const handleCanvasMouseDown = (e) => {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left - panOffset.x * zoom) / zoom;
-    const y = (e.clientY - rect.top - panOffset.y * zoom) / zoom;
+    const dpr = window.devicePixelRatio || 1;
+    const x = ((e.clientX - rect.left) * dpr - panOffset.x * zoom * dpr) / zoom;
+    const y = ((e.clientY - rect.top) * dpr - panOffset.y * zoom * dpr) / zoom;
 
     setIsDrawing(true);
-    
-    if (currentTool === 'pen') {
+
+    if (currentTool === 'pen' || currentTool === 'eraser') {
       setCurrentPath([{ x, y }]);
     } else if (currentTool === 'line' || currentTool === 'measure') {
       setCurrentPath([{ x, y }]);
@@ -256,10 +284,14 @@ const PhotoAnnotator = ({
           fontSize: 16,
           id: Date.now()
         };
-        
+
         saveToUndoStack();
         setAnnotations(prev => [...prev, newAnnotation]);
       }
+    } else if (currentTool === 'rectangle') {
+      setCurrentPath([{ x, y }]);
+    } else if (currentTool === 'circle') {
+      setCurrentPath([{ x, y }]);
     }
   };
 
@@ -268,31 +300,33 @@ const PhotoAnnotator = ({
 
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left - panOffset.x * zoom) / zoom;
-    const y = (e.clientY - rect.top - panOffset.y * zoom) / zoom;
+    const dpr = window.devicePixelRatio || 1;
+    const x = ((e.clientX - rect.left) * dpr - panOffset.x * zoom * dpr) / zoom;
+    const y = ((e.clientY - rect.top) * dpr - panOffset.y * zoom * dpr) / zoom;
 
-    if (currentTool === 'pen') {
+    if (currentTool === 'pen' || currentTool === 'eraser') {
       setCurrentPath(prev => [...prev, { x, y }]);
     }
   };
 
   const handleCanvasMouseUp = (e) => {
     if (!isDrawing) return;
-    
+
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left - panOffset.x * zoom) / zoom;
-    const y = (e.clientY - rect.top - panOffset.y * zoom) / zoom;
+    const dpr = window.devicePixelRatio || 1;
+    const x = ((e.clientX - rect.left) * dpr - panOffset.x * zoom * dpr) / zoom;
+    const y = ((e.clientY - rect.top) * dpr - panOffset.y * zoom * dpr) / zoom;
 
     setIsDrawing(false);
     saveToUndoStack();
 
-    if (currentTool === 'pen' && currentPath.length > 0) {
+    if ((currentTool === 'pen' || currentTool === 'eraser') && currentPath.length > 0) {
       const newAnnotation = {
-        type: 'pen',
+        type: currentTool === 'eraser' ? 'eraser' : 'pen',
         points: currentPath,
         color: drawingColor,
-        lineWidth,
+        lineWidth: currentTool === 'eraser' ? lineWidth * 2 : lineWidth,
         id: Date.now()
       };
       setAnnotations(prev => [...prev, newAnnotation]);
@@ -317,6 +351,38 @@ const PhotoAnnotator = ({
         endX: x,
         endY: y
       };
+    } else if (currentTool === 'rectangle' && currentPath.length > 0) {
+      const startX = currentPath[0].x;
+      const startY = currentPath[0].y;
+      const width = x - startX;
+      const height = y - startY;
+
+      const newAnnotation = {
+        type: 'rectangle',
+        x: startX,
+        y: startY,
+        width,
+        height,
+        color: drawingColor,
+        lineWidth,
+        id: Date.now()
+      };
+      setAnnotations(prev => [...prev, newAnnotation]);
+    } else if (currentTool === 'circle' && currentPath.length > 0) {
+      const centerX = currentPath[0].x;
+      const centerY = currentPath[0].y;
+      const radius = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
+
+      const newAnnotation = {
+        type: 'circle',
+        x: centerX,
+        y: centerY,
+        radius,
+        color: drawingColor,
+        lineWidth,
+        id: Date.now()
+      };
+      setAnnotations(prev => [...prev, newAnnotation]);
     }
 
     setCurrentPath([]);
@@ -378,25 +444,46 @@ const PhotoAnnotator = ({
   };
 
   const handleSave = async () => {
-    if (!photo || !buildingId) return;
+    if (!photo || !buildingId) {
+      alert('Please take a photo first');
+      return;
+    }
 
-    const canvas = canvasRef.current;
-    const annotatedImage = canvas.toDataURL('image/jpeg', 0.9);
-    
-    const photoData = {
-      buildingId,
-      originalPhoto: photo,
-      annotatedPhoto: annotatedImage,
-      annotations,
-      notes,
-      mode,
-      timestamp: new Date().toISOString(),
-      zoom,
-      panOffset
-    };
+    try {
+      console.log('Saving photo...');
 
-    if (onSave) {
-      await onSave(photoData);
+      const canvas = canvasRef.current;
+      const annotatedImage = canvas.toDataURL('image/jpeg', 0.9);
+
+      const photoData = {
+        buildingId,
+        originalPhoto: photo,
+        annotatedPhoto: annotatedImage,
+        annotations,
+        notes,
+        mode,
+        timestamp: new Date().toISOString(),
+        zoom,
+        panOffset
+      };
+
+      console.log('Photo data prepared:', photoData);
+
+      if (onSave) {
+        await onSave(photoData);
+        console.log('Photo saved successfully!');
+      }
+    } catch (error) {
+      console.error('Error saving photo:', error);
+
+      // Show user-friendly error message
+      if (error.message && error.message.includes('fetch')) {
+        alert('Network error: Please check your connection and try again');
+      } else if (error.message && error.message.includes('Cannot refetch')) {
+        alert('Session expired: Please refresh the page and try again');
+      } else {
+        alert('Error saving photo: ' + (error.message || 'Unknown error'));
+      }
     }
   };
 
@@ -569,18 +656,19 @@ const PhotoAnnotator = ({
         {photo ? (
           <canvas
             ref={canvasRef}
-            width={800}
-            height={600}
             style={{
               border: '1px solid #ccc',
-              cursor: currentTool === 'pen' ? 'crosshair' : 'default',
+              cursor: (currentTool === 'pen' || currentTool === 'eraser') ? 'crosshair' :
+                     (currentTool === 'line' || currentTool === 'measure' || currentTool === 'rectangle' || currentTool === 'circle') ? 'crosshair' : 'default',
               width: '100%',
               height: '100%',
-              objectFit: 'contain'
+              objectFit: 'contain',
+              touchAction: 'none' // Prevent scrolling on touch devices
             }}
             onMouseDown={handleCanvasMouseDown}
             onMouseMove={handleCanvasMouseMove}
             onMouseUp={handleCanvasMouseUp}
+            onMouseLeave={() => setIsDrawing(false)}
           />
         ) : (
           <Box

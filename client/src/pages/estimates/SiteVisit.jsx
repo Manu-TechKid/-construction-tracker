@@ -111,38 +111,56 @@ const SiteVisit = () => {
 
   const handlePhotoSave = async (photoData) => {
     try {
-      if (selectedPhoto) {
-        // Update existing photo
-        await updateSitePhoto({
-          id: selectedPhoto.id,
-          ...photoData
-        }).unwrap();
-        console.log('Photo updated successfully!');
-      } else {
-        // Create new photo
-        await createSitePhoto(photoData).unwrap();
-        console.log('Photo saved successfully!');
-      }
-      
+      console.log('Saving photo with data:', photoData);
+
+      const result = await createSitePhoto(photoData).unwrap();
+      console.log('Photo saved successfully:', result);
+
+      // Refresh the photos list
+      refetchPhotos();
+
+      // Close the annotator dialog
       setShowAnnotator(false);
       setSelectedPhoto(null);
-      refetchPhotos();
+
+      // Reset form if needed
+      if (!selectedPhoto) {
+        setVisitType('estimate'); // Reset to default
+      }
+
+      return result;
     } catch (error) {
-      console.error('Failed to save photo');
       console.error('Error saving photo:', error);
+
+      // Enhanced error handling
+      if (error.status === 'FETCH_ERROR' || error.message?.includes('fetch')) {
+        throw new Error('Network error: Please check your internet connection and try again');
+      } else if (error.status === 401) {
+        throw new Error('Authentication error: Please refresh the page and log in again');
+      } else if (error.status === 403) {
+        throw new Error('Permission denied: You do not have permission to save photos');
+      } else if (error.status === 413) {
+        throw new Error('File too large: Please use a smaller image');
+      } else if (error.status >= 500) {
+        throw new Error('Server error: Please try again in a few moments');
+      } else {
+        throw new Error(error.data?.message || error.message || 'Failed to save photo');
+      }
     }
   };
 
   const handleDeletePhoto = async (photoId) => {
-    if (window.confirm('Are you sure you want to delete this photo?')) {
-      try {
-        await deleteSitePhoto(photoId).unwrap();
-        console.log('Photo deleted successfully!');
-        refetchPhotos();
-      } catch (error) {
-        console.error('Failed to delete photo');
-        console.error('Error deleting photo:', error);
-      }
+    if (!window.confirm('Are you sure you want to delete this photo?')) {
+      return;
+    }
+
+    try {
+      await deleteSitePhoto(photoId).unwrap();
+      refetchPhotos();
+      console.log('Photo deleted successfully');
+    } catch (error) {
+      console.error('Error deleting photo:', error);
+      alert('Error deleting photo: ' + (error.data?.message || error.message || 'Unknown error'));
     }
   };
 
