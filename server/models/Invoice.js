@@ -67,7 +67,7 @@ const invoiceSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Generate invoice number
+// Generate invoice number only if not provided
 invoiceSchema.pre('save', async function(next) {
     if (!this.invoiceNumber) {
         const count = await this.constructor.countDocuments();

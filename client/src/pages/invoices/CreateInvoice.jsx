@@ -36,6 +36,7 @@ import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice
 import { useGetUnbilledWorkOrdersQuery, useCreateInvoiceMutation } from '../../features/invoices/invoicesApiSlice';
 
 const validationSchema = Yup.object({
+  invoiceNumber: Yup.string().required('Invoice number is required'),
   buildingId: Yup.string().required('Building is required'),
   dueDate: Yup.date().required('Due date is required').min(new Date(), 'Due date must be in the future'),
   notes: Yup.string(),
@@ -68,6 +69,7 @@ const CreateInvoice = () => {
 
   const formik = useFormik({
     initialValues: {
+      invoiceNumber: '',
       buildingId: '',
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       notes: '',
@@ -154,7 +156,18 @@ const CreateInvoice = () => {
                 Invoice Details
               </Typography>
               
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2, mb: 3 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2, mb: 3 }}>
+                <TextField
+                  fullWidth
+                  label="Invoice Number"
+                  name="invoiceNumber"
+                  value={formik.values.invoiceNumber}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={formik.touched.invoiceNumber && Boolean(formik.errors.invoiceNumber)}
+                  helperText={formik.touched.invoiceNumber && formik.errors.invoiceNumber}
+                />
+
                 <FormControl fullWidth error={formik.touched.buildingId && Boolean(formik.errors.buildingId)}>
                   <InputLabel>Building</InputLabel>
                   <Select
@@ -191,19 +204,6 @@ const CreateInvoice = () => {
                   )}
                 />
               </Box>
-
-              <TextField
-                fullWidth
-                label="Notes"
-                name="notes"
-                value={formik.values.notes}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                multiline
-                rows={3}
-                error={formik.touched.notes && Boolean(formik.errors.notes)}
-                helperText={formik.touched.notes && formik.errors.notes}
-              />
             </CardContent>
           </Card>
 

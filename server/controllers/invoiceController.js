@@ -39,14 +39,23 @@ exports.getInvoice = catchAsync(async (req, res, next) => {
 
 // Create invoice from work orders
 exports.createInvoice = catchAsync(async (req, res, next) => {
-    const { buildingId, workOrderIds, dueDate, notes } = req.body;
+    const { invoiceNumber, buildingId, workOrderIds, dueDate, notes } = req.body;
 
     // Validate required fields
+    if (!invoiceNumber) {
+        return next(new AppError('Invoice number is required', 400));
+    }
     if (!buildingId) {
         return next(new AppError('Building ID is required', 400));
     }
     if (!workOrderIds || workOrderIds.length === 0) {
         return next(new AppError('At least one work order must be selected', 400));
+    }
+
+    // Check if invoice number already exists
+    const existingInvoice = await Invoice.findOne({ invoiceNumber });
+    if (existingInvoice) {
+        return next(new AppError('Invoice number already exists. Please choose a different number.', 400));
     }
 
     // Get work orders that haven't been invoiced yet
@@ -87,6 +96,7 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
 
     // Create invoice
     const invoice = await Invoice.create({
+        invoiceNumber,
         building: buildingId,
         workOrders: invoiceWorkOrders,
         subtotal,
