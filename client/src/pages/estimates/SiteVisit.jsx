@@ -57,7 +57,6 @@ const SiteVisit = () => {
   const { buildingId } = useParams();
   const navigate = useNavigate();
   
-  console.log('SiteVisit component loaded, buildingId:', buildingId);
   
   const [visitType, setVisitType] = useState('estimate');
   const [showAnnotator, setShowAnnotator] = useState(false);
@@ -72,7 +71,6 @@ const SiteVisit = () => {
     error: buildingError 
   } = useGetBuildingQuery(buildingId);
   
-  console.log('Building data:', { building, buildingLoading, buildingError });
 
   const { 
     data: sitePhotos = [], 
@@ -192,20 +190,17 @@ const SiteVisit = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* Debug Info */}
-      <Alert severity="info" sx={{ mb: 2 }}>
-        Debug: Building ID: {buildingId}, Building loaded: {building ? 'Yes' : 'No'}
-        {buildingError && `, Error: ${buildingError.message || 'Unknown error'}`}
-      </Alert>
-      
       {/* Header */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="h4" gutterBottom>
           Site Visit - {building?.name || 'Loading...'}
         </Typography>
+        <Typography variant="body1" color="text.secondary" gutterBottom>
+          {building?.address}
+        </Typography>
         
         <Button
-          variant="contained"
+          variant="outlined"
           startIcon={<ArrowBack />}
           onClick={() => navigate(`/buildings/${buildingId}`)}
           sx={{ mb: 2 }}
@@ -243,23 +238,85 @@ const SiteVisit = () => {
 
       {/* Photo Section */}
       <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Photos {photosLoading && '(Loading...)'}
-        </Typography>
-        
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => setShowAnnotator(true)}
-          sx={{ mb: 2 }}
-        >
-          Take Photo & Annotate
-        </Button>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6">
+            Photos {photosLoading && '(Loading...)'}
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<PhotoCamera />}
+            onClick={() => setShowAnnotator(true)}
+          >
+            Take Photo & Annotate
+          </Button>
+        </Box>
         
         {sitePhotos && sitePhotos.length > 0 ? (
-          <Typography>Found {sitePhotos.length} photos</Typography>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            {sitePhotos.map((photo, index) => (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={photo._id || index}>
+                <Card>
+                  <CardMedia
+                    component="img"
+                    height="200"
+                    image={photo.annotatedPhoto || photo.originalPhoto}
+                    alt="Site photo"
+                    sx={{ objectFit: 'cover' }}
+                  />
+                  <CardContent>
+                    <Chip 
+                      label={photo.mode || visitType}
+                      size="small"
+                      color="primary"
+                      sx={{ mb: 1 }}
+                    />
+                    {photo.notes && (
+                      <Typography variant="body2" noWrap>
+                        {photo.notes}
+                      </Typography>
+                    )}
+                    {photo.annotations && photo.annotations.length > 0 && (
+                      <Chip 
+                        label={`${photo.annotations.length} annotations`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ mt: 1 }}
+                      />
+                    )}
+                  </CardContent>
+                  <CardActions>
+                    <Button 
+                      size="small"
+                      onClick={() => {
+                        setSelectedPhoto(photo);
+                        setShowAnnotator(true);
+                      }}
+                    >
+                      Edit
+                    </Button>
+                    <Button 
+                      size="small"
+                      color="error"
+                      onClick={() => handleDeletePhoto(photo._id)}
+                    >
+                      Delete
+                    </Button>
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
         ) : (
-          <Typography color="text.secondary">No photos yet</Typography>
+          <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+            <PhotoCamera sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
+            <Typography variant="h6" gutterBottom>
+              No photos yet
+            </Typography>
+            <Typography variant="body2">
+              Take your first photo to get started with site documentation
+            </Typography>
+          </Box>
         )}
       </Paper>
 
@@ -268,16 +325,31 @@ const SiteVisit = () => {
         <Dialog 
           open={showAnnotator} 
           onClose={() => setShowAnnotator(false)}
-          maxWidth="lg"
+          maxWidth="xl"
           fullWidth
+          PaperProps={{
+            sx: { height: '90vh' }
+          }}
         >
-          <DialogTitle>Photo Annotation</DialogTitle>
-          <DialogContent>
-            <Typography>Photo annotator will be loaded here</Typography>
+          <DialogTitle>
+            Photo Annotation - {visitType.charAt(0).toUpperCase() + visitType.slice(1)}
+            <Button
+              onClick={() => setShowAnnotator(false)}
+              sx={{ float: 'right' }}
+              color="inherit"
+            >
+              Close
+            </Button>
+          </DialogTitle>
+          <DialogContent sx={{ p: 0, height: '100%' }}>
+            <PhotoAnnotator
+              buildingId={buildingId}
+              mode={visitType}
+              initialPhoto={selectedPhoto?.originalPhoto}
+              onSave={handlePhotoSave}
+              onCancel={() => setShowAnnotator(false)}
+            />
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setShowAnnotator(false)}>Close</Button>
-          </DialogActions>
         </Dialog>
       )}
     </Box>
