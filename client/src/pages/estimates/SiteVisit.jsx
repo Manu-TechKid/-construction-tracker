@@ -116,6 +116,9 @@ const SiteVisit = () => {
       const result = await createSitePhoto(photoData).unwrap();
       console.log('Photo saved successfully:', result);
 
+      // Show success message
+      alert('Photo saved successfully!');
+
       // Refresh the photos list
       refetchPhotos();
 
@@ -133,19 +136,23 @@ const SiteVisit = () => {
       console.error('Error saving photo:', error);
 
       // Enhanced error handling
+      let errorMessage = 'Failed to save photo';
       if (error.status === 'FETCH_ERROR' || error.message?.includes('fetch')) {
-        throw new Error('Network error: Please check your internet connection and try again');
+        errorMessage = 'Network connection issue. Please check your internet connection and try again.';
       } else if (error.status === 401) {
-        throw new Error('Authentication error: Please refresh the page and log in again');
+        errorMessage = 'Authentication error. Please refresh the page and log in again.';
       } else if (error.status === 403) {
-        throw new Error('Permission denied: You do not have permission to save photos');
+        errorMessage = 'Permission denied. You do not have permission to save photos.';
       } else if (error.status === 413) {
-        throw new Error('File too large: Please use a smaller image');
+        errorMessage = 'File too large. Please use a smaller image.';
       } else if (error.status >= 500) {
-        throw new Error('Server error: Please try again in a few moments');
+        errorMessage = 'Server error. Please try again in a few moments.';
       } else {
-        throw new Error(error.data?.message || error.message || 'Failed to save photo');
+        errorMessage = error.data?.message || error.message || 'Failed to save photo';
       }
+
+      alert(errorMessage);
+      throw new Error(errorMessage);
     }
   };
 

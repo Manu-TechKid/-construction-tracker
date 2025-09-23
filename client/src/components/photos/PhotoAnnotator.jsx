@@ -38,7 +38,7 @@ import {
   ZoomIn,
   ZoomOut,
   CenterFocusStrong as CenterIcon,
-  Remove as EraserIcon
+  Delete as EraserIcon
 } from '@mui/icons-material';
 
 const PhotoAnnotator = ({ 
@@ -449,6 +449,13 @@ const PhotoAnnotator = ({
       return;
     }
 
+    // Show loading state
+    const saveButton = document.querySelector('[data-testid="save-button"]');
+    if (saveButton) {
+      saveButton.disabled = true;
+      saveButton.textContent = 'Saving...';
+    }
+
     try {
       console.log('Saving photo...');
 
@@ -470,19 +477,43 @@ const PhotoAnnotator = ({
       console.log('Photo data prepared:', photoData);
 
       if (onSave) {
-        await onSave(photoData);
-        console.log('Photo saved successfully!');
+        const result = await onSave(photoData);
+        console.log('Photo saved successfully!', result);
+
+        // Show success message
+        alert('Photo saved successfully!');
+
+        return result;
       }
     } catch (error) {
       console.error('Error saving photo:', error);
 
-      // Show user-friendly error message
-      if (error.message && error.message.includes('fetch')) {
-        alert('Network error: Please check your connection and try again');
-      } else if (error.message && error.message.includes('Cannot refetch')) {
-        alert('Session expired: Please refresh the page and try again');
-      } else {
-        alert('Error saving photo: ' + (error.message || 'Unknown error'));
+      // Enhanced error handling with specific messages
+      let errorMessage = 'Failed to save photo';
+
+      if (error.message) {
+        if (error.message.includes('Network error') || error.message.includes('fetch')) {
+          errorMessage = 'Network connection issue. Please check your internet connection and try again.';
+        } else if (error.message.includes('Authentication')) {
+          errorMessage = 'Session expired. Please refresh the page and log in again.';
+        } else if (error.message.includes('Permission denied')) {
+          errorMessage = 'You do not have permission to save photos.';
+        } else if (error.message.includes('File too large')) {
+          errorMessage = 'Image file is too large. Please use a smaller image.';
+        } else if (error.message.includes('Server error')) {
+          errorMessage = 'Server temporarily unavailable. Please try again in a few moments.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      alert(errorMessage);
+      throw error;
+    } finally {
+      // Reset button state
+      if (saveButton) {
+        saveButton.disabled = false;
+        saveButton.textContent = 'Save';
       }
     }
   };
@@ -644,6 +675,7 @@ const PhotoAnnotator = ({
             startIcon={<Save />}
             onClick={handleSave}
             disabled={!photo}
+            data-testid="save-button"
             sx={{ ml: 'auto' }}
           >
             Save
