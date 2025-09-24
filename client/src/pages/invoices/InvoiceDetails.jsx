@@ -82,6 +82,15 @@ const InvoiceDetails = () => {
       </Container>
     );
   }
+
+  // Validate invoice data structure
+  if (typeof invoice !== 'object') {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4 }}>
+        <Alert severity="error">Invalid invoice data structure</Alert>
+      </Container>
+    );
+  }
   
   const handleMarkAsPaid = async () => {
     try {
@@ -123,17 +132,38 @@ const InvoiceDetails = () => {
           </IconButton>
           <Box>
             <Typography variant="h4" component="h1">
-              Invoice {invoice.invoiceNumber}
+              {(() => {
+                try {
+                  return `Invoice ${invoice.invoiceNumber || 'N/A'}`;
+                } catch (error) {
+                  console.warn('Error rendering invoice number:', error);
+                  return 'Invoice N/A';
+                }
+              })()}
             </Typography>
             <Typography variant="subtitle1" color="textSecondary">
-              {invoice.building?.name}
+              {(() => {
+                try {
+                  return invoice.building?.name || 'Unknown Building';
+                } catch (error) {
+                  console.warn('Error rendering building name:', error);
+                  return 'Unknown Building';
+                }
+              })()}
             </Typography>
           </Box>
         </Box>
         
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Chip 
-            label={invoice.status?.charAt(0).toUpperCase() + invoice.status?.slice(1) || 'Draft'}
+            label={(() => {
+              try {
+                return invoice.status?.charAt(0).toUpperCase() + invoice.status?.slice(1) || 'Draft';
+              } catch (error) {
+                console.warn('Error rendering status:', error);
+                return 'Draft';
+              }
+            })()}
             color={getStatusColor(invoice.status)}
             size="large"
           />
@@ -174,10 +204,24 @@ const InvoiceDetails = () => {
                     Building
                   </Typography>
                   <Typography variant="body1">
-                    {invoice.building?.name}
+                    {(() => {
+                      try {
+                        return invoice.building?.name || 'Unknown Building';
+                      } catch (error) {
+                        console.warn('Error rendering building name:', error);
+                        return 'Unknown Building';
+                      }
+                    })()}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    {invoice.building?.address}
+                    {(() => {
+                      try {
+                        return invoice.building?.address || 'No address available';
+                      } catch (error) {
+                        console.warn('Error rendering building address:', error);
+                        return 'No address available';
+                      }
+                    })()}
                   </Typography>
                 </Grid>
                 
@@ -224,7 +268,14 @@ const InvoiceDetails = () => {
                     Status
                   </Typography>
                   <Chip 
-                    label={invoice.status?.charAt(0).toUpperCase() + invoice.status?.slice(1) || 'Draft'}
+                    label={(() => {
+                      try {
+                        return invoice.status?.charAt(0).toUpperCase() + invoice.status?.slice(1) || 'Draft';
+                      } catch (error) {
+                        console.warn('Error rendering status:', error);
+                        return 'Draft';
+                      }
+                    })()}
                     color={getStatusColor(invoice.status)}
                     size="small"
                   />
@@ -236,7 +287,14 @@ const InvoiceDetails = () => {
                       Notes
                     </Typography>
                     <Typography variant="body2">
-                      {invoice.notes}
+                      {(() => {
+                        try {
+                          return invoice.notes || 'No notes available';
+                        } catch (error) {
+                          console.warn('Error rendering notes:', error);
+                          return 'No notes available';
+                        }
+                      })()}
                     </Typography>
                   </Grid>
                 )}
@@ -245,44 +303,101 @@ const InvoiceDetails = () => {
           </Card>
           
           {/* Work Orders */}
-          {invoice.workOrders && invoice.workOrders.length > 0 && (
-            <Card>
-              <CardHeader title="Work Orders" />
-              <CardContent>
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Work Order</TableCell>
-                        <TableCell>Description</TableCell>
-                        <TableCell align="right">Quantity</TableCell>
-                        <TableCell align="right">Unit Price</TableCell>
-                        <TableCell align="right">Total</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {invoice.workOrders.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell>
-                            <Typography variant="body2" fontWeight="medium">
-                              {item.workOrder?.title || 'Work Order'}
-                            </Typography>
-                            <Typography variant="caption" color="textSecondary">
-                              Apt: {item.workOrder?.apartmentNumber || 'N/A'}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>{item.description}</TableCell>
-                          <TableCell align="right">{item.quantity}</TableCell>
-                          <TableCell align="right">${item.unitPrice?.toFixed(2) || '0.00'}</TableCell>
-                          <TableCell align="right">${item.totalPrice?.toFixed(2) || '0.00'}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </CardContent>
-            </Card>
-          )}
+          {(() => {
+            try {
+              return invoice.workOrders && Array.isArray(invoice.workOrders) && invoice.workOrders.length > 0 ? (
+                <Card>
+                  <CardHeader title="Work Orders" />
+                  <CardContent>
+                    <TableContainer>
+                      <Table>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Work Order</TableCell>
+                            <TableCell>Description</TableCell>
+                            <TableCell align="right">Quantity</TableCell>
+                            <TableCell align="right">Unit Price</TableCell>
+                            <TableCell align="right">Total</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {invoice.workOrders.map((item, index) => (
+                            <TableRow key={index}>
+                              <TableCell>
+                                <Typography variant="body2" fontWeight="medium">
+                                  {(() => {
+                                    try {
+                                      return item.workOrder?.title || 'Work Order';
+                                    } catch (error) {
+                                      console.warn('Error rendering work order title:', error);
+                                      return 'Work Order';
+                                    }
+                                  })()}
+                                </Typography>
+                                <Typography variant="caption" color="textSecondary">
+                                  {(() => {
+                                    try {
+                                      return `Apt: ${item.workOrder?.apartmentNumber || 'N/A'}`;
+                                    } catch (error) {
+                                      console.warn('Error rendering apartment number:', error);
+                                      return 'Apt: N/A';
+                                    }
+                                  })()}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>
+                                {(() => {
+                                  try {
+                                    return item.description || 'No description';
+                                  } catch (error) {
+                                    console.warn('Error rendering description:', error);
+                                    return 'No description';
+                                  }
+                                })()}
+                              </TableCell>
+                              <TableCell align="right">
+                                {(() => {
+                                  try {
+                                    return item.quantity || 0;
+                                  } catch (error) {
+                                    console.warn('Error rendering quantity:', error);
+                                    return 0;
+                                  }
+                                })()}
+                              </TableCell>
+                              <TableCell align="right">
+                                {(() => {
+                                  try {
+                                    return `$${item.unitPrice?.toFixed(2) || '0.00'}`;
+                                  } catch (error) {
+                                    console.warn('Error rendering unit price:', error);
+                                    return '$0.00';
+                                  }
+                                })()}
+                              </TableCell>
+                              <TableCell align="right">
+                                {(() => {
+                                  try {
+                                    return `$${item.totalPrice?.toFixed(2) || '0.00'}`;
+                                  } catch (error) {
+                                    console.warn('Error rendering total price:', error);
+                                    return '$0.00';
+                                  }
+                                })()}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </CardContent>
+                </Card>
+              ) : null;
+            } catch (error) {
+              console.warn('Error rendering work orders section:', error);
+              return null;
+            }
+          })()}
         </Grid>
         
         {/* Sidebar */}
@@ -293,16 +408,43 @@ const InvoiceDetails = () => {
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="body2">Subtotal:</Typography>
-                <Typography variant="body2">${invoice.subtotal?.toFixed(2) || '0.00'}</Typography>
+                <Typography variant="body2">
+                  {(() => {
+                    try {
+                      return `$${invoice.subtotal?.toFixed(2) || '0.00'}`;
+                    } catch (error) {
+                      console.warn('Error rendering subtotal:', error);
+                      return '$0.00';
+                    }
+                  })()}
+                </Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="body2">Tax:</Typography>
-                <Typography variant="body2">${invoice.tax?.toFixed(2) || '0.00'}</Typography>
+                <Typography variant="body2">
+                  {(() => {
+                    try {
+                      return `$${invoice.tax?.toFixed(2) || '0.00'}`;
+                    } catch (error) {
+                      console.warn('Error rendering tax:', error);
+                      return '$0.00';
+                    }
+                  })()}
+                </Typography>
               </Box>
               <Divider sx={{ my: 1 }} />
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                 <Typography variant="h6">Total:</Typography>
-                <Typography variant="h6">${invoice.total?.toFixed(2) || '0.00'}</Typography>
+                <Typography variant="h6">
+                  {(() => {
+                    try {
+                      return `$${invoice.total?.toFixed(2) || '0.00'}`;
+                    } catch (error) {
+                      console.warn('Error rendering total:', error);
+                      return '$0.00';
+                    }
+                  })()}
+                </Typography>
               </Box>
             </CardContent>
           </Card>
@@ -355,7 +497,14 @@ const InvoiceDetails = () => {
         <DialogTitle>Delete Invoice</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete invoice {invoice.invoiceNumber}? 
+            Are you sure you want to delete invoice {(() => {
+              try {
+                return invoice.invoiceNumber || 'N/A';
+              } catch (error) {
+                console.warn('Error rendering invoice number in dialog:', error);
+                return 'N/A';
+              }
+            })()}? 
             This action cannot be undone and will reset the billing status of associated work orders.
           </Typography>
         </DialogContent>
