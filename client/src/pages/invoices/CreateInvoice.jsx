@@ -118,7 +118,7 @@ const CreateInvoice = () => {
 
         const invoiceData = {
           buildingId: values.buildingId,
-          workOrderIds: selectedWorkOrders.map(wo => wo._id),
+          workOrderIds: values.workOrderIds, // Use Formik values instead of state
           dueDate: values.dueDate,
           notes: values.notes,
           invoiceNumber: values.invoiceNumber?.trim() || undefined
@@ -161,7 +161,7 @@ const CreateInvoice = () => {
     console.log('Selected work orders:', selectedWorkOrders);
     console.log('Formik values:', formik.values);
 
-    if (selectedWorkOrders.length === 0) {
+    if (formik.values.workOrderIds.length === 0) { // Use Formik values for validation
       toast.error('Please select at least one work order');
       return;
     }
@@ -190,9 +190,13 @@ const CreateInvoice = () => {
     try {
       const isSelected = selectedWorkOrders.find(wo => wo._id === workOrder._id);
       if (isSelected) {
-        setSelectedWorkOrders(selectedWorkOrders.filter(wo => wo._id !== workOrder._id));
+        const newSelectedWorkOrders = selectedWorkOrders.filter(wo => wo._id !== workOrder._id);
+        setSelectedWorkOrders(newSelectedWorkOrders);
+        formik.setFieldValue('workOrderIds', newSelectedWorkOrders.map(wo => wo._id));
       } else {
-        setSelectedWorkOrders([...selectedWorkOrders, workOrder]);
+        const newSelectedWorkOrders = [...selectedWorkOrders, workOrder];
+        setSelectedWorkOrders(newSelectedWorkOrders);
+        formik.setFieldValue('workOrderIds', newSelectedWorkOrders.map(wo => wo._id));
       }
     } catch (error) {
       console.error('Error toggling work order:', error);
@@ -441,7 +445,7 @@ const CreateInvoice = () => {
             </Card>
           )}
 
-          {selectedWorkOrders.length > 0 && (
+          {formik.values.workOrderIds.length > 0 && (
             <Card sx={{ mb: 3 }}>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -449,7 +453,7 @@ const CreateInvoice = () => {
                 </Typography>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Typography>
-                    Selected Work Orders: {selectedWorkOrders.length}
+                    Selected Work Orders: {formik.values.workOrderIds.length}
                   </Typography>
                   <Typography variant="h6">
                     Total: ${calculateTotal().toFixed(2)}
@@ -470,7 +474,7 @@ const CreateInvoice = () => {
               type="submit"
               variant="contained"
               startIcon={<SaveIcon />}
-              disabled={isCreating || selectedWorkOrders.length === 0 || isSubmitting}
+              disabled={isCreating || formik.values.workOrderIds.length === 0 || isSubmitting}
             >
               {isCreating || isSubmitting ? 'Creating...' : 'Create Invoice'}
             </Button>
