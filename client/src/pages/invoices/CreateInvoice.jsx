@@ -58,33 +58,34 @@ const CreateInvoice = () => {
   
   const { data: buildingsResponse, isLoading: isLoadingBuildings, error: buildingsError } = useGetBuildingsQuery();
   const buildings = buildingsResponse?.data?.buildings || [];
-  // Debug logging
-  useEffect(() => {
-    console.log('Selected Building ID:', selectedBuildingId);
-    console.log('Work Orders Loading:', isLoadingWorkOrders);
-    console.log('Work Orders Error:', workOrdersError);
-    console.log('Work Orders Data:', workOrders);
-    console.log('Selected Work Orders:', selectedWorkOrders);
-  }, [selectedBuildingId, isLoadingWorkOrders, workOrdersError, workOrders, selectedWorkOrders]);
-  
+
   // Fetch unbilled work orders when a building is selected
-  const { 
-    data: unbilledWorkOrdersData, 
+  const {
+    data: unbilledWorkOrdersData,
     isLoading: isLoadingWorkOrders,
     error: workOrdersError
   } = useGetUnbilledWorkOrdersQuery(
     selectedBuildingId || '',
-    { 
+    {
       skip: !selectedBuildingId,
       refetchOnMountOrArgChange: true
     }
   );
-  
+
   const workOrders = unbilledWorkOrdersData?.data || [];
 
-  // Debug logging
-  console.log('API Response:', unbilledWorkOrdersData);
-  console.log('Work Orders from API:', workOrders);
+  // Debug logging - only run when values actually change
+  useEffect(() => {
+    if (selectedBuildingId || workOrders.length > 0) {
+      console.log('CreateInvoice Debug:', {
+        selectedBuildingId,
+        isLoadingWorkOrders,
+        workOrdersError,
+        workOrdersCount: workOrders.length,
+        selectedWorkOrdersCount: selectedWorkOrders.length
+      });
+    }
+  }, [selectedBuildingId, isLoadingWorkOrders, workOrders.length, selectedWorkOrders.length]);
 
   const [createInvoice, { isLoading: isCreating }] = useCreateInvoiceMutation();
 
@@ -106,20 +107,33 @@ const CreateInvoice = () => {
     validationSchema,
     onSubmit: async (values) => {
       try {
+        console.log('Submitting invoice with values:', values);
+        console.log('Selected work orders:', selectedWorkOrders);
+
+        if (selectedWorkOrders.length === 0) {
+          toast.error('Please select at least one work order');
+          return;
+        }
+
         const invoiceData = {
           buildingId: values.buildingId,
           workOrderIds: selectedWorkOrders.map(wo => wo._id),
           dueDate: values.dueDate,
           notes: values.notes,
-          invoiceNumber: values.invoiceNumber || undefined // Only send if not empty
+          invoiceNumber: values.invoiceNumber?.trim() || undefined
         };
 
-        await createInvoice(invoiceData).unwrap();
+        console.log('Invoice data being sent:', invoiceData);
+
+        const result = await createInvoice(invoiceData).unwrap();
+        console.log('Invoice creation result:', result);
+
         toast.success('Invoice created successfully!');
         navigate('/invoices');
       } catch (error) {
         console.error('Invoice creation error:', error);
-        toast.error(error?.data?.message || 'Failed to create invoice');
+        const errorMessage = error?.data?.message || error?.message || 'Failed to create invoice';
+        toast.error(errorMessage);
       }
     }
   });
@@ -140,21 +154,44 @@ const CreateInvoice = () => {
   };
 
   const handleWorkOrderToggle = (workOrder) => {
-    const isSelected = selectedWorkOrders.find(wo => wo._id === workOrder._id);
-    if (isSelected) {
-      setSelectedWorkOrders(selectedWorkOrders.filter(wo => wo._id !== workOrder._id));
-    } else {
-      setSelectedWorkOrders([...selectedWorkOrders, workOrder]);
+    try {
+      const isSelected = selectedWorkOrders.find(wo => wo._id === workOrder._id);
+      if (isSelected) {
+        setSelectedWorkOrders(selectedWorkOrders.filter(wo => wo._id !== workOrder._id));
+      } else {
+        setSelectedWorkOrders([...selectedWorkOrders, workOrder]);
+      }
+    } catch (error) {
+      console.error('Error toggling work order:', error);
+      toast.error('Error selecting work order');
     }
   };
 
   const handleBuildingChange = (event) => {
-    const buildingId = event.target.value;
-    formik.setFieldValue('buildingId', buildingId);
-    formik.setFieldValue('workOrderIds', []);
-    setSelectedWorkOrders([]);
-    setSelectedBuildingId(buildingId); // This was missing!
+    try {
+      const buildingId = event.target.value;
+      formik.setFieldValue('buildingId', buildingId);
+      formik.setFieldValue('workOrderIds', []);
+      setSelectedWorkOrders([]);
+      setSelectedBuildingId(buildingId);
+    } catch (error) {
+      console.error('Error changing building:', error);
+      toast.error('Error selecting building');
+    }
   };
+
+  // Error boundary for the component
+  if (buildingsError) {
+    return (
+      <Container maxWidth="lg">
+        <Box sx={{ p: 3 }}>
+          <Alert severity="error">
+            Error loading buildings: {buildingsError.message}
+          </Alert>
+        </Box>
+      </Container>
+    );
+  }
 
   if (isLoadingBuildings) {
     return (
@@ -232,22 +269,19 @@ const CreateInvoice = () => {
                 </Grid>
                 
                 <Grid item xs={12} md={6}>
-                  <LocalizationProvider dateAdapter={AdapterDateFns}>
-                    <DatePicker
-                      label="Due Date"
-                      value={formik.values.dueDate}
-                      onChange={(date) => formik.setFieldValue('dueDate', date)}
-                      minDate={new Date()}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          fullWidth
-                          error={formik.touched.dueDate && Boolean(formik.errors.dueDate)}
-                          helperText={formik.touched.dueDate && formik.errors.dueDate}
-                        />
-                      )}
-                    />
-                  </LocalizationProvider>
+                  <DatePicker
+                    label="Due Date"
+                    value={formik.values.dueDate}
+                    onChange={(date) => formik.setFieldValue('dueDate', date)}
+                    minDate={new Date()}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        error: formik.touched.dueDate && Boolean(formik.errors.dueDate),
+                        helperText: formik.touched.dueDate && formik.errors.dueDate
+                      }
+                    }}
+                  />
                 </Grid>
                 
                 <Grid item xs={12}>
@@ -284,7 +318,7 @@ const CreateInvoice = () => {
                   <Typography variant="body2">Work Orders Count: {workOrders.length}</Typography>
                   <Typography variant="body2">Selected Work Orders: {selectedWorkOrders.length}</Typography>
                 </Alert>
-                
+
                 {isLoadingWorkOrders ? (
                   <Box display="flex" justifyContent="center" p={3}>
                     <CircularProgress />
@@ -294,6 +328,15 @@ const CreateInvoice = () => {
                     Error loading work orders: {workOrdersError?.message || 'Unknown error'}
                     <br />
                     <small>Building ID: {selectedBuildingId}</small>
+                    <br />
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => window.location.reload()}
+                      sx={{ mt: 1 }}
+                    >
+                      Retry
+                    </Button>
                   </Alert>
                 ) : workOrders.length === 0 ? (
                   <Alert severity="info">
@@ -302,6 +345,15 @@ const CreateInvoice = () => {
                     <small>Building ID: {selectedBuildingId}</small>
                     <br />
                     <small>Make sure you have work orders with pending billing status for this building.</small>
+                    <br />
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => setSelectedBuildingId('')}
+                      sx={{ mt: 1 }}
+                    >
+                      Select Different Building
+                    </Button>
                   </Alert>
                 ) : (
                   <TableContainer component={Paper}>
@@ -317,7 +369,7 @@ const CreateInvoice = () => {
                       </TableHead>
                       <TableBody>
                         {workOrders.map((workOrder) => (
-                          <TableRow key={workOrder._id}>
+                          <TableRow key={workOrder._id} hover>
                             <TableCell padding="checkbox">
                               <Checkbox
                                 checked={selectedWorkOrders.some(wo => wo._id === workOrder._id)}
@@ -325,17 +377,17 @@ const CreateInvoice = () => {
                               />
                             </TableCell>
                             <TableCell>
-                              {workOrder.title}
+                              {workOrder.title || 'Untitled Work Order'}
                               <br />
                               <small style={{ color: '#666' }}>ID: {workOrder._id}</small>
                             </TableCell>
                             <TableCell>
-                              {workOrder.description}
+                              {workOrder.description || 'No description'}
                               <br />
                               <small style={{ color: '#666' }}>Apt: {workOrder.apartmentNumber || 'N/A'}</small>
                             </TableCell>
                             <TableCell>
-                              {workOrder.status}
+                              {workOrder.status || 'Unknown'}
                               <br />
                               <small style={{ color: '#666' }}>Billing: {workOrder.billingStatus || 'pending'}</small>
                             </TableCell>
