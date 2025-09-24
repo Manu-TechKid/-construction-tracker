@@ -24,12 +24,12 @@ import {
   Typography,
 } from '@mui/material';
 import { ArrowBack as ArrowBackIcon, Save as SaveIcon } from '@mui/icons-material';
-import { useAuth } from '../../hooks/useAuth';
 import {
-  useCreateWorkOrderMutation,
-  useGetWorkOrderQuery,
-  useUpdateWorkOrderMutation,
-} from '../../features/workOrders/workOrdersApiSlice';
+  useGetBuildingsQuery,
+  useGetUsersQuery,
+  useGetBuildingQuery
+} from '../../features/buildings/buildingsApiSlice';
+import PhotoUpload from '../../components/PhotoUpload';
 import {
   useGetWorkTypesQuery,
   useGetWorkSubTypesQuery,
