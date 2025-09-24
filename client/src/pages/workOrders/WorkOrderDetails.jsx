@@ -13,9 +13,7 @@ import {
   Divider,
   Paper,
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
-import { useGetWorkOrderQuery, useDeleteWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
-import { format } from 'date-fns';
+import { useAuth } from '../../hooks/useAuth';
 
 const getPhotoUrl = (photo) => {
   try {
@@ -86,6 +84,7 @@ const WorkOrderDetails = () => {
   const navigate = useNavigate();
   const { data: workOrderData, isLoading, error } = useGetWorkOrderQuery(id);
   const [deleteWorkOrder, { isLoading: isDeleting }] = useDeleteWorkOrderMutation();
+  const { canViewCosts } = useAuth();
 
   if (isLoading) {
     return (
@@ -226,14 +225,26 @@ const WorkOrderDetails = () => {
             <Typography><strong>Work Type:</strong> {workOrder.workType?.name || workOrder.workType || 'Not specified'}</Typography>
             <Typography><strong>Sub-Type:</strong> {workOrder.workSubType?.name || workOrder.workSubType || 'Not specified'}</Typography>
             <Typography><strong>Scheduled:</strong> {
-              workOrder.scheduledDate
-                ? format(new Date(workOrder.scheduledDate), 'MM/dd/yyyy')
-                : 'Not scheduled'
+              (() => {
+                try {
+                  if (!workOrder.scheduledDate) return 'Not scheduled';
+                  const date = new Date(workOrder.scheduledDate);
+                  if (isNaN(date.getTime())) return 'Invalid date';
+                  return format(date, 'MM/dd/yyyy');
+                } catch (error) {
+                  console.warn('Error formatting scheduled date:', error);
+                  return 'Error';
+                }
+              })()
             }</Typography>
             <Divider sx={{ my: 2 }} />
-            <Typography><strong>Estimated Cost:</strong> ${workOrder.estimatedCost?.toFixed(2) || '0.00'}</Typography>
-            <Typography><strong>Actual Cost:</strong> ${workOrder.actualCost?.toFixed(2) || '0.00'}</Typography>
-            <Divider sx={{ my: 2 }} />
+            {canViewCosts() && (
+              <>
+                <Typography><strong>Price (Charge):</strong> ${workOrder.estimatedCost?.toFixed(2) || '0.00'}</Typography>
+                <Typography><strong>Cost (Expense):</strong> ${workOrder.actualCost?.toFixed(2) || '0.00'}</Typography>
+                <Divider sx={{ my: 2 }} />
+              </>
+            )}
             <Typography><strong>Assigned To:</strong></Typography>
             <Box mt={1}>
               {workOrder.assignedTo && Array.isArray(workOrder.assignedTo) && workOrder.assignedTo.length > 0 ? (

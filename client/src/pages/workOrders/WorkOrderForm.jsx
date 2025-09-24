@@ -24,9 +24,7 @@ import {
   Typography,
 } from '@mui/material';
 import { ArrowBack as ArrowBackIcon, Save as SaveIcon } from '@mui/icons-material';
-import PhotoUpload from '../../components/common/PhotoUpload';
-import { useGetBuildingsQuery, useGetBuildingQuery } from '../../features/buildings/buildingsApiSlice';
-import { useGetUsersQuery } from '../../features/users/usersApiSlice';
+import { useAuth } from '../../hooks/useAuth';
 import {
   useCreateWorkOrderMutation,
   useGetWorkOrderQuery,
@@ -43,6 +41,7 @@ const WorkOrderForm = () => {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const [photos, setPhotos] = useState([]);
+  const { canViewCosts } = useAuth();
 
   // Removed photo functionality - not working properly
 
@@ -57,8 +56,8 @@ const WorkOrderForm = () => {
       workSubType: '',
       priority: 'medium',
       assignedTo: [],
-      estimatedCost: 0,
-      actualCost: 0,
+      price: 0, // What we charge the customer
+      cost: 0,  // What it costs us to provide the service
       scheduledDate: new Date(),
       status: 'pending',
     },
@@ -78,6 +77,9 @@ const WorkOrderForm = () => {
           apartmentNumber: values.apartmentNumber || values.apartment,
           // Ensure scheduledDate is properly formatted
           scheduledDate: values.scheduledDate instanceof Date ? values.scheduledDate.toISOString() : values.scheduledDate,
+          // Map price and cost to backend format
+          estimatedCost: values.price, // What we charge the customer
+          actualCost: values.cost,     // What it costs us to provide the service
           // Include photos in the work order data
           photos: photos || []
         };
@@ -150,8 +152,8 @@ const WorkOrderForm = () => {
         workSubType: formData.workSubType || '',
         priority: formData.priority || 'medium',
         assignedTo: formData.assignedTo?.map(a => a.worker?._id || a.worker) || [],
-        estimatedCost: formData.estimatedCost || 0,
-        actualCost: formData.actualCost || 0,
+        price: formData.estimatedCost || 0, // What we charge the customer
+        cost: formData.actualCost || 0,     // What it costs us to provide the service
         scheduledDate: formData.scheduledDate ? new Date(formData.scheduledDate) : new Date(),
         status: formData.status || 'pending'
       };
@@ -381,12 +383,40 @@ const WorkOrderForm = () => {
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField fullWidth id="estimatedCost" name="estimatedCost" label="Estimated Cost" type="number" value={formik.values.estimatedCost} onChange={formik.handleChange} />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField fullWidth id="actualCost" name="actualCost" label="Actual Cost" type="number" value={formik.values.actualCost} onChange={formik.handleChange} />
-                  </Grid>
+                  {canViewCosts() && (
+                    <>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          id="price"
+                          name="price"
+                          label="Price (What you charge)"
+                          type="number"
+                          value={formik.values.price}
+                          onChange={formik.handleChange}
+                          helperText="Amount you charge the customer"
+                          InputProps={{
+                            startAdornment: <Typography variant="body2" sx={{ mr: 1 }}>$</Typography>,
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          id="cost"
+                          name="cost"
+                          label="Cost (What it costs you)"
+                          type="number"
+                          value={formik.values.cost}
+                          onChange={formik.handleChange}
+                          helperText="Your actual cost (materials, labor, etc.)"
+                          InputProps={{
+                            startAdornment: <Typography variant="body2" sx={{ mr: 1 }}>$</Typography>,
+                          }}
+                        />
+                      </Grid>
+                    </>
+                  )}
                   <Grid item xs={12} sm={6}>
                     <FormControl fullWidth>
                       <InputLabel>Assign To</InputLabel>

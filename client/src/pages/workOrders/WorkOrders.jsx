@@ -26,11 +26,7 @@ import {
   Pause as OnHoldIcon,
   Cancel as CancelledIcon
 } from '@mui/icons-material';
-import { DataGrid } from '@mui/x-data-grid';
-import { useGetWorkOrdersQuery, useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
-import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
-import { format } from 'date-fns';
-import { toast } from 'react-toastify';
+import { useAuth } from '../../hooks/useAuth';
 
 const getStatusChipColor = (status) => {
   switch (status) {
@@ -58,6 +54,7 @@ const WorkOrders = () => {
   const { data: workOrdersData, isLoading, error } = useGetWorkOrdersQuery();
   const { data: buildingsData } = useGetBuildingsQuery();
   const [updateWorkOrder] = useUpdateWorkOrderMutation();
+  const { canViewCosts } = useAuth();
 
   const [filters, setFilters] = useState({ building: '', status: '' });
   const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
@@ -173,6 +170,8 @@ const WorkOrders = () => {
         scheduledDate: wo.scheduledDate || null,
         estimatedCost: wo.estimatedCost || 0,
         actualCost: wo.actualCost || 0,
+        price: wo.estimatedCost || 0, // What we charge the customer
+        cost: wo.actualCost || 0,     // What it costs us to provide the service
       }));
   }, [workOrders, filters]);
 
@@ -187,6 +186,19 @@ const WorkOrders = () => {
 
   const columns = [
     { field: 'title', headerName: 'Title', flex: 1 },
+    { 
+      field: 'description',
+      headerName: 'Description',
+      flex: 1.5,
+      valueGetter: (params) => {
+        try {
+          return params.row.description || 'No description available';
+        } catch (error) {
+          console.warn('Error getting description:', error);
+          return 'No description available';
+        }
+      },
+    },
     { 
       field: 'building',
       headerName: 'Building',
@@ -371,6 +383,34 @@ const WorkOrders = () => {
       width: 120,
       valueGetter: (params) => params.row.apartmentNumber || 'N/A',
     },
+    ...(canViewCosts() ? [
+      {
+        field: 'price',
+        headerName: 'Price',
+        width: 120,
+        valueFormatter: (params) => {
+          try {
+            return `$${params.value?.toFixed(2) || '0.00'}`;
+          } catch (error) {
+            console.warn('Error formatting price:', error);
+            return '$0.00';
+          }
+        },
+      },
+      {
+        field: 'cost',
+        headerName: 'Cost',
+        width: 120,
+        valueFormatter: (params) => {
+          try {
+            return `$${params.value?.toFixed(2) || '0.00'}`;
+          } catch (error) {
+            console.warn('Error formatting cost:', error);
+            return '$0.00';
+          }
+        },
+      },
+    ] : []),
     {
       field: 'actions',
       headerName: 'Actions',
