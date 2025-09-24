@@ -85,6 +85,7 @@ const Invoices = () => {
   const handleDeleteInvoice = async () => {
     if (selectedInvoice) {
       try {
+        console.log('Deleting invoice:', selectedInvoice._id);
         await deleteInvoice(selectedInvoice._id).unwrap();
         toast.success('Invoice deleted successfully');
         setDeleteDialogOpen(false);
@@ -93,6 +94,8 @@ const Invoices = () => {
         console.error('Error deleting invoice:', error);
         const errorMessage = error?.data?.message || error?.message || 'Failed to delete invoice';
         toast.error(errorMessage);
+        setDeleteDialogOpen(false);
+        handleMenuClose();
       }
     }
   };
@@ -298,7 +301,6 @@ const Invoices = () => {
         <MenuItem 
           onClick={() => {
             setDeleteDialogOpen(true);
-            handleMenuClose();
           }}
           sx={{ color: 'error.main' }}
         >
