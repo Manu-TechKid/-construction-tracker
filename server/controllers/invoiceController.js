@@ -39,23 +39,14 @@ exports.getInvoice = catchAsync(async (req, res, next) => {
 
 // Create invoice from work orders
 exports.createInvoice = catchAsync(async (req, res, next) => {
-    const { invoiceNumber, buildingId, workOrderIds, dueDate, notes } = req.body;
+    const { buildingId, workOrderIds, dueDate, notes, invoiceNumber } = req.body;
 
     // Validate required fields
-    if (!invoiceNumber) {
-        return next(new AppError('Invoice number is required', 400));
-    }
     if (!buildingId) {
         return next(new AppError('Building ID is required', 400));
     }
     if (!workOrderIds || workOrderIds.length === 0) {
         return next(new AppError('At least one work order must be selected', 400));
-    }
-
-    // Check if invoice number already exists
-    const existingInvoice = await Invoice.findOne({ invoiceNumber });
-    if (existingInvoice) {
-        return next(new AppError('Invoice number already exists. Please choose a different number.', 400));
     }
 
     // Get work orders that haven't been invoiced yet
@@ -94,9 +85,8 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
     const tax = subtotal * 0.1; // 10% tax
     const total = subtotal + tax;
 
-    // Create invoice
-    const invoice = await Invoice.create({
-        invoiceNumber,
+    // Create invoice with manual number if provided
+    const invoiceData = {
         building: buildingId,
         workOrders: invoiceWorkOrders,
         subtotal,
@@ -105,7 +95,19 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
         dueDate: dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
         notes,
         createdBy: req.user ? req.user._id : null
-    });
+    };
+
+    // Add manual invoice number if provided
+    if (invoiceNumber) {
+        // Check if invoice number already exists
+        const existingInvoice = await Invoice.findOne({ invoiceNumber });
+        if (existingInvoice) {
+            return next(new AppError('An invoice with this number already exists', 400));
+        }
+        invoiceData.invoiceNumber = invoiceNumber;
+    }
+
+    const invoice = await Invoice.create(invoiceData);
 
     // Update work orders billing status
     await WorkOrder.updateMany(
@@ -175,6 +177,33 @@ exports.markAsPaid = catchAsync(async (req, res, next) => {
         status: 'success',
         data: {
             invoice
+        }
+    });
+});
+
+// Get invoices for the logged-in worker
+exports.getMyInvoices = catchAsync(async (req, res, next) => {
+    // Find all work orders assigned to this worker
+    const workOrders = await WorkOrder.find({
+        assignedTo: req.user._id,
+        billingStatus: 'invoiced'
+    }).select('_id');
+
+    const workOrderIds = workOrders.map(wo => wo._id);
+
+    // Find invoices containing these work orders
+    const invoices = await Invoice.find({
+        'workOrders.workOrder': { $in: workOrderIds }
+    })
+    .populate('building', 'name address')
+    .populate('workOrders.workOrder', 'title description apartmentNumber status')
+    .sort('-createdAt');
+
+    res.status(200).json({
+        status: 'success',
+        results: invoices.length,
+        data: {
+            invoices
         }
     });
 });

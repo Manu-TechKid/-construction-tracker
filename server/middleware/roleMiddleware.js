@@ -75,6 +75,18 @@ const filterPriceFields = (obj) => {
   return obj;
 };
 
+// Role hierarchy (higher number = more permissions)
+const ROLE_HIERARCHY = {
+  'worker': 1,
+  'supervisor': 2,
+  'manager': 3,
+  'admin': 4
+};
+
+const hasPermission = (userRole, requiredRole) => {
+  return ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[requiredRole];
+};
+
 const restrictToRoles = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
@@ -84,10 +96,24 @@ const restrictToRoles = (...roles) => {
       });
     }
     
-    if (!roles.includes(req.user.role)) {
+    // Check if user has any of the required roles
+    const hasRequiredRole = roles.some(role => {
+      // If admin, always allow
+      if (req.user.role === 'admin') return true;
+      // If manager, allow if required role is manager or below
+      if (req.user.role === 'manager' && hasPermission('manager', role)) return true;
+      // If supervisor, allow if required role is supervisor or below
+      if (req.user.role === 'supervisor' && hasPermission('supervisor', role)) return true;
+      // Exact role match
+      return req.user.role === role;
+    });
+    
+    if (!hasRequiredRole) {
       return res.status(403).json({
         status: 'fail',
-        message: 'You do not have permission to perform this action'
+        message: 'You do not have permission to perform this action',
+        requiredRoles: roles,
+        yourRole: req.user.role
       });
     }
     

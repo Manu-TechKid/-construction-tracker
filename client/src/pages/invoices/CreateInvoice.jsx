@@ -11,6 +11,8 @@ import {
   CardContent,
   Container,
   FormControl,
+  FormHelperText,
+  Grid,
   InputLabel,
   MenuItem,
   Select,
@@ -36,8 +38,13 @@ import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice
 import { useGetUnbilledWorkOrdersQuery, useCreateInvoiceMutation } from '../../features/invoices/invoicesApiSlice';
 
 const validationSchema = Yup.object({
-  invoiceNumber: Yup.string().required('Invoice number is required'),
   buildingId: Yup.string().required('Building is required'),
+  invoiceNumber: Yup.string()
+    .matches(
+      /^[A-Z0-9-]+$/,
+      'Invoice number can only contain letters, numbers, and hyphens'
+    )
+    .max(20, 'Invoice number must be 20 characters or less'),
   dueDate: Yup.date().required('Due date is required').min(new Date(), 'Due date must be in the future'),
   notes: Yup.string(),
   workOrderIds: Yup.array().min(1, 'At least one work order must be selected')
@@ -69,8 +76,8 @@ const CreateInvoice = () => {
 
   const formik = useFormik({
     initialValues: {
-      invoiceNumber: '',
       buildingId: '',
+      invoiceNumber: '',
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       notes: '',
       workOrderIds: []
@@ -88,16 +95,24 @@ const CreateInvoice = () => {
         toast.success('Invoice created successfully!');
         navigate('/invoices');
       } catch (error) {
-        console.error('Error creating invoice:', error);
         toast.error('Failed to create invoice');
       }
     }
   });
 
-  const calculateTotal = () => {
-    return selectedWorkOrders.reduce((total, wo) => {
-      return total + (wo.actualCost || wo.estimatedCost || 0);
-    }, 0);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (selectedWorkOrders.length === 0) {
+      toast.error('Please select at least one work order');
+      return;
+    }
+    
+    // Format invoice number to uppercase and trim
+    if (formik.values.invoiceNumber) {
+      formik.setFieldValue('invoiceNumber', formik.values.invoiceNumber.trim().toUpperCase());
+    }
+    
+    await formik.submitForm();
   };
 
   const handleWorkOrderToggle = (workOrder) => {
@@ -109,28 +124,19 @@ const CreateInvoice = () => {
     }
   };
 
-  const handleBuildingChange = (buildingId) => {
-    setSelectedBuildingId(buildingId);
+  const handleBuildingChange = (event) => {
+    const buildingId = event.target.value;
     formik.setFieldValue('buildingId', buildingId);
+    formik.setFieldValue('workOrderIds', []);
     setSelectedWorkOrders([]);
   };
 
   if (isLoadingBuildings) {
     return (
-      <Container>
-        <Box display="flex" justifyContent="center" mt={4}>
+      <Container maxWidth="lg">
+        <Box display="flex" justifyContent="center" p={5}>
           <CircularProgress />
         </Box>
-      </Container>
-    );
-  }
-
-  if (buildingsError) {
-    return (
-      <Container>
-        <Alert severity="error" sx={{ mt: 2 }}>
-          Error loading buildings: {buildingsError.message}
-        </Alert>
       </Container>
     );
   }
@@ -138,72 +144,101 @@ const CreateInvoice = () => {
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Container maxWidth="lg">
-        <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ mb: 3 }}>
           <Button
             startIcon={<ArrowBackIcon />}
             onClick={() => navigate('/invoices')}
-            variant="outlined"
+            sx={{ mb: 2 }}
           >
             Back to Invoices
           </Button>
-          <Typography variant="h4">Create Invoice</Typography>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Create New Invoice
+          </Typography>
         </Box>
 
-        <form onSubmit={formik.handleSubmit}>
+        <form onSubmit={handleSubmit}>
           <Card sx={{ mb: 3 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Invoice Details
               </Typography>
               
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2, mb: 3 }}>
-                <TextField
-                  fullWidth
-                  label="Invoice Number"
-                  name="invoiceNumber"
-                  value={formik.values.invoiceNumber}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  error={formik.touched.invoiceNumber && Boolean(formik.errors.invoiceNumber)}
-                  helperText={formik.touched.invoiceNumber && formik.errors.invoiceNumber}
-                />
-
-                <FormControl fullWidth error={formik.touched.buildingId && Boolean(formik.errors.buildingId)}>
-                  <InputLabel>Building</InputLabel>
-                  <Select
-                    name="buildingId"
-                    value={formik.values.buildingId}
-                    onChange={(e) => handleBuildingChange(e.target.value)}
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth error={formik.touched.buildingId && Boolean(formik.errors.buildingId)}>
+                    <InputLabel id="building-label">Building</InputLabel>
+                    <Select
+                      labelId="building-label"
+                      id="buildingId"
+                      name="buildingId"
+                      value={formik.values.buildingId}
+                      onChange={handleBuildingChange}
+                      onBlur={formik.handleBlur}
+                      label="Building"
+                      disabled={isLoadingBuildings}
+                    >
+                      {buildings.map((building) => (
+                        <MenuItem key={building._id} value={building._id}>
+                          {building.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {formik.touched.buildingId && formik.errors.buildingId && (
+                      <FormHelperText>{formik.errors.buildingId}</FormHelperText>
+                    )}
+                  </FormControl>
+                </Grid>
+                
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    id="invoiceNumber"
+                    name="invoiceNumber"
+                    label="Invoice Number (Optional)"
+                    value={formik.values.invoiceNumber}
+                    onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
-                    label="Building"
-                  >
-                    {buildings.map((building) => (
-                      <MenuItem key={building._id} value={building._id}>
-                        {building.name} - {building.address}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {formik.touched.buildingId && formik.errors.buildingId && (
-                    <Typography variant="caption" color="error">
-                      {formik.errors.buildingId}
-                    </Typography>
-                  )}
-                </FormControl>
-
-                <DatePicker
-                  label="Due Date"
-                  value={formik.values.dueDate}
-                  onChange={(value) => formik.setFieldValue('dueDate', value)}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      fullWidth
-                      error={formik.touched.dueDate && Boolean(formik.errors.dueDate)}
-                      helperText={formik.touched.dueDate && formik.errors.dueDate}
+                    error={formik.touched.invoiceNumber && Boolean(formik.errors.invoiceNumber)}
+                    helperText={formik.touched.invoiceNumber && formik.errors.invoiceNumber}
+                    placeholder="Leave blank for auto-generation"
+                  />
+                </Grid>
+                
+                <Grid item xs={12} md={6}>
+                  <LocalizationProvider dateAdapter={AdapterDateFns}>
+                    <DatePicker
+                      label="Due Date"
+                      value={formik.values.dueDate}
+                      onChange={(date) => formik.setFieldValue('dueDate', date)}
+                      minDate={new Date()}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          fullWidth
+                          error={formik.touched.dueDate && Boolean(formik.errors.dueDate)}
+                          helperText={formik.touched.dueDate && formik.errors.dueDate}
+                        />
+                      )}
                     />
-                  )}
-                />
-              </Box>
+                  </LocalizationProvider>
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Notes"
+                    name="notes"
+                    value={formik.values.notes}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    multiline
+                    rows={3}
+                    error={formik.touched.notes && Boolean(formik.errors.notes)}
+                    helperText={formik.touched.notes && formik.errors.notes}
+                  />
+                </Grid>
+              </Grid>
             </CardContent>
           </Card>
 
