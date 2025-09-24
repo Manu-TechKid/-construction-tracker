@@ -111,33 +111,55 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
     };
 
     // Add manual invoice number if provided
-    if (invoiceNumber) {
+    if (invoiceNumber && invoiceNumber.trim()) {
         // Check if invoice number already exists
-        const existingInvoice = await Invoice.findOne({ invoiceNumber });
+        const existingInvoice = await Invoice.findOne({ invoiceNumber: invoiceNumber.trim().toUpperCase() });
         if (existingInvoice) {
             return next(new AppError('An invoice with this number already exists', 400));
         }
-        invoiceData.invoiceNumber = invoiceNumber;
+        invoiceData.invoiceNumber = invoiceNumber.trim().toUpperCase();
     }
+    // If no invoice number provided, the pre-save hook will generate one
 
-    const invoice = await Invoice.create(invoiceData);
+    console.log('=== CREATING INVOICE ===');
+    console.log('Invoice data to be saved:', JSON.stringify(invoiceData, null, 2));
 
-    // Update work orders billing status
-    await WorkOrder.updateMany(
-        { _id: { $in: workOrderIds } },
-        { billingStatus: 'invoiced' }
-    );
+    try {
+        const invoice = await Invoice.create(invoiceData);
+        console.log('Invoice created successfully:', invoice._id);
+        console.log('Generated invoice number:', invoice.invoiceNumber);
 
-    const populatedInvoice = await Invoice.findById(invoice._id)
-        .populate('building', 'name address')
-        .populate('workOrders.workOrder', 'title description apartmentNumber');
+        // Update work orders billing status
+        await WorkOrder.updateMany(
+            { _id: { $in: workOrderIds } },
+            { billingStatus: 'invoiced' }
+        );
 
-    res.status(201).json({
-        status: 'success',
-        data: {
-            invoice: populatedInvoice
+        const populatedInvoice = await Invoice.findById(invoice._id)
+            .populate('building', 'name address')
+            .populate('workOrders.workOrder', 'title description apartmentNumber');
+
+        console.log('Invoice populated successfully');
+
+        res.status(201).json({
+            status: 'success',
+            data: {
+                invoice: populatedInvoice
+            }
+        });
+    } catch (error) {
+        console.error('=== INVOICE CREATION FAILED ===');
+        console.error('Error creating invoice:', error);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+
+        if (error.name === 'ValidationError') {
+            console.error('Validation errors:', error.errors);
+            return next(new AppError(`Validation failed: ${Object.values(error.errors).map(err => err.message).join(', ')}`, 400));
         }
-    });
+
+        return next(new AppError('Failed to create invoice', 500));
+    }
 });
 
 // Update invoice

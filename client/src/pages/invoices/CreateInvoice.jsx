@@ -107,6 +107,7 @@ const CreateInvoice = () => {
     validationSchema,
     onSubmit: async (values) => {
       try {
+        console.log('=== FORMIK ONSUBMIT CALLED ===');
         console.log('Submitting invoice with values:', values);
         console.log('Selected work orders:', selectedWorkOrders);
 
@@ -123,16 +124,23 @@ const CreateInvoice = () => {
           invoiceNumber: values.invoiceNumber?.trim() || undefined
         };
 
-        console.log('Invoice data being sent:', invoiceData);
+        console.log('Invoice data being sent to API:', invoiceData);
 
+        console.log('About to call createInvoice mutation...');
         const result = await createInvoice(invoiceData).unwrap();
-        console.log('Invoice creation result:', result);
+        console.log('API call successful! Result:', result);
 
         toast.success('Invoice created successfully!');
         navigate('/invoices');
       } catch (error) {
-        console.error('Invoice creation error:', error);
+        console.error('=== INVOICE CREATION ERROR ===');
+        console.error('Error details:', error);
+        console.error('Error data:', error?.data);
+        console.error('Error message:', error?.message);
+        console.error('Error status:', error?.status);
+
         const errorMessage = error?.data?.message || error?.message || 'Failed to create invoice';
+        console.log('Final error message:', errorMessage);
         toast.error(errorMessage);
       }
     }
@@ -140,6 +148,10 @@ const CreateInvoice = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('=== FORM SUBMISSION STARTED ===');
+    console.log('Selected work orders:', selectedWorkOrders);
+    console.log('Formik values:', formik.values);
+
     if (selectedWorkOrders.length === 0) {
       toast.error('Please select at least one work order');
       return;
@@ -150,7 +162,16 @@ const CreateInvoice = () => {
       formik.setFieldValue('invoiceNumber', formik.values.invoiceNumber.trim().toUpperCase());
     }
 
-    await formik.submitForm();
+    console.log('About to call formik.handleSubmit...');
+
+    try {
+      // Submit the form using Formik's handleSubmit
+      await formik.handleSubmit(e);
+      console.log('Formik handleSubmit completed successfully');
+    } catch (error) {
+      console.error('Error in handleSubmit:', error);
+      toast.error('Form submission failed: ' + (error?.message || 'Unknown error'));
+    }
   };
 
   const handleWorkOrderToggle = (workOrder) => {

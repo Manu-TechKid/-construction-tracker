@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const invoiceSchema = new mongoose.Schema({
     invoiceNumber: {
         type: String,
-        required: [true, 'Invoice number is required'],
+        required: false, // Made optional since pre-save hook generates it
         unique: true,
         trim: true,
         uppercase: true,
