@@ -57,6 +57,7 @@ const CreateInvoice = () => {
   const [selectedBuildingId, setSelectedBuildingId] = useState('');
   
   const { data: buildingsResponse, isLoading: isLoadingBuildings, error: buildingsError } = useGetBuildingsQuery();
+  const buildings = buildingsResponse?.data?.buildings || [];
   // Debug logging
   useEffect(() => {
     console.log('Selected Building ID:', selectedBuildingId);
