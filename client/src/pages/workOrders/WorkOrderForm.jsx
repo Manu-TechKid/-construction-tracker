@@ -27,18 +27,17 @@ import { ArrowBack as ArrowBackIcon, Save as SaveIcon } from '@mui/icons-materia
 import {
   useGetBuildingsQuery,
   useGetUsersQuery,
-  useGetBuildingQuery
-} from '../../features/buildings/buildingsApiSlice';
-import {
+  useGetBuildingQuery,
   useGetWorkTypesQuery,
   useGetWorkSubTypesQuery,
   useGetDropdownOptionsQuery
 } from '../../features/setup/setupApiSlice';
-
+import { useAuth } from '../../hooks/useAuth';
 const WorkOrderForm = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = Boolean(id);
+  const { canViewCosts } = useAuth();
 
   const formik = useFormik({
     initialValues: {
@@ -76,7 +75,7 @@ const WorkOrderForm = () => {
           estimatedCost: values.price, // What we charge the customer
           actualCost: values.cost,     // What it costs us to provide the service
           // Include photos in the work order data
-          photos: photos || []
+          photos: []
         };
 
         let workOrderId = id;
@@ -87,7 +86,7 @@ const WorkOrderForm = () => {
           workOrderId = newWorkOrder.data._id;
         }
 
-        console.log(`Work order saved with ${photos?.length || 0} photos`);
+        console.log(`Work order saved successfully`);
 
         // Show success message and redirect immediately
         const message = isEdit ? 'Work order updated successfully!' : 'Work order created successfully!';
@@ -154,11 +153,6 @@ const WorkOrderForm = () => {
       };
       
       formik.setValues(safeFormData);
-
-      // Load existing photos for edit mode
-      if (formData.photos && Array.isArray(formData.photos)) {
-        setPhotos(formData.photos);
-      }
     }
   }, [isEdit, workOrderData]);
 

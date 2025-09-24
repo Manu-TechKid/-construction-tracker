@@ -14,8 +14,7 @@ import {
   Paper,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
-import { useGetWorkOrderQuery, useDeleteWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
-import { format } from 'date-fns';
+import { useAuth } from '../../hooks/useAuth';
 
 const getPhotoUrl = (photo) => {
   try {
