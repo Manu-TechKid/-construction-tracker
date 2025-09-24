@@ -27,7 +27,9 @@ import { ArrowBack as ArrowBackIcon, Save as SaveIcon } from '@mui/icons-materia
 import {
   useGetBuildingsQuery,
   useGetUsersQuery,
-  useGetBuildingQuery,
+  useGetBuildingQuery
+} from '../../features/buildings/buildingsApiSlice';
+import {
   useGetWorkTypesQuery,
   useGetWorkSubTypesQuery,
   useGetDropdownOptionsQuery
