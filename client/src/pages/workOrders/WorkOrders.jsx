@@ -131,11 +131,29 @@ const WorkOrders = () => {
   const workOrders = workOrdersData?.data || [];
 
   const filteredWorkOrders = useMemo(() => {
-    return workOrders.filter(wo => {
-      const buildingMatch = filters.building ? wo.building?._id === filters.building : true;
-      const statusMatch = filters.status ? wo.status === filters.status : true;
-      return buildingMatch && statusMatch;
-    });
+    return workOrders
+      .filter(wo => {
+        // Filter out invalid work orders
+        if (!wo || typeof wo !== 'object' || !wo._id) {
+          console.warn('Invalid work order found:', wo);
+          return false;
+        }
+
+        const buildingMatch = filters.building ? wo.building?._id === filters.building : true;
+        const statusMatch = filters.status ? wo.status === filters.status : true;
+        return buildingMatch && statusMatch;
+      })
+      .map(wo => ({
+        ...wo,
+        // Ensure photos is always an array
+        photos: Array.isArray(wo.photos) ? wo.photos : [],
+        // Ensure assignedTo is always an array
+        assignedTo: Array.isArray(wo.assignedTo) ? wo.assignedTo : [],
+        // Ensure other fields have safe defaults
+        title: wo.title || 'Untitled Work Order',
+        status: wo.status || 'pending',
+        priority: wo.priority || 'normal',
+      }));
   }, [workOrders, filters]);
 
   if (isLoading) {
@@ -206,65 +224,63 @@ const WorkOrders = () => {
       width: 100,
       renderCell: (params) => {
         const photos = params.row.photos || [];
-        console.log('WorkOrder photos data:', {
-          workOrderId: params.row._id,
-          photos: photos,
-          photosLength: photos.length,
-          firstPhoto: photos[0]
-        });
-        
+
         if (photos.length === 0) {
           return <Typography variant="body2" color="textSecondary">No photos</Typography>;
         }
-        
-        const firstPhoto = photos[0];
-        let photoUrl = '';
-        
-        // Handle different photo data structures
-        if (typeof firstPhoto === 'string') {
-          photoUrl = firstPhoto;
-        } else if (firstPhoto?.url) {
-          photoUrl = firstPhoto.url;
-        } else if (firstPhoto?.path) {
-          photoUrl = firstPhoto.path;
-        } else if (firstPhoto?.filename) {
-          photoUrl = firstPhoto.filename;
-        } else if (firstPhoto?.src) {
-          photoUrl = firstPhoto.src;
+
+        try {
+          const firstPhoto = photos[0];
+          let photoUrl = '';
+
+          // Handle different photo data structures
+          if (typeof firstPhoto === 'string') {
+            photoUrl = firstPhoto;
+          } else if (firstPhoto?.url) {
+            photoUrl = firstPhoto.url;
+          } else if (firstPhoto?.path) {
+            photoUrl = firstPhoto.path;
+          } else if (firstPhoto?.filename) {
+            photoUrl = firstPhoto.filename;
+          } else if (firstPhoto?.src) {
+            photoUrl = firstPhoto.src;
+          }
+
+          // Clean the photo URL - remove any leading slashes or path prefixes
+          photoUrl = photoUrl.replace(/^.*[\\\/]/, '').replace(/^uploads[\\\/]photos[\\\/]/, '');
+
+          const baseUrl = process.env.REACT_APP_API_URL || window.location.origin;
+          const fullPhotoUrl = `${baseUrl}/uploads/photos/${photoUrl}`;
+
+          return (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box
+                component="img"
+                src={fullPhotoUrl}
+                alt="Work order photo"
+                sx={{
+                  width: 40,
+                  height: 40,
+                  objectFit: 'cover',
+                  borderRadius: 1,
+                  border: '1px solid #ddd'
+                }}
+                onError={(e) => {
+                  e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjVmNWY1Ii8+CjxwYXRoIGQ9Ik0yMCAyNUMyMi43NjE0IDI1IDI1IDIyLjc2MTQgMjUgMjBDMjUgMTcuMjM4NiAyMi43NjE0IDE1IDIwIDE1QzE3LjIzODYgMTUgMTUgMTcuMjM4NiAxNSAyMEMxNSAyMi43NjE0IDE3LjIzODYgMjUgMjAgMjVaIiBmaWxsPSIjY2NjIi8+Cjwvc3ZnPgo=';
+                  e.target.style.border = '1px solid #ddd';
+                }}
+              />
+              {photos.length > 1 && (
+                <Typography variant="caption" color="textSecondary">
+                  +{photos.length - 1}
+                </Typography>
+              )}
+            </Box>
+          );
+        } catch (error) {
+          console.warn('Error rendering photo in DataGrid:', error);
+          return <Typography variant="body2" color="textSecondary">Error</Typography>;
         }
-        
-        // Clean the photo URL - remove any leading slashes or path prefixes
-        photoUrl = photoUrl.replace(/^.*[\\\/]/, '').replace(/^uploads[\\\/]photos[\\\/]/, '');
-        
-        const baseUrl = process.env.REACT_APP_API_URL || window.location.origin;
-        const fullPhotoUrl = `${baseUrl}/uploads/photos/${photoUrl}`;
-        
-        return (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Box
-              component="img"
-              src={fullPhotoUrl}
-              alt="Work order photo"
-              sx={{
-                width: 40,
-                height: 40,
-                objectFit: 'cover',
-                borderRadius: 1,
-                border: '1px solid #ddd'
-              }}
-              onError={(e) => {
-                console.log('Photo load error for:', fullPhotoUrl);
-                e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjVmNWY1Ii8+CjxwYXRoIGQ9Ik0yMCAyNUMyMi43NjE0IDI1IDI1IDIyLjc2MTQgMjUgMjBDMjUgMTcuMjM4NiAyMi43NjE0IDE1IDIwIDE1QzE3LjIzODYgMTUgMTUgMTcuMjM4NiAxNSAyMEMxNSAyMi43NjE0IDE3LjIzODYgMjUgMjAgMjVaIiBmaWxsPSIjY2NjIi8+Cjwvc3ZnPgo=';
-                e.target.style.border = '1px solid #ddd';
-              }}
-            />
-            {photos.length > 1 && (
-              <Typography variant="caption" color="textSecondary">
-                +{photos.length - 1}
-              </Typography>
-            )}
-          </Box>
-        );
       },
     },
     {
@@ -367,6 +383,37 @@ const WorkOrders = () => {
         disableSelectionOnClick
         loading={isLoading}
         autoHeight
+        getRowHeight={() => 'auto'}
+        sx={{
+          '& .MuiDataGrid-cell': {
+            padding: '8px',
+          },
+          '& .MuiDataGrid-row': {
+            '&:hover': {
+              backgroundColor: 'rgba(0, 0, 0, 0.04)',
+            },
+          },
+        }}
+        components={{
+          NoRowsOverlay: () => (
+            <Box
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+              justifyContent="center"
+              minHeight="200px"
+            >
+              <Typography variant="h6" color="textSecondary">
+                No work orders found
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                {filters.building || filters.status
+                  ? 'Try adjusting your filters'
+                  : 'Create your first work order to get started'}
+              </Typography>
+            </Box>
+          ),
+        }}
       />
 
       {/* Status Update Menu */}
