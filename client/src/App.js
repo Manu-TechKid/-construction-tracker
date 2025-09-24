@@ -51,6 +51,7 @@ import NotesSheet from './components/notes/NotesSheet';
 import BuildingSchedule from './pages/scheduling/BuildingSchedule';
 import WorkerDashboard from './pages/workers/WorkerDashboard';
 import EditWorker from './pages/workers/EditWorker';
+import WorkerDetails from './pages/workers/WorkerDetails';
 import WorkerApproval from './pages/admin/WorkerApproval';
 import ProjectsPendingApproval from './pages/admin/ProjectsPendingApproval';
 import Setup from './pages/admin/Setup';
@@ -247,10 +248,10 @@ const AppContent = () => {
                 } 
               />
               <Route 
-                path="workers/:id/edit" 
+                path="workers/:id" 
                 element={
-                  <RoleBasedRoute requiredPermissions={['update:workers']}>
-                    <EditWorker />
+                  <RoleBasedRoute requiredPermissions={['read:workers']}>
+                    <WorkerDetails />
                   </RoleBasedRoute>
                 } 
               />
