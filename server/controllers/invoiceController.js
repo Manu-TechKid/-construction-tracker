@@ -181,6 +181,42 @@ exports.markAsPaid = catchAsync(async (req, res, next) => {
     });
 });
 
+// Update payment information
+exports.updatePayment = catchAsync(async (req, res, next) => {
+    const { paymentMethod, paymentDate, amountPaid, notes } = req.body;
+
+    const updateData = {};
+    if (paymentMethod) updateData.paymentMethod = paymentMethod;
+    if (paymentDate) updateData.paymentDate = paymentDate;
+    if (amountPaid !== undefined) updateData.amountPaid = amountPaid;
+    if (notes !== undefined) updateData.paymentNotes = notes;
+
+    // If amount paid equals total, mark as paid
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) {
+        return next(new AppError('No invoice found with that ID', 404));
+    }
+
+    if (amountPaid && amountPaid >= invoice.total) {
+        updateData.status = 'paid';
+        updateData.paidDate = paymentDate || new Date();
+    }
+
+    const updatedInvoice = await Invoice.findByIdAndUpdate(
+        req.params.id,
+        updateData,
+        { new: true, runValidators: true }
+    ).populate('building', 'name address')
+     .populate('workOrders.workOrder', 'title description apartmentNumber');
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            invoice: updatedInvoice
+        }
+    });
+});
+
 // Get invoices for the logged-in worker
 exports.getMyInvoices = catchAsync(async (req, res, next) => {
     // Find all work orders assigned to this worker
@@ -254,5 +290,93 @@ exports.deleteInvoice = catchAsync(async (req, res, next) => {
     res.status(204).json({
         status: 'success',
         data: null
+    });
+});
+
+// Get summary report
+exports.getSummaryReport = catchAsync(async (req, res, next) => {
+    const { startDate, endDate } = req.query;
+
+    let dateFilter = {};
+    if (startDate && endDate) {
+        dateFilter.createdAt = {
+            $gte: new Date(startDate),
+            $lte: new Date(endDate)
+        };
+    }
+
+    const invoices = await Invoice.find(dateFilter)
+        .populate('building', 'name')
+        .sort('-createdAt');
+
+    const summary = {
+        totalInvoices: invoices.length,
+        totalRevenue: invoices.reduce((sum, inv) => sum + inv.total, 0),
+        paidInvoices: invoices.filter(inv => inv.status === 'paid').length,
+        paidAmount: invoices
+            .filter(inv => inv.status === 'paid')
+            .reduce((sum, inv) => sum + inv.total, 0),
+        pendingInvoices: invoices.filter(inv => inv.status === 'pending').length,
+        pendingAmount: invoices
+            .filter(inv => inv.status === 'pending')
+            .reduce((sum, inv) => sum + inv.total, 0),
+        overdueInvoices: invoices.filter(inv =>
+            inv.status === 'pending' &&
+            inv.dueDate < new Date()
+        ).length,
+        overdueAmount: invoices
+            .filter(inv => inv.status === 'pending' && inv.dueDate < new Date())
+            .reduce((sum, inv) => sum + inv.total, 0)
+    };
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            summary,
+            period: { startDate, endDate }
+        }
+    });
+});
+
+// Get aging report
+exports.getAgingReport = catchAsync(async (req, res, next) => {
+    const invoices = await Invoice.find({ status: 'pending' })
+        .populate('building', 'name')
+        .sort('dueDate');
+
+    const agingReport = {
+        current: [],
+        pastDue: [],
+        dueIn30Days: [],
+        dueIn60Days: []
+    };
+
+    const now = new Date();
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const sixtyDaysFromNow = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+
+    invoices.forEach(invoice => {
+        if (invoice.dueDate < now) {
+            agingReport.pastDue.push(invoice);
+        } else if (invoice.dueDate <= thirtyDaysFromNow) {
+            agingReport.dueIn30Days.push(invoice);
+        } else if (invoice.dueDate <= sixtyDaysFromNow) {
+            agingReport.dueIn60Days.push(invoice);
+        } else {
+            agingReport.current.push(invoice);
+        }
+    });
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            agingReport,
+            totals: {
+                current: agingReport.current.reduce((sum, inv) => sum + inv.total, 0),
+                pastDue: agingReport.pastDue.reduce((sum, inv) => sum + inv.total, 0),
+                dueIn30Days: agingReport.dueIn30Days.reduce((sum, inv) => sum + inv.total, 0),
+                dueIn60Days: agingReport.dueIn60Days.reduce((sum, inv) => sum + inv.total, 0)
+            }
+        }
     });
 });
