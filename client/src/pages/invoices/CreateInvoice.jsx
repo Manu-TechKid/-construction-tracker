@@ -57,7 +57,14 @@ const CreateInvoice = () => {
   const [selectedBuildingId, setSelectedBuildingId] = useState('');
   
   const { data: buildingsResponse, isLoading: isLoadingBuildings, error: buildingsError } = useGetBuildingsQuery();
-  const buildings = buildingsResponse?.data?.buildings || [];
+  // Debug logging
+  useEffect(() => {
+    console.log('Selected Building ID:', selectedBuildingId);
+    console.log('Work Orders Loading:', isLoadingWorkOrders);
+    console.log('Work Orders Error:', workOrdersError);
+    console.log('Work Orders Data:', workOrders);
+    console.log('Selected Work Orders:', selectedWorkOrders);
+  }, [selectedBuildingId, isLoadingWorkOrders, workOrdersError, workOrders, selectedWorkOrders]);
   
   // Fetch unbilled work orders when a building is selected
   const { 
@@ -73,6 +80,11 @@ const CreateInvoice = () => {
   );
   
   const workOrders = unbilledWorkOrdersData?.data || [];
+
+  // Debug logging
+  console.log('API Response:', unbilledWorkOrdersData);
+  console.log('Work Orders from API:', workOrders);
+
   const [createInvoice, { isLoading: isCreating }] = useCreateInvoiceMutation();
 
   // Calculate total amount from selected work orders
@@ -140,6 +152,7 @@ const CreateInvoice = () => {
     formik.setFieldValue('buildingId', buildingId);
     formik.setFieldValue('workOrderIds', []);
     setSelectedWorkOrders([]);
+    setSelectedBuildingId(buildingId); // This was missing!
   };
 
   if (isLoadingBuildings) {
@@ -260,6 +273,16 @@ const CreateInvoice = () => {
                 <Typography variant="h6" gutterBottom>
                   Select Work Orders
                 </Typography>
+
+                {/* Debug Information */}
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2">Debug Information:</Typography>
+                  <Typography variant="body2">Selected Building ID: {selectedBuildingId}</Typography>
+                  <Typography variant="body2">Loading: {isLoadingWorkOrders ? 'Yes' : 'No'}</Typography>
+                  <Typography variant="body2">Error: {workOrdersError ? 'Yes' : 'No'}</Typography>
+                  <Typography variant="body2">Work Orders Count: {workOrders.length}</Typography>
+                  <Typography variant="body2">Selected Work Orders: {selectedWorkOrders.length}</Typography>
+                </Alert>
                 
                 {isLoadingWorkOrders ? (
                   <Box display="flex" justifyContent="center" p={3}>
@@ -267,11 +290,17 @@ const CreateInvoice = () => {
                   </Box>
                 ) : workOrdersError ? (
                   <Alert severity="error">
-                    Error loading work orders: {workOrdersError.message}
+                    Error loading work orders: {workOrdersError?.message || 'Unknown error'}
+                    <br />
+                    <small>Building ID: {selectedBuildingId}</small>
                   </Alert>
                 ) : workOrders.length === 0 ? (
                   <Alert severity="info">
                     No unbilled work orders found for this building.
+                    <br />
+                    <small>Building ID: {selectedBuildingId}</small>
+                    <br />
+                    <small>Make sure you have work orders with pending billing status for this building.</small>
                   </Alert>
                 ) : (
                   <TableContainer component={Paper}>
@@ -294,11 +323,27 @@ const CreateInvoice = () => {
                                 onChange={() => handleWorkOrderToggle(workOrder)}
                               />
                             </TableCell>
-                            <TableCell>{workOrder.title}</TableCell>
-                            <TableCell>{workOrder.description}</TableCell>
-                            <TableCell>{workOrder.status}</TableCell>
+                            <TableCell>
+                              {workOrder.title}
+                              <br />
+                              <small style={{ color: '#666' }}>ID: {workOrder._id}</small>
+                            </TableCell>
+                            <TableCell>
+                              {workOrder.description}
+                              <br />
+                              <small style={{ color: '#666' }}>Apt: {workOrder.apartmentNumber || 'N/A'}</small>
+                            </TableCell>
+                            <TableCell>
+                              {workOrder.status}
+                              <br />
+                              <small style={{ color: '#666' }}>Billing: {workOrder.billingStatus || 'pending'}</small>
+                            </TableCell>
                             <TableCell align="right">
                               ${(workOrder.actualCost || workOrder.estimatedCost || 0).toFixed(2)}
+                              <br />
+                              <small style={{ color: '#666' }}>
+                                Actual: ${workOrder.actualCost || 0} | Est: ${workOrder.estimatedCost || 0}
+                              </small>
                             </TableCell>
                           </TableRow>
                         ))}

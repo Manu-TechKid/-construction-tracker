@@ -41,6 +41,8 @@ exports.getInvoice = catchAsync(async (req, res, next) => {
 exports.createInvoice = catchAsync(async (req, res, next) => {
     const { buildingId, workOrderIds, dueDate, notes, invoiceNumber, totalAmount } = req.body;
 
+    console.log('createInvoice called with:', { buildingId, workOrderIds, dueDate, notes, invoiceNumber, totalAmount });
+
     // Validate required fields
     if (!buildingId) {
         return next(new AppError('Building ID is required', 400));
@@ -59,6 +61,9 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
             { billingStatus: null }
         ]
     }).populate('building', 'name address');
+
+    console.log('Found work orders for invoice:', workOrders.length);
+    console.log('Work orders:', workOrders);
 
     if (workOrders.length === 0) {
         return next(new AppError('No eligible work orders found for invoicing. Work orders may already be invoiced.', 400));
@@ -260,6 +265,8 @@ exports.getUnbilledWorkOrders = catchAsync(async (req, res, next) => {
         return next(new AppError('Building ID is required', 400));
     }
 
+    console.log('getUnbilledWorkOrders called with buildingId:', buildingId);
+
     // Find work orders that haven't been invoiced yet
     const workOrders = await WorkOrder.find({
         building: buildingId,
@@ -270,6 +277,9 @@ exports.getUnbilledWorkOrders = catchAsync(async (req, res, next) => {
         ]
     }).populate('building', 'name address')
       .sort('-createdAt');
+
+    console.log('Found work orders:', workOrders.length);
+    console.log('Work orders data:', workOrders);
 
     res.status(200).json({
         status: 'success',
