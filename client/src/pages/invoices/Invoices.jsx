@@ -230,7 +230,7 @@ const Invoices = () => {
                   <TableRow key={invoice._id} hover>
                     <TableCell>
                       <Typography variant="body2" fontWeight="medium">
-                        {invoice.invoiceNumber}
+                        {invoice.invoiceNumber || 'N/A'}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -242,10 +242,10 @@ const Invoices = () => {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      {new Date(invoice.issueDate).toLocaleDateString()}
+                      {invoice.issueDate ? new Date(invoice.issueDate).toLocaleDateString() : 'N/A'}
                     </TableCell>
                     <TableCell>
-                      {new Date(invoice.dueDate).toLocaleDateString()}
+                      {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight="medium">

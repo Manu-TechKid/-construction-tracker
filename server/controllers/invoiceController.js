@@ -39,7 +39,7 @@ exports.getInvoice = catchAsync(async (req, res, next) => {
 
 // Create invoice from work orders
 exports.createInvoice = catchAsync(async (req, res, next) => {
-    const { buildingId, workOrderIds, dueDate, notes, invoiceNumber } = req.body;
+    const { buildingId, workOrderIds, dueDate, notes, invoiceNumber, totalAmount } = req.body;
 
     // Validate required fields
     if (!buildingId) {
@@ -64,15 +64,23 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
         return next(new AppError('No eligible work orders found for invoicing. Work orders may already be invoiced.', 400));
     }
 
-    // Calculate totals
+    // Calculate totals using either services or estimated/actual costs
     let subtotal = 0;
     const invoiceWorkOrders = workOrders.map(wo => {
-        // Calculate total cost from services
-        const totalPrice = wo.services?.reduce((sum, service) => {
-            return sum + (service.laborCost || 0) + (service.materialCost || 0);
-        }, 0) || 0;
+        let totalPrice = 0;
+
+        // Try to calculate from services first
+        if (wo.services && wo.services.length > 0) {
+            totalPrice = wo.services.reduce((sum, service) => {
+                return sum + (service.laborCost || 0) + (service.materialCost || 0);
+            }, 0);
+        } else {
+            // Fall back to estimated or actual cost
+            totalPrice = wo.actualCost || wo.estimatedCost || 0;
+        }
+
         subtotal += totalPrice;
-        
+
         return {
             workOrder: wo._id,
             description: `${wo.title || 'Work Order'} (Apt: ${wo.apartmentNumber || 'N/A'})`,

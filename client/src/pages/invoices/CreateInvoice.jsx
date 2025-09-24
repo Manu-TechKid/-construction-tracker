@@ -40,8 +40,9 @@ import { useGetUnbilledWorkOrdersQuery, useCreateInvoiceMutation } from '../../f
 const validationSchema = Yup.object({
   buildingId: Yup.string().required('Building is required'),
   invoiceNumber: Yup.string()
+    .transform((value) => value.trim().toUpperCase())
     .matches(
-      /^[A-Z0-9-]+$/,
+      /^[A-Z0-9-]*$/,
       'Invoice number can only contain letters, numbers, and hyphens'
     )
     .max(20, 'Invoice number must be 20 characters or less'),
@@ -93,16 +94,19 @@ const CreateInvoice = () => {
     onSubmit: async (values) => {
       try {
         const invoiceData = {
-          ...values,
+          buildingId: values.buildingId,
           workOrderIds: selectedWorkOrders.map(wo => wo._id),
-          totalAmount: calculateTotal()
+          dueDate: values.dueDate,
+          notes: values.notes,
+          invoiceNumber: values.invoiceNumber || undefined // Only send if not empty
         };
-        
+
         await createInvoice(invoiceData).unwrap();
         toast.success('Invoice created successfully!');
         navigate('/invoices');
       } catch (error) {
-        toast.error('Failed to create invoice');
+        console.error('Invoice creation error:', error);
+        toast.error(error?.data?.message || 'Failed to create invoice');
       }
     }
   });
@@ -113,12 +117,12 @@ const CreateInvoice = () => {
       toast.error('Please select at least one work order');
       return;
     }
-    
+
     // Format invoice number to uppercase and trim
     if (formik.values.invoiceNumber) {
       formik.setFieldValue('invoiceNumber', formik.values.invoiceNumber.trim().toUpperCase());
     }
-    
+
     await formik.submitForm();
   };
 
@@ -202,13 +206,14 @@ const CreateInvoice = () => {
                     fullWidth
                     id="invoiceNumber"
                     name="invoiceNumber"
-                    label="Invoice Number (Optional)"
+                    label="Invoice Number"
                     value={formik.values.invoiceNumber}
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
                     error={formik.touched.invoiceNumber && Boolean(formik.errors.invoiceNumber)}
                     helperText={formik.touched.invoiceNumber && formik.errors.invoiceNumber}
-                    placeholder="Leave blank for auto-generation"
+                    placeholder="e.g., INV-2025-001 (optional - leave blank for auto-generation)"
+                    inputProps={{ style: { textTransform: 'uppercase' } }}
                   />
                 </Grid>
                 

@@ -70,6 +70,11 @@ const workOrderSchema = new mongoose.Schema({
     min: [0, 'Actual cost cannot be negative'],
     default: 0
   },
+  billingStatus: {
+    type: String,
+    enum: ['pending', 'invoiced', 'paid', 'cancelled'],
+    default: 'pending'
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -86,6 +91,20 @@ const workOrderSchema = new mongoose.Schema({
       uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       uploadedAt: { type: Date, default: Date.now },
     },
+  ],
+  services: [
+    {
+      name: { type: String, required: true },
+      description: { type: String },
+      laborCost: { type: Number, default: 0 },
+      materialCost: { type: Number, default: 0 },
+      quantity: { type: Number, default: 1 },
+      status: {
+        type: String,
+        enum: ['pending', 'in_progress', 'completed', 'cancelled'],
+        default: 'pending'
+      }
+    }
   ],
 }, {
   timestamps: true,
