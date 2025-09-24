@@ -29,7 +29,7 @@ import {
   useGetUsersQuery,
   useGetBuildingQuery
 } from '../../features/buildings/buildingsApiSlice';
-import PhotoUpload from '../../components/PhotoUpload';
+import PhotoUpload from '../../components/common/PhotoUpload';
 import {
   useGetWorkTypesQuery,
   useGetWorkSubTypesQuery,
