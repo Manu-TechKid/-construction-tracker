@@ -160,7 +160,7 @@ const WorkOrderDetails = () => {
               <Typography paragraph>{workOrder.description || 'No description available'}</Typography>
               <Divider sx={{ my: 2 }} />
               <Typography variant="h6" gutterBottom>Location</Typography>
-              <Typography><strong>Building:</strong> {workOrder.building?.name || 'Unknown Building'}</Typography>
+              <Typography><strong>Building:</strong> {workOrder.building?.name || workOrder.building?.code || 'Unknown Building'}</Typography>
               {workOrder.block && <Typography><strong>Block:</strong> {workOrder.block}</Typography>}
               {workOrder.apartmentNumber && <Typography><strong>Apartment:</strong> {workOrder.apartmentNumber}</Typography>}
             </CardContent>
@@ -223,8 +223,8 @@ const WorkOrderDetails = () => {
               />
             </Box>
             <Divider sx={{ my: 2 }} />
-            <Typography><strong>Work Type:</strong> {workOrder.workType || 'Not specified'}</Typography>
-            <Typography><strong>Sub-Type:</strong> {workOrder.workSubType || 'Not specified'}</Typography>
+            <Typography><strong>Work Type:</strong> {workOrder.workType?.name || workOrder.workType || 'Not specified'}</Typography>
+            <Typography><strong>Sub-Type:</strong> {workOrder.workSubType?.name || workOrder.workSubType || 'Not specified'}</Typography>
             <Typography><strong>Scheduled:</strong> {
               workOrder.scheduledDate
                 ? format(new Date(workOrder.scheduledDate), 'MM/dd/yyyy')
@@ -240,7 +240,7 @@ const WorkOrderDetails = () => {
                 workOrder.assignedTo.map((assignment, index) => (
                   <Chip
                     key={index}
-                    label={assignment?.worker?.name || 'Unknown Worker'}
+                    label={assignment?.worker?.name || assignment?.worker?.code || 'Unknown Worker'}
                     size="small"
                     sx={{ mr: 0.5, mb: 0.5 }}
                   />

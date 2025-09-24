@@ -139,6 +139,22 @@ const WorkOrders = () => {
           return false;
         }
 
+        try {
+          // Validate essential fields
+          if (wo.workType && typeof wo.workType === 'object' && !wo.workType.name && !wo.workType.code) {
+            console.warn('Work order has invalid workType:', wo.workType);
+          }
+          if (wo.workSubType && typeof wo.workSubType === 'object' && !wo.workSubType.name && !wo.workSubType.code) {
+            console.warn('Work order has invalid workSubType:', wo.workSubType);
+          }
+          if (wo.building && typeof wo.building === 'object' && !wo.building.name && !wo.building.code) {
+            console.warn('Work order has invalid building:', wo.building);
+          }
+        } catch (error) {
+          console.warn('Error validating work order:', wo._id, error);
+          return false;
+        }
+
         const buildingMatch = filters.building ? wo.building?._id === filters.building : true;
         const statusMatch = filters.status ? wo.status === filters.status : true;
         return buildingMatch && statusMatch;
@@ -153,6 +169,10 @@ const WorkOrders = () => {
         title: wo.title || 'Untitled Work Order',
         status: wo.status || 'pending',
         priority: wo.priority || 'normal',
+        description: wo.description || '',
+        scheduledDate: wo.scheduledDate || null,
+        estimatedCost: wo.estimatedCost || 0,
+        actualCost: wo.actualCost || 0,
       }));
   }, [workOrders, filters]);
 
@@ -171,7 +191,23 @@ const WorkOrders = () => {
       field: 'building',
       headerName: 'Building',
       flex: 1,
-      valueGetter: (params) => params.row.building?.name || 'N/A',
+      valueGetter: (params) => {
+        try {
+          // Handle different building data structures
+          if (params.row.building?.name) {
+            return params.row.building.name;
+          } else if (params.row.building?.code) {
+            return params.row.building.code;
+          } else if (typeof params.row.building === 'string') {
+            return params.row.building;
+          } else {
+            return 'N/A';
+          }
+        } catch (error) {
+          console.warn('Error getting building value:', error);
+          return 'N/A';
+        }
+      },
     },
     {
       field: 'status',
@@ -287,14 +323,47 @@ const WorkOrders = () => {
       field: 'scheduledDate',
       headerName: 'Scheduled Date',
       width: 150,
-      valueFormatter: (params) => format(new Date(params.value), 'MM/dd/yyyy'),
+      valueFormatter: (params) => {
+        try {
+          if (!params.value) return 'Not scheduled';
+          const date = new Date(params.value);
+          if (isNaN(date.getTime())) return 'Invalid date';
+          return format(date, 'MM/dd/yyyy');
+        } catch (error) {
+          console.warn('Error formatting scheduled date:', error);
+          return 'Error';
+        }
+      },
     },
     {
       field: 'assignedTo',
       headerName: 'Assigned To',
       flex: 1.5,
-      valueGetter: (params) => 
-        params.row.assignedTo?.map(a => a.worker?.name || 'Unknown Worker').join(', ') || 'N/A',
+      valueGetter: (params) => {
+        try {
+          if (!params.row.assignedTo || !Array.isArray(params.row.assignedTo)) {
+            return 'N/A';
+          }
+
+          return params.row.assignedTo
+            .map(assignment => {
+              if (assignment?.worker?.name) {
+                return assignment.worker.name;
+              } else if (assignment?.worker?.code) {
+                return assignment.worker.code;
+              } else if (typeof assignment?.worker === 'string') {
+                return assignment.worker;
+              } else {
+                return 'Unknown Worker';
+              }
+            })
+            .filter(name => name && name !== 'Unknown Worker')
+            .join(', ') || 'N/A';
+        } catch (error) {
+          console.warn('Error getting assigned to value:', error);
+          return 'N/A';
+        }
+      },
     },
     {
       field: 'apartmentNumber',
@@ -413,6 +482,25 @@ const WorkOrders = () => {
               </Typography>
             </Box>
           ),
+          ErrorOverlay: () => (
+            <Box
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+              justifyContent="center"
+              minHeight="200px"
+            >
+              <Typography variant="h6" color="error">
+                Error displaying work orders
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                There was an error rendering the work orders. Please refresh the page.
+              </Typography>
+            </Box>
+          ),
+        }}
+        onError={(error) => {
+          console.error('DataGrid error:', error);
         }}
       />
 
