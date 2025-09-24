@@ -63,7 +63,8 @@ const invoiceSchema = new mongoose.Schema({
     paymentMethod: {
         type: String,
         enum: ['cash', 'check', 'credit_card', 'bank_transfer', 'other'],
-        default: null
+        required: false, // Made optional since payment method may not be known at creation
+        default: undefined
     },
     paymentDate: Date,
     amountPaid: {
