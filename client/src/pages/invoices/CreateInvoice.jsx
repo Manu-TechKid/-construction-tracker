@@ -146,8 +146,17 @@ const CreateInvoice = () => {
     }
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Prevent multiple submissions
+    if (isSubmitting) {
+      console.log('Form already submitting, ignoring...');
+      return;
+    }
+
     console.log('=== FORM SUBMISSION STARTED ===');
     console.log('Selected work orders:', selectedWorkOrders);
     console.log('Formik values:', formik.values);
@@ -162,15 +171,18 @@ const CreateInvoice = () => {
       formik.setFieldValue('invoiceNumber', formik.values.invoiceNumber.trim().toUpperCase());
     }
 
-    console.log('About to call formik.handleSubmit...');
+    console.log('About to submit form...');
+    setIsSubmitting(true);
 
+    // Submit the form using Formik's submitForm method
     try {
-      // Submit the form using Formik's handleSubmit
-      await formik.handleSubmit(e);
-      console.log('Formik handleSubmit completed successfully');
+      await formik.submitForm();
+      console.log('Form submitted successfully');
     } catch (error) {
-      console.error('Error in handleSubmit:', error);
+      console.error('Error submitting form:', error);
       toast.error('Form submission failed: ' + (error?.message || 'Unknown error'));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -458,9 +470,9 @@ const CreateInvoice = () => {
               type="submit"
               variant="contained"
               startIcon={<SaveIcon />}
-              disabled={isCreating || selectedWorkOrders.length === 0}
+              disabled={isCreating || selectedWorkOrders.length === 0 || isSubmitting}
             >
-              {isCreating ? 'Creating...' : 'Create Invoice'}
+              {isCreating || isSubmitting ? 'Creating...' : 'Create Invoice'}
             </Button>
           </Box>
         </form>
