@@ -29,7 +29,6 @@ import {
   useGetUsersQuery,
   useGetBuildingQuery
 } from '../../features/buildings/buildingsApiSlice';
-import PhotoUpload from '../../components/common/PhotoUpload';
 import {
   useGetWorkTypesQuery,
   useGetWorkSubTypesQuery,
@@ -40,10 +39,6 @@ const WorkOrderForm = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = Boolean(id);
-  const [photos, setPhotos] = useState([]);
-  const { canViewCosts } = useAuth();
-
-  // Removed photo functionality - not working properly
 
   const formik = useFormik({
     initialValues: {
@@ -334,14 +329,6 @@ const WorkOrderForm = () => {
                 </Grid>
               </CardContent>
             </Card>
-          </Grid>
-          <Grid item xs={12}>
-            <PhotoUpload 
-              photos={photos}
-              onPhotosChange={setPhotos}
-              maxPhotos={10}
-              workOrderId={id}
-            />
           </Grid>
           <Grid item xs={12}>
             <Card>

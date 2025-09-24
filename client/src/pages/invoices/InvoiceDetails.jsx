@@ -318,6 +318,7 @@ const InvoiceDetails = () => {
                             <TableCell align="right">Quantity</TableCell>
                             <TableCell align="right">Unit Price</TableCell>
                             <TableCell align="right">Total</TableCell>
+                            <TableCell align="right">Work Order Pricing</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -382,6 +383,21 @@ const InvoiceDetails = () => {
                                   } catch (error) {
                                     console.warn('Error rendering total price:', error);
                                     return '$0.00';
+                                  }
+                                })()}
+                              </TableCell>
+                              <TableCell align="right">
+                                {(() => {
+                                  try {
+                                    // Show original work order pricing for reference
+                                    const workOrder = invoice.workOrders?.find(wo => wo.workOrder?._id === item.workOrder?._id)?.workOrder;
+                                    if (workOrder && hasPermission('view:costs')) {
+                                      return `Price: $${workOrder.estimatedCost || 0} | Cost: $${workOrder.actualCost || 0}`;
+                                    }
+                                    return 'N/A';
+                                  } catch (error) {
+                                    console.warn('Error rendering work order pricing:', error);
+                                    return 'N/A';
                                   }
                                 })()}
                               </TableCell>
