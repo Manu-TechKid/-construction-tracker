@@ -245,10 +245,30 @@ const Invoices = () => {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      {invoice.issueDate ? new Date(invoice.issueDate).toLocaleDateString() : 'N/A'}
+                      {(() => {
+                        try {
+                          if (!invoice.issueDate) return 'N/A';
+                          const date = new Date(invoice.issueDate);
+                          if (isNaN(date.getTime())) return 'Invalid Date';
+                          return date.toLocaleDateString();
+                        } catch (error) {
+                          console.warn('Error formatting issue date:', error);
+                          return 'Error';
+                        }
+                      })()}
                     </TableCell>
                     <TableCell>
-                      {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}
+                      {(() => {
+                        try {
+                          if (!invoice.dueDate) return 'N/A';
+                          const date = new Date(invoice.dueDate);
+                          if (isNaN(date.getTime())) return 'Invalid Date';
+                          return date.toLocaleDateString();
+                        } catch (error) {
+                          console.warn('Error formatting due date:', error);
+                          return 'Error';
+                        }
+                      })()}
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight="medium">

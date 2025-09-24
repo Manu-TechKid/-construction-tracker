@@ -72,11 +72,29 @@ const EditInvoice = () => {
   useEffect(() => {
     if (invoiceData?.data) {
       const invoice = invoiceData.data;
-      formik.setValues({
-        status: invoice.status || 'draft',
-        dueDate: new Date(invoice.dueDate),
-        notes: invoice.notes || '',
-      });
+      try {
+        let dueDateValue = new Date();
+        if (invoice.dueDate) {
+          const parsedDate = new Date(invoice.dueDate);
+          if (!isNaN(parsedDate.getTime())) {
+            dueDateValue = parsedDate;
+          }
+        }
+
+        formik.setValues({
+          status: invoice.status || 'draft',
+          dueDate: dueDateValue,
+          notes: invoice.notes || '',
+        });
+      } catch (error) {
+        console.warn('Error setting form values:', error);
+        // Set default values if there's an error
+        formik.setValues({
+          status: invoice.status || 'draft',
+          dueDate: new Date(),
+          notes: invoice.notes || '',
+        });
+      }
     }
   }, [invoiceData]);
   

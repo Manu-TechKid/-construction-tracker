@@ -186,7 +186,17 @@ const InvoiceDetails = () => {
                     Issue Date
                   </Typography>
                   <Typography variant="body1">
-                    {format(new Date(invoice.issueDate), 'MMM dd, yyyy')}
+                    {(() => {
+                      try {
+                        if (!invoice.issueDate) return 'Not set';
+                        const date = new Date(invoice.issueDate);
+                        if (isNaN(date.getTime())) return 'Invalid date';
+                        return format(date, 'MMM dd, yyyy');
+                      } catch (error) {
+                        console.warn('Error formatting issue date:', error);
+                        return 'Error';
+                      }
+                    })()}
                   </Typography>
                 </Grid>
                 
@@ -195,7 +205,17 @@ const InvoiceDetails = () => {
                     Due Date
                   </Typography>
                   <Typography variant="body1">
-                    {format(new Date(invoice.dueDate), 'MMM dd, yyyy')}
+                    {(() => {
+                      try {
+                        if (!invoice.dueDate) return 'Not set';
+                        const date = new Date(invoice.dueDate);
+                        if (isNaN(date.getTime())) return 'Invalid date';
+                        return format(date, 'MMM dd, yyyy');
+                      } catch (error) {
+                        console.warn('Error formatting due date:', error);
+                        return 'Error';
+                      }
+                    })()}
                   </Typography>
                 </Grid>
                 
