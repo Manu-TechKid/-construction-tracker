@@ -74,6 +74,13 @@ const CreateInvoice = () => {
   const workOrders = unbilledWorkOrdersData?.data || [];
   const [createInvoice, { isLoading: isCreating }] = useCreateInvoiceMutation();
 
+  // Calculate total amount from selected work orders
+  const calculateTotal = () => {
+    return selectedWorkOrders.reduce((total, workOrder) => {
+      return total + (workOrder.actualCost || workOrder.estimatedCost || 0);
+    }, 0);
+  };
+
   const formik = useFormik({
     initialValues: {
       buildingId: '',
