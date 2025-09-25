@@ -78,9 +78,22 @@ const WorkOrderForm = () => {
           apartmentNumber: values.apartmentNumber || values.apartment,
           // Ensure scheduledDate is properly formatted
           scheduledDate: values.scheduledDate instanceof Date ? values.scheduledDate.toISOString() : values.scheduledDate,
-          // Include photos in the work order data
-          photos: photos || []
+          // Ensure price and cost are numbers
+          price: Number(values.price) || 0,
+          cost: Number(values.cost) || 0,
+          // Ensure workType and workSubType are just IDs
+          workType: values.workType && typeof values.workType === 'object' ? values.workType._id : values.workType,
+          workSubType: values.workSubType && typeof values.workSubType === 'object' ? values.workSubType._id : values.workSubType,
+          // Include photos in the work order data - ensure they are properly formatted
+          photos: photos && Array.isArray(photos) ? photos.map(photo => ({
+            url: photo.url,
+            caption: photo.caption || '',
+            type: photo.type || 'other',
+            uploadedAt: photo.uploadedAt || new Date().toISOString()
+          })) : []
         };
+
+        console.log('Submitting work order with data:', formattedValues);
 
         let workOrderId = id;
         if (isEdit) {
@@ -107,9 +120,9 @@ const WorkOrderForm = () => {
         navigate('/work-orders', { replace: true });
       } catch (error) {
         console.error('Failed to save work order:', error);
-        toast.error('Failed to save work order. Please try again.', {
+        toast.error(`Failed to save work order: ${error.message || 'Unknown error'}`, {
           position: "top-right",
-          autoClose: 3000,
+          autoClose: 5000,
           hideProgressBar: false,
           closeOnClick: true,
           pauseOnHover: true,
@@ -126,7 +139,11 @@ const WorkOrderForm = () => {
   
   // Setup data queries
   const { data: workTypesData, isLoading: isLoadingWorkTypes } = useGetWorkTypesQuery();
-  const { data: workSubTypesData, isLoading: isLoadingWorkSubTypes } = useGetWorkSubTypesQuery(formik.values.workType);
+  const { data: workSubTypesData, isLoading: isLoadingWorkSubTypes } = useGetWorkSubTypesQuery(
+    formik.values.workType && typeof formik.values.workType === 'object' 
+      ? formik.values.workType._id 
+      : formik.values.workType
+  );
   const { data: priorityOptionsData } = useGetDropdownOptionsQuery('priority');
   const { data: statusOptionsData } = useGetDropdownOptionsQuery('status');
 
@@ -146,8 +163,8 @@ const WorkOrderForm = () => {
         building: formData.building?._id || formData.building || '',
         block: formData.block || '',
         apartmentNumber: formData.apartmentNumber || '',
-        workType: formData.workType || '',
-        workSubType: formData.workSubType || '',
+        workType: formData.workType?._id || formData.workType || '',
+        workSubType: formData.workSubType?._id || formData.workSubType || '',
         priority: formData.priority || 'medium',
         assignedTo: formData.assignedTo?.map(a => a.worker?._id || a.worker) || [],
         price: formData.price || formData.estimatedCost || 0, // Map old estimatedCost to new price field

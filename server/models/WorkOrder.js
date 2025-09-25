@@ -70,6 +70,19 @@ const workOrderSchema = new mongoose.Schema({
     min: [0, 'Actual cost cannot be negative'],
     default: 0
   },
+  // New fields for better cost management
+  price: {
+    type: Number,
+    min: [0, 'Price cannot be negative'],
+    default: 0,
+    comment: 'What we charge the customer'
+  },
+  cost: {
+    type: Number,
+    min: [0, 'Cost cannot be negative'],
+    default: 0,
+    comment: 'What it costs us (materials, labor, etc.)'
+  },
   billingStatus: {
     type: String,
     enum: ['pending', 'invoiced', 'paid', 'cancelled'],
