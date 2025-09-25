@@ -191,24 +191,34 @@ const WorkOrders = () => {
       field: 'title', 
       headerName: 'Title & Description', 
       flex: 1.5,
-      renderCell: (params) => (
-        <Box>
-          <Typography variant="body2" fontWeight="medium">
-            {params.row.title || 'Untitled Work Order'}
-          </Typography>
-          {params.row.description && (
-            <Typography variant="caption" color="textSecondary" sx={{ 
-              display: 'block', 
-              overflow: 'hidden', 
-              textOverflow: 'ellipsis', 
-              whiteSpace: 'nowrap',
-              maxWidth: '300px'
-            }}>
-              {params.row.description}
-            </Typography>
-          )}
-        </Box>
-      ),
+      renderCell: (params) => {
+        try {
+          if (!params.row) {
+            return <Typography variant="body2" color="textSecondary">No data</Typography>;
+          }
+          return (
+            <Box>
+              <Typography variant="body2" fontWeight="medium">
+                {params.row.title || 'Untitled Work Order'}
+              </Typography>
+              {params.row.description && (
+                <Typography variant="caption" color="textSecondary" sx={{ 
+                  display: 'block', 
+                  overflow: 'hidden', 
+                  textOverflow: 'ellipsis', 
+                  whiteSpace: 'nowrap',
+                  maxWidth: '300px'
+                }}>
+                  {params.row.description}
+                </Typography>
+              )}
+            </Box>
+          );
+        } catch (error) {
+          console.warn('Error rendering title cell:', error);
+          return <Typography variant="body2" color="textSecondary">Error</Typography>;
+        }
+      },
     },
     { 
       field: 'building',
@@ -216,6 +226,7 @@ const WorkOrders = () => {
       flex: 1,
       valueGetter: (params) => {
         try {
+          if (!params.row) return 'N/A';
           // Handle different building data structures
           if (params.row.building?.name) {
             return params.row.building.name;
@@ -236,46 +247,66 @@ const WorkOrders = () => {
       field: 'status',
       headerName: 'Status',
       width: 150,
-      renderCell: (params) => (
-        <Chip 
-          label={params.value}
-          color={getStatusChipColor(params.value)}
-          size="small"
-          onClick={(event) => handleStatusClick(event, params.row)}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-              event.preventDefault();
-              handleStatusClick(event, params.row);
-            }
-          }}
-          sx={{ 
-            cursor: 'pointer',
-            '&:hover': {
-              opacity: 0.8,
-              transform: 'scale(1.05)'
-            },
-            '&:focus': {
-              outline: '2px solid',
-              outlineColor: 'primary.main',
-              outlineOffset: '2px'
-            }
-          }}
-        />
-      ),
+      renderCell: (params) => {
+        try {
+          if (!params.row) {
+            return <Chip label="N/A" color="default" size="small" />;
+          }
+          return (
+            <Chip 
+              label={params.value || 'pending'}
+              color={getStatusChipColor(params.value || 'pending')}
+              size="small"
+              onClick={(event) => handleStatusClick(event, params.row)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  handleStatusClick(event, params.row);
+                }
+              }}
+              sx={{ 
+                cursor: 'pointer',
+                '&:hover': {
+                  opacity: 0.8,
+                  transform: 'scale(1.05)'
+                },
+                '&:focus': {
+                  outline: '2px solid',
+                  outlineColor: 'primary.main',
+                  outlineOffset: '2px'
+                }
+              }}
+            />
+          );
+        } catch (error) {
+          console.warn('Error rendering status cell:', error);
+          return <Chip label="Error" color="error" size="small" />;
+        }
+      },
     },
     {
       field: 'priority',
       headerName: 'Priority',
       width: 120,
-      renderCell: (params) => (
-        <Chip 
-          label={params.value}
-          color={getPriorityChipColor(params.value)}
-          size="small" 
-        />
-      ),
+      renderCell: (params) => {
+        try {
+          if (!params.row) {
+            return <Chip label="N/A" color="default" size="small" />;
+          }
+          return (
+            <Chip 
+              label={params.value || 'medium'}
+              color={getPriorityChipColor(params.value || 'medium')}
+              size="small" 
+            />
+          );
+        } catch (error) {
+          console.warn('Error rendering priority cell:', error);
+          return <Chip label="Error" color="error" size="small" />;
+        }
+      },
     },
     ...(canViewCosts() ? [
       {
@@ -305,31 +336,51 @@ const WorkOrders = () => {
         headerName: 'Profit',
         width: 100,
         valueGetter: (params) => {
-          const price = params.row.price || 0;
-          const cost = params.row.cost || 0;
-          return price - cost;
+          try {
+            if (!params.row) return 0;
+            const price = params.row.price || 0;
+            const cost = params.row.cost || 0;
+            return price - cost;
+          } catch (error) {
+            console.warn('Error calculating profit:', error);
+            return 0;
+          }
         },
         valueFormatter: (params) => {
-          const profit = params.value || 0;
-          const price = params.row.price || 0;
-          const margin = price > 0 ? ((profit / price) * 100).toFixed(1) : 0;
-          return `$${profit.toFixed(2)} (${margin}%)`;
+          try {
+            if (!params.row) return '$0.00 (0%)';
+            const profit = params.value || 0;
+            const price = params.row.price || 0;
+            const margin = price > 0 ? ((profit / price) * 100).toFixed(1) : 0;
+            return `$${profit.toFixed(2)} (${margin}%)`;
+          } catch (error) {
+            console.warn('Error formatting profit:', error);
+            return '$0.00 (0%)';
+          }
         },
         renderCell: (params) => {
-          const profit = params.value || 0;
-          const price = params.row.price || 0;
-          const margin = price > 0 ? ((profit / price) * 100).toFixed(1) : 0;
-          
-          return (
-            <Box>
-              <Typography variant="body2" color={profit >= 0 ? 'success.main' : 'error.main'} fontWeight="medium">
-                ${profit.toFixed(2)}
-              </Typography>
-              <Typography variant="caption" color="textSecondary">
-                {margin}%
-              </Typography>
-            </Box>
-          );
+          try {
+            if (!params.row) {
+              return <Typography variant="body2" color="textSecondary">$0.00</Typography>;
+            }
+            const profit = params.value || 0;
+            const price = params.row.price || 0;
+            const margin = price > 0 ? ((profit / price) * 100).toFixed(1) : 0;
+
+            return (
+              <Box>
+                <Typography variant="body2" color={profit >= 0 ? 'success.main' : 'error.main'} fontWeight="medium">
+                  ${profit.toFixed(2)}
+                </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  {margin}%
+                </Typography>
+              </Box>
+            );
+          } catch (error) {
+            console.warn('Error rendering profit cell:', error);
+            return <Typography variant="body2" color="textSecondary">Error</Typography>;
+          }
         },
       }
     ] : []),
@@ -338,13 +389,16 @@ const WorkOrders = () => {
       headerName: 'Photos',
       width: 100,
       renderCell: (params) => {
-        const photos = params.row.photos || [];
-
-        if (photos.length === 0) {
-          return <Typography variant="body2" color="textSecondary">No photos</Typography>;
-        }
-
         try {
+          if (!params.row) {
+            return <Typography variant="body2" color="textSecondary">No data</Typography>;
+          }
+          const photos = params.row.photos || [];
+
+          if (photos.length === 0) {
+            return <Typography variant="body2" color="textSecondary">No photos</Typography>;
+          }
+
           const firstPhoto = photos[0];
           let photoUrl = '';
 
@@ -420,7 +474,7 @@ const WorkOrders = () => {
       flex: 1.5,
       valueGetter: (params) => {
         try {
-          if (!params.row.assignedTo || !Array.isArray(params.row.assignedTo)) {
+          if (!params.row || !params.row.assignedTo || !Array.isArray(params.row.assignedTo)) {
             return 'N/A';
           }
 
@@ -448,23 +502,41 @@ const WorkOrders = () => {
       field: 'apartmentNumber',
       headerName: 'Apartment',
       width: 120,
-      valueGetter: (params) => params.row.apartmentNumber || 'N/A',
+      valueGetter: (params) => {
+        try {
+          if (!params.row) return 'N/A';
+          return params.row.apartmentNumber || 'N/A';
+        } catch (error) {
+          console.warn('Error getting apartment number:', error);
+          return 'N/A';
+        }
+      },
     },
     {
       field: 'actions',
       headerName: 'Actions',
       flex: 1,
       sortable: false,
-      renderCell: (params) => (
-        <Box>
-          <Button
-            startIcon={<ViewIcon />}
-            onClick={() => navigate(`/work-orders/${params.row._id}`)}
-          >
-            View
-          </Button>
-        </Box>
-      ),
+      renderCell: (params) => {
+        try {
+          if (!params.row) {
+            return <Typography variant="body2" color="textSecondary">No actions</Typography>;
+          }
+          return (
+            <Box>
+              <Button
+                startIcon={<ViewIcon />}
+                onClick={() => navigate(`/work-orders/${params.row._id}`)}
+              >
+                View
+              </Button>
+            </Box>
+          );
+        } catch (error) {
+          console.warn('Error rendering actions cell:', error);
+          return <Typography variant="body2" color="textSecondary">Error</Typography>;
+        }
+      },
     },
   ];
 
@@ -496,9 +568,9 @@ const WorkOrders = () => {
                 onChange={handleFilterChange}
               >
                 <MenuItem value="">All Buildings</MenuItem>
-                {buildingsData?.data?.buildings.map(b => (
+                {buildingsData?.data?.buildings?.map(b => (
                   <MenuItem key={b._id} value={b._id}>{b.name}</MenuItem>
-                ))}
+                )) || []}
               </TextField>
             </Grid>
             <Grid item xs={12} sm={6}>
