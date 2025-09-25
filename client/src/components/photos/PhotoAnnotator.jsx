@@ -548,17 +548,9 @@ const PhotoAnnotator = ({
     setZoom(prev => Math.max(prev / 1.2, 0.1));
   };
 
-  const handleApplyTemplate = (templateAnnotations) => {
-    if (templateAnnotations && templateAnnotations.length > 0) {
-      // Add template annotations to current annotations
-      const newAnnotations = templateAnnotations.map(annotation => ({
-        ...annotation,
-        id: Date.now() + Math.random() // Ensure unique IDs
-      }));
-      setAnnotations(prev => [...prev, ...newAnnotations]);
-      saveToUndoStack();
-    }
-    setShowTemplatesDialog(false);
+  const handleCenter = () => {
+    setZoom(1);
+    setPanOffset({ x: 0, y: 0 });
   };
 
   return (

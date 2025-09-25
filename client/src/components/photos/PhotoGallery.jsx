@@ -27,7 +27,8 @@ import {
   ImageListItem,
   ImageListItemBar,
   Skeleton,
-  Menu
+  Menu,
+  Divider
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
