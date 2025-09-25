@@ -59,7 +59,8 @@ exports.uploadWorkOrderPhotos = catchAsync(async (req, res, next) => {
   // Process uploaded files
   const photos = req.files.map(file => ({
     url: `/uploads/${file.filename}`,
-    description: req.body.description || '',
+    caption: req.body.description || '',
+    type: req.body.type || 'other',
     uploadedBy: req.user.id,
     uploadedAt: new Date()
   }));
@@ -93,7 +94,8 @@ exports.uploadReminderPhotos = catchAsync(async (req, res, next) => {
   // Process uploaded files
   const photos = req.files.map(file => ({
     url: `/uploads/${file.filename}`,
-    description: req.body.description || '',
+    caption: req.body.description || '',
+    type: req.body.type || 'other',
     uploadedBy: req.user.id,
     uploadedAt: new Date()
   }));

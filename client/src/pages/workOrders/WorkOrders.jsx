@@ -387,7 +387,7 @@ const WorkOrders = () => {
     {
       field: 'photos',
       headerName: 'Photos',
-      width: 200,
+      width: 250,
       renderCell: (params) => {
         try {
           if (!params.row) {
@@ -428,10 +428,10 @@ const WorkOrders = () => {
               display: 'flex',
               gap: 1,
               alignItems: 'center',
-              maxWidth: 180,
+              maxWidth: 230,
               overflow: 'hidden'
             }}>
-              {photos.slice(0, 3).map((photo, index) => {
+              {photos.slice(0, 4).map((photo, index) => {
                 let currentPhotoUrl = '';
 
                 // Handle different photo data structures for each photo
@@ -456,15 +456,17 @@ const WorkOrders = () => {
                     key={photo._id || index}
                     sx={{
                       position: 'relative',
-                      width: 60,
-                      height: 60,
+                      width: 50,
+                      height: 50,
                       borderRadius: 1,
                       overflow: 'hidden',
                       border: '2px solid',
-                      borderColor: 'divider',
+                      borderColor: 'primary.light',
+                      backgroundColor: 'grey.50',
                       '&:hover': {
                         transform: 'scale(1.1)',
-                        boxShadow: 2,
+                        boxShadow: 3,
+                        borderColor: 'primary.main',
                       },
                       transition: 'all 0.2s ease-in-out',
                     }}
@@ -475,15 +477,18 @@ const WorkOrders = () => {
                       style={{
                         width: '100%',
                         height: '100%',
-                        objectFit: 'cover',
+                        objectFit: 'contain',
                         display: 'block',
+                        backgroundColor: 'white',
                       }}
                       onError={(e) => {
                         console.warn('Error loading image:', currentFullPhotoUrl);
                         e.target.style.display = 'none';
+                        e.target.parentElement.style.backgroundColor = '#f5f5f5';
+                        e.target.parentElement.style.border = '2px dashed #ccc';
                       }}
                     />
-                    {index === 2 && photos.length > 3 && (
+                    {index === 3 && photos.length > 4 && (
                       <Box
                         sx={{
                           position: 'absolute',
@@ -500,7 +505,7 @@ const WorkOrders = () => {
                           fontWeight: 'bold',
                         }}
                       >
-                        +{photos.length - 3}
+                        +{photos.length - 4}
                       </Box>
                     )}
                   </Box>

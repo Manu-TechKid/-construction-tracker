@@ -28,6 +28,7 @@ import {
 } from '@mui/icons-material';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'react-toastify';
+import { format } from 'date-fns';
 import photoService from '../../services/photoService';
 
 const PhotoUpload = ({ photos = [], onPhotosChange, maxPhotos = 10, workOrderId = null }) => {
@@ -210,82 +211,119 @@ const PhotoUpload = ({ photos = [], onPhotosChange, maxPhotos = 10, workOrderId 
           {photos.map((photo) => (
             <Grid item xs={12} sm={6} md={4} key={photo.id}>
               <Card>
-                <Box sx={{ position: 'relative' }}>
-                  <img
-                    src={photo.url}
-                    alt={photo.caption || 'Work order photo'}
-                    style={{
-                      width: '100%',
-                      height: 200,
-                      objectFit: 'cover',
-                    }}
-                  />
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      top: 8,
-                      right: 8,
-                      display: 'flex',
-                      gap: 1,
-                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                      borderRadius: 1,
-                      p: 0.5,
-                    }}
-                  >
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEditPhoto(photo)}
-                      sx={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                        color: 'primary.main',
-                        '&:hover': { 
-                          backgroundColor: 'rgba(255, 255, 255, 1)',
-                          transform: 'scale(1.1)'
-                        },
-                        width: 32,
-                        height: 32,
-                        boxShadow: 2,
+                  <Box sx={{ position: 'relative' }}>
+                    <img
+                      src={photo.url}
+                      alt={photo.caption || 'Work order photo'}
+                      style={{
+                        width: '100%',
+                        height: 200,
+                        objectFit: 'contain',
+                        borderRadius: '8px',
+                        backgroundColor: '#f8f9fa',
+                        border: '1px solid #e9ecef',
+                        padding: '4px',
                       }}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDeletePhoto(photo)}
-                      sx={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                        color: 'error.main',
-                        '&:hover': { 
-                          backgroundColor: 'rgba(255, 255, 255, 1)',
-                          transform: 'scale(1.1)'
-                        },
-                        width: 32,
-                        height: 32,
-                        boxShadow: 2,
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.parentElement.style.backgroundColor = '#f8f9fa';
+                        e.target.parentElement.style.border = '2px dashed #dee2e6';
+                        e.target.parentElement.style.height = '200px';
+                        e.target.parentElement.style.display = 'flex';
+                        e.target.parentElement.style.alignItems = 'center';
+                        e.target.parentElement.style.justifyContent = 'center';
+                        e.target.parentElement.innerHTML = '<span style="color: #6c757d;">Image not available</span>';
                       }}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      top: 8,
-                      left: 8,
-                    }}
-                  >
-                    <Chip
-                      label={getPhotoTypeLabel(photo.type)}
-                      color={getPhotoTypeColor(photo.type)}
-                      size="small"
                     />
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        display: 'flex',
+                        gap: 1,
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        borderRadius: 1,
+                        p: 0.5,
+                      }}
+                    >
+                      <IconButton
+                        size="small"
+                        onClick={() => handleEditPhoto(photo)}
+                        sx={{
+                          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                          color: 'primary.main',
+                          '&:hover': {
+                            backgroundColor: 'rgba(255, 255, 255, 1)',
+                            transform: 'scale(1.1)',
+                            boxShadow: 2,
+                          },
+                          width: 32,
+                          height: 32,
+                        }}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDeletePhoto(photo)}
+                        sx={{
+                          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                          color: 'error.main',
+                          '&:hover': {
+                            backgroundColor: 'rgba(255, 255, 255, 1)',
+                            transform: 'scale(1.1)',
+                            boxShadow: 2,
+                          },
+                          width: 32,
+                          height: 32,
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 8,
+                        left: 8,
+                      }}
+                    >
+                      <Chip
+                        label={getPhotoTypeLabel(photo.type)}
+                        color={getPhotoTypeColor(photo.type)}
+                        size="small"
+                        sx={{
+                          fontWeight: 'medium',
+                          '& .MuiChip-label': {
+                            px: 1,
+                          }
+                        }}
+                      />
+                    </Box>
                   </Box>
-                </Box>
-                <CardContent sx={{ pt: 1 }}>
-                  <Typography variant="body2" color="text.secondary" noWrap>
-                    {photo.caption || 'No caption'}
-                  </Typography>
-                </CardContent>
+                  <CardContent sx={{ pt: 1, pb: 2, '&:last-child': { pb: 2 } }}>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{
+                        minHeight: '2.5rem',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        lineHeight: 1.3,
+                      }}
+                    >
+                      {photo.caption || 'No caption'}
+                    </Typography>
+                    {photo.uploadedAt && (
+                      <Typography variant="caption" color="text.secondary" display="block" mt={0.5}>
+                        {format(new Date(photo.uploadedAt), 'MMM dd, yyyy HH:mm')}
+                      </Typography>
+                    )}
+                  </CardContent>
               </Card>
             </Grid>
           ))}

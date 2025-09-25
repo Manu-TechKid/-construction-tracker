@@ -73,7 +73,8 @@ const reminderSchema = new mongoose.Schema({
   photos: [
     {
       url: { type: String, required: true },
-      description: { type: String, trim: true },
+      caption: { type: String, trim: true },
+      type: { type: String, enum: ['before', 'during', 'after', 'issue', 'other'], default: 'other' },
       uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       uploadedAt: { type: Date, default: Date.now },
     },

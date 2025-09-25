@@ -171,25 +171,60 @@ const WorkOrderDetails = () => {
             <Card sx={{ mt: 3 }}>
               <CardContent>
                 <Typography variant="h6" gutterBottom>Photos</Typography>
-                <Box display="flex" flexWrap="wrap" gap={2}>
+                <Grid container spacing={3}>
                   {workOrder.photos
                     .filter(photo => photo) // Filter out null/undefined photos
                     .map((photo, index) => {
                       try {
                         const photoUrl = getPhotoUrl(photo);
                         return photoUrl ? (
-                          <img
-                            key={index}
-                            src={photoUrl}
-                            alt={`work order photo ${index + 1}`}
-                            width="150"
-                            height="150"
-                            style={{ objectFit: 'cover', borderRadius: '4px' }}
-                            onError={(e) => {
-                              console.warn('Error loading image:', photoUrl, photo);
-                              e.target.style.display = 'none';
-                            }}
-                          />
+                          <Grid item xs={12} sm={6} md={4} key={index}>
+                            <Card variant="outlined" sx={{ height: '100%' }}>
+                              <Box sx={{ position: 'relative', p: 1 }}>
+                                <img
+                                  src={photoUrl}
+                                  alt={`work order photo ${index + 1}`}
+                                  style={{
+                                    width: '100%',
+                                    height: 200,
+                                    objectFit: 'contain',
+                                    borderRadius: '4px',
+                                    backgroundColor: '#f5f5f5',
+                                    border: '1px solid #e0e0e0'
+                                  }}
+                                  onError={(e) => {
+                                    console.warn('Error loading image:', photoUrl, photo);
+                                    e.target.style.display = 'none';
+                                    e.target.parentElement.style.backgroundColor = '#f5f5f5';
+                                    e.target.parentElement.style.border = '2px dashed #ccc';
+                                    e.target.parentElement.style.height = '200px';
+                                    e.target.parentElement.style.display = 'flex';
+                                    e.target.parentElement.style.alignItems = 'center';
+                                    e.target.parentElement.style.justifyContent = 'center';
+                                    e.target.parentElement.innerHTML = '<span style="color: #999;">Image not available</span>';
+                                  }}
+                                />
+                                {photo.type && (
+                                  <Chip
+                                    label={photo.type}
+                                    size="small"
+                                    color={photo.type === 'before' ? 'primary' : photo.type === 'after' ? 'success' : photo.type === 'issue' ? 'error' : 'default'}
+                                    sx={{ position: 'absolute', top: 8, left: 8 }}
+                                  />
+                                )}
+                              </Box>
+                              <CardContent sx={{ pt: 1, pb: 2 }}>
+                                <Typography variant="body2" color="text.secondary" sx={{ minHeight: '2.5rem' }}>
+                                  {photo.caption || 'No caption'}
+                                </Typography>
+                                {photo.uploadedAt && (
+                                  <Typography variant="caption" color="text.secondary" display="block" mt={1}>
+                                    Uploaded: {format(new Date(photo.uploadedAt), 'MM/dd/yyyy HH:mm')}
+                                  </Typography>
+                                )}
+                              </CardContent>
+                            </Card>
+                          </Grid>
                         ) : null;
                       } catch (error) {
                         console.warn('Error processing photo:', photo, error);
@@ -198,7 +233,7 @@ const WorkOrderDetails = () => {
                     })
                     .filter(Boolean) // Remove null entries
                   }
-                </Box>
+                </Grid>
               </CardContent>
             </Card>
           )}
