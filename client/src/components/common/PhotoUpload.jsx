@@ -227,14 +227,24 @@ const PhotoUpload = ({ photos = [], onPhotosChange, maxPhotos = 10, workOrderId 
                       right: 8,
                       display: 'flex',
                       gap: 1,
+                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                      borderRadius: 1,
+                      p: 0.5,
                     }}
                   >
                     <IconButton
                       size="small"
                       onClick={() => handleEditPhoto(photo)}
                       sx={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' }
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        color: 'primary.main',
+                        '&:hover': { 
+                          backgroundColor: 'rgba(255, 255, 255, 1)',
+                          transform: 'scale(1.1)'
+                        },
+                        width: 32,
+                        height: 32,
+                        boxShadow: 2,
                       }}
                     >
                       <EditIcon fontSize="small" />
@@ -243,8 +253,15 @@ const PhotoUpload = ({ photos = [], onPhotosChange, maxPhotos = 10, workOrderId 
                       size="small"
                       onClick={() => handleDeletePhoto(photo)}
                       sx={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' }
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        color: 'error.main',
+                        '&:hover': { 
+                          backgroundColor: 'rgba(255, 255, 255, 1)',
+                          transform: 'scale(1.1)'
+                        },
+                        width: 32,
+                        height: 32,
+                        boxShadow: 2,
                       }}
                     >
                       <DeleteIcon fontSize="small" />

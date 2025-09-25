@@ -387,7 +387,7 @@ const WorkOrders = () => {
     {
       field: 'photos',
       headerName: 'Photos',
-      width: 100,
+      width: 200,
       renderCell: (params) => {
         try {
           if (!params.row) {
@@ -418,36 +418,98 @@ const WorkOrders = () => {
           // Clean the photo URL - remove any leading slashes or path prefixes
           photoUrl = photoUrl.replace(/^.*[\\\/]/, '').replace(/^uploads[\\\/]photos[\\\/]/, '');
 
+          // Fix double API path issue and ensure correct URL construction
           const baseUrl = process.env.REACT_APP_API_URL || window.location.origin;
-          const fullPhotoUrl = `${baseUrl}/uploads/photos/${photoUrl}`;
+          const cleanBaseUrl = baseUrl.replace(/\/api\/v1\/api\/v1/g, '/api/v1').replace(/\/+$/, '');
+          const fullPhotoUrl = `${cleanBaseUrl}/uploads/photos/${photoUrl}`;
 
           return (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Box
-                component="img"
-                src={fullPhotoUrl}
-                alt="Work order photo"
-                sx={{
-                  width: 40,
-                  height: 40,
-                  objectFit: 'cover',
-                  borderRadius: 1,
-                  border: '1px solid #ddd'
-                }}
-                onError={(e) => {
-                  e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjVmNWY1Ii8+CjxwYXRoIGQ9Ik0yMCAyNUMyMi43NjE0IDI1IDI1IDIyLjc2MTQgMjUgMjBDMjUgMTcuMjM4NiAyMi43NjE0IDE1IDIwIDE1QzE3LjIzODYgMTUgMTUgMTcuMjM4NiAxNSAyMEMxNSAyMi43NjE0IDE3LjIzODYgMjUgMjAgMjVaIiBmaWxsPSIjY2NjIi8+Cjwvc3ZnPgo=';
-                  e.target.style.border = '1px solid #ddd';
-                }}
-              />
-              {photos.length > 1 && (
-                <Typography variant="caption" color="textSecondary">
-                  +{photos.length - 1}
-                </Typography>
-              )}
+            <Box sx={{
+              display: 'flex',
+              gap: 1,
+              alignItems: 'center',
+              maxWidth: 180,
+              overflow: 'hidden'
+            }}>
+              {photos.slice(0, 3).map((photo, index) => {
+                let currentPhotoUrl = '';
+
+                // Handle different photo data structures for each photo
+                if (typeof photo === 'string') {
+                  currentPhotoUrl = photo;
+                } else if (photo?.url) {
+                  currentPhotoUrl = photo.url;
+                } else if (photo?.path) {
+                  currentPhotoUrl = photo.path;
+                } else if (photo?.filename) {
+                  currentPhotoUrl = photo.filename;
+                } else if (photo?.src) {
+                  currentPhotoUrl = photo.src;
+                }
+
+                // Clean the photo URL
+                currentPhotoUrl = currentPhotoUrl.replace(/^.*[\\\/]/, '').replace(/^uploads[\\\/]photos[\\\/]/, '');
+                const currentFullPhotoUrl = `${cleanBaseUrl}/uploads/photos/${currentPhotoUrl}`;
+
+                return (
+                  <Box
+                    key={photo._id || index}
+                    sx={{
+                      position: 'relative',
+                      width: 60,
+                      height: 60,
+                      borderRadius: 1,
+                      overflow: 'hidden',
+                      border: '2px solid',
+                      borderColor: 'divider',
+                      '&:hover': {
+                        transform: 'scale(1.1)',
+                        boxShadow: 2,
+                      },
+                      transition: 'all 0.2s ease-in-out',
+                    }}
+                  >
+                    <img
+                      src={currentFullPhotoUrl}
+                      alt={photo.caption || `Photo ${index + 1}`}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        display: 'block',
+                      }}
+                      onError={(e) => {
+                        console.warn('Error loading image:', currentFullPhotoUrl);
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                    {index === 2 && photos.length > 3 && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontSize: '10px',
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        +{photos.length - 3}
+                      </Box>
+                    )}
+                  </Box>
+                );
+              })}
             </Box>
           );
         } catch (error) {
-          console.warn('Error rendering photo in DataGrid:', error);
+          console.warn('Error rendering photos cell:', error);
           return <Typography variant="body2" color="textSecondary">Error</Typography>;
         }
       },
