@@ -27,7 +27,8 @@ import {
   Cancel as CancelledIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
-import { useGetWorkOrdersQuery, useGetBuildingsQuery, useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
+import { useGetWorkOrdersQuery, useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
+import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
 
