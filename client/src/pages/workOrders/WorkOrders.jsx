@@ -24,12 +24,9 @@ import {
   PlayArrow as InProgressIcon,
   CheckCircle as CompletedIcon,
   Pause as OnHoldIcon,
-  Cancel as CancelledIcon
+  Cancel as CancelledIcon,
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
-import { useGetWorkOrdersQuery, useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
-import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
-import { useAuth } from '../../hooks/useAuth';
 
 const getStatusChipColor = (status) => {
   switch (status) {
@@ -54,10 +51,10 @@ const getPriorityChipColor = (priority) => {
 
 const WorkOrders = () => {
   const navigate = useNavigate();
+  const { canViewCosts } = useAuth();
   const { data: workOrdersData, isLoading, error } = useGetWorkOrdersQuery();
   const { data: buildingsData } = useGetBuildingsQuery();
   const [updateWorkOrder] = useUpdateWorkOrderMutation();
-  const { canViewCosts } = useAuth();
 
   const [filters, setFilters] = useState({ building: '', status: '' });
   const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
@@ -171,10 +168,8 @@ const WorkOrders = () => {
         priority: wo.priority || 'normal',
         description: wo.description || '',
         scheduledDate: wo.scheduledDate || null,
-        estimatedCost: wo.estimatedCost || 0,
-        actualCost: wo.actualCost || 0,
-        price: wo.estimatedCost || 0, // What we charge the customer
-        cost: wo.actualCost || 0,     // What it costs us to provide the service
+        price: wo.price || wo.estimatedCost || 0, // Map old estimatedCost to new price field
+        cost: wo.cost || wo.actualCost || 0, // Map old actualCost to new cost field
       }));
   }, [workOrders, filters]);
 
@@ -188,19 +183,28 @@ const WorkOrders = () => {
 
 
   const columns = [
-    { field: 'title', headerName: 'Title', flex: 1 },
     { 
-      field: 'description',
-      headerName: 'Description',
+      field: 'title', 
+      headerName: 'Title & Description', 
       flex: 1.5,
-      valueGetter: (params) => {
-        try {
-          return params.row.description || 'No description available';
-        } catch (error) {
-          console.warn('Error getting description:', error);
-          return 'No description available';
-        }
-      },
+      renderCell: (params) => (
+        <Box>
+          <Typography variant="body2" fontWeight="medium">
+            {params.row.title || 'Untitled Work Order'}
+          </Typography>
+          {params.row.description && (
+            <Typography variant="caption" color="textSecondary" sx={{ 
+              display: 'block', 
+              overflow: 'hidden', 
+              textOverflow: 'ellipsis', 
+              whiteSpace: 'nowrap',
+              maxWidth: '300px'
+            }}>
+              {params.row.description}
+            </Typography>
+          )}
+        </Box>
+      ),
     },
     { 
       field: 'building',
@@ -269,6 +273,62 @@ const WorkOrders = () => {
         />
       ),
     },
+    ...(canViewCosts() ? [
+      {
+        field: 'price',
+        headerName: 'Price',
+        width: 100,
+        valueFormatter: (params) => `$${params.value?.toFixed(2) || '0.00'}`,
+        renderCell: (params) => (
+          <Typography variant="body2" color="success.main" fontWeight="medium">
+            ${params.value?.toFixed(2) || '0.00'}
+          </Typography>
+        ),
+      },
+      {
+        field: 'cost',
+        headerName: 'Cost',
+        width: 100,
+        valueFormatter: (params) => `$${params.value?.toFixed(2) || '0.00'}`,
+        renderCell: (params) => (
+          <Typography variant="body2" color="error.main" fontWeight="medium">
+            ${params.value?.toFixed(2) || '0.00'}
+          </Typography>
+        ),
+      },
+      {
+        field: 'profit',
+        headerName: 'Profit',
+        width: 100,
+        valueGetter: (params) => {
+          const price = params.row.price || 0;
+          const cost = params.row.cost || 0;
+          return price - cost;
+        },
+        valueFormatter: (params) => {
+          const profit = params.value || 0;
+          const price = params.row.price || 0;
+          const margin = price > 0 ? ((profit / price) * 100).toFixed(1) : 0;
+          return `$${profit.toFixed(2)} (${margin}%)`;
+        },
+        renderCell: (params) => {
+          const profit = params.value || 0;
+          const price = params.row.price || 0;
+          const margin = price > 0 ? ((profit / price) * 100).toFixed(1) : 0;
+          
+          return (
+            <Box>
+              <Typography variant="body2" color={profit >= 0 ? 'success.main' : 'error.main'} fontWeight="medium">
+                ${profit.toFixed(2)}
+              </Typography>
+              <Typography variant="caption" color="textSecondary">
+                {margin}%
+              </Typography>
+            </Box>
+          );
+        },
+      }
+    ] : []),
     {
       field: 'photos',
       headerName: 'Photos',
@@ -386,34 +446,6 @@ const WorkOrders = () => {
       width: 120,
       valueGetter: (params) => params.row.apartmentNumber || 'N/A',
     },
-    ...(canViewCosts() ? [
-      {
-        field: 'price',
-        headerName: 'Price',
-        width: 120,
-        valueFormatter: (params) => {
-          try {
-            return `$${params.value?.toFixed(2) || '0.00'}`;
-          } catch (error) {
-            console.warn('Error formatting price:', error);
-            return '$0.00';
-          }
-        },
-      },
-      {
-        field: 'cost',
-        headerName: 'Cost',
-        width: 120,
-        valueFormatter: (params) => {
-          try {
-            return `$${params.value?.toFixed(2) || '0.00'}`;
-          } catch (error) {
-            console.warn('Error formatting cost:', error);
-            return '$0.00';
-          }
-        },
-      },
-    ] : []),
     {
       field: 'actions',
       headerName: 'Actions',

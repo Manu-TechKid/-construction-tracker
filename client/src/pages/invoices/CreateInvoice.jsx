@@ -92,8 +92,8 @@ const CreateInvoice = () => {
   // Calculate total amount from selected work orders
   const calculateTotal = () => {
     return selectedWorkOrders.reduce((total, workOrder) => {
-      // Use the price field (what we charge) for invoice calculation
-      return total + (workOrder.estimatedCost || workOrder.actualCost || 0);
+      // Use the price field (what customer pays) instead of cost fields
+      return total + (workOrder.price || workOrder.estimatedCost || workOrder.actualCost || 0);
     }, 0);
   };
 
@@ -430,10 +430,10 @@ const CreateInvoice = () => {
                               <small style={{ color: '#666' }}>Billing: {workOrder.billingStatus || 'pending'}</small>
                             </TableCell>
                             <TableCell align="right">
-                              ${(workOrder.estimatedCost || workOrder.actualCost || 0).toFixed(2)}
+                              ${((workOrder.price || workOrder.estimatedCost || workOrder.actualCost || 0)).toFixed(2)}
                               <br />
                               <small style={{ color: '#666' }}>
-                                Price: ${workOrder.estimatedCost || 0} | Cost: ${workOrder.actualCost || 0}
+                                Price: ${workOrder.price || 0} | Cost: ${workOrder.cost || workOrder.actualCost || 0}
                               </small>
                             </TableCell>
                           </TableRow>
