@@ -10,7 +10,6 @@ import {
   Divider,
   Tooltip,
   Dialog,
-  DialogTitle,
   DialogContent,
   DialogActions,
   Slider,
@@ -38,12 +37,14 @@ import {
   ZoomIn,
   ZoomOut,
   CenterFocusStrong as CenterIcon,
-  Delete as EraserIcon
+  Delete as EraserIcon,
+  Bookmark as BookmarkIcon
 } from '@mui/icons-material';
+import AnnotationTemplates from './AnnotationTemplates';
 
 const PhotoAnnotator = ({ 
   buildingId, 
-  onSave, 
+  onSave,
   initialPhoto = null,
   mode = 'estimate' // 'estimate', 'inspection', 'progress'
 }) => {
@@ -65,6 +66,9 @@ const PhotoAnnotator = ({
   const [zoom, setZoom] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [notes, setNotes] = useState('');
+
+  const [isFilled, setIsFilled] = useState(false);
+  const [showTemplatesDialog, setShowTemplatesDialog] = useState(false);
 
   const tools = [
     { id: 'pen', icon: <DrawIcon />, label: 'Draw' },
@@ -188,12 +192,23 @@ const PhotoAnnotator = ({
         break;
 
       case 'rectangle':
+        // Draw rectangle outline
         ctx.strokeRect(
           annotation.x,
           annotation.y,
           annotation.width,
           annotation.height
         );
+
+        // Fill rectangle if it's a filled rectangle
+        if (annotation.filled) {
+          ctx.fillRect(
+            annotation.x,
+            annotation.y,
+            annotation.width,
+            annotation.height
+          );
+        }
         break;
 
       case 'circle':
@@ -206,6 +221,11 @@ const PhotoAnnotator = ({
           2 * Math.PI
         );
         ctx.stroke();
+
+        // Fill circle if it's a filled circle
+        if (annotation.filled) {
+          ctx.fill();
+        }
         break;
 
       case 'text':
@@ -365,6 +385,7 @@ const PhotoAnnotator = ({
         height,
         color: drawingColor,
         lineWidth,
+        filled: isFilled,
         id: Date.now()
       };
       setAnnotations(prev => [...prev, newAnnotation]);
@@ -380,6 +401,7 @@ const PhotoAnnotator = ({
         radius,
         color: drawingColor,
         lineWidth,
+        filled: isFilled,
         id: Date.now()
       };
       setAnnotations(prev => [...prev, newAnnotation]);
@@ -526,9 +548,17 @@ const PhotoAnnotator = ({
     setZoom(prev => Math.max(prev / 1.2, 0.1));
   };
 
-  const handleCenter = () => {
-    setZoom(1);
-    setPanOffset({ x: 0, y: 0 });
+  const handleApplyTemplate = (templateAnnotations) => {
+    if (templateAnnotations && templateAnnotations.length > 0) {
+      // Add template annotations to current annotations
+      const newAnnotations = templateAnnotations.map(annotation => ({
+        ...annotation,
+        id: Date.now() + Math.random() // Ensure unique IDs
+      }));
+      setAnnotations(prev => [...prev, ...newAnnotations]);
+      saveToUndoStack();
+    }
+    setShowTemplatesDialog(false);
   };
 
   return (
@@ -572,7 +602,18 @@ const PhotoAnnotator = ({
 
           <Divider orientation="vertical" flexItem />
 
-          {/* Color Picker */}
+          {/* Fill Toggle for Shapes */}
+          <Tooltip title={isFilled ? 'Filled Shapes' : 'Outline Shapes'}>
+            <IconButton
+              onClick={() => setIsFilled(!isFilled)}
+              color={isFilled ? 'secondary' : 'default'}
+              variant={isFilled ? 'contained' : 'outlined'}
+            >
+              <ShapeIcon />
+            </IconButton>
+          </Tooltip>
+
+          <Divider orientation="vertical" flexItem />
           <Tooltip title="Color">
             <IconButton onClick={() => setShowColorPicker(!showColorPicker)}>
               <ColorIcon sx={{ color: drawingColor }} />
@@ -603,7 +644,14 @@ const PhotoAnnotator = ({
 
           <Divider orientation="vertical" flexItem />
 
-          {/* Line Width */}
+          {/* Templates */}
+          <Tooltip title="Annotation Templates">
+            <IconButton onClick={() => setShowTemplatesDialog(true)}>
+              <BookmarkIcon />
+            </IconButton>
+          </Tooltip>
+
+          <Divider orientation="vertical" flexItem />
           <Box sx={{ width: 100 }}>
             <Typography variant="caption">Width: {lineWidth}px</Typography>
             <Slider
@@ -732,39 +780,12 @@ const PhotoAnnotator = ({
         />
       </Paper>
 
-      {/* Measurement Dialog */}
-      <Dialog open={showMeasureDialog} onClose={() => setShowMeasureDialog(false)}>
-        <DialogTitle>Add Measurement</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-            <TextField
-              label="Measurement"
-              value={measurementValue}
-              onChange={(e) => setMeasurementValue(e.target.value)}
-              type="number"
-              fullWidth
-            />
-            <FormControl sx={{ minWidth: 80 }}>
-              <InputLabel>Unit</InputLabel>
-              <Select
-                value={measurementUnit}
-                onChange={(e) => setMeasurementUnit(e.target.value)}
-                label="Unit"
-              >
-                {units.map(unit => (
-                  <MenuItem key={unit} value={unit}>{unit}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowMeasureDialog(false)}>Cancel</Button>
-          <Button onClick={handleMeasurementSave} variant="contained">
-            Add Measurement
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Templates Dialog */}
+      <AnnotationTemplates
+        open={showTemplatesDialog}
+        onClose={() => setShowTemplatesDialog(false)}
+        onApplyTemplate={handleApplyTemplate}
+      />
     </Box>
   );
 };

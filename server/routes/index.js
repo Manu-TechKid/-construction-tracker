@@ -5,9 +5,12 @@ const buildingRoutes = require('./buildingRoutes');
 const workOrderRoutes = require('./workOrderRoutes');
 const userRoutes = require('./userRoutes');
 const reminderRoutes = require('./reminderRoutes');
-const invoiceRoutes = require('./invoiceRoutes');
-const scheduleRoutes = require('./scheduleRoutes');
-const noteRoutes = require('./noteRoutes');
+const photoRoutes = require('./photoRoutes');
+const uploadRoutes = require('./uploadRoutes');
+const timeTrackingRoutes = require('./timeTrackingRoutes');
+const searchRoutes = require('./searchRoutes');
+const setupRoutes = require('./setupRoutes');
+const migrationRoutes = require('./migrationRoutes');
 
 const router = express.Router();
 
@@ -17,8 +20,11 @@ router.use('/buildings', buildingRoutes);
 router.use('/work-orders', workOrderRoutes);
 router.use('/users', userRoutes);
 router.use('/reminders', reminderRoutes);
-router.use('/invoices', invoiceRoutes);
-router.use('/schedules', scheduleRoutes);
-router.use('/notes', noteRoutes);
+router.use('/photos', photoRoutes);
+router.use('/uploads', uploadRoutes);
+router.use('/time-tracking', timeTrackingRoutes);
+router.use('/search', searchRoutes);
+router.use('/setup', setupRoutes);
+router.use('/migrations', migrationRoutes);
 
 module.exports = router;

@@ -415,13 +415,29 @@ const WorkOrders = () => {
             photoUrl = firstPhoto.src;
           }
 
-          // Clean the photo URL - remove any leading slashes or path prefixes
-          photoUrl = photoUrl.replace(/^.*[\\\/]/, '').replace(/^uploads[\\\/]photos[\\\/]/, '');
+          // Robust URL construction - handle various URL formats
+          let fullPhotoUrl = '';
+          if (photoUrl) {
+            // If it's already a full URL (starts with http/https), use it as-is
+            if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+              fullPhotoUrl = photoUrl;
+            } else {
+              // Clean the path and construct proper URL
+              const cleanPath = photoUrl
+                .replace(/^.*[\\\/]/, '') // Remove any path prefixes
+                .replace(/^uploads[\\\/]photos[\\\/]/, '') // Remove uploads/photos prefix
+                .replace(/^[\\\/]+/, ''); // Remove leading slashes
 
-          // Fix double API path issue and ensure correct URL construction
-          const baseUrl = process.env.REACT_APP_API_URL || window.location.origin;
-          const cleanBaseUrl = baseUrl.replace(/\/api\/v1\/api\/v1/g, '/api/v1').replace(/\/+$/, '');
-          const fullPhotoUrl = `${cleanBaseUrl}/uploads/photos/${photoUrl}`;
+              // Get base URL and ensure no double API paths
+              const baseUrl = process.env.REACT_APP_API_URL || window.location.origin;
+              const cleanBaseUrl = baseUrl
+                .replace(/\/api\/v1\/api\/v1/g, '/api/v1')
+                .replace(/\/api\/v1\/api\/v1/g, '/api/v1')
+                .replace(/\/+$/, '');
+
+              fullPhotoUrl = `${cleanBaseUrl}/uploads/photos/${cleanPath}`;
+            }
+          }
 
           return (
             <Box sx={{
@@ -447,9 +463,29 @@ const WorkOrders = () => {
                   currentPhotoUrl = photo.src;
                 }
 
-                // Clean the photo URL
-                currentPhotoUrl = currentPhotoUrl.replace(/^.*[\\\/]/, '').replace(/^uploads[\\\/]photos[\\\/]/, '');
-                const currentFullPhotoUrl = `${cleanBaseUrl}/uploads/photos/${currentPhotoUrl}`;
+                // Robust URL construction for each photo
+                let currentFullPhotoUrl = '';
+                if (currentPhotoUrl) {
+                  // If it's already a full URL (starts with http/https), use it as-is
+                  if (currentPhotoUrl.startsWith('http://') || currentPhotoUrl.startsWith('https://')) {
+                    currentFullPhotoUrl = currentPhotoUrl;
+                  } else {
+                    // Clean the path and construct proper URL
+                    const cleanPath = currentPhotoUrl
+                      .replace(/^.*[\\\/]/, '') // Remove any path prefixes
+                      .replace(/^uploads[\\\/]photos[\\\/]/, '') // Remove uploads/photos prefix
+                      .replace(/^[\\\/]+/, ''); // Remove leading slashes
+
+                    // Get base URL and ensure no double API paths
+                    const baseUrl = process.env.REACT_APP_API_URL || window.location.origin;
+                    const cleanBaseUrl = baseUrl
+                      .replace(/\/api\/v1\/api\/v1/g, '/api/v1')
+                      .replace(/\/api\/v1\/api\/v1/g, '/api/v1')
+                      .replace(/\/+$/, '');
+
+                    currentFullPhotoUrl = `${cleanBaseUrl}/uploads/photos/${cleanPath}`;
+                  }
+                }
 
                 return (
                   <Box
