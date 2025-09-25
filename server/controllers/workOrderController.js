@@ -12,8 +12,8 @@ exports.createWorkOrder = async (req, res) => {
     const { title, description, building, workType, workSubType, assignedTo, scheduledDate } = req.body;
 
     // Basic validation
-    if (!title || !description || !building || !workType || !workSubType || !scheduledDate) {
-      return res.status(400).json({ message: 'Please provide all required fields.' });
+    if (!title || !description || !building || !scheduledDate) {
+      return res.status(400).json({ message: 'Please provide all required fields: title, description, building, and scheduledDate.' });
     }
 
     // Verify building exists
@@ -22,16 +22,27 @@ exports.createWorkOrder = async (req, res) => {
       return res.status(404).json({ message: 'Building not found.' });
     }
 
-    // Verify work type exists
-    const workTypeExists = await WorkType.findById(workType);
-    if (!workTypeExists) {
-      return res.status(404).json({ message: 'Work type not found.' });
+    // Optional validation for work type and sub-type (skip if they don't exist)
+    if (workType) {
+      try {
+        const workTypeExists = await WorkType.findById(workType);
+        if (!workTypeExists) {
+          console.warn(`Work type ${workType} not found, proceeding without validation`);
+        }
+      } catch (error) {
+        console.warn('Error validating work type:', error.message);
+      }
     }
 
-    // Verify work sub-type exists
-    const workSubTypeExists = await WorkSubType.findById(workSubType);
-    if (!workSubTypeExists) {
-      return res.status(404).json({ message: 'Work sub-type not found.' });
+    if (workSubType) {
+      try {
+        const workSubTypeExists = await WorkSubType.findById(workSubType);
+        if (!workSubTypeExists) {
+          console.warn(`Work sub-type ${workSubType} not found, proceeding without validation`);
+        }
+      } catch (error) {
+        console.warn('Error validating work sub-type:', error.message);
+      }
     }
 
     const workOrderData = { ...req.body, createdBy: req.user._id };
@@ -44,6 +55,7 @@ exports.createWorkOrder = async (req, res) => {
 
     res.status(201).json({ success: true, data: workOrder });
   } catch (error) {
+    console.error('Error creating work order:', error);
     res.status(500).json({ success: false, message: 'Server Error', error: error.message });
   }
 };
@@ -101,19 +113,27 @@ exports.updateWorkOrder = async (req, res) => {
 
     const updateData = { ...req.body, updatedBy: req.user._id };
 
-    // Validate work type if provided
+    // Optional validation for work type if provided
     if (updateData.workType) {
-      const workTypeExists = await WorkType.findById(updateData.workType);
-      if (!workTypeExists) {
-        return res.status(404).json({ message: 'Work type not found.' });
+      try {
+        const workTypeExists = await WorkType.findById(updateData.workType);
+        if (!workTypeExists) {
+          console.warn(`Work type ${updateData.workType} not found, proceeding without validation`);
+        }
+      } catch (error) {
+        console.warn('Error validating work type:', error.message);
       }
     }
 
-    // Validate work sub-type if provided
+    // Optional validation for work sub-type if provided
     if (updateData.workSubType) {
-      const workSubTypeExists = await WorkSubType.findById(updateData.workSubType);
-      if (!workSubTypeExists) {
-        return res.status(404).json({ message: 'Work sub-type not found.' });
+      try {
+        const workSubTypeExists = await WorkSubType.findById(updateData.workSubType);
+        if (!workSubTypeExists) {
+          console.warn(`Work sub-type ${updateData.workSubType} not found, proceeding without validation`);
+        }
+      } catch (error) {
+        console.warn('Error validating work sub-type:', error.message);
       }
     }
 
@@ -128,6 +148,7 @@ exports.updateWorkOrder = async (req, res) => {
 
     res.status(200).json({ success: true, data: workOrder });
   } catch (error) {
+    console.error('Error updating work order:', error);
     res.status(500).json({ success: false, message: 'Server Error', error: error.message });
   }
 };
