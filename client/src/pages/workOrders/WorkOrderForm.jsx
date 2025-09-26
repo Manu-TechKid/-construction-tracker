@@ -207,10 +207,32 @@ const WorkOrderForm = () => {
               <CardContent>
                 <Grid container spacing={3}>
                   <Grid item xs={12}>
-                    <TextField fullWidth id="title" name="title" label="Title" value={formik.values.title} onChange={formik.handleChange} error={formik.touched.title && Boolean(formik.errors.title)} helperText={formik.touched.title && formik.errors.title} />
+                    <TextField
+                      fullWidth
+                      id="title"
+                      name="title"
+                      label="Title"
+                      value={formik.values.title}
+                      onChange={formik.handleChange}
+                      error={formik.touched.title && Boolean(formik.errors.title)}
+                      helperText={formik.touched.title && formik.errors.title}
+                      inputProps={{ maxLength: 100 }}
+                    />
                   </Grid>
                   <Grid item xs={12}>
-                    <TextField fullWidth id="description" name="description" label="Description" multiline rows={4} value={formik.values.description} onChange={formik.handleChange} error={formik.touched.description && Boolean(formik.errors.description)} helperText={formik.touched.description && formik.errors.description} />
+                    <TextField
+                      fullWidth
+                      id="description"
+                      name="description"
+                      label="Description"
+                      multiline
+                      rows={4}
+                      value={formik.values.description}
+                      onChange={formik.handleChange}
+                      error={formik.touched.description && Boolean(formik.errors.description)}
+                      helperText={formik.touched.description && formik.errors.description}
+                      inputProps={{ maxLength: 500 }}
+                    />
                   </Grid>
                 </Grid>
               </CardContent>
@@ -222,30 +244,42 @@ const WorkOrderForm = () => {
               <Divider />
               <CardContent>
                 <Grid container spacing={3}>
-                  <Grid item xs={12} sm={4}>
-                    <FormControl fullWidth>
-                      <InputLabel>Building</InputLabel>
-                      <Select id="building" name="building" value={formik.values.building} onChange={formik.handleChange}>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <FormControl fullWidth error={formik.touched.building && Boolean(formik.errors.building)}>
+                      <InputLabel>Building *</InputLabel>
+                      <Select
+                        id="building"
+                        name="building"
+                        value={formik.values.building}
+                        onChange={formik.handleChange}
+                        label="Building *"
+                      >
                         {buildingsData?.data?.buildings?.map((building) => (
                           <MenuItem key={building._id} value={building._id}>
                             {building.serviceManager ? `${building.name} - [${building.serviceManager}]` : building.name}
                           </MenuItem>
                         ))}
                       </Select>
+                      {formik.touched.building && formik.errors.building && (
+                        <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
+                          {formik.errors.building}
+                        </Typography>
+                      )}
                     </FormControl>
                   </Grid>
-                  <Grid item xs={12} sm={4}>
+                  <Grid item xs={12} sm={6} md={4}>
                     <FormControl fullWidth disabled={!formik.values.building}>
                       <InputLabel>Filter by Block (Optional)</InputLabel>
-                      <Select 
-                        id="block" 
-                        name="block" 
-                        value={formik.values.block} 
+                      <Select
+                        id="block"
+                        name="block"
+                        value={formik.values.block}
                         onChange={(e) => {
                           formik.setFieldValue('block', e.target.value);
                           formik.setFieldValue('apartmentNumber', '');
                         }}
                         displayEmpty
+                        label="Filter by Block (Optional)"
                       >
                         <MenuItem value="">
                           <em>All Blocks</em>
@@ -254,7 +288,7 @@ const WorkOrderForm = () => {
                           ...new Set(
                             selectedBuildingData?.data?.apartments
                               ?.map(a => a.block)
-                              .filter(block => block) // Filter out undefined/null blocks
+                              .filter(block => block)
                               .sort((a, b) => a.localeCompare(b, undefined, { numeric: true })) || []
                           )
                         ].map((block) => (
@@ -265,13 +299,13 @@ const WorkOrderForm = () => {
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid item xs={12} sm={4}>
+                  <Grid item xs={12} sm={6} md={4}>
                     <FormControl fullWidth disabled={!formik.values.building}>
                       <InputLabel>Apartment</InputLabel>
-                      <Select 
-                        id="apartmentNumber" 
-                        name="apartmentNumber" 
-                        value={formik.values.apartmentNumber} 
+                      <Select
+                        id="apartmentNumber"
+                        name="apartmentNumber"
+                        value={formik.values.apartmentNumber}
                         onChange={formik.handleChange}
                         MenuProps={{
                           PaperProps: {
@@ -281,6 +315,7 @@ const WorkOrderForm = () => {
                           },
                         }}
                         displayEmpty
+                        label="Apartment"
                         renderValue={(selected) => {
                           if (!selected) return <em>Select an apartment</em>;
                           const apartment = selectedBuildingData?.data?.apartments?.find(a => a.number === selected);
@@ -292,15 +327,11 @@ const WorkOrderForm = () => {
                         </MenuItem>
                         {selectedBuildingData?.data?.apartments
                           ?.filter(a => {
-                            // If no block is selected, show all apartments
                             if (!formik.values.block || formik.values.block === '') return true;
-                            // If apartment has no block, don't show it when a block is selected
                             if (!a.block) return false;
-                            // Otherwise, match the block
                             return a.block === formik.values.block;
                           })
                           .sort((a, b) => {
-                            // Sort by block first, then by apartment number
                             const blockCompare = (a.block || '').localeCompare(b.block || '');
                             if (blockCompare !== 0) return blockCompare;
                             return a.number.localeCompare(b.number, undefined, { numeric: true });
@@ -316,17 +347,18 @@ const WorkOrderForm = () => {
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth>
-                      <InputLabel>Work Type</InputLabel>
-                      <Select 
-                        id="workType" 
-                        name="workType" 
-                        value={formik.values.workType} 
+                  <Grid item xs={12} sm={6} md={6}>
+                    <FormControl fullWidth error={formik.touched.workType && Boolean(formik.errors.workType)}>
+                      <InputLabel>Work Type *</InputLabel>
+                      <Select
+                        id="workType"
+                        name="workType"
+                        value={formik.values.workType}
                         onChange={(e) => {
                           formik.setFieldValue('workType', e.target.value);
-                          formik.setFieldValue('workSubType', ''); // Reset sub-type when work type changes
+                          formik.setFieldValue('workSubType', '');
                         }}
+                        label="Work Type *"
                       >
                         {workTypesData?.data?.workTypes?.map((workType) => (
                           <MenuItem key={workType._id} value={workType._id}>
@@ -334,16 +366,32 @@ const WorkOrderForm = () => {
                           </MenuItem>
                         ))}
                       </Select>
+                      {formik.touched.workType && formik.errors.workType && (
+                        <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
+                          {formik.errors.workType}
+                        </Typography>
+                      )}
                     </FormControl>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth disabled={!formik.values.workType}>
-                      <InputLabel>Work Sub-Type</InputLabel>
-                      <Select id="workSubType" name="workSubType" value={formik.values.workSubType} onChange={formik.handleChange}>
+                  <Grid item xs={12} sm={6} md={6}>
+                    <FormControl fullWidth disabled={!formik.values.workType} error={formik.touched.workSubType && Boolean(formik.errors.workSubType)}>
+                      <InputLabel>Work Sub-Type *</InputLabel>
+                      <Select
+                        id="workSubType"
+                        name="workSubType"
+                        value={formik.values.workSubType}
+                        onChange={formik.handleChange}
+                        label="Work Sub-Type *"
+                      >
                         {workSubTypesData?.data?.workSubTypes?.map(subType => (
                           <MenuItem key={subType._id} value={subType._id}>{subType.name}</MenuItem>
                         ))}
                       </Select>
+                      {formik.touched.workSubType && formik.errors.workSubType && (
+                        <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
+                          {formik.errors.workSubType}
+                        </Typography>
+                      )}
                     </FormControl>
                   </Grid>
                 </Grid>

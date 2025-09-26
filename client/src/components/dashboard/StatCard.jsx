@@ -1,21 +1,23 @@
 import { Box, Typography, useTheme } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
-const StatCard = ({ title, value, icon, color, subtitle, trend, trendColor }) => {
+const StatCard = ({ title, value, icon, color, subtitle, trend, trendColor, onClick }) => {
   const theme = useTheme();
 
   return (
     <Box
+      onClick={onClick}
       sx={{
         backgroundColor: theme.palette.background.paper,
         borderRadius: 2,
         p: 3,
         height: '100%',
         boxShadow: theme.shadows[2],
-        transition: 'transform 0.2s, box-shadow 0.2s',
+        transition: 'transform 0.2s, box-shadow 0.2s, cursor 0.2s',
+        cursor: onClick ? 'pointer' : 'default',
         '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: theme.shadows[4],
+          transform: onClick ? 'translateY(-4px)' : 'none',
+          boxShadow: onClick ? theme.shadows[4] : theme.shadows[2],
         },
       }}
     >
@@ -53,7 +55,7 @@ const StatCard = ({ title, value, icon, color, subtitle, trend, trendColor }) =>
           {icon}
         </Box>
       </Box>
-      
+
       <Box>
         <Typography
           variant="h4"
@@ -66,7 +68,7 @@ const StatCard = ({ title, value, icon, color, subtitle, trend, trendColor }) =>
         >
           {value}
         </Typography>
-        
+
         {(subtitle || trend) && (
           <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
             {trend && (

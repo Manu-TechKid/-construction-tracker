@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Grid, 
-  Typography, 
-  Paper, 
-  Card, 
-  CardContent, 
-  CardHeader, 
+import { useNavigate } from 'react-router-dom';
+import {
+  Box,
+  Grid,
+  Typography,
+  Paper,
+  Card,
+  CardContent,
+  CardHeader,
   Divider,
   LinearProgress,
   useTheme
 } from '@mui/material';
-import { 
-  Assignment as AssignmentIcon, 
-  Apartment as BuildingIcon, 
+import {
+  Assignment as AssignmentIcon,
+  Apartment as BuildingIcon,
   People as PeopleIcon,
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
@@ -30,6 +31,7 @@ import { formatDate, timeAgo } from '../../utils/dateUtils';
 
 const Dashboard = () => {
   const theme = useTheme();
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalBuildings: 0,
     totalWorkers: 0,
@@ -59,10 +61,10 @@ const Dashboard = () => {
     // Handle workers data
     if (usersData?.data) {
       const workers = usersData.data.users || [];
-      const availableWorkers = workers.filter(worker => 
+      const availableWorkers = workers.filter(worker =>
         worker.workerProfile?.status === 'available'
       );
-      
+
       setStats(prevStats => ({
         ...prevStats,
         totalWorkers: workers.length,
@@ -76,7 +78,7 @@ const Dashboard = () => {
       const pendingOrders = workOrders.filter(order => order.status === 'pending');
       const completedOrders = workOrders.filter(order => order.status === 'completed');
       const inProgressOrders = workOrders.filter(order => order.status === 'in_progress');
-      
+
       setStats(prevStats => ({
         ...prevStats,
         totalWorkOrders: workOrders.length,
@@ -100,10 +102,10 @@ const Dashboard = () => {
 
   // Get worker availability with actual names and work order counts
   const workerAvailabilityData = (usersData?.data?.users || []).map(worker => {
-    const assignedOrders = workOrdersData?.data?.filter(wo => 
+    const assignedOrders = workOrdersData?.data?.filter(wo =>
       wo.assignedTo?.some(assignment => assignment.worker?._id === worker._id)
     ) || [];
-    
+
     return {
       id: worker._id,
       name: worker.name || `${worker.firstName || ''} ${worker.lastName || ''}`.trim() || 'Unknown Worker',
@@ -146,6 +148,7 @@ const Dashboard = () => {
             value={stats.totalBuildings}
             icon={<BuildingIcon />}
             color={theme.palette.primary.main}
+            onClick={() => navigate('/buildings')}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={2.4}>
@@ -154,6 +157,7 @@ const Dashboard = () => {
             value={stats.totalWorkers}
             icon={<PeopleIcon />}
             color={theme.palette.info.main}
+            onClick={() => navigate('/workers')}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={2.4}>
@@ -162,6 +166,7 @@ const Dashboard = () => {
             value={stats.pendingWorkOrders}
             icon={<WarningIcon />}
             color={theme.palette.warning.main}
+            onClick={() => navigate('/work-orders?status=pending')}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={2.4}>
@@ -170,6 +175,7 @@ const Dashboard = () => {
             value={stats.inProgressWorkOrders}
             icon={<InfoIcon />}
             color={theme.palette.info.main}
+            onClick={() => navigate('/work-orders?status=in_progress')}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={2.4}>
@@ -178,6 +184,7 @@ const Dashboard = () => {
             value={stats.completedWorkOrders}
             icon={<CheckCircleIcon />}
             color={theme.palette.success.main}
+            onClick={() => navigate('/work-orders?status=completed')}
           />
         </Grid>
       </Grid>
@@ -187,8 +194,8 @@ const Dashboard = () => {
         {/* Building Status */}
         <Grid item xs={12} md={6}>
           <Card elevation={3}>
-            <CardHeader 
-              title="Building Status" 
+            <CardHeader
+              title="Building Status"
               titleTypographyProps={{ variant: 'h6' }}
               avatar={<BuildingIcon />}
             />
@@ -202,8 +209,8 @@ const Dashboard = () => {
         {/* Worker Availability */}
         <Grid item xs={12}>
           <Card elevation={3}>
-            <CardHeader 
-              title="Worker Availability" 
+            <CardHeader
+              title="Worker Availability"
               titleTypographyProps={{ variant: 'h6' }}
               avatar={<PeopleIcon />}
             />

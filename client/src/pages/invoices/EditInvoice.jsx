@@ -17,11 +17,22 @@ import {
   MenuItem,
   FormHelperText,
   CircularProgress,
-  Alert
+  Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
+  Divider,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
-  Save as SaveIcon
+  Save as SaveIcon,
+  Assignment as WorkOrderIcon,
+  AttachMoney as MoneyIcon,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -30,7 +41,7 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { toast } from 'react-toastify';
 
-import { 
+import {
   useGetInvoiceQuery,
   useUpdateInvoiceMutation
 } from '../../features/invoices/invoicesApiSlice';
@@ -44,10 +55,10 @@ const validationSchema = Yup.object({
 const EditInvoice = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   const { data: invoiceData, isLoading, error } = useGetInvoiceQuery(id);
   const [updateInvoice, { isLoading: isUpdating }] = useUpdateInvoiceMutation();
-  
+
   const formik = useFormik({
     initialValues: {
       status: 'draft',
@@ -57,7 +68,13 @@ const EditInvoice = () => {
     validationSchema,
     onSubmit: async (values) => {
       try {
-        await updateInvoice({ id, ...values }).unwrap();
+        const updateData = {
+          status: values.status,
+          dueDate: values.dueDate instanceof Date ? values.dueDate.toISOString() : new Date(values.dueDate).toISOString(),
+          notes: values.notes,
+        };
+
+        await updateInvoice({ id, ...updateData }).unwrap();
         toast.success('Invoice updated successfully');
         navigate('/invoices');
       } catch (error) {
@@ -67,7 +84,7 @@ const EditInvoice = () => {
       }
     },
   });
-  
+
   // Load invoice data when available
   useEffect(() => {
     if (invoiceData?.data) {
@@ -77,7 +94,8 @@ const EditInvoice = () => {
         if (invoice.dueDate) {
           const parsedDate = new Date(invoice.dueDate);
           if (!isNaN(parsedDate.getTime())) {
-            dueDateValue = parsedDate;
+            // Ensure we handle timezone properly - convert to local date
+            dueDateValue = new Date(parsedDate.getTime() - parsedDate.getTimezoneOffset() * 60000);
           }
         }
 
@@ -97,7 +115,7 @@ const EditInvoice = () => {
       }
     }
   }, [invoiceData]);
-  
+
   if (isLoading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
@@ -105,7 +123,7 @@ const EditInvoice = () => {
       </Container>
     );
   }
-  
+
   if (error) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4 }}>
@@ -115,9 +133,9 @@ const EditInvoice = () => {
       </Container>
     );
   }
-  
+
   const invoice = invoiceData?.data;
-  
+
   if (!invoice) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4 }}>
@@ -126,13 +144,32 @@ const EditInvoice = () => {
     );
   }
 
+  // Helper function to get status color
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'paid': return 'success';
+      case 'sent': return 'info';
+      case 'overdue': return 'error';
+      case 'cancelled': return 'default';
+      default: return 'warning';
+    }
+  };
+
+  // Helper function to format currency
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount || 0);
+  };
+
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Container maxWidth="md" sx={{ mt: 2, mb: 4 }}>
+      <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
         {/* Header */}
         <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton 
-            onClick={() => navigate(`/invoices/${id}`)} 
+          <IconButton
+            onClick={() => navigate(`/invoices/${id}`)}
             color="primary"
             disabled={isUpdating}
           >
@@ -142,15 +179,149 @@ const EditInvoice = () => {
             Edit Invoice {invoice.invoiceNumber}
           </Typography>
         </Box>
-        
+
+        {/* Invoice Summary */}
+        <Card sx={{ mb: 3 }}>
+          <CardHeader title="Invoice Summary" />
+          <CardContent>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={3}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h4" color="primary" fontWeight="bold">
+                    {formatCurrency(invoice.totalAmount)}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Total Amount
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Chip
+                    label={invoice.status?.toUpperCase() || 'DRAFT'}
+                    color={getStatusColor(invoice.status)}
+                    size="large"
+                  />
+                  <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                    Current Status
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h6">
+                    {new Date(invoice.dueDate).toLocaleDateString()}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Due Date
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h6">
+                    {invoice.workOrders?.length || 0}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Work Orders
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+
+        {/* Work Orders Details */}
+        {invoice.workOrders && invoice.workOrders.length > 0 && (
+          <Card sx={{ mb: 3 }}>
+            <CardHeader
+              title="Work Orders in This Invoice"
+              avatar={<WorkOrderIcon />}
+            />
+            <CardContent>
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Title</TableCell>
+                      <TableCell>Description</TableCell>
+                      <TableCell>Apartment</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell align="right">Price</TableCell>
+                      <TableCell align="right">Cost</TableCell>
+                      <TableCell align="right">Profit</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {invoice.workOrders.map((workOrder) => (
+                      <TableRow key={workOrder._id} hover>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight="medium">
+                            {workOrder.title || 'Untitled Work Order'}
+                          </Typography>
+                          <Typography variant="caption" color="textSecondary">
+                            ID: {workOrder._id}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          {workOrder.description || 'No description'}
+                        </TableCell>
+                        <TableCell>
+                          {workOrder.apartmentNumber ? (
+                            <Box>
+                              <Typography variant="body2">
+                                {workOrder.building?.name || 'Unknown Building'}
+                              </Typography>
+                              <Typography variant="caption" color="textSecondary">
+                                Apt {workOrder.apartmentNumber}
+                              </Typography>
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" color="textSecondary">
+                              No apartment
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={workOrder.status || 'pending'}
+                            color={workOrder.status === 'completed' ? 'success' : 'warning'}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" color="success.main" fontWeight="medium">
+                            {formatCurrency(workOrder.price || workOrder.estimatedCost)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" color="error.main" fontWeight="medium">
+                            {formatCurrency(workOrder.cost || workOrder.actualCost)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" color="primary.main" fontWeight="medium">
+                            {formatCurrency((workOrder.price || workOrder.estimatedCost || 0) - (workOrder.cost || workOrder.actualCost || 0))}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Edit Form */}
         <form onSubmit={formik.handleSubmit}>
           <Card>
-            <CardHeader title="Invoice Details" />
+            <CardHeader title="Edit Invoice Details" />
             <CardContent>
               <Grid container spacing={3}>
                 <Grid item xs={12} sm={6}>
-                  <FormControl 
-                    fullWidth 
+                  <FormControl
+                    fullWidth
                     error={formik.touched.status && Boolean(formik.errors.status)}
                   >
                     <InputLabel>Status</InputLabel>
@@ -172,23 +343,23 @@ const EditInvoice = () => {
                     </FormHelperText>
                   </FormControl>
                 </Grid>
-                
+
                 <Grid item xs={12} sm={6}>
                   <DatePicker
                     label="Due Date"
                     value={formik.values.dueDate}
                     onChange={(newValue) => formik.setFieldValue('dueDate', newValue)}
                     renderInput={(params) => (
-                      <TextField 
-                        {...params} 
-                        fullWidth 
+                      <TextField
+                        {...params}
+                        fullWidth
                         error={formik.touched.dueDate && Boolean(formik.errors.dueDate)}
                         helperText={formik.touched.dueDate && formik.errors.dueDate}
                       />
                     )}
                   />
                 </Grid>
-                
+
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
@@ -206,7 +377,7 @@ const EditInvoice = () => {
               </Grid>
             </CardContent>
           </Card>
-          
+
           {/* Action Buttons */}
           <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
             <Button

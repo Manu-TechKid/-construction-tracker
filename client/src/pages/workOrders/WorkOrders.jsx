@@ -568,14 +568,50 @@ const WorkOrders = () => {
     {
       field: 'apartmentNumber',
       headerName: 'Apartment',
-      width: 120,
+      width: 200,
       valueGetter: (params) => {
         try {
           if (!params.row) return 'N/A';
-          return params.row.apartmentNumber || 'N/A';
+
+          const buildingName = params.row.building?.name || params.row.building?.code || 'Unknown Building';
+          const apartmentNumber = params.row.apartmentNumber || 'N/A';
+
+          if (apartmentNumber === 'N/A') {
+            return 'No apartment';
+          }
+
+          return `${buildingName} - Apt ${apartmentNumber}`;
         } catch (error) {
           console.warn('Error getting apartment number:', error);
           return 'N/A';
+        }
+      },
+      renderCell: (params) => {
+        try {
+          if (!params.row) {
+            return <Typography variant="body2" color="textSecondary">No data</Typography>;
+          }
+
+          const buildingName = params.row.building?.name || params.row.building?.code || 'Unknown Building';
+          const apartmentNumber = params.row.apartmentNumber || 'N/A';
+
+          if (apartmentNumber === 'N/A') {
+            return <Typography variant="body2" color="textSecondary">No apartment</Typography>;
+          }
+
+          return (
+            <Box>
+              <Typography variant="body2" fontWeight="medium">
+                {buildingName}
+              </Typography>
+              <Typography variant="caption" color="textSecondary">
+                Apt {apartmentNumber}
+              </Typography>
+            </Box>
+          );
+        } catch (error) {
+          console.warn('Error rendering apartment cell:', error);
+          return <Typography variant="body2" color="textSecondary">Error</Typography>;
         }
       },
     },

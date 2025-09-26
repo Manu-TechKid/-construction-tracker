@@ -101,7 +101,7 @@ const CreateInvoice = () => {
     initialValues: {
       buildingId: '',
       invoiceNumber: '',
-      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
       notes: '',
       workOrderIds: []
     },
@@ -119,8 +119,8 @@ const CreateInvoice = () => {
 
         const invoiceData = {
           buildingId: values.buildingId,
-          workOrderIds: values.workOrderIds, // Use Formik values instead of state
-          dueDate: values.dueDate,
+          workOrderIds: values.workOrderIds,
+          dueDate: values.dueDate instanceof Date ? values.dueDate.toISOString() : new Date(values.dueDate).toISOString(),
           notes: values.notes,
           invoiceNumber: values.invoiceNumber?.trim() || undefined
         };
