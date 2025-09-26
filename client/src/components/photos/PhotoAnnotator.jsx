@@ -544,9 +544,8 @@ const PhotoAnnotator = ({
     setZoom(prev => Math.min(prev * 1.2, 5));
   };
 
-  const handleCenter = () => {
-    setZoom(1);
-    setPanOffset({ x: 0, y: 0 });
+  const handleZoomOut = () => {
+    setZoom(prev => Math.max(prev / 1.2, 0.1));
   };
 
   const handleApplyTemplate = (templateAnnotations) => {
