@@ -187,28 +187,45 @@ const WorkOrders = () => {
 
 
   const columns = [
-    { 
-      field: 'title', 
-      headerName: 'Title & Description', 
-      flex: 1.5,
+    {
+      field: 'title',
+      headerName: 'Title & Description',
+      flex: 2,
+      minWidth: 280,
       renderCell: (params) => {
         try {
           if (!params.row) {
             return <Typography variant="body2" color="textSecondary">No data</Typography>;
           }
           return (
-            <Box>
-              <Typography variant="body2" fontWeight="medium">
+            <Box sx={{ maxWidth: '100%' }}>
+              <Typography
+                variant="body2"
+                fontWeight="medium"
+                sx={{
+                  fontSize: '0.875rem',
+                  lineHeight: 1.4,
+                  wordBreak: 'break-word',
+                  mb: 0.5
+                }}
+              >
                 {params.row.title || 'Untitled Work Order'}
               </Typography>
               {params.row.description && (
-                <Typography variant="caption" color="textSecondary" sx={{ 
-                  display: 'block', 
-                  overflow: 'hidden', 
-                  textOverflow: 'ellipsis', 
-                  whiteSpace: 'nowrap',
-                  maxWidth: '300px'
-                }}>
+                <Typography
+                  variant="body2"
+                  color="textSecondary"
+                  sx={{
+                    fontSize: '0.8rem',
+                    lineHeight: 1.3,
+                    wordBreak: 'break-word',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}
+                >
                   {params.row.description}
                 </Typography>
               )}
@@ -220,10 +237,11 @@ const WorkOrders = () => {
         }
       },
     },
-    { 
+    {
       field: 'building',
       headerName: 'Building',
-      flex: 1,
+      flex: 1.2,
+      minWidth: 140,
       valueGetter: (params) => {
         try {
           if (!params.row) return 'N/A';
@@ -242,18 +260,45 @@ const WorkOrders = () => {
           return 'N/A';
         }
       },
+      renderCell: (params) => {
+        try {
+          if (!params.row) {
+            return <Typography variant="body2" color="textSecondary">No data</Typography>;
+          }
+          const buildingName = params.row.building?.name || params.row.building?.code || 'Unknown Building';
+
+          return (
+            <Box sx={{ maxWidth: '100%' }}>
+              <Typography
+                variant="body2"
+                fontWeight="medium"
+                sx={{
+                  fontSize: '0.875rem',
+                  lineHeight: 1.4,
+                  wordBreak: 'break-word'
+                }}
+              >
+                {buildingName}
+              </Typography>
+            </Box>
+          );
+        } catch (error) {
+          console.warn('Error rendering building cell:', error);
+          return <Typography variant="body2" color="textSecondary">Error</Typography>;
+        }
+      },
     },
     {
       field: 'status',
       headerName: 'Status',
-      width: 150,
+      width: 130,
       renderCell: (params) => {
         try {
           if (!params.row) {
             return <Chip label="N/A" color="default" size="small" />;
           }
           return (
-            <Chip 
+            <Chip
               label={params.value || 'pending'}
               color={getStatusChipColor(params.value || 'pending')}
               size="small"
@@ -266,8 +311,10 @@ const WorkOrders = () => {
                   handleStatusClick(event, params.row);
                 }
               }}
-              sx={{ 
+              sx={{
                 cursor: 'pointer',
+                fontSize: '0.75rem',
+                height: '24px',
                 '&:hover': {
                   opacity: 0.8,
                   transform: 'scale(1.05)'
@@ -289,17 +336,21 @@ const WorkOrders = () => {
     {
       field: 'priority',
       headerName: 'Priority',
-      width: 120,
+      width: 100,
       renderCell: (params) => {
         try {
           if (!params.row) {
             return <Chip label="N/A" color="default" size="small" />;
           }
           return (
-            <Chip 
+            <Chip
               label={params.value || 'medium'}
               color={getPriorityChipColor(params.value || 'medium')}
-              size="small" 
+              size="small"
+              sx={{
+                fontSize: '0.75rem',
+                height: '24px'
+              }}
             />
           );
         } catch (error) {
@@ -312,10 +363,18 @@ const WorkOrders = () => {
       {
         field: 'price',
         headerName: 'Price',
-        width: 100,
+        width: 90,
         valueFormatter: (params) => `$${params.value?.toFixed(2) || '0.00'}`,
         renderCell: (params) => (
-          <Typography variant="body2" color="success.main" fontWeight="medium">
+          <Typography
+            variant="body2"
+            color="success.main"
+            fontWeight="medium"
+            sx={{
+              fontSize: '0.875rem',
+              textAlign: 'right'
+            }}
+          >
             ${params.value?.toFixed(2) || '0.00'}
           </Typography>
         ),
@@ -323,10 +382,18 @@ const WorkOrders = () => {
       {
         field: 'cost',
         headerName: 'Cost',
-        width: 100,
+        width: 90,
         valueFormatter: (params) => `$${params.value?.toFixed(2) || '0.00'}`,
         renderCell: (params) => (
-          <Typography variant="body2" color="error.main" fontWeight="medium">
+          <Typography
+            variant="body2"
+            color="error.main"
+            fontWeight="medium"
+            sx={{
+              fontSize: '0.875rem',
+              textAlign: 'right'
+            }}
+          >
             ${params.value?.toFixed(2) || '0.00'}
           </Typography>
         ),
@@ -361,25 +428,34 @@ const WorkOrders = () => {
         renderCell: (params) => {
           try {
             if (!params.row) {
-              return <Typography variant="body2" color="textSecondary">$0.00</Typography>;
+              return <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'right' }}>$0.00</Typography>;
             }
             const profit = params.value || 0;
             const price = params.row.price || 0;
             const margin = price > 0 ? ((profit / price) * 100).toFixed(1) : 0;
 
             return (
-              <Box>
-                <Typography variant="body2" color={profit >= 0 ? 'success.main' : 'error.main'} fontWeight="medium">
+              <Box sx={{ textAlign: 'right' }}>
+                <Typography
+                  variant="body2"
+                  color={profit >= 0 ? 'success.main' : 'error.main'}
+                  fontWeight="medium"
+                  sx={{ fontSize: '0.875rem' }}
+                >
                   ${profit.toFixed(2)}
                 </Typography>
-                <Typography variant="caption" color="textSecondary">
+                <Typography
+                  variant="caption"
+                  color="textSecondary"
+                  sx={{ fontSize: '0.75rem' }}
+                >
                   {margin}%
                 </Typography>
               </Box>
             );
           } catch (error) {
             console.warn('Error rendering profit cell:', error);
-            return <Typography variant="body2" color="textSecondary">Error</Typography>;
+            return <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'right' }}>Error</Typography>;
           }
         },
       }
@@ -387,7 +463,7 @@ const WorkOrders = () => {
     {
       field: 'photos',
       headerName: 'Photos',
-      width: 250,
+      width: 200,
       renderCell: (params) => {
         try {
           if (!params.row) {
@@ -426,12 +502,12 @@ const WorkOrders = () => {
           return (
             <Box sx={{
               display: 'flex',
-              gap: 1,
+              gap: 0.5,
               alignItems: 'center',
-              maxWidth: 230,
+              maxWidth: 180,
               overflow: 'hidden'
             }}>
-              {photos.slice(0, 4).map((photo, index) => {
+              {photos.slice(0, 3).map((photo, index) => {
                 let currentPhotoUrl = '';
 
                 // Handle different photo data structures for each photo
@@ -456,16 +532,16 @@ const WorkOrders = () => {
                     key={photo._id || index}
                     sx={{
                       position: 'relative',
-                      width: 50,
-                      height: 50,
+                      width: 45,
+                      height: 45,
                       borderRadius: 1,
                       overflow: 'hidden',
-                      border: '2px solid',
+                      border: '1px solid',
                       borderColor: 'primary.light',
                       backgroundColor: 'grey.50',
                       '&:hover': {
                         transform: 'scale(1.1)',
-                        boxShadow: 3,
+                        boxShadow: 2,
                         borderColor: 'primary.main',
                       },
                       transition: 'all 0.2s ease-in-out',
@@ -477,7 +553,7 @@ const WorkOrders = () => {
                       style={{
                         width: '100%',
                         height: '100%',
-                        objectFit: 'contain',
+                        objectFit: 'cover',
                         display: 'block',
                         backgroundColor: 'white',
                       }}
@@ -485,10 +561,10 @@ const WorkOrders = () => {
                         console.warn('Error loading image:', currentFullPhotoUrl);
                         e.target.style.display = 'none';
                         e.target.parentElement.style.backgroundColor = '#f5f5f5';
-                        e.target.parentElement.style.border = '2px dashed #ccc';
+                        e.target.parentElement.style.border = '1px dashed #ccc';
                       }}
                     />
-                    {index === 3 && photos.length > 4 && (
+                    {index === 2 && photos.length > 3 && (
                       <Box
                         sx={{
                           position: 'absolute',
@@ -505,7 +581,7 @@ const WorkOrders = () => {
                           fontWeight: 'bold',
                         }}
                       >
-                        +{photos.length - 4}
+                        +{photos.length - 3}
                       </Box>
                     )}
                   </Box>
@@ -522,7 +598,7 @@ const WorkOrders = () => {
     {
       field: 'scheduledDate',
       headerName: 'Scheduled Date',
-      width: 150,
+      width: 130,
       valueFormatter: (params) => {
         try {
           if (!params.value) return 'Not scheduled';
@@ -534,11 +610,37 @@ const WorkOrders = () => {
           return 'Error';
         }
       },
+      renderCell: (params) => {
+        try {
+          if (!params.value) {
+            return <Typography variant="body2" color="textSecondary">Not scheduled</Typography>;
+          }
+          const date = new Date(params.value);
+          if (isNaN(date.getTime())) {
+            return <Typography variant="body2" color="error">Invalid date</Typography>;
+          }
+          return (
+            <Typography
+              variant="body2"
+              sx={{
+                fontSize: '0.875rem',
+                fontWeight: 'medium'
+              }}
+            >
+              {format(date, 'MM/dd/yyyy')}
+            </Typography>
+          );
+        } catch (error) {
+          console.warn('Error rendering scheduled date:', error);
+          return <Typography variant="body2" color="textSecondary">Error</Typography>;
+        }
+      },
     },
     {
       field: 'assignedTo',
       headerName: 'Assigned To',
-      flex: 1.5,
+      flex: 1.3,
+      minWidth: 150,
       valueGetter: (params) => {
         try {
           if (!params.row || !params.row.assignedTo || !Array.isArray(params.row.assignedTo)) {
@@ -564,11 +666,60 @@ const WorkOrders = () => {
           return 'N/A';
         }
       },
+      renderCell: (params) => {
+        try {
+          if (!params.row || !params.row.assignedTo || !Array.isArray(params.row.assignedTo)) {
+            return <Typography variant="body2" color="textSecondary">Unassigned</Typography>;
+          }
+
+          const workers = params.row.assignedTo
+            .map(assignment => {
+              if (assignment?.worker?.name) {
+                return assignment.worker.name;
+              } else if (assignment?.worker?.code) {
+                return assignment.worker.code;
+              } else if (typeof assignment?.worker === 'string') {
+                return assignment.worker;
+              } else {
+                return 'Unknown Worker';
+              }
+            })
+            .filter(name => name && name !== 'Unknown Worker');
+
+          if (workers.length === 0) {
+            return <Typography variant="body2" color="textSecondary">Unassigned</Typography>;
+          }
+
+          return (
+            <Box sx={{ maxWidth: '100%' }}>
+              <Typography
+                variant="body2"
+                fontWeight="medium"
+                sx={{
+                  fontSize: '0.875rem',
+                  lineHeight: 1.4,
+                  wordBreak: 'break-word',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >
+                {workers.join(', ')}
+              </Typography>
+            </Box>
+          );
+        } catch (error) {
+          console.warn('Error rendering assigned to cell:', error);
+          return <Typography variant="body2" color="textSecondary">Error</Typography>;
+        }
+      },
     },
     {
       field: 'apartmentNumber',
       headerName: 'Apartment',
-      width: 200,
+      width: 160,
       valueGetter: (params) => {
         try {
           if (!params.row) return 'N/A';
@@ -600,11 +751,26 @@ const WorkOrders = () => {
           }
 
           return (
-            <Box>
-              <Typography variant="body2" fontWeight="medium">
+            <Box sx={{ maxWidth: '100%' }}>
+              <Typography
+                variant="body2"
+                fontWeight="medium"
+                sx={{
+                  fontSize: '0.875rem',
+                  lineHeight: 1.4,
+                  wordBreak: 'break-word'
+                }}
+              >
                 {buildingName}
               </Typography>
-              <Typography variant="caption" color="textSecondary">
+              <Typography
+                variant="body2"
+                color="textSecondary"
+                sx={{
+                  fontSize: '0.8rem',
+                  lineHeight: 1.3
+                }}
+              >
                 Apt {apartmentNumber}
               </Typography>
             </Box>
@@ -618,7 +784,8 @@ const WorkOrders = () => {
     {
       field: 'actions',
       headerName: 'Actions',
-      flex: 1,
+      flex: 0.8,
+      minWidth: 100,
       sortable: false,
       renderCell: (params) => {
         try {
@@ -628,8 +795,14 @@ const WorkOrders = () => {
           return (
             <Box>
               <Button
+                size="small"
                 startIcon={<ViewIcon />}
                 onClick={() => navigate(`/work-orders/${params.row._id}`)}
+                sx={{
+                  fontSize: '0.75rem',
+                  padding: '4px 8px',
+                  minWidth: 'auto'
+                }}
               >
                 View
               </Button>
@@ -644,7 +817,7 @@ const WorkOrders = () => {
   ];
 
   return (
-    <Box sx={{ height: 'calc(100vh - 120px)', width: '100%' }}>
+    <Box sx={{ height: 'calc(100vh - 120px)', width: '100%', display: 'flex', flexDirection: 'column' }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">
           Work Orders
@@ -697,66 +870,103 @@ const WorkOrders = () => {
         </CardContent>
       </Card>
 
-      <DataGrid
-        rows={filteredWorkOrders}
-        columns={columns}
-        getRowId={(row) => row._id}
-        pageSize={10}
-        rowsPerPageOptions={[10, 25, 50]}
-        disableSelectionOnClick
-        loading={isLoading}
-        autoHeight
-        getRowHeight={() => 'auto'}
-        sx={{
-          '& .MuiDataGrid-cell': {
-            padding: '8px',
-          },
-          '& .MuiDataGrid-row': {
-            '&:hover': {
-              backgroundColor: 'rgba(0, 0, 0, 0.04)',
+      <Box sx={{ flex: 1, width: '100%' }}>
+        <DataGrid
+          rows={filteredWorkOrders}
+          columns={columns}
+          getRowId={(row) => row._id}
+          pageSize={10}
+          rowsPerPageOptions={[10, 25, 50]}
+          disableSelectionOnClick
+          loading={isLoading}
+          autoHeight={false}
+          sx={{
+            height: '100%',
+            width: '100%',
+            '& .MuiDataGrid-root': {
+              fontSize: '0.875rem',
             },
-          },
-        }}
-        components={{
-          NoRowsOverlay: () => (
-            <Box
-              display="flex"
-              flexDirection="column"
-              alignItems="center"
-              justifyContent="center"
-              minHeight="200px"
-            >
-              <Typography variant="h6" color="textSecondary">
-                No work orders found
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                {filters.building || filters.status
-                  ? 'Try adjusting your filters'
-                  : 'Create your first work order to get started'}
-              </Typography>
-            </Box>
-          ),
-          ErrorOverlay: () => (
-            <Box
-              display="flex"
-              flexDirection="column"
-              alignItems="center"
-              justifyContent="center"
-              minHeight="200px"
-            >
-              <Typography variant="h6" color="error">
-                Error displaying work orders
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                There was an error rendering the work orders. Please refresh the page.
-              </Typography>
-            </Box>
-          ),
-        }}
-        onError={(error) => {
-          console.error('DataGrid error:', error);
-        }}
-      />
+            '& .MuiDataGrid-cell': {
+              padding: '8px',
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              alignItems: 'center',
+            },
+            '& .MuiDataGrid-row': {
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+              },
+              '&:nth-of-type(even)': {
+                backgroundColor: 'rgba(0, 0, 0, 0.01)',
+              },
+            },
+            '& .MuiDataGrid-columnHeader': {
+              backgroundColor: 'background.paper',
+              fontWeight: 'bold',
+              fontSize: '0.875rem',
+              borderBottom: '2px solid',
+              borderColor: 'primary.main',
+            },
+            '& .MuiDataGrid-columnHeaderTitle': {
+              fontWeight: 'bold',
+              fontSize: '0.875rem',
+            },
+            '& .MuiDataGrid-footerContainer': {
+              backgroundColor: 'background.paper',
+              borderTop: '1px solid',
+              borderColor: 'divider',
+            },
+            '& .MuiTablePagination-root': {
+              fontSize: '0.875rem',
+            },
+            '& .MuiDataGrid-cell:focus': {
+              outline: 'none',
+            },
+            '& .MuiDataGrid-row:focus-within': {
+              outline: 'none',
+            },
+          }}
+          components={{
+            NoRowsOverlay: () => (
+              <Box
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                justifyContent="center"
+                minHeight="200px"
+              >
+                <Typography variant="h6" color="textSecondary">
+                  No work orders found
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  {filters.building || filters.status
+                    ? 'Try adjusting your filters'
+                    : 'Create your first work order to get started'}
+                </Typography>
+              </Box>
+            ),
+            ErrorOverlay: () => (
+              <Box
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                justifyContent="center"
+                minHeight="200px"
+              >
+                <Typography variant="h6" color="error">
+                  Error displaying work orders
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  There was an error rendering the work orders. Please refresh the page.
+                </Typography>
+              </Box>
+            ),
+          }}
+          onError={(error) => {
+            console.error('DataGrid error:', error);
+          }}
+        />
+      </Box>
 
       {/* Status Update Menu */}
       <Menu
