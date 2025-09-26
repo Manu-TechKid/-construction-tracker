@@ -53,12 +53,7 @@ const getPhotoUrl = (photo) => {
 
     // Construct the clean URL with exactly one /photos/ segment
     const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
-    const cleanApiUrl = apiUrl
-      .replace(/\/api\/v1\/api\/v1/g, '/api/v1')
-      .replace(/\/api\/v1\/api\/v1/g, '/api/v1')
-      .replace(/\/+$/, '');
-
-    return `${cleanApiUrl}/uploads/photos/${cleanPath}`;
+    return `${apiUrl}/api/v1/uploads/photos/${cleanPath}`;
   } catch (error) {
     console.error('Error processing photo URL:', { photo, error });
     return null;

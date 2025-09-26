@@ -25,10 +25,7 @@ import {
   Alert,
   Breadcrumbs,
   Link,
-  Fab,
-  Tabs,
-  Tab,
-  AppBar
+  Fab
 } from '@mui/material';
 import {
   PhotoCamera,
@@ -43,24 +40,23 @@ import {
   TrendingUp as ProgressIcon,
   ArrowBack,
   Save,
-  Share,
-  ViewModule as GridIcon,
-  ViewList as ListIcon
+  Share
 } from '@mui/icons-material';
+// import { toast } from 'react-toastify';
 import { useGetBuildingQuery } from '../../features/buildings/buildingsApiSlice';
-import {
+import { 
   useGetSitePhotosQuery,
   useCreateSitePhotoMutation,
   useUpdateSitePhotoMutation,
   useDeleteSitePhotoMutation
 } from '../../features/photos/photosApiSlice';
 import PhotoAnnotator from '../../components/photos/PhotoAnnotator';
-import PhotoGallery from '../../components/photos/PhotoGallery';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 const SiteVisit = () => {
   const { buildingId } = useParams();
   const navigate = useNavigate();
+  
   
   const [visitType, setVisitType] = useState('estimate');
   const [showAnnotator, setShowAnnotator] = useState(false);
@@ -68,7 +64,6 @@ const SiteVisit = () => {
   const [visitNotes, setVisitNotes] = useState('');
   const [showVisitDialog, setShowVisitDialog] = useState(false);
   const [currentVisit, setCurrentVisit] = useState(null);
-  const [viewMode, setViewMode] = useState('gallery'); // 'gallery' or 'annotator'
 
   const { 
     data: building, 
@@ -228,7 +223,7 @@ const SiteVisit = () => {
         <Typography variant="body1" color="text.secondary" gutterBottom>
           {building?.address}
         </Typography>
-
+        
         <Button
           variant="outlined"
           startIcon={<ArrowBack />}
@@ -239,25 +234,25 @@ const SiteVisit = () => {
         </Button>
       </Box>
 
-      {/* Visit Type Selection */}
+      {/* Simple Visit Type Selection */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" gutterBottom>
           Visit Type: {visitType}
         </Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
+          <Button 
             variant={visitType === 'estimate' ? 'contained' : 'outlined'}
             onClick={() => setVisitType('estimate')}
           >
             Estimate
           </Button>
-          <Button
+          <Button 
             variant={visitType === 'inspection' ? 'contained' : 'outlined'}
             onClick={() => setVisitType('inspection')}
           >
             Inspection
           </Button>
-          <Button
+          <Button 
             variant={visitType === 'progress' ? 'contained' : 'outlined'}
             onClick={() => setVisitType('progress')}
           >
@@ -266,69 +261,122 @@ const SiteVisit = () => {
         </Box>
       </Paper>
 
-      {/* Main Content with Tabs */}
-      <Paper sx={{ mb: 3 }}>
-        <AppBar position="static" color="default" elevation={1}>
-          <Tabs
-            value={viewMode}
-            onChange={(e, newValue) => setViewMode(newValue)}
-            indicatorColor="primary"
-            textColor="primary"
-            variant="fullWidth"
+      {/* Photo Section */}
+      <Paper sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6">
+            Photos {photosLoading && '(Loading...)'}
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<PhotoCamera />}
+            onClick={() => setShowAnnotator(true)}
           >
-            <Tab
-              value="gallery"
-              label="Photo Gallery"
-              icon={<GridIcon />}
-              iconPosition="start"
-            />
-            <Tab
-              value="annotator"
-              label="Take Photo"
-              icon={<PhotoCamera />}
-              iconPosition="start"
-            />
-          </Tabs>
-        </AppBar>
-
-        {/* Gallery View */}
-        {viewMode === 'gallery' && (
-          <PhotoGallery
-            buildingId={buildingId}
-            onPhotoSelect={(photo) => {
-              setSelectedPhoto(photo);
-              setViewMode('annotator');
-            }}
-            onAddPhoto={() => setViewMode('annotator')}
-          />
+            Take Photo & Annotate
+          </Button>
+        </Box>
+        
+        {sitePhotos && sitePhotos.length > 0 ? (
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            {sitePhotos.map((photo, index) => (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={photo._id || index}>
+                <Card>
+                  <CardMedia
+                    component="img"
+                    height="200"
+                    image={photo.annotatedPhoto || photo.originalPhoto}
+                    alt="Site photo"
+                    sx={{ objectFit: 'cover' }}
+                  />
+                  <CardContent>
+                    <Chip 
+                      label={photo.mode || visitType}
+                      size="small"
+                      color="primary"
+                      sx={{ mb: 1 }}
+                    />
+                    {photo.notes && (
+                      <Typography variant="body2" noWrap>
+                        {photo.notes}
+                      </Typography>
+                    )}
+                    {photo.annotations && photo.annotations.length > 0 && (
+                      <Chip 
+                        label={`${photo.annotations.length} annotations`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ mt: 1 }}
+                      />
+                    )}
+                  </CardContent>
+                  <CardActions>
+                    <Button 
+                      size="small"
+                      onClick={() => {
+                        setSelectedPhoto(photo);
+                        setShowAnnotator(true);
+                      }}
+                    >
+                      Edit
+                    </Button>
+                    <Button 
+                      size="small"
+                      color="error"
+                      onClick={() => handleDeletePhoto(photo._id)}
+                    >
+                      Delete
+                    </Button>
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        ) : (
+          <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+            <PhotoCamera sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
+            <Typography variant="h6" gutterBottom>
+              No photos yet
+            </Typography>
+            <Typography variant="body2">
+              Take your first photo to get started with site documentation
+            </Typography>
+          </Box>
         )}
+      </Paper>
 
-        {/* Photo Annotator View */}
-        {viewMode === 'annotator' && (
-          <Box sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h6">
-                Photo Annotation Tool
-              </Typography>
-              <Button
-                variant="outlined"
-                startIcon={<GridIcon />}
-                onClick={() => setViewMode('gallery')}
-              >
-                Back to Gallery
-              </Button>
-            </Box>
-
+      {/* Photo Annotator Dialog */}
+      {showAnnotator && (
+        <Dialog 
+          open={showAnnotator} 
+          onClose={() => setShowAnnotator(false)}
+          maxWidth="xl"
+          fullWidth
+          PaperProps={{
+            sx: { height: '90vh' }
+          }}
+        >
+          <DialogTitle>
+            Photo Annotation - {visitType.charAt(0).toUpperCase() + visitType.slice(1)}
+            <Button
+              onClick={() => setShowAnnotator(false)}
+              sx={{ float: 'right' }}
+              color="inherit"
+            >
+              Close
+            </Button>
+          </DialogTitle>
+          <DialogContent sx={{ p: 0, height: '100%' }}>
             <PhotoAnnotator
               buildingId={buildingId}
               mode={visitType}
               initialPhoto={selectedPhoto?.originalPhoto}
               onSave={handlePhotoSave}
-              onCancel={() => setViewMode('gallery')}
+              onCancel={() => setShowAnnotator(false)}
             />
-          </Box>
-        )}
-      </Paper>
+          </DialogContent>
+        </Dialog>
+      )}
     </Box>
   );
 };

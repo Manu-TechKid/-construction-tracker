@@ -6,8 +6,9 @@ services:
     region: oregon  # or your preferred region
     nodeVersion: 18.18.0
     buildCommand: |
+      echo "Installing dependencies..."
       npm install
-      cd client && npm install && npm run build
+      cd client && npm install --legacy-peer-deps && npm run build
       cd ..
     startCommand: npm run start:prod
     healthCheckPath: /api/v1/health
@@ -19,13 +20,13 @@ services:
         value: 10000
       - key: NODE_OPTIONS
         value: --max_old_space_size=1024
-      
+
       # MongoDB Configuration
       - key: MONGO_URI
         fromDatabase:
           name: construction-tracker-db
           property: connectionString
-      
+
       # JWT Configuration
       - key: JWT_SECRET
         generateValue: true
@@ -33,34 +34,22 @@ services:
         value: 90d
       - key: JWT_COOKIE_EXPIRES
         value: "90"  # days
-      
+
       # Client Configuration
       - key: REACT_APP_API_URL
         sync: false  # Will be set to the service URL
     envVarFiles:
       - group: production
         path: .env.production
-    
+
     # Auto-deploy from GitHub
     autoDeploy: true
     branch: main
-    
+
     # Health check configuration
     healthCheckPath: /api/v1/health
     healthCheckTimeout: 300
-    
+
     # Resource allocation
     plan: starter
     instanceSize: free
-    
-    # Build environment
-    buildCommand: |
-      echo "Installing dependencies..."
-      npm install
-      cd client && npm install && npm run build
-      cd ..
-      
-    # Start command
-    startCommand: |
-      echo "Starting application..."
-      npm run start:prod

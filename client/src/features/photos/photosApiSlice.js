@@ -23,29 +23,29 @@ export const photosApiSlice = apiSlice.injectEndpoints({
     createSitePhoto: builder.mutation({
       query: (photoData) => {
         const formData = new FormData();
-
+        
         // Convert base64 images to blobs
         if (photoData.originalPhoto) {
           const originalBlob = dataURLtoBlob(photoData.originalPhoto);
           formData.append('originalPhoto', originalBlob, 'original.jpg');
         }
-
+        
         if (photoData.annotatedPhoto) {
           const annotatedBlob = dataURLtoBlob(photoData.annotatedPhoto);
           formData.append('annotatedPhoto', annotatedBlob, 'annotated.jpg');
         }
-
+        
         // Add other data
         formData.append('buildingId', photoData.buildingId);
         formData.append('mode', photoData.mode);
         formData.append('notes', photoData.notes || '');
         formData.append('annotations', JSON.stringify(photoData.annotations || []));
         formData.append('timestamp', photoData.timestamp);
-
+        
         if (photoData.zoom) {
           formData.append('zoom', photoData.zoom.toString());
         }
-
+        
         if (photoData.panOffset) {
           formData.append('panOffset', JSON.stringify(photoData.panOffset));
         }
@@ -53,10 +53,7 @@ export const photosApiSlice = apiSlice.injectEndpoints({
         return {
           url: '/photos/site',
           method: 'POST',
-          body: formData,
-          headers: {
-            // Don't set Content-Type - let browser set it with boundary for FormData
-          }
+          body: formData
         };
       },
       invalidatesTags: (result, error, { buildingId }) => [

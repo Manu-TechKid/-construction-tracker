@@ -211,10 +211,10 @@ app.get('/api/v1', (req, res) => {
 
 // Serve client build in production
 if (process.env.NODE_ENV === 'production') {
-  const clientBuildPath = path.resolve(process.cwd(), 'client/build');
+  const clientBuildPath = path.resolve(__dirname, '../client/build');
   console.log('Looking for client build at:', clientBuildPath);
   console.log('Client build exists:', fs.existsSync(clientBuildPath));
-  
+
   if (fs.existsSync(clientBuildPath)) {
     // Serve static files from the React app with proper headers
     app.use(express.static(clientBuildPath, {
@@ -225,14 +225,14 @@ if (process.env.NODE_ENV === 'production') {
         }
       }
     }));
-    
+
     // Handle React routing, return all requests to React app (but only for non-API routes)
     app.get('*', (req, res, next) => {
       // Skip API routes
       if (req.path.startsWith('/api/')) {
         return next();
       }
-      
+
       console.log('Serving React app for path:', req.path);
       res.sendFile(path.join(clientBuildPath, 'index.html'), (err) => {
         if (err) {
@@ -243,14 +243,13 @@ if (process.env.NODE_ENV === 'production') {
     });
   } else {
     console.log('Client build not found at:', clientBuildPath);
-    console.log('Available files in parent directory:', fs.readdirSync(path.resolve(__dirname, '..')));
-    
+
     // Serve a basic HTML page indicating the frontend is not available
     app.get('*', (req, res, next) => {
       if (req.path.startsWith('/api/')) {
         return next();
       }
-      
+
       res.send(`
         <!DOCTYPE html>
         <html>
