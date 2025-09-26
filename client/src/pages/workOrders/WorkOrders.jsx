@@ -57,7 +57,11 @@ const WorkOrders = () => {
   const navigate = useNavigate();
   const { canViewCosts } = useAuth();
   const { data: workOrdersData, isLoading, error } = useGetWorkOrdersQuery();
-  const { data: buildingsData } = useGetBuildingsQuery();
+  const { 
+    data: buildingsData, 
+    isLoading: isLoadingBuildings, 
+    error: buildingsError 
+  } = useGetBuildingsQuery();
   const [updateWorkOrder] = useUpdateWorkOrderMutation();
 
   const [filters, setFilters] = useState({ building: '', status: '' });
@@ -156,8 +160,18 @@ const WorkOrders = () => {
           return false;
         }
 
-        const buildingMatch = filters.building ? wo.building?._id === filters.building : true;
-        const statusMatch = filters.status ? wo.status === filters.status : true;
+        // Handle building filter
+        const buildingMatch = filters.building 
+          ? wo.building?._id === filters.building || 
+            (typeof wo.building === 'string' && wo.building === filters.building) ||
+            (wo.building && wo.building._id === filters.building)
+          : true;
+          
+        // Handle status filter
+        const statusMatch = filters.status 
+          ? wo.status === filters.status 
+          : true;
+          
         return buildingMatch && statusMatch;
       })
       .map(wo => ({
@@ -816,6 +830,12 @@ const WorkOrders = () => {
     },
   ];
 
+  // Debug information
+  console.log('Buildings Data:', buildingsData);
+  console.log('Is Loading Buildings:', isLoadingBuildings);
+  console.log('Buildings Error:', buildingsError);
+  console.log('Current Filters:', filters);
+
   return (
     <Box sx={{ height: 'calc(100vh - 120px)', width: '100%', display: 'flex', flexDirection: 'column' }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
@@ -831,40 +851,86 @@ const WorkOrders = () => {
         </Button>
       </Box>
 
-      <Card sx={{ mb: 3 }}>
+      {/* FILTERS SECTION - ALWAYS VISIBLE */}
+      <Card sx={{ 
+        mb: 3, 
+        boxShadow: 3, 
+        border: '3px solid #1976d2', 
+        backgroundColor: '#e3f2fd',
+        minHeight: '150px'
+      }}>
         <CardContent>
+          <Typography variant="h5" gutterBottom sx={{ mb: 2, fontWeight: 'bold', color: '#1976d2' }}>
+            🔍 Filter Work Orders
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 2, color: '#666' }}>
+            Total Work Orders: {workOrders.length} | Filtered: {filteredWorkOrders.length}
+          </Typography>
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={6} md={4}>
               <TextField
                 select
                 fullWidth
-                label="Filter by Building"
+                label="Building"
                 name="building"
                 value={filters.building}
                 onChange={handleFilterChange}
+                variant="outlined"
+                size="small"
+                disabled={isLoadingBuildings || Boolean(buildingsError)}
+                helperText={isLoadingBuildings ? 'Loading buildings...' : ''}
               >
-                <MenuItem value="">All Buildings</MenuItem>
-                {buildingsData?.data?.buildings?.map(b => (
-                  <MenuItem key={b._id} value={b._id}>{b.name}</MenuItem>
-                )) || []}
+                <MenuItem value="">
+                  <em>All Buildings</em>
+                </MenuItem>
+                {buildingsData?.data?.map(building => (
+                  <MenuItem key={building._id} value={building._id}>
+                    {building.name}
+                  </MenuItem>
+                ))}
               </TextField>
+              {buildingsError && (
+                <Typography color="error" variant="caption">
+                  Error loading buildings
+                </Typography>
+              )}
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={6} md={4}>
               <TextField
                 select
                 fullWidth
-                label="Filter by Status"
+                label="Status"
                 name="status"
                 value={filters.status}
                 onChange={handleFilterChange}
+                variant="outlined"
+                size="small"
               >
-                <MenuItem value="">All Statuses</MenuItem>
-                <MenuItem value="pending">Pending</MenuItem>
-                <MenuItem value="in_progress">In Progress</MenuItem>
-                <MenuItem value="on_hold">On Hold</MenuItem>
-                <MenuItem value="completed">Completed</MenuItem>
-                <MenuItem value="cancelled">Cancelled</MenuItem>
+                <MenuItem value="">
+                  <em>All Statuses</em>
+                </MenuItem>
+                {statusOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      {option.icon}
+                      {option.label}
+                    </Box>
+                  </MenuItem>
+                ))}
               </TextField>
+            </Grid>
+            <Grid item xs={12} md={4} sx={{ display: 'flex', alignItems: 'flex-end' }}>
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={() => setFilters({ building: '', status: '' })}
+                disabled={!filters.building && !filters.status}
+                fullWidth
+                size="large"
+                sx={{ height: '40px' }}
+              >
+                Clear Filters
+              </Button>
             </Grid>
           </Grid>
         </CardContent>
