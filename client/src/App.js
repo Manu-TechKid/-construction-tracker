@@ -52,6 +52,7 @@ import BuildingSchedule from './pages/scheduling/BuildingSchedule';
 import WorkerDashboard from './pages/workers/WorkerDashboard';
 import EditWorker from './pages/workers/EditWorker';
 import WorkerDetails from './pages/workers/WorkerDetails';
+import WorkerSchedules from './pages/workers/WorkerSchedules';
 import WorkerApproval from './pages/admin/WorkerApproval';
 import ProjectsPendingApproval from './pages/admin/ProjectsPendingApproval';
 import Setup from './pages/admin/Setup';
@@ -252,6 +253,24 @@ const AppContent = () => {
                 element={
                   <RoleBasedRoute requiredPermissions={['read:workers']}>
                     <WorkerDetails />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="workers/:id/edit" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['update:workers']}>
+                    <EditWorker />
+                  </RoleBasedRoute>
+                } 
+              />
+
+              {/* Worker Schedules */}
+              <Route 
+                path="worker-schedules" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['read:schedules']}>
+                    <WorkerSchedules />
                   </RoleBasedRoute>
                 } 
               />

@@ -152,6 +152,16 @@ const DashboardLayout = () => {
       });
     }
 
+    // Worker Schedules - for scheduling workers
+    if (!isWorker && hasPermission(['read:schedules'])) {
+      items.push({
+        text: 'Worker Schedules',
+        icon: <TimeIcon />,
+        path: '/worker-schedules',
+        permission: 'read:schedules'
+      });
+    }
+
     // Worker Approval - for admins
     if (!isWorker && hasPermission(['approve:workers'])) {
       items.push({
