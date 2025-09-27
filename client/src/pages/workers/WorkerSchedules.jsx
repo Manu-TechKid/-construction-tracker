@@ -68,6 +68,7 @@ import {
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { toast } from 'react-toastify';
+import { CalendarSkeleton } from '../../components/common/LoadingSkeleton';
 
 import { useGetUsersQuery } from '../../features/users/usersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
@@ -405,11 +406,8 @@ const WorkerSchedules = () => {
   // Handle loading states
   if (isLoadingWorkers || isLoadingBuildings || isLoadingSchedules) {
     return (
-      <Container maxWidth="xl" sx={{ mt: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-        <CircularProgress />
-        <Typography variant="body1" color="textSecondary">
-          Loading worker schedules...
-        </Typography>
+      <Container maxWidth="xl" sx={{ mt: 4 }}>
+        <CalendarSkeleton />
       </Container>
     );
   }

@@ -48,6 +48,7 @@ import Settings from './pages/settings/Settings';
 
 // New Components
 import NotesSheet from './components/notes/NotesSheet';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import BuildingSchedule from './pages/scheduling/BuildingSchedule';
 import WorkerDashboard from './pages/workers/WorkerDashboard';
 import EditWorker from './pages/workers/EditWorker';
@@ -94,7 +95,8 @@ const AppContent = () => {
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <BuildingProvider>
-          <Routes>
+          <ErrorBoundary>
+            <Routes>
             {/* Public Routes */}
             <Route path="/login" element={
               <PublicRoute>
@@ -409,7 +411,8 @@ const AppContent = () => {
 
             {/* Catch all route */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
+            </Routes>
+          </ErrorBoundary>
           
           <ToastContainer
             position="top-right"
