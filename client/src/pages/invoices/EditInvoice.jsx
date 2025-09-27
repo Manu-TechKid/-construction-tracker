@@ -139,7 +139,7 @@ const EditInvoice = () => {
     );
   }
 
-  const invoice = invoiceData?.data;
+  const invoice = invoiceData?.data?.invoice;
 
   console.log('EditInvoice: Final invoice object:', invoice);
 
@@ -201,7 +201,7 @@ const EditInvoice = () => {
               <Grid item xs={12} md={3}>
                 <Box sx={{ textAlign: 'center' }}>
                   <Typography variant="h4" color="primary" fontWeight="bold">
-                    {formatCurrency(invoice.totalAmount)}
+                    {formatCurrency(invoice.total)}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
                     Total Amount
@@ -266,27 +266,27 @@ const EditInvoice = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {invoice.workOrders.map((workOrder) => (
-                      <TableRow key={workOrder._id} hover>
+                    {invoice.workOrders.map((item, index) => (
+                      <TableRow key={item.workOrder?._id || index} hover>
                         <TableCell>
                           <Typography variant="body2" fontWeight="medium">
-                            {workOrder.title || 'Untitled Work Order'}
+                            {item.workOrder?.title || 'Untitled Work Order'}
                           </Typography>
                           <Typography variant="caption" color="textSecondary">
-                            ID: {workOrder._id}
+                            ID: {item.workOrder?._id || 'N/A'}
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          {workOrder.description || 'No description'}
+                          {item.workOrder?.description || item.description || 'No description'}
                         </TableCell>
                         <TableCell>
-                          {workOrder.apartmentNumber ? (
+                          {item.workOrder?.apartmentNumber ? (
                             <Box>
                               <Typography variant="body2">
-                                {workOrder.building?.name || 'Unknown Building'}
+                                {invoice.building?.name || 'Unknown Building'}
                               </Typography>
                               <Typography variant="caption" color="textSecondary">
-                                Apt {workOrder.apartmentNumber}
+                                Apt {item.workOrder.apartmentNumber}
                               </Typography>
                             </Box>
                           ) : (
@@ -297,24 +297,24 @@ const EditInvoice = () => {
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={workOrder.status || 'pending'}
-                            color={workOrder.status === 'completed' ? 'success' : 'warning'}
+                            label={item.workOrder?.status || 'pending'}
+                            color={item.workOrder?.status === 'completed' ? 'success' : 'warning'}
                             size="small"
                           />
                         </TableCell>
                         <TableCell align="right">
                           <Typography variant="body2" color="success.main" fontWeight="medium">
-                            {formatCurrency(workOrder.price || workOrder.estimatedCost)}
+                            {formatCurrency(item.unitPrice || item.workOrder?.price || item.workOrder?.estimatedCost)}
                           </Typography>
                         </TableCell>
                         <TableCell align="right">
                           <Typography variant="body2" color="error.main" fontWeight="medium">
-                            {formatCurrency(workOrder.cost || workOrder.actualCost)}
+                            {formatCurrency(item.workOrder?.cost || item.workOrder?.actualCost)}
                           </Typography>
                         </TableCell>
                         <TableCell align="right">
                           <Typography variant="body2" color="primary.main" fontWeight="medium">
-                            {formatCurrency((workOrder.price || workOrder.estimatedCost || 0) - (workOrder.cost || workOrder.actualCost || 0))}
+                            {formatCurrency(item.totalPrice || ((item.unitPrice || item.workOrder?.price || 0) * (item.quantity || 1)))}
                           </Typography>
                         </TableCell>
                       </TableRow>

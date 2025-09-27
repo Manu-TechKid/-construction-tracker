@@ -73,7 +73,10 @@ const InvoiceDetails = () => {
     );
   }
   
-  const invoice = invoiceData?.data;
+  const invoice = invoiceData?.data?.invoice;
+  
+  console.log('InvoiceDetails: Full invoice data:', invoiceData);
+  console.log('InvoiceDetails: Invoice object:', invoice);
   
   if (!invoice) {
     return (
