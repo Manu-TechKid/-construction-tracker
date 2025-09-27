@@ -82,12 +82,15 @@ exports.createWorkerSchedule = catchAsync(async (req, res, next) => {
   if (!worker) {
     return next(new AppError('Worker not found', 404));
   }
-  console.log('Worker found:', worker.firstName, worker.lastName, 'Role:', worker.role);
+  // Debug logging for development
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Worker found:', worker.firstName, worker.lastName, 'Role:', worker.role);
+  }
   
-  // Allow any authenticated user for now (can be restricted later)
-  // if (worker.role.toLowerCase() !== 'worker') {
-  //   return next(new AppError(`User role is '${worker.role}', not a worker`, 400));
-  // }
+  // Validate that the user is actually a worker (optional - can be relaxed for managers/admins)
+  if (worker.role.toLowerCase() !== 'worker' && !['admin', 'manager', 'supervisor'].includes(req.user.role)) {
+    return next(new AppError(`User role is '${worker.role}', not a worker`, 400));
+  }
 
   // Validate building exists
   const building = await Building.findById(buildingId);

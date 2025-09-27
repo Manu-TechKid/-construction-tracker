@@ -199,8 +199,9 @@ const WorkerSchedules = () => {
       const workerUsers = allUsers.filter(user => 
         user && (user.role === 'worker' || user.role === 'Worker')
       );
-      
-      console.log('Filtered workers:', workerUsers);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Filtered workers:', workerUsers);
+      }
       return workerUsers;
     } catch (error) {
       console.error('Error processing workers data:', error);
@@ -228,7 +229,9 @@ const WorkerSchedules = () => {
         return [];
       }
       
-      console.log('Extracted buildings:', buildingsList);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Extracted buildings:', buildingsList);
+      }
       return buildingsList;
     } catch (error) {
       console.error('Error processing buildings data:', error);
@@ -256,11 +259,12 @@ const WorkerSchedules = () => {
         return [];
       }
       
-      console.log('Extracted schedules:', schedulesList);
-      if (schedulesList.length > 0) {
-        console.log('Sample schedule structure:', schedulesList[0]);
-        console.log('Sample workerId:', schedulesList[0].workerId);
-        console.log('Sample buildingId:', schedulesList[0].buildingId);
+      // Debug logging (can be removed in production)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Extracted schedules:', schedulesList);
+        if (schedulesList.length > 0) {
+          console.log('Sample schedule structure:', schedulesList[0]);
+        }
       }
       return schedulesList;
     } catch (error) {

@@ -75,8 +75,11 @@ const InvoiceDetails = () => {
   
   const invoice = invoiceData?.data?.invoice;
   
-  console.log('InvoiceDetails: Full invoice data:', invoiceData);
-  console.log('InvoiceDetails: Invoice object:', invoice);
+  // Debug logging for development
+  if (process.env.NODE_ENV === 'development') {
+    console.log('InvoiceDetails: Full invoice data:', invoiceData);
+    console.log('InvoiceDetails: Invoice object:', invoice);
+  }
   
   if (!invoice) {
     return (
