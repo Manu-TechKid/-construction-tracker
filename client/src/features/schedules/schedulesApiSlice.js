@@ -32,7 +32,7 @@ export const schedulesApiSlice = apiSlice.injectEndpoints({
     }),
     createSchedule: builder.mutation({
       query: (scheduleData) => ({
-        url: '/worker-schedules',
+        url: '/worker-schedules/test-create',
         method: 'POST',
         body: scheduleData,
       }),
