@@ -257,6 +257,11 @@ const WorkerSchedules = () => {
       }
       
       console.log('Extracted schedules:', schedulesList);
+      if (schedulesList.length > 0) {
+        console.log('Sample schedule structure:', schedulesList[0]);
+        console.log('Sample workerId:', schedulesList[0].workerId);
+        console.log('Sample buildingId:', schedulesList[0].buildingId);
+      }
       return schedulesList;
     } catch (error) {
       console.error('Error processing schedules data:', error);
@@ -293,23 +298,45 @@ const WorkerSchedules = () => {
   };
 
   const getWorkerName = (workerId) => {
+    // First try to find in the workers list
     const worker = workers.find(w => w._id === workerId);
-    if (!worker) return 'Unknown Worker';
-    
-    // Handle different name field structures
-    if (worker.firstName && worker.lastName) {
-      return `${worker.firstName} ${worker.lastName}`;
-    } else if (worker.name) {
-      return worker.name;
-    } else if (worker.email) {
-      return worker.email;
+    if (worker) {
+      if (worker.firstName && worker.lastName) {
+        return `${worker.firstName} ${worker.lastName}`;
+      } else if (worker.name) {
+        return worker.name;
+      } else if (worker.email) {
+        return worker.email;
+      }
     }
+    
+    // If not found in workers list, check if workerId is actually a populated object
+    if (typeof workerId === 'object' && workerId !== null) {
+      if (workerId.firstName && workerId.lastName) {
+        return `${workerId.firstName} ${workerId.lastName}`;
+      } else if (workerId.name) {
+        return workerId.name;
+      } else if (workerId.email) {
+        return workerId.email;
+      }
+    }
+    
     return 'Unknown Worker';
   };
 
   const getBuildingName = (buildingId) => {
+    // First try to find in the buildings list
     const building = buildings.find(b => b._id === buildingId);
-    return building ? building.name : 'Unknown Building';
+    if (building) {
+      return building.name || building.title || 'Unknown Building';
+    }
+    
+    // If not found in buildings list, check if buildingId is actually a populated object
+    if (typeof buildingId === 'object' && buildingId !== null) {
+      return buildingId.name || buildingId.title || 'Unknown Building';
+    }
+    
+    return 'Unknown Building';
   };
 
   const getStatusColor = (schedule) => {

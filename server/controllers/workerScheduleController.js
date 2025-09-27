@@ -23,12 +23,17 @@ exports.getAllWorkerSchedules = catchAsync(async (req, res, next) => {
     if (endDate) filter.date.$lte = new Date(endDate);
   }
 
+  console.log('Getting schedules with filter:', filter);
+  
   const schedules = await WorkerSchedule.find(filter)
     .populate('workerId', 'firstName lastName email role')
     .populate('buildingId', 'name address')
     .populate('createdBy', 'firstName lastName')
     .populate('updatedBy', 'firstName lastName')
     .sort({ date: 1, startTime: 1 });
+    
+  console.log('Found schedules:', schedules.length);
+  console.log('Sample schedule:', schedules[0]);
 
   res.status(200).json({
     status: 'success',

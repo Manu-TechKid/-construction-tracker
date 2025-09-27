@@ -46,6 +46,13 @@ router.post('/test-create', async (req, res) => {
     
     console.log('Schedule created:', schedule);
     
+    // Populate the created schedule
+    await schedule.populate('workerId', 'firstName lastName email role');
+    await schedule.populate('buildingId', 'name address');
+    await schedule.populate('createdBy', 'firstName lastName');
+    
+    console.log('Schedule populated:', schedule);
+    
     res.status(201).json({
       status: 'success',
       data: { schedule }
