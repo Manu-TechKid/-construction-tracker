@@ -156,10 +156,10 @@ const WorkerSchedules = () => {
     },
   });
 
-  // Helper functions
-  const workers = workersData?.data || [];
-  const buildings = buildingsData?.data || [];
-  const schedules = schedulesData?.data || [];
+  // Helper functions - handle different API response structures
+  const workers = workersData?.data?.workers || workersData?.data || [];
+  const buildings = buildingsData?.data?.buildings || buildingsData?.data || [];
+  const schedules = schedulesData?.data?.schedules || schedulesData?.data || [];
 
   const weekDays = useMemo(() => {
     return eachDayOfInterval({
@@ -174,10 +174,19 @@ const WorkerSchedules = () => {
   }, [workers, selectedWorker]);
 
   const getSchedulesForDay = (date, workerId) => {
-    return schedules.filter(schedule => 
-      isSameDay(new Date(schedule.date), date) && 
-      (!workerId || schedule.workerId === workerId)
-    );
+    if (!Array.isArray(schedules)) {
+      console.warn('Schedules is not an array:', schedules);
+      return [];
+    }
+    return schedules.filter(schedule => {
+      try {
+        return isSameDay(new Date(schedule.date), date) && 
+               (!workerId || schedule.workerId === workerId);
+      } catch (error) {
+        console.warn('Error filtering schedule:', error, schedule);
+        return false;
+      }
+    });
   };
 
   const getWorkerName = (workerId) => {

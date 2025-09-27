@@ -768,14 +768,15 @@ const WorkOrders = () => {
       </Box>
 
       {/* FILTERS SECTION */}
-      <Card sx={{ 
-        mb: 3, 
-        boxShadow: 2, 
-        border: '1px solid #e0e0e0', 
-        backgroundColor: '#fafafa'
+      <Card sx={{
+        mb: 3,
+        boxShadow: 3,
+        border: '3px solid #1976d2',
+        backgroundColor: '#e3f2fd',
+        minHeight: '150px'
       }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom sx={{ mb: 2, fontWeight: 'medium', color: '#1976d2' }}>
+          <Typography variant="h5" gutterBottom sx={{ mb: 2, fontWeight: 'bold', color: '#1976d2' }}>
             🔍 Filter Work Orders
           </Typography>
           <Typography variant="body2" sx={{ mb: 2, color: '#666' }}>
