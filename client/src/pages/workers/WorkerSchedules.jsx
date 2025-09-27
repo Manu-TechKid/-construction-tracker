@@ -117,15 +117,7 @@ const WorkerSchedules = () => {
     workerId: selectedWorker || undefined,
   });
 
-  // Debug logging (only in development and limited)
-  if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
-    console.log('WorkerSchedules Debug (sampled):', {
-      workersLoaded: !!workersData,
-      buildingsLoaded: !!buildingsData,
-      schedulesLoaded: !!schedulesData,
-      hasErrors: !!(workersError || buildingsError || schedulesError)
-    });
-  }
+  // Debug logging removed for performance
 
   // Mutations
   const [createSchedule, { isLoading: isCreating }] = useCreateScheduleMutation();
@@ -299,8 +291,19 @@ const WorkerSchedules = () => {
     }
     return schedules.filter(schedule => {
       try {
-        return isSameDay(new Date(schedule.date), date) && 
-               (!workerId || schedule.workerId === workerId);
+        const dateMatch = isSameDay(new Date(schedule.date), date);
+        let workerMatch = true;
+        
+        if (workerId) {
+          // Handle both populated and non-populated workerId
+          if (typeof schedule.workerId === 'object' && schedule.workerId !== null) {
+            workerMatch = schedule.workerId._id === workerId;
+          } else {
+            workerMatch = schedule.workerId === workerId;
+          }
+        }
+        
+        return dateMatch && workerMatch;
       } catch (error) {
         console.warn('Error filtering schedule:', error, schedule);
         return false;
@@ -364,14 +367,22 @@ const WorkerSchedules = () => {
   const handleOpenDialog = (schedule = null) => {
     setEditingSchedule(schedule);
     if (schedule) {
+      // Handle populated worker and building data
+      const workerId = typeof schedule.workerId === 'object' && schedule.workerId !== null 
+        ? schedule.workerId._id 
+        : schedule.workerId;
+      const buildingId = typeof schedule.buildingId === 'object' && schedule.buildingId !== null 
+        ? schedule.buildingId._id 
+        : schedule.buildingId;
+        
       formik.setValues({
-        workerId: schedule.workerId || '',
-        buildingId: schedule.buildingId || '',
+        workerId: workerId || '',
+        buildingId: buildingId || '',
         date: new Date(schedule.date),
         startTime: new Date(schedule.startTime),
         endTime: new Date(schedule.endTime),
-        task: schedule.task || '',
-        notes: schedule.notes || '',
+        task: schedule.task || 'General maintenance',
+        notes: schedule.notes || 'Please complete the assigned task',
       });
     } else {
       // Set better default times for new schedules
@@ -383,13 +394,13 @@ const WorkerSchedules = () => {
       endTime.setHours(startTime.getHours() + 2); // Default 2-hour duration
       
       formik.setValues({
-        workerId: '',
-        buildingId: '',
+        workerId: workers.length > 0 ? workers[0]._id : '',
+        buildingId: buildings.length > 0 ? buildings[0]._id : '',
         date: new Date(),
         startTime: startTime,
         endTime: endTime,
-        task: '',
-        notes: '',
+        task: 'General maintenance',
+        notes: 'Please complete the assigned task',
       });
     }
     setOpenDialog(true);
@@ -633,7 +644,7 @@ const WorkerSchedules = () => {
                                 }
                               >
                                 <Chip
-                                  label={schedule.task}
+                                  label={`${format(new Date(schedule.startTime), 'HH:mm')} - ${schedule.task}`}
                                   size="small"
                                   color={getStatusColor(schedule)}
                                   sx={{ 
