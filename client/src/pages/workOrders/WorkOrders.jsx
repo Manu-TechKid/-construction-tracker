@@ -254,8 +254,8 @@ const WorkOrders = () => {
     {
       field: 'building',
       headerName: 'Building',
-      flex: 1.2,
-      minWidth: 140,
+      flex: 1.8,
+      minWidth: 180,
       valueGetter: (params) => {
         try {
           if (!params.row) return 'N/A';
@@ -411,73 +411,12 @@ const WorkOrders = () => {
             ${params.value?.toFixed(2) || '0.00'}
           </Typography>
         ),
-      },
-      {
-        field: 'profit',
-        headerName: 'Profit',
-        width: 100,
-        valueGetter: (params) => {
-          try {
-            if (!params.row) return 0;
-            const price = params.row.price || 0;
-            const cost = params.row.cost || 0;
-            return price - cost;
-          } catch (error) {
-            console.warn('Error calculating profit:', error);
-            return 0;
-          }
-        },
-        valueFormatter: (params) => {
-          try {
-            if (!params.row) return '$0.00 (0%)';
-            const profit = params.value || 0;
-            const price = params.row.price || 0;
-            const margin = price > 0 ? ((profit / price) * 100).toFixed(1) : 0;
-            return `$${profit.toFixed(2)} (${margin}%)`;
-          } catch (error) {
-            console.warn('Error formatting profit:', error);
-            return '$0.00 (0%)';
-          }
-        },
-        renderCell: (params) => {
-          try {
-            if (!params.row) {
-              return <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'right' }}>$0.00</Typography>;
-            }
-            const profit = params.value || 0;
-            const price = params.row.price || 0;
-            const margin = price > 0 ? ((profit / price) * 100).toFixed(1) : 0;
-
-            return (
-              <Box sx={{ textAlign: 'right' }}>
-                <Typography
-                  variant="body2"
-                  color={profit >= 0 ? 'success.main' : 'error.main'}
-                  fontWeight="medium"
-                  sx={{ fontSize: '0.875rem' }}
-                >
-                  ${profit.toFixed(2)}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  color="textSecondary"
-                  sx={{ fontSize: '0.75rem' }}
-                >
-                  {margin}%
-                </Typography>
-              </Box>
-            );
-          } catch (error) {
-            console.warn('Error rendering profit cell:', error);
-            return <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'right' }}>Error</Typography>;
-          }
-        },
       }
     ] : []),
     {
       field: 'photos',
       headerName: 'Photos',
-      width: 200,
+      width: 160,
       renderCell: (params) => {
         try {
           if (!params.row) {
@@ -733,19 +672,12 @@ const WorkOrders = () => {
     {
       field: 'apartmentNumber',
       headerName: 'Apartment',
-      width: 160,
+      width: 100,
       valueGetter: (params) => {
         try {
           if (!params.row) return 'N/A';
-
-          const buildingName = params.row.building?.name || params.row.building?.code || 'Unknown Building';
           const apartmentNumber = params.row.apartmentNumber || 'N/A';
-
-          if (apartmentNumber === 'N/A') {
-            return 'No apartment';
-          }
-
-          return `${buildingName} - Apt ${apartmentNumber}`;
+          return apartmentNumber === 'N/A' ? 'No apartment' : `Apt ${apartmentNumber}`;
         } catch (error) {
           console.warn('Error getting apartment number:', error);
           return 'N/A';
@@ -757,7 +689,6 @@ const WorkOrders = () => {
             return <Typography variant="body2" color="textSecondary">No data</Typography>;
           }
 
-          const buildingName = params.row.building?.name || params.row.building?.code || 'Unknown Building';
           const apartmentNumber = params.row.apartmentNumber || 'N/A';
 
           if (apartmentNumber === 'N/A') {
@@ -765,29 +696,16 @@ const WorkOrders = () => {
           }
 
           return (
-            <Box sx={{ maxWidth: '100%' }}>
-              <Typography
-                variant="body2"
-                fontWeight="medium"
-                sx={{
-                  fontSize: '0.875rem',
-                  lineHeight: 1.4,
-                  wordBreak: 'break-word'
-                }}
-              >
-                {buildingName}
-              </Typography>
-              <Typography
-                variant="body2"
-                color="textSecondary"
-                sx={{
-                  fontSize: '0.8rem',
-                  lineHeight: 1.3
-                }}
-              >
-                Apt {apartmentNumber}
-              </Typography>
-            </Box>
+            <Typography
+              variant="body2"
+              fontWeight="medium"
+              sx={{
+                fontSize: '0.875rem',
+                lineHeight: 1.4
+              }}
+            >
+              Apt {apartmentNumber}
+            </Typography>
           );
         } catch (error) {
           console.warn('Error rendering apartment cell:', error);
