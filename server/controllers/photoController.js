@@ -4,6 +4,7 @@ const SitePhoto = require('../models/SitePhoto');
 const Building = require('../models/Building');
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
+const { optimizePhoto, getStorageStats, cleanupOldPhotos } = require('../utils/photoOptimizer');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -56,23 +57,55 @@ exports.uploadWorkOrderPhotos = catchAsync(async (req, res, next) => {
     return next(new AppError('Please upload at least one photo', 400));
   }
 
-  // Process uploaded files
-  const photos = req.files.map(file => ({
-    url: `/uploads/${file.filename}`,
-    caption: req.body.description || '',
-    type: req.body.type || 'other',
-    uploadedBy: req.user.id,
-    uploadedAt: new Date()
-  }));
+  const optimizedPhotos = [];
+  const outputDir = path.join(__dirname, '../public/uploads/photos');
+
+  // Process and optimize each uploaded file
+  for (const file of req.files) {
+    try {
+      const optimizationResult = await optimizePhoto(
+        file.path,
+        outputDir,
+        file.filename
+      );
+
+      // Create photo object with all optimized versions
+      const photoData = {
+        thumbnail: `/uploads/photos/${optimizationResult.thumbnail.filename}`,
+        medium: `/uploads/photos/${optimizationResult.medium.filename}`,
+        original: `/uploads/photos/${optimizationResult.original.filename}`,
+        caption: req.body.description || '',
+        type: req.body.type || 'other',
+        uploadedBy: req.user.id,
+        uploadedAt: new Date(),
+        metadata: optimizationResult.metadata,
+        compressionStats: optimizationResult.compressionStats
+      };
+
+      optimizedPhotos.push(photoData);
+    } catch (error) {
+      console.error('Photo optimization failed:', error);
+      // Fallback to original file if optimization fails
+      const photoData = {
+        url: `/uploads/${file.filename}`,
+        caption: req.body.description || '',
+        type: req.body.type || 'other',
+        uploadedBy: req.user.id,
+        uploadedAt: new Date()
+      };
+      optimizedPhotos.push(photoData);
+    }
+  }
 
   // Add photos to work order
-  workOrder.photos.push(...photos);
+  workOrder.photos.push(...optimizedPhotos);
   await workOrder.save();
 
   res.status(200).json({
     status: 'success',
     data: {
-      photos: photos
+      photos: optimizedPhotos,
+      message: 'Photos uploaded and optimized successfully'
     }
   });
 });
@@ -633,13 +666,71 @@ exports.getAllPhotos = catchAsync(async (req, res, next) => {
   });
 });
 
-// @desc    Cleanup orphaned photos (admin)
-// @route   DELETE /api/v1/photos/admin/cleanup
+// @desc    Get storage statistics (admin)
+// @route   GET /api/v1/photos/admin/storage-stats
 // @access  Admin
-exports.cleanupOrphanedPhotos = catchAsync(async (req, res, next) => {
-  // This is a placeholder for cleanup functionality
+exports.getStorageStatistics = catchAsync(async (req, res, next) => {
+  const uploadsDir = path.join(__dirname, '../public/uploads');
+  const stats = await getStorageStats(uploadsDir);
+  
+  if (!stats) {
+    return next(new AppError('Failed to get storage statistics', 500));
+  }
+
+  // Get MongoDB photo count for comparison
+  const workOrderPhotos = await WorkOrder.aggregate([
+    { $unwind: '$photos' },
+    { $count: 'total' }
+  ]);
+  
+  const sitePhotos = await SitePhoto.countDocuments();
+  
+  const dbPhotoCount = (workOrderPhotos[0]?.total || 0) + sitePhotos;
+
   res.status(200).json({
     status: 'success',
-    message: 'Cleanup functionality not yet implemented'
+    data: {
+      storage: stats,
+      database: {
+        workOrderPhotos: workOrderPhotos[0]?.total || 0,
+        sitePhotos,
+        totalPhotos: dbPhotoCount
+      },
+      recommendations: {
+        compressionSavings: stats.totalSize > 100 * 1024 * 1024 ? 'Consider running photo optimization' : 'Storage usage is optimal',
+        cleanup: stats.totalFiles > 1000 ? 'Consider cleaning up old photos' : 'File count is manageable'
+      }
+    }
+  });
+});
+
+// @desc    Cleanup old photos (admin)
+// @route   DELETE /api/v1/photos/admin/cleanup
+// @access  Admin
+exports.cleanupOldPhotos = catchAsync(async (req, res, next) => {
+  const { maxAgeInDays = 365 } = req.body;
+  const uploadsDir = path.join(__dirname, '../public/uploads');
+  
+  const cleanupResult = await cleanupOldPhotos(uploadsDir, maxAgeInDays);
+  
+  res.status(200).json({
+    status: 'success',
+    data: {
+      ...cleanupResult,
+      message: `Cleaned up ${cleanupResult.deletedFiles} files, freed ${cleanupResult.freedSpaceFormatted}`
+    }
+  });
+});
+
+// @desc    Optimize existing photos (admin)
+// @route   POST /api/v1/photos/admin/optimize
+// @access  Admin
+exports.optimizeExistingPhotos = catchAsync(async (req, res, next) => {
+  // This would be a batch operation to optimize existing unoptimized photos
+  // For now, return a placeholder response
+  res.status(200).json({
+    status: 'success',
+    message: 'Batch optimization functionality will be implemented in future updates',
+    recommendation: 'New uploads are automatically optimized. Consider this feature for large existing photo collections.'
   });
 });

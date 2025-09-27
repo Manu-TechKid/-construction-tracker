@@ -48,6 +48,8 @@ router.use(restrictToRoles('admin', 'manager'));
 
 // Admin photo management
 router.get('/admin/all', photoController.getAllPhotos);
-router.delete('/admin/cleanup', photoController.cleanupOrphanedPhotos);
+router.get('/admin/storage-stats', photoController.getStorageStatistics);
+router.delete('/admin/cleanup', photoController.cleanupOldPhotos);
+router.post('/admin/optimize', photoController.optimizeExistingPhotos);
 
 module.exports = router;
