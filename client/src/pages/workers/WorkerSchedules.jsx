@@ -69,7 +69,7 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { toast } from 'react-toastify';
 
-import { useGetWorkersQuery } from '../../features/workers/workersApiSlice';
+import { useGetUsersQuery } from '../../features/users/usersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { 
   useGetSchedulesQuery,
@@ -102,7 +102,7 @@ const WorkerSchedules = () => {
   const [viewMode, setViewMode] = useState('week'); // 'week' or 'month'
 
   // API queries with error handling
-  const { data: workersData, isLoading: isLoadingWorkers, error: workersError } = useGetWorkersQuery();
+  const { data: workersData, isLoading: isLoadingWorkers, error: workersError } = useGetUsersQuery();
   const { data: buildingsData, isLoading: isLoadingBuildings, error: buildingsError } = useGetBuildingsQuery();
   const { data: schedulesData, isLoading: isLoadingSchedules, error: schedulesError } = useGetSchedulesQuery({
     startDate: startOfWeek(currentWeek).toISOString(),
@@ -171,14 +171,29 @@ const WorkerSchedules = () => {
     try {
       if (!workersData) return [];
       
-      // Try different possible data structures
-      if (Array.isArray(workersData)) return workersData;
-      if (workersData.data?.workers && Array.isArray(workersData.data.workers)) return workersData.data.workers;
-      if (workersData.data && Array.isArray(workersData.data)) return workersData.data;
-      if (workersData.workers && Array.isArray(workersData.workers)) return workersData.workers;
+      // Workers are actually users with role 'worker' from the users API
+      let allUsers = [];
       
-      console.warn('Workers data structure not recognized:', workersData);
-      return [];
+      if (Array.isArray(workersData)) {
+        allUsers = workersData;
+      } else if (workersData.data?.users && Array.isArray(workersData.data.users)) {
+        allUsers = workersData.data.users;
+      } else if (workersData.data && Array.isArray(workersData.data)) {
+        allUsers = workersData.data;
+      } else if (workersData.users && Array.isArray(workersData.users)) {
+        allUsers = workersData.users;
+      } else {
+        console.warn('Workers data structure not recognized:', workersData);
+        return [];
+      }
+      
+      // Filter users to only include workers
+      const workerUsers = allUsers.filter(user => 
+        user && (user.role === 'worker' || user.role === 'Worker')
+      );
+      
+      console.log('Filtered workers:', workerUsers);
+      return workerUsers;
     } catch (error) {
       console.error('Error processing workers data:', error);
       return [];
@@ -189,14 +204,24 @@ const WorkerSchedules = () => {
     try {
       if (!buildingsData) return [];
       
-      // Try different possible data structures
-      if (Array.isArray(buildingsData)) return buildingsData;
-      if (buildingsData.data?.buildings && Array.isArray(buildingsData.data.buildings)) return buildingsData.data.buildings;
-      if (buildingsData.data && Array.isArray(buildingsData.data)) return buildingsData.data;
-      if (buildingsData.buildings && Array.isArray(buildingsData.buildings)) return buildingsData.buildings;
+      // Extract buildings from the API response
+      let buildingsList = [];
       
-      console.warn('Buildings data structure not recognized:', buildingsData);
-      return [];
+      if (Array.isArray(buildingsData)) {
+        buildingsList = buildingsData;
+      } else if (buildingsData.data?.buildings && Array.isArray(buildingsData.data.buildings)) {
+        buildingsList = buildingsData.data.buildings;
+      } else if (buildingsData.data && Array.isArray(buildingsData.data)) {
+        buildingsList = buildingsData.data;
+      } else if (buildingsData.buildings && Array.isArray(buildingsData.buildings)) {
+        buildingsList = buildingsData.buildings;
+      } else {
+        console.warn('Buildings data structure not recognized:', buildingsData);
+        return [];
+      }
+      
+      console.log('Extracted buildings:', buildingsList);
+      return buildingsList;
     } catch (error) {
       console.error('Error processing buildings data:', error);
       return [];
@@ -207,14 +232,24 @@ const WorkerSchedules = () => {
     try {
       if (!schedulesData) return [];
       
-      // Try different possible data structures
-      if (Array.isArray(schedulesData)) return schedulesData;
-      if (schedulesData.data?.schedules && Array.isArray(schedulesData.data.schedules)) return schedulesData.data.schedules;
-      if (schedulesData.data && Array.isArray(schedulesData.data)) return schedulesData.data;
-      if (schedulesData.schedules && Array.isArray(schedulesData.schedules)) return schedulesData.schedules;
+      // Extract schedules from the API response
+      let schedulesList = [];
       
-      console.warn('Schedules data structure not recognized:', schedulesData);
-      return [];
+      if (Array.isArray(schedulesData)) {
+        schedulesList = schedulesData;
+      } else if (schedulesData.data?.schedules && Array.isArray(schedulesData.data.schedules)) {
+        schedulesList = schedulesData.data.schedules;
+      } else if (schedulesData.data && Array.isArray(schedulesData.data)) {
+        schedulesList = schedulesData.data;
+      } else if (schedulesData.schedules && Array.isArray(schedulesData.schedules)) {
+        schedulesList = schedulesData.schedules;
+      } else {
+        console.warn('Schedules data structure not recognized:', schedulesData);
+        return [];
+      }
+      
+      console.log('Extracted schedules:', schedulesList);
+      return schedulesList;
     } catch (error) {
       console.error('Error processing schedules data:', error);
       return [];
@@ -251,7 +286,17 @@ const WorkerSchedules = () => {
 
   const getWorkerName = (workerId) => {
     const worker = workers.find(w => w._id === workerId);
-    return worker ? `${worker.firstName} ${worker.lastName}` : 'Unknown Worker';
+    if (!worker) return 'Unknown Worker';
+    
+    // Handle different name field structures
+    if (worker.firstName && worker.lastName) {
+      return `${worker.firstName} ${worker.lastName}`;
+    } else if (worker.name) {
+      return worker.name;
+    } else if (worker.email) {
+      return worker.email;
+    }
+    return 'Unknown Worker';
   };
 
   const getBuildingName = (buildingId) => {
@@ -387,7 +432,16 @@ const WorkerSchedules = () => {
                     <MenuItem value="">All Workers</MenuItem>
                     {Array.isArray(workers) && workers.length > 0 ? workers.map((worker) => (
                       <MenuItem key={worker._id || worker.id} value={worker._id || worker.id}>
-                        {worker.firstName || worker.name || 'Unknown'} {worker.lastName || ''}
+                        {(() => {
+                          if (worker.firstName && worker.lastName) {
+                            return `${worker.firstName} ${worker.lastName}`;
+                          } else if (worker.name) {
+                            return worker.name;
+                          } else if (worker.email) {
+                            return worker.email;
+                          }
+                          return 'Unknown Worker';
+                        })()}
                       </MenuItem>
                     )) : (
                       <MenuItem disabled>No workers available</MenuItem>
@@ -466,7 +520,16 @@ const WorkerSchedules = () => {
                       <PersonIcon />
                     </Avatar>
                     <Typography variant="h6">
-                      {worker.firstName} {worker.lastName}
+                      {(() => {
+                        if (worker.firstName && worker.lastName) {
+                          return `${worker.firstName} ${worker.lastName}`;
+                        } else if (worker.name) {
+                          return worker.name;
+                        } else if (worker.email) {
+                          return worker.email;
+                        }
+                        return 'Unknown Worker';
+                      })()}
                     </Typography>
                     <Chip 
                       label={worker.role || 'Worker'} 
@@ -679,7 +742,16 @@ const WorkerSchedules = () => {
                     >
                       {Array.isArray(workers) && workers.length > 0 ? workers.map((worker) => (
                         <MenuItem key={worker._id || worker.id} value={worker._id || worker.id}>
-                          {worker.firstName || worker.name || 'Unknown'} {worker.lastName || ''}
+                          {(() => {
+                            if (worker.firstName && worker.lastName) {
+                              return `${worker.firstName} ${worker.lastName}`;
+                            } else if (worker.name) {
+                              return worker.name;
+                            } else if (worker.email) {
+                              return worker.email;
+                            }
+                            return 'Unknown Worker';
+                          })()}
                         </MenuItem>
                       )) : (
                         <MenuItem disabled>No workers available</MenuItem>
