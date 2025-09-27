@@ -117,15 +117,15 @@ const WorkerSchedules = () => {
     workerId: selectedWorker || undefined,
   });
 
-  // Debug logging
-  console.log('WorkerSchedules Debug:', {
-    workersData,
-    buildingsData,
-    schedulesData,
-    workersError,
-    buildingsError,
-    schedulesError
-  });
+  // Debug logging (only in development and limited)
+  if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
+    console.log('WorkerSchedules Debug (sampled):', {
+      workersLoaded: !!workersData,
+      buildingsLoaded: !!buildingsData,
+      schedulesLoaded: !!schedulesData,
+      hasErrors: !!(workersError || buildingsError || schedulesError)
+    });
+  }
 
   // Mutations
   const [createSchedule, { isLoading: isCreating }] = useCreateScheduleMutation();
