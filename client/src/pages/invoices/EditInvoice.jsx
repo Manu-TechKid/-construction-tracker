@@ -142,6 +142,10 @@ const EditInvoice = () => {
   const invoice = invoiceData?.data?.invoice;
 
   console.log('EditInvoice: Final invoice object:', invoice);
+  console.log('EditInvoice: Invoice total:', invoice?.total);
+  console.log('EditInvoice: Invoice subtotal:', invoice?.subtotal);
+  console.log('EditInvoice: Invoice tax:', invoice?.tax);
+  console.log('EditInvoice: Invoice workOrders:', invoice?.workOrders);
 
   if (!invoice) {
     return (
@@ -325,6 +329,32 @@ const EditInvoice = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Cost Summary */}
+        <Card sx={{ mb: 3 }}>
+          <CardHeader title="Cost Summary" />
+          <CardContent>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2">Subtotal:</Typography>
+              <Typography variant="body2">
+                {formatCurrency(invoice.subtotal)}
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2">Tax:</Typography>
+              <Typography variant="body2">
+                {formatCurrency(invoice.tax)}
+              </Typography>
+            </Box>
+            <Divider sx={{ my: 1 }} />
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Typography variant="h6">Total:</Typography>
+              <Typography variant="h6">
+                {formatCurrency(invoice.total)}
+              </Typography>
+            </Box>
+          </CardContent>
+        </Card>
 
         {/* Edit Form */}
         <form onSubmit={formik.handleSubmit}>
