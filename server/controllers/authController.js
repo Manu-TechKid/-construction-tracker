@@ -173,7 +173,16 @@ exports.protect = catchAsync(async (req, res, next) => {
 
   // 3) Check if user still exists
   const currentUser = await User.findById(decoded.id);
+  console.log('User lookup result:', {
+    found: !!currentUser,
+    id: decoded.id,
+    role: currentUser?.role,
+    approvalStatus: currentUser?.workerProfile?.approvalStatus,
+    isActive: currentUser?.isActive
+  });
+  
   if (!currentUser) {
+    console.log('User not found in database');
     return next(
       new AppError(
         'The user belonging to this token does no longer exist.',
@@ -184,6 +193,7 @@ exports.protect = catchAsync(async (req, res, next) => {
 
   // 4) Check if user changed password after the token was issued
   if (currentUser.changedPasswordAfter(decoded.iat)) {
+    console.log('Password changed after token issued');
     return next(
       new AppError('User recently changed password! Please log in again.', 401)
     );
@@ -191,6 +201,10 @@ exports.protect = catchAsync(async (req, res, next) => {
 
   // 5) Check if worker is still approved
   if (currentUser.role === 'worker' && currentUser.workerProfile?.approvalStatus !== 'approved') {
+    console.log('Worker not approved:', {
+      role: currentUser.role,
+      approvalStatus: currentUser.workerProfile?.approvalStatus
+    });
     return next(new AppError('Your worker account is no longer approved.', 403));
   }
 
@@ -201,6 +215,7 @@ exports.protect = catchAsync(async (req, res, next) => {
 
   // GRANT ACCESS TO PROTECTED ROUTE
   req.user = currentUser;
+  console.log('Auth middleware completed successfully for user:', currentUser.name);
   next();
 });
 
