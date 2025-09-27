@@ -87,8 +87,10 @@ const EditInvoice = () => {
 
   // Load invoice data when available
   useEffect(() => {
+    console.log('EditInvoice: Invoice data received:', invoiceData);
     if (invoiceData?.data) {
       const invoice = invoiceData.data;
+      console.log('EditInvoice: Setting form values for invoice:', invoice);
       try {
         let dueDateValue = new Date();
         if (invoice.dueDate) {
@@ -118,8 +120,11 @@ const EditInvoice = () => {
 
   if (isLoading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+      <Container maxWidth="lg" sx={{ mt: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
         <CircularProgress />
+        <Typography variant="body1" color="textSecondary">
+          Loading invoice details...
+        </Typography>
       </Container>
     );
   }
@@ -136,10 +141,18 @@ const EditInvoice = () => {
 
   const invoice = invoiceData?.data;
 
+  console.log('EditInvoice: Final invoice object:', invoice);
+
   if (!invoice) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4 }}>
-        <Alert severity="warning">Invoice not found</Alert>
+        <Alert severity="warning">
+          Invoice not found. Invoice ID: {id}
+          <br />
+          <Typography variant="caption" component="div" sx={{ mt: 1 }}>
+            Debug info: {JSON.stringify(invoiceData, null, 2)}
+          </Typography>
+        </Alert>
       </Container>
     );
   }
@@ -349,14 +362,13 @@ const EditInvoice = () => {
                     label="Due Date"
                     value={formik.values.dueDate}
                     onChange={(newValue) => formik.setFieldValue('dueDate', newValue)}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        fullWidth
-                        error={formik.touched.dueDate && Boolean(formik.errors.dueDate)}
-                        helperText={formik.touched.dueDate && formik.errors.dueDate}
-                      />
-                    )}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        error: formik.touched.dueDate && Boolean(formik.errors.dueDate),
+                        helperText: formik.touched.dueDate && formik.errors.dueDate
+                      }
+                    }}
                   />
                 </Grid>
 
