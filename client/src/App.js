@@ -56,6 +56,7 @@ import WorkerDetails from './pages/workers/WorkerDetails';
 import WorkerSchedules from './pages/workers/WorkerSchedules';
 import WorkerApproval from './pages/admin/WorkerApproval';
 import ProjectsPendingApproval from './pages/admin/ProjectsPendingApproval';
+import TimeTrackingManagement from './pages/admin/TimeTrackingManagement';
 import Setup from './pages/admin/Setup';
 import SiteVisit from './pages/estimates/SiteVisit';
 import ApartmentSearch from './pages/search/ApartmentSearch';
@@ -273,6 +274,16 @@ const AppContent = () => {
                 element={
                   <RoleBasedRoute requiredPermissions={['read:schedules']}>
                     <WorkerSchedules />
+                  </RoleBasedRoute>
+                } 
+              />
+
+              {/* Time Tracking Management */}
+              <Route 
+                path="time-tracking" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['read:schedules']}>
+                    <TimeTrackingManagement />
                   </RoleBasedRoute>
                 } 
               />

@@ -78,7 +78,7 @@ const EnhancedTimeTracker = ({ workOrderId, buildingId }) => {
   
   // API hooks
   const { data: statusData, refetch: refetchStatus } = useGetWorkerStatusQuery(user?.id, {
-    pollingInterval: 10000, // Poll every 10 seconds
+    pollingInterval: 60000, // Poll every 60 seconds instead of 10
     skip: !user?.id
   });
   

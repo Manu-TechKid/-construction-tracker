@@ -58,11 +58,15 @@ if (process.env.NODE_ENV === 'development') {
 
 // Limit requests from same API
 const limiter = rateLimit({
-  max: 100,
-  windowMs: 60 * 60 * 1000,
-  message: 'Too many requests from this IP, please try again in an hour!',
+  max: 1000, // Increased from 100 to 1000
+  windowMs: 15 * 60 * 1000, // Reduced from 1 hour to 15 minutes
+  message: 'Too many requests from this IP, please try again in 15 minutes!',
   standardHeaders: true,
   legacyHeaders: false,
+  // Skip rate limiting for time tracking status checks
+  skip: (req) => {
+    return req.path.includes('/time-tracking/status/');
+  }
 });
 app.use('/api', limiter);
 

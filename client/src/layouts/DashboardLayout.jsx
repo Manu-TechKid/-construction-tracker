@@ -156,8 +156,18 @@ const DashboardLayout = () => {
     if (!isWorker && hasPermission(['read:schedules'])) {
       items.push({
         text: 'Worker Schedules',
-        icon: <TimeIcon />,
+        icon: <ScheduleIcon />,
         path: '/worker-schedules',
+        permission: 'read:schedules'
+      });
+    }
+
+    // Time Tracking Management - for admins/managers
+    if (!isWorker && hasPermission(['read:schedules'])) {
+      items.push({
+        text: 'Time Tracking',
+        icon: <TimeIcon />,
+        path: '/time-tracking',
         permission: 'read:schedules'
       });
     }
