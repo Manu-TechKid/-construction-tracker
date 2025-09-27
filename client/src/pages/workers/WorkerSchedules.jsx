@@ -101,13 +101,23 @@ const WorkerSchedules = () => {
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [viewMode, setViewMode] = useState('week'); // 'week' or 'month'
 
-  // API queries
-  const { data: workersData, isLoading: isLoadingWorkers } = useGetWorkersQuery();
-  const { data: buildingsData, isLoading: isLoadingBuildings } = useGetBuildingsQuery();
-  const { data: schedulesData, isLoading: isLoadingSchedules } = useGetSchedulesQuery({
+  // API queries with error handling
+  const { data: workersData, isLoading: isLoadingWorkers, error: workersError } = useGetWorkersQuery();
+  const { data: buildingsData, isLoading: isLoadingBuildings, error: buildingsError } = useGetBuildingsQuery();
+  const { data: schedulesData, isLoading: isLoadingSchedules, error: schedulesError } = useGetSchedulesQuery({
     startDate: startOfWeek(currentWeek).toISOString(),
     endDate: endOfWeek(currentWeek).toISOString(),
     workerId: selectedWorker || undefined,
+  });
+
+  // Debug logging
+  console.log('WorkerSchedules Debug:', {
+    workersData,
+    buildingsData,
+    schedulesData,
+    workersError,
+    buildingsError,
+    schedulesError
   });
 
   // Mutations
@@ -156,10 +166,60 @@ const WorkerSchedules = () => {
     },
   });
 
-  // Helper functions - handle different API response structures
-  const workers = workersData?.data?.workers || workersData?.data || [];
-  const buildings = buildingsData?.data?.buildings || buildingsData?.data || [];
-  const schedules = schedulesData?.data?.schedules || schedulesData?.data || [];
+  // Helper functions - comprehensive data extraction with error handling
+  const workers = useMemo(() => {
+    try {
+      if (!workersData) return [];
+      
+      // Try different possible data structures
+      if (Array.isArray(workersData)) return workersData;
+      if (workersData.data?.workers && Array.isArray(workersData.data.workers)) return workersData.data.workers;
+      if (workersData.data && Array.isArray(workersData.data)) return workersData.data;
+      if (workersData.workers && Array.isArray(workersData.workers)) return workersData.workers;
+      
+      console.warn('Workers data structure not recognized:', workersData);
+      return [];
+    } catch (error) {
+      console.error('Error processing workers data:', error);
+      return [];
+    }
+  }, [workersData]);
+
+  const buildings = useMemo(() => {
+    try {
+      if (!buildingsData) return [];
+      
+      // Try different possible data structures
+      if (Array.isArray(buildingsData)) return buildingsData;
+      if (buildingsData.data?.buildings && Array.isArray(buildingsData.data.buildings)) return buildingsData.data.buildings;
+      if (buildingsData.data && Array.isArray(buildingsData.data)) return buildingsData.data;
+      if (buildingsData.buildings && Array.isArray(buildingsData.buildings)) return buildingsData.buildings;
+      
+      console.warn('Buildings data structure not recognized:', buildingsData);
+      return [];
+    } catch (error) {
+      console.error('Error processing buildings data:', error);
+      return [];
+    }
+  }, [buildingsData]);
+
+  const schedules = useMemo(() => {
+    try {
+      if (!schedulesData) return [];
+      
+      // Try different possible data structures
+      if (Array.isArray(schedulesData)) return schedulesData;
+      if (schedulesData.data?.schedules && Array.isArray(schedulesData.data.schedules)) return schedulesData.data.schedules;
+      if (schedulesData.data && Array.isArray(schedulesData.data)) return schedulesData.data;
+      if (schedulesData.schedules && Array.isArray(schedulesData.schedules)) return schedulesData.schedules;
+      
+      console.warn('Schedules data structure not recognized:', schedulesData);
+      return [];
+    } catch (error) {
+      console.error('Error processing schedules data:', error);
+      return [];
+    }
+  }, [schedulesData]);
 
   const weekDays = useMemo(() => {
     return eachDayOfInterval({
@@ -258,10 +318,36 @@ const WorkerSchedules = () => {
     setTabValue(newValue);
   };
 
-  if (isLoadingWorkers || isLoadingBuildings) {
+  // Handle loading states
+  if (isLoadingWorkers || isLoadingBuildings || isLoadingSchedules) {
     return (
-      <Container maxWidth="xl" sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+      <Container maxWidth="xl" sx={{ mt: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
         <CircularProgress />
+        <Typography variant="body1" color="textSecondary">
+          Loading worker schedules...
+        </Typography>
+      </Container>
+    );
+  }
+
+  // Handle errors
+  if (workersError || buildingsError || schedulesError) {
+    return (
+      <Container maxWidth="xl" sx={{ mt: 4 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          <Typography variant="h6">Failed to load data</Typography>
+          <Typography variant="body2">
+            {workersError && `Workers: ${workersError?.data?.message || workersError.message}`}
+            {buildingsError && `Buildings: ${buildingsError?.data?.message || buildingsError.message}`}
+            {schedulesError && `Schedules: ${schedulesError?.data?.message || schedulesError.message}`}
+          </Typography>
+        </Alert>
+        <Button 
+          variant="contained" 
+          onClick={() => window.location.reload()}
+        >
+          Refresh Page
+        </Button>
       </Container>
     );
   }
@@ -299,11 +385,13 @@ const WorkerSchedules = () => {
                     label="Filter by Worker"
                   >
                     <MenuItem value="">All Workers</MenuItem>
-                    {workers.map((worker) => (
-                      <MenuItem key={worker._id} value={worker._id}>
-                        {worker.firstName} {worker.lastName}
+                    {Array.isArray(workers) && workers.length > 0 ? workers.map((worker) => (
+                      <MenuItem key={worker._id || worker.id} value={worker._id || worker.id}>
+                        {worker.firstName || worker.name || 'Unknown'} {worker.lastName || ''}
                       </MenuItem>
-                    ))}
+                    )) : (
+                      <MenuItem disabled>No workers available</MenuItem>
+                    )}
                   </Select>
                 </FormControl>
               </Grid>
@@ -371,7 +459,7 @@ const WorkerSchedules = () => {
               </Grid>
 
               {/* Worker Rows */}
-              {filteredWorkers.map((worker) => (
+              {Array.isArray(filteredWorkers) && filteredWorkers.length > 0 ? filteredWorkers.map((worker) => (
                 <Box key={worker._id} sx={{ mt: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
@@ -447,7 +535,16 @@ const WorkerSchedules = () => {
                   </Grid>
                   <Divider sx={{ mt: 2 }} />
                 </Box>
-              ))}
+              )) : (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography variant="h6" color="textSecondary">
+                    No workers available
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Please check your data or try refreshing the page.
+                  </Typography>
+                </Box>
+              )}
             </CardContent>
           </Card>
         )}
@@ -470,7 +567,7 @@ const WorkerSchedules = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {schedules.map((schedule) => (
+                    {Array.isArray(schedules) && schedules.length > 0 ? schedules.map((schedule) => (
                       <TableRow key={schedule._id} hover>
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -517,7 +614,18 @@ const WorkerSchedules = () => {
                           </IconButton>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )) : (
+                      <TableRow>
+                        <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
+                          <Typography variant="h6" color="textSecondary">
+                            No schedules found
+                          </Typography>
+                          <Typography variant="body2" color="textSecondary">
+                            Create your first schedule to get started.
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -543,11 +651,13 @@ const WorkerSchedules = () => {
                       onBlur={formik.handleBlur}
                       label="Worker"
                     >
-                      {workers.map((worker) => (
-                        <MenuItem key={worker._id} value={worker._id}>
-                          {worker.firstName} {worker.lastName}
+                      {Array.isArray(workers) && workers.length > 0 ? workers.map((worker) => (
+                        <MenuItem key={worker._id || worker.id} value={worker._id || worker.id}>
+                          {worker.firstName || worker.name || 'Unknown'} {worker.lastName || ''}
                         </MenuItem>
-                      ))}
+                      )) : (
+                        <MenuItem disabled>No workers available</MenuItem>
+                      )}
                     </Select>
                   </FormControl>
                 </Grid>
@@ -562,11 +672,13 @@ const WorkerSchedules = () => {
                       onBlur={formik.handleBlur}
                       label="Building"
                     >
-                      {buildings.map((building) => (
-                        <MenuItem key={building._id} value={building._id}>
-                          {building.name}
+                      {Array.isArray(buildings) && buildings.length > 0 ? buildings.map((building) => (
+                        <MenuItem key={building._id || building.id} value={building._id || building.id}>
+                          {building.name || building.title || 'Unknown Building'}
                         </MenuItem>
-                      ))}
+                      )) : (
+                        <MenuItem disabled>No buildings available</MenuItem>
+                      )}
                     </Select>
                   </FormControl>
                 </Grid>
