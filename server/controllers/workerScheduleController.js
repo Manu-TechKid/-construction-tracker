@@ -84,7 +84,7 @@ exports.createWorkerSchedule = catchAsync(async (req, res, next) => {
   }
   console.log('Worker found:', worker.firstName, worker.lastName, 'Role:', worker.role);
   
-  // Temporarily allow any user role for testing
+  // Allow any authenticated user for now (can be restricted later)
   // if (worker.role.toLowerCase() !== 'worker') {
   //   return next(new AppError(`User role is '${worker.role}', not a worker`, 400));
   // }
