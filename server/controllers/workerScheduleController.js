@@ -65,6 +65,10 @@ exports.getWorkerSchedule = catchAsync(async (req, res, next) => {
 // @route   POST /api/v1/worker-schedules
 // @access  Private
 exports.createWorkerSchedule = catchAsync(async (req, res, next) => {
+  console.log('=== CREATE WORKER SCHEDULE ===');
+  console.log('Request body:', req.body);
+  console.log('User making request:', req.user);
+  
   const { workerId, buildingId, date, startTime, endTime, task, notes } = req.body;
 
   // Validate worker exists and is actually a worker
@@ -72,8 +76,8 @@ exports.createWorkerSchedule = catchAsync(async (req, res, next) => {
   if (!worker) {
     return next(new AppError('Worker not found', 404));
   }
-  if (worker.role !== 'worker') {
-    return next(new AppError('User is not a worker', 400));
+  if (worker.role.toLowerCase() !== 'worker') {
+    return next(new AppError(`User role is '${worker.role}', not a worker`, 400));
   }
 
   // Validate building exists
@@ -101,6 +105,17 @@ exports.createWorkerSchedule = catchAsync(async (req, res, next) => {
     return next(new AppError('Worker already has a conflicting schedule at this time', 400));
   }
 
+  console.log('Creating schedule with data:', {
+    workerId,
+    buildingId,
+    date: new Date(date),
+    startTime: new Date(startTime),
+    endTime: new Date(endTime),
+    task,
+    notes: notes || '',
+    createdBy: req.user.id
+  });
+
   const schedule = await WorkerSchedule.create({
     workerId,
     buildingId,
@@ -112,10 +127,14 @@ exports.createWorkerSchedule = catchAsync(async (req, res, next) => {
     createdBy: req.user.id
   });
 
+  console.log('Schedule created successfully:', schedule);
+
   // Populate the created schedule
   await schedule.populate('workerId', 'firstName lastName email role');
   await schedule.populate('buildingId', 'name address');
   await schedule.populate('createdBy', 'firstName lastName');
+
+  console.log('Schedule populated:', schedule);
 
   res.status(201).json({
     status: 'success',
@@ -147,8 +166,8 @@ exports.updateWorkerSchedule = catchAsync(async (req, res, next) => {
     if (!worker) {
       return next(new AppError('Worker not found', 404));
     }
-    if (worker.role !== 'worker') {
-      return next(new AppError('User is not a worker', 400));
+    if (worker.role.toLowerCase() !== 'worker') {
+      return next(new AppError(`User role is '${worker.role}', not a worker`, 400));
     }
   }
 

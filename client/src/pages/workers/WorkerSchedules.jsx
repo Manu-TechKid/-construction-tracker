@@ -139,6 +139,8 @@ const WorkerSchedules = () => {
     validationSchema,
     onSubmit: async (values, { resetForm }) => {
       try {
+        console.log('Form values before processing:', values);
+        
         const scheduleData = {
           workerId: values.workerId,
           buildingId: values.buildingId,
@@ -146,22 +148,28 @@ const WorkerSchedules = () => {
           startTime: values.startTime.toISOString(),
           endTime: values.endTime.toISOString(),
           task: values.task,
-          notes: values.notes,
+          notes: values.notes || '',
         };
 
+        console.log('Schedule data being sent:', scheduleData);
+
         if (editingSchedule) {
-          await updateSchedule({ id: editingSchedule._id, ...scheduleData }).unwrap();
+          const result = await updateSchedule({ id: editingSchedule._id, ...scheduleData }).unwrap();
+          console.log('Update result:', result);
           toast.success('Schedule updated successfully');
         } else {
-          await createSchedule(scheduleData).unwrap();
+          const result = await createSchedule(scheduleData).unwrap();
+          console.log('Create result:', result);
           toast.success('Schedule created successfully');
         }
 
         handleCloseDialog();
         resetForm();
       } catch (error) {
-        console.error('Failed to save schedule:', error);
-        toast.error(error?.data?.message || 'Failed to save schedule');
+        console.error('Failed to save schedule - Full error:', error);
+        console.error('Error data:', error?.data);
+        console.error('Error message:', error?.data?.message);
+        toast.error(error?.data?.message || error?.message || 'Failed to save schedule');
       }
     },
   });

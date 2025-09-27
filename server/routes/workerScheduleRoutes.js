@@ -8,8 +8,8 @@ const router = express.Router();
 // Protect all routes
 router.use(authController.protect);
 
-// Routes accessible to managers and admins
-router.use(restrictToRoles('admin', 'manager', 'supervisor'));
+// Routes accessible to managers, admins, and workers
+router.use(restrictToRoles('admin', 'manager', 'supervisor', 'worker'));
 
 // Main CRUD routes
 router
