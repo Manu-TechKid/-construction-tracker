@@ -304,6 +304,14 @@ exports.deleteUser = catchAsync(async (req, res, next) => {
 exports.getWorkerAssignments = catchAsync(async (req, res, next) => {
     const workerId = req.params.id;
     
+    // Debug logging for production
+    console.log('getWorkerAssignments called:', {
+        requestedWorkerId: workerId,
+        currentUserId: req.user?.id,
+        currentUserRole: req.user?.role,
+        timestamp: new Date().toISOString()
+    });
+    
     // Allow workers to access their own assignments, or allow managers/admins to access any worker's assignments
     if (req.user.role === 'worker' && req.user.id !== workerId) {
         return next(new AppError('You can only access your own assignments', 403));

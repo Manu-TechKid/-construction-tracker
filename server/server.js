@@ -162,14 +162,13 @@ app.use('/api/v1/setup', setupRoutes);
 app.use('/api/v1/migration', migrationRoutes);
 app.use('/api/v1/photos', photoRoutes);
 app.use('/api/v1/worker-schedules', workerScheduleRoutes);
-
 // Health check endpoints
 app.get('/api/v1/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     time: new Date().toISOString(),
-    node: process.version,
-    env: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV,
+    version: '1.0.2'  // Trigger deployment
   });
 });
 
