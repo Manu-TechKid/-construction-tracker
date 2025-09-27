@@ -315,10 +315,10 @@ const WorkerSchedules = () => {
     // First try to find in the workers list
     const worker = workers.find(w => w._id === workerId);
     if (worker) {
-      if (worker.firstName && worker.lastName) {
-        return `${worker.firstName} ${worker.lastName}`;
-      } else if (worker.name) {
+      if (worker.name) {
         return worker.name;
+      } else if (worker.firstName && worker.lastName) {
+        return `${worker.firstName} ${worker.lastName}`;
       } else if (worker.email) {
         return worker.email;
       }
@@ -326,10 +326,10 @@ const WorkerSchedules = () => {
     
     // If not found in workers list, check if workerId is actually a populated object
     if (typeof workerId === 'object' && workerId !== null) {
-      if (workerId.firstName && workerId.lastName) {
-        return `${workerId.firstName} ${workerId.lastName}`;
-      } else if (workerId.name) {
+      if (workerId.name) {
         return workerId.name;
+      } else if (workerId.firstName && workerId.lastName) {
+        return `${workerId.firstName} ${workerId.lastName}`;
       } else if (workerId.email) {
         return workerId.email;
       }
@@ -503,10 +503,10 @@ const WorkerSchedules = () => {
                     {Array.isArray(workers) && workers.length > 0 ? workers.map((worker) => (
                       <MenuItem key={worker._id || worker.id} value={worker._id || worker.id}>
                         {(() => {
-                          if (worker.firstName && worker.lastName) {
-                            return `${worker.firstName} ${worker.lastName}`;
-                          } else if (worker.name) {
+                          if (worker.name) {
                             return worker.name;
+                          } else if (worker.firstName && worker.lastName) {
+                            return `${worker.firstName} ${worker.lastName}`;
                           } else if (worker.email) {
                             return worker.email;
                           }
@@ -591,10 +591,10 @@ const WorkerSchedules = () => {
                     </Avatar>
                     <Typography variant="h6">
                       {(() => {
-                        if (worker.firstName && worker.lastName) {
-                          return `${worker.firstName} ${worker.lastName}`;
-                        } else if (worker.name) {
+                        if (worker.name) {
                           return worker.name;
+                        } else if (worker.firstName && worker.lastName) {
+                          return `${worker.firstName} ${worker.lastName}`;
                         } else if (worker.email) {
                           return worker.email;
                         }
@@ -813,10 +813,10 @@ const WorkerSchedules = () => {
                       {Array.isArray(workers) && workers.length > 0 ? workers.map((worker) => (
                         <MenuItem key={worker._id || worker.id} value={worker._id || worker.id}>
                           {(() => {
-                            if (worker.firstName && worker.lastName) {
-                              return `${worker.firstName} ${worker.lastName}`;
-                            } else if (worker.name) {
+                            if (worker.name) {
                               return worker.name;
+                            } else if (worker.firstName && worker.lastName) {
+                              return `${worker.firstName} ${worker.lastName}`;
                             } else if (worker.email) {
                               return worker.email;
                             }
