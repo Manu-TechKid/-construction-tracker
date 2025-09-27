@@ -832,6 +832,14 @@ const WorkOrders = () => {
 
   // Debug information
   console.log('Buildings Data:', buildingsData);
+  console.log('Buildings Data Structure:', {
+    hasData: !!buildingsData?.data,
+    isArray: Array.isArray(buildingsData?.data),
+    hasBuildings: !!buildingsData?.data?.buildings,
+    isBuildingsArray: Array.isArray(buildingsData?.data?.buildings),
+    dataKeys: buildingsData?.data ? Object.keys(buildingsData.data) : null,
+    firstItem: buildingsData?.data?.buildings?.[0] || buildingsData?.data?.[0]
+  });
   console.log('Is Loading Buildings:', isLoadingBuildings);
   console.log('Buildings Error:', buildingsError);
   console.log('Current Filters:', filters);
@@ -878,16 +886,47 @@ const WorkOrders = () => {
                 variant="outlined"
                 size="small"
                 disabled={isLoadingBuildings || Boolean(buildingsError)}
-                helperText={isLoadingBuildings ? 'Loading buildings...' : ''}
+                helperText={
+                  isLoadingBuildings 
+                    ? 'Loading buildings...' 
+                    : buildingsError 
+                    ? 'Error loading buildings' 
+                    : ''
+                }
+                error={Boolean(buildingsError)}
               >
                 <MenuItem value="">
                   <em>All Buildings</em>
                 </MenuItem>
-                {buildingsData?.data?.map(building => (
-                  <MenuItem key={building._id} value={building._id}>
-                    {building.name}
-                  </MenuItem>
-                ))}
+                {(() => {
+                  try {
+                    let buildings = [];
+                    
+                    // Handle different possible data structures
+                    if (buildingsData?.data?.buildings && Array.isArray(buildingsData.data.buildings)) {
+                      buildings = buildingsData.data.buildings;
+                    } else if (buildingsData?.data && Array.isArray(buildingsData.data)) {
+                      buildings = buildingsData.data;
+                    } else if (buildingsData?.buildings && Array.isArray(buildingsData.buildings)) {
+                      buildings = buildingsData.buildings;
+                    } else if (Array.isArray(buildingsData)) {
+                      buildings = buildingsData;
+                    }
+                    
+                    return buildings.map(building => (
+                      <MenuItem key={building._id || building.id} value={building._id || building.id}>
+                        {building.name || building.title || 'Unnamed Building'}
+                      </MenuItem>
+                    ));
+                  } catch (error) {
+                    console.error('Error rendering building options:', error);
+                    return (
+                      <MenuItem disabled>
+                        Error loading buildings
+                      </MenuItem>
+                    );
+                  }
+                })()}
               </TextField>
               {buildingsError && (
                 <Typography color="error" variant="caption">
