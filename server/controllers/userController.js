@@ -304,6 +304,11 @@ exports.deleteUser = catchAsync(async (req, res, next) => {
 exports.getWorkerAssignments = catchAsync(async (req, res, next) => {
     const workerId = req.params.id;
     
+    // Allow workers to access their own assignments, or allow managers/admins to access any worker's assignments
+    if (req.user.role === 'worker' && req.user.id !== workerId) {
+        return next(new AppError('You can only access your own assignments', 403));
+    }
+    
     // Find work orders assigned to this worker
     const workOrders = await WorkOrder.find({
         'assignedTo.worker': workerId
