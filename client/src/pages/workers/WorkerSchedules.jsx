@@ -85,7 +85,13 @@ const validationSchema = Yup.object({
   buildingId: Yup.string().required('Building is required'),
   date: Yup.date().required('Date is required'),
   startTime: Yup.date().required('Start time is required'),
-  endTime: Yup.date().required('End time is required'),
+  endTime: Yup.date()
+    .required('End time is required')
+    .test('is-after-start', 'End time must be after start time', function(value) {
+      const { startTime } = this.parent;
+      if (!startTime || !value) return true;
+      return new Date(value) > new Date(startTime);
+    }),
   task: Yup.string().required('Task description is required'),
   notes: Yup.string(),
 });
@@ -368,7 +374,23 @@ const WorkerSchedules = () => {
         notes: schedule.notes || '',
       });
     } else {
-      formik.resetForm();
+      // Set better default times for new schedules
+      const now = new Date();
+      const startTime = new Date(now);
+      startTime.setMinutes(0, 0, 0); // Round to nearest hour
+      
+      const endTime = new Date(startTime);
+      endTime.setHours(startTime.getHours() + 2); // Default 2-hour duration
+      
+      formik.setValues({
+        workerId: '',
+        buildingId: '',
+        date: new Date(),
+        startTime: startTime,
+        endTime: endTime,
+        task: '',
+        notes: '',
+      });
     }
     setOpenDialog(true);
   };
@@ -837,7 +859,15 @@ const WorkerSchedules = () => {
                   <TimePicker
                     label="Start Time"
                     value={formik.values.startTime}
-                    onChange={(newValue) => formik.setFieldValue('startTime', newValue)}
+                    onChange={(newValue) => {
+                      formik.setFieldValue('startTime', newValue);
+                      // Auto-adjust end time if it's before the new start time
+                      if (formik.values.endTime && newValue && new Date(formik.values.endTime) <= new Date(newValue)) {
+                        const newEndTime = new Date(newValue);
+                        newEndTime.setHours(newEndTime.getHours() + 1); // Add 1 hour minimum
+                        formik.setFieldValue('endTime', newEndTime);
+                      }
+                    }}
                     slotProps={{
                       textField: {
                         fullWidth: true,

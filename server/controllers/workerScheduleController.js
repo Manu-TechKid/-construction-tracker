@@ -98,6 +98,20 @@ exports.createWorkerSchedule = catchAsync(async (req, res, next) => {
     return next(new AppError('Building not found', 404));
   }
 
+  // Validate time order
+  const startDateTime = new Date(startTime);
+  const endDateTime = new Date(endTime);
+  
+  if (startDateTime >= endDateTime) {
+    return next(new AppError('Start time must be before end time', 400));
+  }
+
+  // Validate dates are not in the past (optional - can be removed if past scheduling is allowed)
+  const now = new Date();
+  if (startDateTime < now) {
+    console.warn('Schedule being created for past time:', startDateTime);
+  }
+
   // Check for scheduling conflicts
   const conflictingSchedule = await WorkerSchedule.findOne({
     workerId,
