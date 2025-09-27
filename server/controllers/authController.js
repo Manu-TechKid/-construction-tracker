@@ -199,8 +199,10 @@ exports.protect = catchAsync(async (req, res, next) => {
     );
   }
 
-  // 5) Check if worker is still approved
-  if (currentUser.role === 'worker' && currentUser.workerProfile?.approvalStatus !== 'approved') {
+  // 5) Check if worker is still approved (allow pending workers to access basic features)
+  if (currentUser.role === 'worker' && 
+      currentUser.workerProfile?.approvalStatus !== 'approved' && 
+      currentUser.workerProfile?.approvalStatus !== 'pending') {
     console.log('Worker not approved:', {
       role: currentUser.role,
       approvalStatus: currentUser.workerProfile?.approvalStatus

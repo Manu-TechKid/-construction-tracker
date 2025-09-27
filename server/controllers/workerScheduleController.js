@@ -26,10 +26,10 @@ exports.getAllWorkerSchedules = catchAsync(async (req, res, next) => {
   console.log('Getting schedules with filter:', filter);
   
   const schedules = await WorkerSchedule.find(filter)
-    .populate('workerId', 'firstName lastName email role')
+    .populate('workerId', 'name email role')
     .populate('buildingId', 'name address')
-    .populate('createdBy', 'firstName lastName')
-    .populate('updatedBy', 'firstName lastName')
+    .populate('createdBy', 'name')
+    .populate('updatedBy', 'name')
     .sort({ date: 1, startTime: 1 });
     
   console.log('Found schedules:', schedules.length);
@@ -49,10 +49,10 @@ exports.getAllWorkerSchedules = catchAsync(async (req, res, next) => {
 // @access  Private
 exports.getWorkerSchedule = catchAsync(async (req, res, next) => {
   const schedule = await WorkerSchedule.findById(req.params.id)
-    .populate('workerId', 'firstName lastName email role')
+    .populate('workerId', 'name email role')
     .populate('buildingId', 'name address')
-    .populate('createdBy', 'firstName lastName')
-    .populate('updatedBy', 'firstName lastName');
+    .populate('createdBy', 'name')
+    .populate('updatedBy', 'name');
 
   if (!schedule) {
     return next(new AppError('No schedule found with that ID', 404));
@@ -156,9 +156,9 @@ exports.createWorkerSchedule = catchAsync(async (req, res, next) => {
   console.log('Schedule created successfully:', schedule);
 
   // Populate the created schedule
-  await schedule.populate('workerId', 'firstName lastName email role');
+  await schedule.populate('workerId', 'name email role');
   await schedule.populate('buildingId', 'name address');
-  await schedule.populate('createdBy', 'firstName lastName');
+  await schedule.populate('createdBy', 'name');
 
   console.log('Schedule populated:', schedule);
 
@@ -252,10 +252,10 @@ exports.updateWorkerSchedule = catchAsync(async (req, res, next) => {
   await schedule.save();
 
   // Populate the updated schedule
-  await schedule.populate('workerId', 'firstName lastName email role');
+  await schedule.populate('workerId', 'name email role');
   await schedule.populate('buildingId', 'name address');
-  await schedule.populate('createdBy', 'firstName lastName');
-  await schedule.populate('updatedBy', 'firstName lastName');
+  await schedule.populate('createdBy', 'name');
+  await schedule.populate('updatedBy', 'name');
 
   res.status(200).json({
     status: 'success',
@@ -314,7 +314,7 @@ exports.getWorkerSchedulesByWorker = catchAsync(async (req, res, next) => {
 
   const schedules = await WorkerSchedule.find(filter)
     .populate('buildingId', 'name address')
-    .populate('createdBy', 'firstName lastName')
+    .populate('createdBy', 'name')
     .sort({ date: 1, startTime: 1 });
 
   res.status(200).json({
@@ -351,8 +351,8 @@ exports.getWorkerSchedulesByBuilding = catchAsync(async (req, res, next) => {
   }
 
   const schedules = await WorkerSchedule.find(filter)
-    .populate('workerId', 'firstName lastName email role')
-    .populate('createdBy', 'firstName lastName')
+    .populate('workerId', 'name email role')
+    .populate('createdBy', 'name')
     .sort({ date: 1, startTime: 1 });
 
   res.status(200).json({
