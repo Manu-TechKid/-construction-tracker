@@ -4,7 +4,7 @@ export const schedulesApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getSchedules: builder.query({
       query: (params = {}) => ({
-        url: '/schedules',
+        url: '/worker-schedules',
         params,
       }),
       providesTags: (result = {}, error, arg) => {
@@ -18,12 +18,12 @@ export const schedulesApiSlice = apiSlice.injectEndpoints({
       },
     }),
     getSchedule: builder.query({
-      query: (id) => `/schedules/${id}`,
+      query: (id) => `/worker-schedules/${id}`,
       providesTags: (result, error, id) => [{ type: 'Schedule', id }],
     }),
     getBuildingSchedules: builder.query({
       query: ({ buildingId, month, year }) => ({
-        url: `/schedules/building/${buildingId}`,
+        url: `/worker-schedules/building/${buildingId}`,
         params: { month, year },
       }),
       providesTags: (result, error, { buildingId }) => [
@@ -32,7 +32,7 @@ export const schedulesApiSlice = apiSlice.injectEndpoints({
     }),
     createSchedule: builder.mutation({
       query: (scheduleData) => ({
-        url: '/schedules',
+        url: '/worker-schedules',
         method: 'POST',
         body: scheduleData,
       }),
@@ -40,7 +40,7 @@ export const schedulesApiSlice = apiSlice.injectEndpoints({
     }),
     updateSchedule: builder.mutation({
       query: ({ id, ...updates }) => ({
-        url: `/schedules/${id}`,
+        url: `/worker-schedules/${id}`,
         method: 'PATCH',
         body: updates,
       }),
@@ -51,7 +51,7 @@ export const schedulesApiSlice = apiSlice.injectEndpoints({
     }),
     deleteSchedule: builder.mutation({
       query: (id) => ({
-        url: `/schedules/${id}`,
+        url: `/worker-schedules/${id}`,
         method: 'DELETE',
       }),
       invalidatesTags: ['Schedule'],

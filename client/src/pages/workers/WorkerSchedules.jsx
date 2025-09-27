@@ -578,11 +578,28 @@ const WorkerSchedules = () => {
                           </Box>
                         </TableCell>
                         <TableCell>
-                          {format(new Date(schedule.date), 'MMM d, yyyy')}
+                          {(() => {
+                            try {
+                              const date = new Date(schedule.date);
+                              return isNaN(date.getTime()) ? 'Invalid Date' : format(date, 'MMM d, yyyy');
+                            } catch (error) {
+                              return 'Invalid Date';
+                            }
+                          })()}
                         </TableCell>
                         <TableCell>
-                          {format(new Date(schedule.startTime), 'HH:mm')} - 
-                          {format(new Date(schedule.endTime), 'HH:mm')}
+                          {(() => {
+                            try {
+                              const startTime = new Date(schedule.startTime);
+                              const endTime = new Date(schedule.endTime);
+                              if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
+                                return 'Invalid Time';
+                              }
+                              return `${format(startTime, 'HH:mm')} - ${format(endTime, 'HH:mm')}`;
+                            } catch (error) {
+                              return 'Invalid Time';
+                            }
+                          })()}
                         </TableCell>
                         <TableCell>
                           {getBuildingName(schedule.buildingId)}
@@ -590,10 +607,19 @@ const WorkerSchedules = () => {
                         <TableCell>{schedule.task}</TableCell>
                         <TableCell>
                           <Chip
-                            label={
-                              isBefore(new Date(schedule.endTime), new Date()) ? 'Completed' :
-                              isToday(new Date(schedule.date)) ? 'Today' : 'Upcoming'
-                            }
+                            label={(() => {
+                              try {
+                                const endTime = new Date(schedule.endTime);
+                                const scheduleDate = new Date(schedule.date);
+                                if (isNaN(endTime.getTime()) || isNaN(scheduleDate.getTime())) {
+                                  return 'Unknown';
+                                }
+                                return isBefore(endTime, new Date()) ? 'Completed' :
+                                       isToday(scheduleDate) ? 'Today' : 'Upcoming';
+                              } catch (error) {
+                                return 'Unknown';
+                              }
+                            })()}
                             color={getStatusColor(schedule)}
                             size="small"
                           />

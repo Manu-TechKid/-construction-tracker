@@ -26,6 +26,7 @@ const timeTrackingRoutes = require('./routes/timeTrackingRoutes');
 const setupRoutes = require('./routes/setupRoutes');
 const migrationRoutes = require('./routes/migrationRoutes');
 const photoRoutes = require('./routes/photoRoutes');
+const workerScheduleRoutes = require('./routes/workerScheduleRoutes');
 
 // Import routes
 const AppError = require('./utils/appError');
@@ -160,6 +161,7 @@ app.use('/api/v1/time-tracking', timeTrackingRoutes);
 app.use('/api/v1/setup', setupRoutes);
 app.use('/api/v1/migration', migrationRoutes);
 app.use('/api/v1/photos', photoRoutes);
+app.use('/api/v1/worker-schedules', workerScheduleRoutes);
 
 // Health check endpoints
 app.get('/api/v1/health', (req, res) => {
