@@ -12,6 +12,7 @@ const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
 const cookieParser = require('cookie-parser');
 const compression = require('compression');
+const authRoutes = require('./routes/authRoutes');
 const buildingRoutes = require('./routes/buildingRoutes');
 const workOrderRoutes = require('./routes/workOrderRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -24,6 +25,9 @@ const searchRoutes = require('./routes/searchRoutes');
 const setupRoutes = require('./routes/setupRoutes');
 const migrationRoutes = require('./routes/migrationRoutes');
 const photoRoutes = require('./routes/photoRoutes');
+const noteRoutes = require('./routes/noteRoutes');
+const reminderRoutes = require('./routes/reminderRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 
 // Import routes
 const AppError = require('./utils/appError');
