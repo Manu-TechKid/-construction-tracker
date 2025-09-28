@@ -48,7 +48,8 @@ import {
   Refresh as RefreshIcon,
   PhotoCamera as PhotoIcon,
   Notes as NotesIcon,
-  Timeline as StatsIcon
+  Timeline as StatsIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { format, parseISO, differenceInHours, differenceInMinutes } from 'date-fns';
 import { toast } from 'react-toastify';
@@ -56,7 +57,8 @@ import {
   useGetTimeSessionsQuery,
   useGetPendingApprovalsQuery,
   useApproveTimeSessionMutation,
-  useGetTimeStatsQuery
+  useGetTimeStatsQuery,
+  useDeleteTimeSessionMutation
 } from '../../features/timeTracking/timeTrackingApiSlice';
 import { useGetUsersQuery } from '../../features/users/usersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
@@ -88,6 +90,7 @@ const TimeTrackingManagement = () => {
 
   // Mutations
   const [approveTimeSession, { isLoading: isApproving }] = useApproveTimeSessionMutation();
+  const [deleteTimeSession, { isLoading: isDeleting }] = useDeleteTimeSessionMutation();
 
   const workers = usersData?.data?.users || [];
   const buildings = buildingsData?.data?.buildings || [];
@@ -105,8 +108,13 @@ const TimeTrackingManagement = () => {
     return `${hours}h ${minutes}m`;
   };
 
-  const getWorkerName = (workerId) => {
-    const worker = workers.find(w => w._id === workerId);
+  const getWorkerName = (workerRef) => {
+    // If populated object
+    if (workerRef && typeof workerRef === 'object') {
+      return workerRef.name || workerRef.email || 'Unknown Worker';
+    }
+    // If ID, look up from workers list
+    const worker = workers.find(w => w._id === workerRef);
     return worker?.name || worker?.email || 'Unknown Worker';
   };
 
@@ -153,6 +161,19 @@ const TimeTrackingManagement = () => {
   const handleViewDetails = (session) => {
     setSelectedSession(session);
     setDetailsDialog(true);
+  };
+
+  const handleDelete = async (sessionId) => {
+    try {
+      const confirmed = window.confirm('Delete this time session? This action cannot be undone.');
+      if (!confirmed) return;
+      await deleteTimeSession(sessionId).unwrap();
+      toast.success('Time session deleted');
+      refetchSessions();
+      refetchPending();
+    } catch (e) {
+      toast.error('Failed to delete time session');
+    }
   };
 
   const exportToCSV = () => {
@@ -438,6 +459,17 @@ const TimeTrackingManagement = () => {
                                 </IconButton>
                               </Tooltip>
                             )}
+                            <Tooltip title="Delete">
+                              <IconButton 
+                                size="small" 
+                                color="error"
+                                onClick={() => handleDelete(session._id)}
+                                disabled={isDeleting}
+                                sx={{ ml: 1 }}
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            </Tooltip>
                           </TableCell>
                         </TableRow>
                       ))}

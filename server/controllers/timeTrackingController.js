@@ -446,3 +446,20 @@ exports.getTimeStats = catchAsync(async (req, res, next) => {
     }
   });
 });
+
+// Delete time session (Admin/Manager only)
+exports.deleteTimeSession = catchAsync(async (req, res, next) => {
+  const { sessionId } = req.params;
+
+  const session = await TimeSession.findById(sessionId);
+  if (!session) {
+    return next(new AppError('Time session not found', 404));
+  }
+
+  await TimeSession.findByIdAndDelete(sessionId);
+
+  res.status(204).json({
+    status: 'success',
+    data: null
+  });
+});

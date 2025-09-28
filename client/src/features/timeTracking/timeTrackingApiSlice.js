@@ -109,6 +109,15 @@ export const timeTrackingApiSlice = apiSlice.injectEndpoints({
       },
       providesTags: ['TimeStats']
     }),
+
+    // Delete time session
+    deleteTimeSession: builder.mutation({
+      query: (sessionId) => ({
+        url: `/time-tracking/sessions/${sessionId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['TimeSession', 'PendingApproval', 'TimeStats']
+    }),
   })
 });
 
@@ -123,4 +132,5 @@ export const {
   useGetPendingApprovalsQuery,
   useApproveTimeSessionMutation,
   useGetTimeStatsQuery,
+  useDeleteTimeSessionMutation,
 } = timeTrackingApiSlice;

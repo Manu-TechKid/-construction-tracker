@@ -65,15 +65,37 @@ exports.createWorkOrder = async (req, res) => {
 // @access  Private
 exports.getAllWorkOrders = async (req, res) => {
   try {
-    const workOrders = await WorkOrder.find()
-      .populate('building', 'name')
+    const { status, billingStatus, buildingId, workerId, startDate, endDate } = req.query;
+    
+    // Build filter object
+    const filter = {};
+    if (status) filter.status = status;
+    if (billingStatus) filter.billingStatus = billingStatus;
+    if (buildingId) filter.building = buildingId;
+    if (workerId) filter['assignedTo.worker'] = workerId;
+    
+    // Date range filter
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+
+    const workOrders = await WorkOrder.find(filter)
+      .populate('building', 'name address')
       .populate('workType', 'name code color')
       .populate('workSubType', 'name code estimatedDuration estimatedCost')
       .populate('assignedTo.worker', 'name email')
-      .populate('createdBy', 'name email');
+      .populate('createdBy', 'name email')
+      .sort({ createdAt: -1 });
       
-    res.status(200).json({ success: true, count: workOrders.length, data: workOrders });
+    res.status(200).json({ 
+      success: true, 
+      count: workOrders.length, 
+      data: { workOrders } 
+    });
   } catch (error) {
+    console.error('Error fetching work orders:', error);
     res.status(500).json({ success: false, message: 'Server Error', error: error.message });
   }
 };

@@ -3,7 +3,15 @@ import { apiSlice } from '../../app/api/apiSlice';
 export const workOrdersApiSlice = apiSlice.injectEndpoints({
   endpoints: builder => ({
     getWorkOrders: builder.query({
-      query: () => '/work-orders',
+      query: (params = {}) => {
+        const searchParams = new URLSearchParams();
+        Object.keys(params).forEach(key => {
+          if (params[key] !== undefined && params[key] !== '') {
+            searchParams.append(key, params[key]);
+          }
+        });
+        return `/work-orders?${searchParams.toString()}`;
+      },
       providesTags: (result) => 
         result ? [...result.data.map(({ _id }) => ({ type: 'WorkOrder', id: _id })), { type: 'WorkOrder', id: 'LIST' }] : [{ type: 'WorkOrder', id: 'LIST' }],
     }),

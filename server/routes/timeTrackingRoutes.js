@@ -34,6 +34,7 @@ router.post('/sessions/:sessionId/progress',
 
 // Time sessions
 router.get('/sessions', timeTrackingController.getTimeSessions);
+router.delete('/sessions/:sessionId', timeTrackingController.deleteTimeSession);
 
 // Statistics
 router.get('/stats', timeTrackingController.getTimeStats);
