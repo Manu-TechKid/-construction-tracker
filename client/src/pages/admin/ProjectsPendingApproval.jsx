@@ -19,609 +19,715 @@ import {
   Alert,
   CircularProgress,
   Paper,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
   IconButton,
   Tabs,
+  Tab,
   Badge,
   useTheme,
   useMediaQuery,
-  Fab,
-  ImageList,
-  ImageListItem,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
-  TableRow
+  TableRow,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Tooltip
 } from '@mui/material';
 import {
-  CheckCircle as approveIcon,
+  CheckCircle as ApproveIcon,
   Cancel as RejectIcon,
-  Schedule as TimeIcon,
-  Timeline as ProgressIcon,
   Refresh as RefreshIcon,
   FilterList as FilterIcon,
   Visibility as ViewIcon,
   Edit as EditIcon,
   AttachMoney as MoneyIcon,
-  Assignment as AssignmentIcon
+  Assignment as AssignmentIcon,
+  Add as AddIcon,
+  PhotoCamera as PhotoIcon,
+  Business as BuildingIcon,
+  Delete as DeleteIcon,
+  Transform as ConvertIcon,
+  CalendarToday as CalendarIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
 import {
-  useGetWorkOrdersQuery,
-  useUpdateWorkOrderMutation
-} from '../../features/workOrders/workOrdersApiSlice';
+  useGetProjectEstimatesQuery,
+  useGetPendingProjectApprovalsQuery,
+  useApproveProjectEstimateMutation,
+  useDeleteProjectEstimateMutation,
+  useConvertToWorkOrderMutation,
+  useGetProjectEstimateStatsQuery
+} from '../../features/projectEstimates/projectEstimatesApiSlice';
+import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 
 const ProjectsPendingApproval = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const { user, canViewCosts } = useAuth();
+  const { user } = useAuth();
   
   // State management
   const [selectedTab, setSelectedTab] = useState(0);
-  const [selectedSession, setSelectedSession] = useState(null);
+  const [selectedProject, setSelectedProject] = useState(null);
   const [detailsDialog, setDetailsDialog] = useState(false);
   const [approvalDialog, setApprovalDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [filters, setFilters] = useState({
-    workerId: '',
-    buildingId: '',
-    startDate: '',
-    endDate: ''
+    status: '',
+    building: '',
+    targetYear: new Date().getFullYear(),
+    priority: ''
   });
-  const [page, setPage] = useState(1);
-  
-  // API hooks
-  const { 
-    data: pendingData, 
-    isLoading: isPendingLoading, 
-    refetch: refetchPending 
-  } = useGetPendingApprovalsQuery({ page, limit: 10 });
-  
-  const { 
-    data: approvedData, 
-    isLoading: isApprovedLoading 
-  } = useGetTimeSessionsQuery({ 
-    isApproved: true, 
-    page, 
-    limit: 10,
-    ...filters 
-  });
-  
-  const [approveTimeSession, { isLoading: isApproving }] = useApproveTimeSessionMutation();
-  
-  const pendingSessions = pendingData?.data?.sessions || [];
-  const approvedSessions = approvedData?.data?.sessions || [];
-  
-  // Handle approval
-  const handleApprove = async (sessionId, approved) => {
+
+  // API queries
+  const { data: projectsData, isLoading: projectsLoading, error: projectsError, refetch: refetchProjects } = useGetProjectEstimatesQuery(filters);
+  const { data: pendingData, isLoading: pendingLoading, error: pendingError, refetch: refetchPending } = useGetPendingProjectApprovalsQuery();
+  const { data: statsData, isLoading: statsLoading } = useGetProjectEstimateStatsQuery({ targetYear: filters.targetYear });
+  const { data: buildingsData } = useGetBuildingsQuery();
+
+  // Mutations
+  const [approveProject, { isLoading: isApproving }] = useApproveProjectEstimateMutation();
+  const [deleteProject, { isLoading: isDeleting }] = useDeleteProjectEstimateMutation();
+  const [convertToWorkOrder, { isLoading: isConverting }] = useConvertToWorkOrderMutation();
+
+  const projects = projectsData?.data?.projectEstimates || [];
+  const pendingProjects = pendingData?.data?.projectEstimates || [];
+  const stats = statsData?.data?.stats || {};
+  const buildings = buildingsData?.data?.buildings || [];
+
+  // Helper functions
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'draft': return 'default';
+      case 'submitted': return 'info';
+      case 'pending': return 'warning';
+      case 'approved': return 'success';
+      case 'rejected': return 'error';
+      case 'converted': return 'primary';
+      default: return 'default';
+    }
+  };
+
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'low': return 'default';
+      case 'medium': return 'info';
+      case 'high': return 'warning';
+      case 'urgent': return 'error';
+      default: return 'default';
+    }
+  };
+
+  const getBuildingName = (buildingId) => {
+    const building = buildings.find(b => b._id === buildingId);
+    return building?.name || 'Unknown Building';
+  };
+
+  const calculateProfit = (price, cost) => {
+    return (price || 0) - (cost || 0);
+  };
+
+  const calculateProfitMargin = (price, cost) => {
+    if (!price || price === 0) return 0;
+    const profit = calculateProfit(price, cost);
+    return ((profit / price) * 100).toFixed(1);
+  };
+
+  // Event handlers
+  const handleFilterChange = (field, value) => {
+    setFilters(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleApproval = async (projectId, approved, reason = '') => {
     try {
-      await approveTimeSession({
-        sessionId,
+      await approveProject({
+        id: projectId,
         approved,
-        rejectionReason: approved ? '' : rejectionReason
+        rejectionReason: reason
       }).unwrap();
       
-      toast.success(approved ? 'Time session approved!' : 'Time session rejected!');
+      toast.success(`Project ${approved ? 'approved' : 'rejected'} successfully`);
       setApprovalDialog(false);
       setRejectionReason('');
-      setSelectedSession(null);
+      refetchPending();
+      refetchProjects();
+    } catch (error) {
+      toast.error(`Failed to ${approved ? 'approve' : 'reject'} project`);
+    }
+  };
+
+  const handleDelete = async (projectId) => {
+    try {
+      const confirmed = window.confirm('Delete this project estimate? This action cannot be undone.');
+      if (!confirmed) return;
+      
+      await deleteProject(projectId).unwrap();
+      toast.success('Project estimate deleted successfully');
+      refetchProjects();
       refetchPending();
     } catch (error) {
-      toast.error(error?.data?.message || 'Failed to process approval');
+      toast.error('Failed to delete project estimate');
     }
   };
 
-  // Format duration
-  const formatDuration = (hours) => {
-    const h = Math.floor(hours);
-    const m = Math.round((hours - h) * 60);
-    return `${h}h ${m}m`;
-  };
-
-  // Calculate total cost (only for admins/managers)
-  const calculateCost = (session) => {
-    if (!canViewCosts() || !session.worker?.workerProfile?.hourlyRate) {
-      return null;
+  const handleConvert = async (projectId) => {
+    try {
+      const confirmed = window.confirm('Convert this project estimate to a work order?');
+      if (!confirmed) return;
+      
+      await convertToWorkOrder(projectId).unwrap();
+      toast.success('Project estimate converted to work order successfully');
+      refetchProjects();
+      refetchPending();
+    } catch (error) {
+      toast.error('Failed to convert project estimate');
     }
-    const rate = session.worker.workerProfile.hourlyRate;
-    const cost = session.totalHours * rate;
-    return cost.toFixed(2);
   };
 
-  // Session Card Component
-  const SessionCard = ({ session, showActions = true }) => {
-    const cost = calculateCost(session);
-    
-    return (
-      <Card elevation={2} sx={{ mb: 2 }}>
-        <CardContent>
-          <Grid container spacing={2}>
-            {/* Worker Info */}
-            <Grid item xs={12} sm={6}>
-              <Box display="flex" alignItems="center" mb={1}>
-                <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
-                  <PersonIcon />
-                </Avatar>
-                <Box>
-                  <Typography variant="h6">
-                    {session.worker?.name}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    {session.worker?.email}
-                  </Typography>
-                </Box>
-              </Box>
-            </Grid>
-            
-            {/* Time Info */}
-            <Grid item xs={12} sm={6}>
-              <Box display="flex" alignItems="center" mb={1}>
-                <TimeIcon color="action" sx={{ mr: 1 }} />
-                <Box>
-                  <Typography variant="body1">
-                    {formatDuration(session.totalHours)}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    {format(new Date(session.clockInTime), 'MMM d, yyyy HH:mm')} - 
-                    {session.clockOutTime && format(new Date(session.clockOutTime), 'HH:mm')}
-                  </Typography>
-                </Box>
-              </Box>
-            </Grid>
-            
-            {/* Work Order Info */}
-            {session.workOrder && (
-              <Grid item xs={12} sm={6}>
-                <Box display="flex" alignItems="center" mb={1}>
-                  <WorkIcon color="action" sx={{ mr: 1 }} />
-                  <Box>
-                    <Typography variant="body1">
-                      {session.workOrder.title}
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      Work Order
-                    </Typography>
-                  </Box>
-                </Box>
-              </Grid>
-            )}
-            
-            {/* Building Info */}
-            {session.building && (
-              <Grid item xs={12} sm={6}>
-                <Box display="flex" alignItems="center" mb={1}>
-                  <BuildingIcon color="action" sx={{ mr: 1 }} />
-                  <Box>
-                    <Typography variant="body1">
-                      {session.building.name}
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      {session.building.address}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Grid>
-            )}
-            
-            {/* Cost Info (Admin/Manager only) */}
-            {cost && (
-              <Grid item xs={12} sm={6}>
-                <Box display="flex" alignItems="center" mb={1}>
-                  <Typography variant="h6" color="primary">
-                    ${cost}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary" sx={{ ml: 1 }}>
-                    Total Cost
-                  </Typography>
-                </Box>
-              </Grid>
-            )}
-            
-            {/* Status Chips */}
-            <Grid item xs={12}>
-              <Box display="flex" gap={1} flexWrap="wrap">
-                <Chip 
-                  label={session.status} 
-                  color={session.status === 'completed' ? 'success' : 'default'}
-                  size="small"
-                />
-                {session.breakTime > 0 && (
-                  <Chip 
-                    label={`${Math.round(session.breakTime)}m break`}
-                    color="warning"
-                    size="small"
-                  />
-                )}
-                {session.photos?.length > 0 && (
-                  <Chip 
-                    icon={<PhotoIcon />}
-                    label={`${session.photos.length} photos`}
-                    size="small"
-                  />
-                )}
-                {session.progressUpdates?.length > 0 && (
-                  <Chip 
-                    icon={<ProgressIcon />}
-                    label={`${session.progressUpdates.length} updates`}
-                    size="small"
-                  />
-                )}
-              </Box>
-            </Grid>
-            
-            {/* Notes */}
-            {session.notes && (
-              <Grid item xs={12}>
-                <Typography variant="body2" color="textSecondary">
-                  <NotesIcon fontSize="small" sx={{ mr: 1, verticalAlign: 'middle' }} />
-                  {session.notes}
-                </Typography>
-              </Grid>
-            )}
-          </Grid>
-        </CardContent>
-        
-        {showActions && (
-          <CardActions>
-            <Button
-              size="small"
-              startIcon={<ViewIcon />}
-              onClick={() => {
-                setSelectedSession(session);
-                setDetailsDialog(true);
-              }}
-            >
-              View Details
-            </Button>
-            {selectedTab === 0 && (
-              <>
-                <Button
-                  size="small"
-                  color="success"
-                  startIcon={<ApproveIcon />}
-                  onClick={() => handleApprove(session._id, true)}
-                  disabled={isApproving}
-                >
-                  Approve
-                </Button>
-                <Button
-                  size="small"
-                  color="error"
-                  startIcon={<RejectIcon />}
-                  onClick={() => {
-                    setSelectedSession(session);
-                    setApprovalDialog(true);
-                  }}
-                  disabled={isApproving}
-                >
-                  Reject
-                </Button>
-              </>
-            )}
-          </CardActions>
-        )}
-      </Card>
-    );
+  const handleViewDetails = (project) => {
+    setSelectedProject(project);
+    setDetailsDialog(true);
   };
+
+  // Statistics cards
+  const StatCard = ({ title, value, icon, color = 'primary' }) => (
+    <Card>
+      <CardContent>
+        <Box display="flex" alignItems="center" justifyContent="space-between">
+          <Box>
+            <Typography color="textSecondary" gutterBottom variant="body2">
+              {title}
+            </Typography>
+            <Typography variant="h4" component="div">
+              {value}
+            </Typography>
+          </Box>
+          <Avatar sx={{ bgcolor: `${color}.main` }}>
+            {icon}
+          </Avatar>
+        </Box>
+      </CardContent>
+    </Card>
+  );
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
-      {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1">
-          Projects Pending Approval
-        </Typography>
-        <Button
-          variant="outlined"
-          startIcon={<RefreshIcon />}
-          onClick={() => {
-            refetchPending();
-          }}
-        >
-          Refresh
-        </Button>
-      </Box>
-
-      {/* Tabs */}
-      <Paper sx={{ mb: 3 }}>
-        <Tabs 
-          value={selectedTab} 
-          onChange={(e, newValue) => setSelectedTab(newValue)}
-          variant={isMobile ? 'fullWidth' : 'standard'}
-        >
-          <Tab 
-            label={
-              <Badge badgeContent={pendingSessions.length} color="error">
-                Pending Approval
-              </Badge>
-            } 
-          />
-          <Tab label="Approved Sessions" />
-          <Tab label="Statistics" />
-        </Tabs>
-      </Paper>
-
-      {/* Tab Content */}
-      {selectedTab === 0 && (
-        <Box>
-          {isPendingLoading ? (
-            <Box display="flex" justifyContent="center" p={4}>
-              <CircularProgress />
-            </Box>
-          ) : pendingSessions.length === 0 ? (
-            <Alert severity="info">
-              No time sessions pending approval.
-            </Alert>
-          ) : (
-            pendingSessions.map((session) => (
-              <SessionCard key={session._id} session={session} />
-            ))
-          )}
+    <Container maxWidth="xl">
+      <Box sx={{ py: 3 }}>
+        {/* Header */}
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+          <Typography variant="h4" component="h1">
+            Pending Project Approval
+          </Typography>
+          <Box display="flex" gap={2}>
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={() => {
+                refetchProjects();
+                refetchPending();
+              }}
+            >
+              Refresh
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              href="/project-estimates/new"
+            >
+              New Project
+            </Button>
+          </Box>
         </Box>
-      )}
 
-      {selectedTab === 1 && (
-        <Box>
-          {isApprovedLoading ? (
-            <Box display="flex" justifyContent="center" p={4}>
-              <CircularProgress />
-            </Box>
-          ) : approvedSessions.length === 0 ? (
-            <Alert severity="info">
-              No approved sessions found.
-            </Alert>
-          ) : (
-            approvedSessions.map((session) => (
-              <SessionCard key={session._id} session={session} showActions={false} />
-            ))
-          )}
-        </Box>
-      )}
-
-      {selectedTab === 2 && (
-        <Box>
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card>
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <Typography variant="h4" color="error">
-                    {pendingSessions.length}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Pending Approval
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card>
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <Typography variant="h4" color="success.main">
-                    {approvedSessions.length}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Approved Today
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            {canViewCosts() && (
-              <>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Card>
-                    <CardContent sx={{ textAlign: 'center' }}>
-                      <Typography variant="h4" color="primary">
-                        ${pendingSessions.reduce((total, session) => {
-                          const cost = calculateCost(session);
-                          return total + (cost ? parseFloat(cost) : 0);
-                        }, 0).toFixed(2)}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        Pending Cost
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Card>
-                    <CardContent sx={{ textAlign: 'center' }}>
-                      <Typography variant="h4" color="success.main">
-                        ${approvedSessions.reduce((total, session) => {
-                          const cost = calculateCost(session);
-                          return total + (cost ? parseFloat(cost) : 0);
-                        }, 0).toFixed(2)}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        Approved Cost
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              </>
-            )}
+        {/* Statistics Cards */}
+        <Grid container spacing={3} mb={3}>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              title="Pending Approval"
+              value={pendingProjects.length}
+              icon={<AssignmentIcon />}
+              color="warning"
+            />
           </Grid>
-        </Box>
-      )}
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              title="Total Projects"
+              value={stats.totalProjects || 0}
+              icon={<BuildingIcon />}
+              color="primary"
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              title="Estimated Value"
+              value={`$${(stats.totalEstimatedValue || 0).toFixed(0)}`}
+              icon={<MoneyIcon />}
+              color="success"
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              title="Target Year"
+              value={filters.targetYear}
+              icon={<CalendarIcon />}
+              color="info"
+            />
+          </Grid>
+        </Grid>
 
-      {/* Details Dialog */}
-      <Dialog 
-        open={detailsDialog} 
-        onClose={() => setDetailsDialog(false)}
-        maxWidth="md"
-        fullWidth
-        fullScreen={isMobile}
-      >
-        <DialogTitle>
-          Time Session Details
-        </DialogTitle>
-        <DialogContent>
-          {selectedSession && (
-            <Box>
-              {/* Basic Info */}
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="textSecondary">Worker</Typography>
-                  <Typography variant="body1">{selectedSession.worker?.name}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="textSecondary">Duration</Typography>
-                  <Typography variant="body1">{formatDuration(selectedSession.totalHours)}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="textSecondary">Clock In</Typography>
-                  <Typography variant="body1">
-                    {format(new Date(selectedSession.clockInTime), 'MMM d, yyyy HH:mm:ss')}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="textSecondary">Clock Out</Typography>
-                  <Typography variant="body1">
-                    {selectedSession.clockOutTime ? 
-                      format(new Date(selectedSession.clockOutTime), 'MMM d, yyyy HH:mm:ss') : 
-                      'Still active'
-                    }
-                  </Typography>
-                </Grid>
+        {/* Filters */}
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              <FilterIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+              Filters
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6} md={2}>
+                <FormControl fullWidth>
+                  <InputLabel>Status</InputLabel>
+                  <Select
+                    value={filters.status}
+                    label="Status"
+                    onChange={(e) => handleFilterChange('status', e.target.value)}
+                  >
+                    <MenuItem value="">All Statuses</MenuItem>
+                    <MenuItem value="draft">Draft</MenuItem>
+                    <MenuItem value="submitted">Submitted</MenuItem>
+                    <MenuItem value="pending">Pending</MenuItem>
+                    <MenuItem value="approved">Approved</MenuItem>
+                    <MenuItem value="rejected">Rejected</MenuItem>
+                    <MenuItem value="converted">Converted</MenuItem>
+                  </Select>
+                </FormControl>
               </Grid>
+              <Grid item xs={12} sm={6} md={2}>
+                <FormControl fullWidth>
+                  <InputLabel>Building</InputLabel>
+                  <Select
+                    value={filters.building}
+                    label="Building"
+                    onChange={(e) => handleFilterChange('building', e.target.value)}
+                  >
+                    <MenuItem value="">All Buildings</MenuItem>
+                    {buildings.map((building) => (
+                      <MenuItem key={building._id} value={building._id}>
+                        {building.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6} md={2}>
+                <FormControl fullWidth>
+                  <InputLabel>Priority</InputLabel>
+                  <Select
+                    value={filters.priority}
+                    label="Priority"
+                    onChange={(e) => handleFilterChange('priority', e.target.value)}
+                  >
+                    <MenuItem value="">All Priorities</MenuItem>
+                    <MenuItem value="low">Low</MenuItem>
+                    <MenuItem value="medium">Medium</MenuItem>
+                    <MenuItem value="high">High</MenuItem>
+                    <MenuItem value="urgent">Urgent</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6} md={2}>
+                <TextField
+                  fullWidth
+                  label="Target Year"
+                  type="number"
+                  value={filters.targetYear}
+                  onChange={(e) => handleFilterChange('targetYear', parseInt(e.target.value))}
+                  inputProps={{ min: 2024, max: 2030 }}
+                />
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
 
-              {/* Location Info */}
-              {selectedSession.location && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="h6" gutterBottom>Location Information</Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="subtitle2" color="textSecondary">Clock In Location</Typography>
-                      <Typography variant="body2">
-                        Lat: {selectedSession.location.clockIn?.latitude?.toFixed(6)}<br/>
-                        Lng: {selectedSession.location.clockIn?.longitude?.toFixed(6)}<br/>
-                        Accuracy: {selectedSession.location.clockIn?.accuracy}m
-                      </Typography>
-                    </Grid>
-                    {selectedSession.location.clockOut && (
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2" color="textSecondary">Clock Out Location</Typography>
-                        <Typography variant="body2">
-                          Lat: {selectedSession.location.clockOut?.latitude?.toFixed(6)}<br/>
-                          Lng: {selectedSession.location.clockOut?.longitude?.toFixed(6)}<br/>
-                          Accuracy: {selectedSession.location.clockOut?.accuracy}m
-                        </Typography>
-                      </Grid>
-                    )}
+        {/* Tabs */}
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Tabs value={selectedTab} onChange={(e, newValue) => setSelectedTab(newValue)}>
+            <Tab 
+              label={
+                <Badge badgeContent={pendingProjects.length} color="error">
+                  Pending Approval
+                </Badge>
+              } 
+            />
+            <Tab label="All Projects" />
+            <Tab label="Statistics" />
+          </Tabs>
+        </Box>
+
+        {/* Content */}
+        {selectedTab === 0 && (
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Projects Pending Approval
+              </Typography>
+              {pendingLoading ? (
+                <Box display="flex" justifyContent="center" p={3}>
+                  <CircularProgress />
+                </Box>
+              ) : pendingError ? (
+                <Alert severity="error">
+                  Error loading pending projects: {pendingError?.data?.message || pendingError?.message || 'Unknown error'}
+                </Alert>
+              ) : pendingProjects.length === 0 ? (
+                <Alert severity="info">
+                  No projects pending approval. Create project estimates from your building visits to get started.
+                </Alert>
+              ) : (
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Title</TableCell>
+                        <TableCell>Building</TableCell>
+                        <TableCell>Estimated Price</TableCell>
+                        <TableCell>Estimated Cost</TableCell>
+                        <TableCell>Profit</TableCell>
+                        <TableCell>Priority</TableCell>
+                        <TableCell>Visit Date</TableCell>
+                        <TableCell>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {pendingProjects.map((project) => (
+                        <TableRow key={project._id}>
+                          <TableCell>
+                            <Box>
+                              <Typography variant="subtitle2">{project.title}</Typography>
+                              {project.apartmentNumber && (
+                                <Typography variant="caption" color="textSecondary">
+                                  Apt: {project.apartmentNumber}
+                                </Typography>
+                              )}
+                            </Box>
+                          </TableCell>
+                          <TableCell>{getBuildingName(project.building)}</TableCell>
+                          <TableCell>${(project.estimatedPrice || 0).toFixed(2)}</TableCell>
+                          <TableCell>${(project.estimatedCost || 0).toFixed(2)}</TableCell>
+                          <TableCell>
+                            <Typography 
+                              color={calculateProfit(project.estimatedPrice, project.estimatedCost) >= 0 ? 'success.main' : 'error.main'}
+                            >
+                              ${calculateProfit(project.estimatedPrice, project.estimatedCost).toFixed(2)}
+                              <br />
+                              <Typography variant="caption">
+                                ({calculateProfitMargin(project.estimatedPrice, project.estimatedCost)}%)
+                              </Typography>
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={project.priority} 
+                              color={getPriorityColor(project.priority)}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {format(parseISO(project.visitDate), 'MMM dd, yyyy')}
+                          </TableCell>
+                          <TableCell>
+                            <Tooltip title="View Details">
+                              <IconButton 
+                                size="small" 
+                                onClick={() => handleViewDetails(project)}
+                              >
+                                <ViewIcon />
+                              </IconButton>
+                            </Tooltip>
+                            {project.photos && project.photos.length > 0 && (
+                              <Tooltip title={`${project.photos.length} Photos`}>
+                                <IconButton size="small">
+                                  <PhotoIcon color="primary" />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            <Button
+                              size="small"
+                              startIcon={<ApproveIcon />}
+                              color="success"
+                              onClick={() => handleApproval(project._id, true)}
+                              disabled={isApproving}
+                              sx={{ ml: 1 }}
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              size="small"
+                              startIcon={<RejectIcon />}
+                              color="error"
+                              onClick={() => {
+                                setSelectedProject(project);
+                                setApprovalDialog(true);
+                              }}
+                              disabled={isApproving}
+                              sx={{ ml: 1 }}
+                            >
+                              Reject
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {selectedTab === 1 && (
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                All Project Estimates
+              </Typography>
+              {projectsLoading ? (
+                <Box display="flex" justifyContent="center" p={3}>
+                  <CircularProgress />
+                </Box>
+              ) : projectsError ? (
+                <Alert severity="error">
+                  Error loading projects: {projectsError?.data?.message || projectsError?.message || 'Unknown error'}
+                </Alert>
+              ) : projects.length === 0 ? (
+                <Alert severity="info">
+                  No project estimates found. Start by visiting buildings and creating estimates.
+                </Alert>
+              ) : (
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Title</TableCell>
+                        <TableCell>Building</TableCell>
+                        <TableCell>Status</TableCell>
+                        <TableCell>Priority</TableCell>
+                        <TableCell>Estimated Price</TableCell>
+                        <TableCell>Target Year</TableCell>
+                        <TableCell>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {projects.map((project) => (
+                        <TableRow key={project._id}>
+                          <TableCell>{project.title}</TableCell>
+                          <TableCell>{getBuildingName(project.building)}</TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={project.status} 
+                              color={getStatusColor(project.status)}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={project.priority} 
+                              color={getPriorityColor(project.priority)}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>${(project.estimatedPrice || 0).toFixed(2)}</TableCell>
+                          <TableCell>{project.targetYear}</TableCell>
+                          <TableCell>
+                            <Tooltip title="View Details">
+                              <IconButton 
+                                size="small" 
+                                onClick={() => handleViewDetails(project)}
+                              >
+                                <ViewIcon />
+                              </IconButton>
+                            </Tooltip>
+                            {project.status === 'approved' && (
+                              <Tooltip title="Convert to Work Order">
+                                <IconButton 
+                                  size="small" 
+                                  color="primary"
+                                  onClick={() => handleConvert(project._id)}
+                                  disabled={isConverting}
+                                >
+                                  <ConvertIcon />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            {project.status !== 'converted' && (
+                              <Tooltip title="Delete">
+                                <IconButton 
+                                  size="small" 
+                                  color="error"
+                                  onClick={() => handleDelete(project._id)}
+                                  disabled={isDeleting}
+                                >
+                                  <DeleteIcon />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {selectedTab === 2 && (
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Financial Overview ({filters.targetYear})
+                  </Typography>
+                  <Box display="flex" justifyContent="space-between" mb={2}>
+                    <Typography>Total Estimated Revenue:</Typography>
+                    <Typography variant="h6" color="success.main">
+                      ${(stats.totalEstimatedValue || 0).toFixed(2)}
+                    </Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between" mb={2}>
+                    <Typography>Total Estimated Cost:</Typography>
+                    <Typography variant="h6" color="warning.main">
+                      ${(stats.totalEstimatedCost || 0).toFixed(2)}
+                    </Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography>Estimated Profit:</Typography>
+                    <Typography variant="h6" color="primary.main">
+                      ${(stats.totalEstimatedProfit || 0).toFixed(2)}
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Status Breakdown
+                  </Typography>
+                  {Object.entries(stats.byStatus || {}).map(([status, data]) => (
+                    <Box key={status} display="flex" justifyContent="space-between" mb={1}>
+                      <Typography>{status.charAt(0).toUpperCase() + status.slice(1)}:</Typography>
+                      <Typography>{data.count} projects (${data.value?.toFixed(2) || '0.00'})</Typography>
+                    </Box>
+                  ))}
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        )}
+
+        {/* Project Details Dialog */}
+        <Dialog 
+          open={detailsDialog} 
+          onClose={() => setDetailsDialog(false)}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>Project Estimate Details</DialogTitle>
+          <DialogContent>
+            {selectedProject && (
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <Typography variant="h6">{selectedProject.title}</Typography>
+                  <Typography color="textSecondary">{selectedProject.description}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2">Building</Typography>
+                  <Typography>{getBuildingName(selectedProject.building)}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2">Apartment</Typography>
+                  <Typography>{selectedProject.apartmentNumber || 'N/A'}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2">Estimated Price</Typography>
+                  <Typography>${(selectedProject.estimatedPrice || 0).toFixed(2)}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2">Estimated Cost</Typography>
+                  <Typography>${(selectedProject.estimatedCost || 0).toFixed(2)}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2">Visit Date</Typography>
+                  <Typography>{format(parseISO(selectedProject.visitDate), 'MMM dd, yyyy')}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2">Target Year</Typography>
+                  <Typography>{selectedProject.targetYear}</Typography>
+                </Grid>
+                {selectedProject.notes && (
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle2">Notes</Typography>
+                    <Typography>{selectedProject.notes}</Typography>
                   </Grid>
-                </Box>
-              )}
-
-              {/* Photos */}
-              {selectedSession.photos && selectedSession.photos.length > 0 && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="h6" gutterBottom>Photos</Typography>
-                  <ImageList cols={isMobile ? 2 : 4} gap={8}>
-                    {selectedSession.photos.map((photo, index) => (
-                      <ImageListItem key={index}>
-                        <img
-                          src={photo.url}
-                          alt={photo.description || `Photo ${index + 1}`}
-                          loading="lazy"
-                          style={{ height: 120, objectFit: 'cover' }}
+                )}
+                {selectedProject.photos && selectedProject.photos.length > 0 && (
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle2">Photos ({selectedProject.photos.length})</Typography>
+                    <Box display="flex" gap={1} flexWrap="wrap" mt={1}>
+                      {selectedProject.photos.map((photo, index) => (
+                        <img 
+                          key={index}
+                          src={`${process.env.REACT_APP_API_URL}${photo.url}`}
+                          alt={photo.caption || `Photo ${index + 1}`}
+                          style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 4 }}
                         />
-                      </ImageListItem>
-                    ))}
-                  </ImageList>
-                </Box>
-              )}
+                      ))}
+                    </Box>
+                  </Grid>
+                )}
+              </Grid>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDetailsDialog(false)}>Close</Button>
+          </DialogActions>
+        </Dialog>
 
-              {/* Progress Updates */}
-              {selectedSession.progressUpdates && selectedSession.progressUpdates.length > 0 && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="h6" gutterBottom>Progress Updates</Typography>
-                  <List>
-                    {selectedSession.progressUpdates.map((update, index) => (
-                      <ListItem key={index} divider>
-                        <ListItemText
-                          primary={`${update.progress}% - ${update.notes}`}
-                          secondary={format(new Date(update.timestamp), 'MMM d, yyyy HH:mm')}
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                </Box>
-              )}
-
-              {/* Notes */}
-              {selectedSession.notes && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="h6" gutterBottom>Notes</Typography>
-                  <Typography variant="body1">{selectedSession.notes}</Typography>
-                </Box>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDetailsDialog(false)}>Close</Button>
-          {selectedSession && selectedTab === 0 && (
-            <>
-              <Button
-                color="success"
-                startIcon={<ApproveIcon />}
-                onClick={() => {
-                  setDetailsDialog(false);
-                  handleApprove(selectedSession._id, true);
-                }}
-                disabled={isApproving}
-              >
-                Approve
-              </Button>
-              <Button
-                color="error"
-                startIcon={<RejectIcon />}
-                onClick={() => {
-                  setDetailsDialog(false);
-                  setApprovalDialog(true);
-                }}
-                disabled={isApproving}
-              >
-                Reject
-              </Button>
-            </>
-          )}
-        </DialogActions>
-      </Dialog>
-
-      {/* Rejection Dialog */}
-      <Dialog open={approvalDialog} onClose={() => setApprovalDialog(false)}>
-        <DialogTitle>Reject Time Session</DialogTitle>
-        <DialogContent>
-          <TextField
-            fullWidth
-            multiline
-            rows={4}
-            label="Rejection Reason"
-            value={rejectionReason}
-            onChange={(e) => setRejectionReason(e.target.value)}
-            placeholder="Please provide a reason for rejection..."
-            sx={{ mt: 2 }}
-            required
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setApprovalDialog(false)}>Cancel</Button>
-          <Button
-            color="error"
-            onClick={() => handleApprove(selectedSession?._id, false)}
-            disabled={isApproving || !rejectionReason.trim()}
-          >
-            Reject Session
-          </Button>
-        </DialogActions>
-      </Dialog>
+        {/* Rejection Dialog */}
+        <Dialog open={approvalDialog} onClose={() => setApprovalDialog(false)}>
+          <DialogTitle>Reject Project Estimate</DialogTitle>
+          <DialogContent>
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Rejection Reason"
+              fullWidth
+              multiline
+              rows={3}
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setApprovalDialog(false)}>Cancel</Button>
+            <Button 
+              onClick={() => handleApproval(selectedProject?._id, false, rejectionReason)}
+              color="error"
+              disabled={!rejectionReason.trim() || isApproving}
+            >
+              Reject
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
     </Container>
   );
 };

@@ -182,6 +182,16 @@ const DashboardLayout = () => {
       });
     }
 
+    // Pending Project Approval - for admins/managers
+    if (!isWorker && hasPermission(['view:costs', 'manage:users'])) {
+      items.push({
+        text: 'Pending Project Approval',
+        icon: <ProjectApprovalIcon />,
+        path: '/projects-pending-approval',
+        permission: 'view:costs'
+      });
+    }
+
     // Work Order Approval - for admins/managers
     if (!isWorker && hasPermission(['view:costs', 'manage:users'])) {
       items.push({
