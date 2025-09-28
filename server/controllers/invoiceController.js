@@ -439,3 +439,5 @@ exports.getAgingReport = catchAsync(async (req, res, next) => {
         }
     });
 });
+
+module.exports = exports;
