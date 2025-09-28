@@ -37,33 +37,11 @@ exports.getInvoice = catchAsync(async (req, res, next) => {
     });
 });
 
-// @desc    Create invoice from work orders with flexible tax calculation
-// @route   POST /api/v1/invoices
-// @access  Private
+// Create invoice from work orders
 exports.createInvoice = catchAsync(async (req, res, next) => {
-    const {
-        buildingId,
-        workOrderIds,
-        dueDate,
-        notes,
-        invoiceNumber,
-        subtotal,
-        taxRate = 0,
-        isTaxExempt = true,
-        taxType = 'none'
-    } = req.body;
+    const { buildingId, workOrderIds, dueDate, notes, invoiceNumber, totalAmount } = req.body;
 
-    console.log('createInvoice called with:', {
-        buildingId,
-        workOrderIds,
-        dueDate,
-        notes,
-        invoiceNumber,
-        subtotal,
-        taxRate,
-        isTaxExempt,
-        taxType
-    });
+    console.log('createInvoice called with:', { buildingId, workOrderIds, dueDate, notes, invoiceNumber, totalAmount });
 
     // Validate required fields
     if (!buildingId) {
@@ -92,7 +70,7 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
     }
 
     // Calculate totals using either services or estimated/actual costs
-    let calculatedSubtotal = 0;
+    let subtotal = 0;
     const invoiceWorkOrders = workOrders.map(wo => {
         let totalPrice = 0;
 
@@ -106,7 +84,7 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
             totalPrice = wo.actualCost || wo.estimatedCost || 0;
         }
 
-        calculatedSubtotal += totalPrice;
+        subtotal += totalPrice;
 
         return {
             workOrder: wo._id,
@@ -117,17 +95,16 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
         };
     });
 
-    // Use provided subtotal or calculated subtotal
-    const finalSubtotal = subtotal !== undefined ? subtotal : calculatedSubtotal;
+    const tax = subtotal * 0.1; // 10% tax
+    const total = subtotal + tax;
 
-    // Create invoice with tax calculation
+    // Create invoice with manual number if provided
     const invoiceData = {
         building: buildingId,
         workOrders: invoiceWorkOrders,
-        subtotal: finalSubtotal,
-        taxRate: taxRate,
-        isTaxExempt: isTaxExempt,
-        taxType: taxType,
+        subtotal,
+        tax,
+        total,
         dueDate: dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
         notes,
         createdBy: req.user ? req.user._id : null
@@ -185,32 +162,11 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
     }
 });
 
-// @desc    Update invoice with tax calculation support
-// @route   PATCH /api/v1/invoices/:id
-// @access  Private
+// Update invoice
 exports.updateInvoice = catchAsync(async (req, res, next) => {
-    const { subtotal, taxRate, isTaxExempt, taxType, notes, status, dueDate } = req.body;
-
-    const invoice = await Invoice.findById(req.params.id);
-    if (!invoice) {
-        return next(new AppError('No invoice found with that ID', 404));
-    }
-
-    // Prepare update data
-    const updateData = {};
-
-    if (subtotal !== undefined) updateData.subtotal = subtotal;
-    if (taxRate !== undefined) updateData.taxRate = taxRate;
-    if (isTaxExempt !== undefined) updateData.isTaxExempt = isTaxExempt;
-    if (taxType !== undefined) updateData.taxType = taxType;
-    if (notes !== undefined) updateData.notes = notes;
-    if (status !== undefined) updateData.status = status;
-    if (dueDate !== undefined) updateData.dueDate = dueDate;
-
-    // Update invoice (this will trigger the pre-save hook to recalculate tax and total)
-    const updatedInvoice = await Invoice.findByIdAndUpdate(
+    const invoice = await Invoice.findByIdAndUpdate(
         req.params.id,
-        updateData,
+        req.body,
         {
             new: true,
             runValidators: true
@@ -218,10 +174,14 @@ exports.updateInvoice = catchAsync(async (req, res, next) => {
     ).populate('building', 'name address')
      .populate('workOrders.workOrder', 'title description apartmentNumber');
 
+    if (!invoice) {
+        return next(new AppError('No invoice found with that ID', 404));
+    }
+
     res.status(200).json({
         status: 'success',
         data: {
-            invoice: updatedInvoice
+            invoice
         }
     });
 });

@@ -27,10 +27,8 @@ import {
   TableRow,
   Checkbox,
   FormControlLabel,
-  Switch,
   Divider,
-  CircularProgress,
-  InputAdornment
+  CircularProgress
 } from '@mui/material';
 import { ArrowBack as ArrowBackIcon, Save as SaveIcon } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -50,10 +48,7 @@ const validationSchema = Yup.object({
     .max(20, 'Invoice number must be 20 characters or less'),
   dueDate: Yup.date().required('Due date is required').min(new Date(), 'Due date must be in the future'),
   notes: Yup.string(),
-  workOrderIds: Yup.array().min(1, 'At least one work order must be selected'),
-  taxRate: Yup.number().min(0, 'Tax rate cannot be negative').max(1, 'Tax rate cannot exceed 100%'),
-  isTaxExempt: Yup.boolean(),
-  taxType: Yup.string().oneOf(['none', 'commercial', 'residential'])
+  workOrderIds: Yup.array().min(1, 'At least one work order must be selected')
 });
 
 const CreateInvoice = () => {
@@ -108,10 +103,7 @@ const CreateInvoice = () => {
       invoiceNumber: '',
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
       notes: '',
-      workOrderIds: [],
-      taxRate: 0,
-      isTaxExempt: true,
-      taxType: 'none'
+      workOrderIds: []
     },
     validationSchema,
     onSubmit: async (values) => {
@@ -130,10 +122,7 @@ const CreateInvoice = () => {
           workOrderIds: values.workOrderIds,
           dueDate: values.dueDate instanceof Date ? values.dueDate.toISOString() : new Date(values.dueDate).toISOString(),
           notes: values.notes,
-          invoiceNumber: values.invoiceNumber?.trim() || undefined,
-          taxRate: values.taxRate,
-          isTaxExempt: values.isTaxExempt,
-          taxType: values.taxType
+          invoiceNumber: values.invoiceNumber?.trim() || undefined
         };
 
         console.log('Invoice data being sent to API:', invoiceData);
@@ -351,82 +340,6 @@ const CreateInvoice = () => {
             </CardContent>
           </Card>
 
-          {/* Tax Configuration */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Tax Configuration
-              </Typography>
-              <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                Configure tax settings for this invoice. Commercial properties are typically tax-exempt, while residential properties may have tax.
-              </Typography>
-
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={formik.values.isTaxExempt}
-                        onChange={(e) => formik.setFieldValue('isTaxExempt', e.target.checked)}
-                        name="isTaxExempt"
-                      />
-                    }
-                    label="Tax Exempt (Commercial Property)"
-                  />
-                  <Typography variant="caption" color="textSecondary" display="block">
-                    Enable for commercial properties (no tax), disable for residential properties (with tax)
-                  </Typography>
-                </Grid>
-
-                {!formik.values.isTaxExempt && (
-                  <>
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        fullWidth
-                        name="taxRate"
-                        label="Tax Rate"
-                        type="number"
-                        value={formik.values.taxRate}
-                        onChange={formik.handleChange}
-                        onBlur={formik.handleBlur}
-                        error={formik.touched.taxRate && Boolean(formik.errors.taxRate)}
-                        helperText={formik.touched.taxRate && formik.errors.taxRate}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">%</InputAdornment>,
-                          endAdornment: <InputAdornment position="end">/100</InputAdornment>,
-                          step: '0.001'
-                        }}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} sm={6}>
-                      <FormControl
-                        fullWidth
-                        error={formik.touched.taxType && Boolean(formik.errors.taxType)}
-                      >
-                        <InputLabel>Tax Type</InputLabel>
-                        <Select
-                          name="taxType"
-                          value={formik.values.taxType}
-                          onChange={formik.handleChange}
-                          onBlur={formik.handleBlur}
-                          label="Tax Type"
-                        >
-                          <MenuItem value="none">None</MenuItem>
-                          <MenuItem value="commercial">Commercial</MenuItem>
-                          <MenuItem value="residential">Residential</MenuItem>
-                        </Select>
-                        <FormHelperText>
-                          {formik.touched.taxType && formik.errors.taxType}
-                        </FormHelperText>
-                      </FormControl>
-                    </Grid>
-                  </>
-                )}
-              </Grid>
-            </CardContent>
-          </Card>
-
           {selectedBuildingId && (
             <Card sx={{ mb: 3 }}>
               <CardContent>
@@ -544,26 +457,7 @@ const CreateInvoice = () => {
                     Selected Work Orders: {formik.values.workOrderIds.length}
                   </Typography>
                   <Typography variant="h6">
-                    Subtotal: ${calculateTotal().toFixed(2)}
-                  </Typography>
-                </Box>
-
-                {!formik.values.isTaxExempt && (
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
-                    <Typography>
-                      Tax ({(formik.values.taxRate * 100).toFixed(1)}%):
-                    </Typography>
-                    <Typography variant="body1" color="warning.main">
-                      ${(calculateTotal() * formik.values.taxRate).toFixed(2)}
-                    </Typography>
-                  </Box>
-                )}
-
-                <Divider sx={{ my: 1 }} />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="h6">Total:</Typography>
-                  <Typography variant="h6" color="primary">
-                    ${(calculateTotal() + (formik.values.isTaxExempt ? 0 : calculateTotal() * formik.values.taxRate)).toFixed(2)}
+                    Total: ${calculateTotal().toFixed(2)}
                   </Typography>
                 </Box>
               </CardContent>

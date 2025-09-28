@@ -27,16 +27,12 @@ import {
   Paper,
   Chip,
   Divider,
-  Switch,
-  FormControlLabel,
-  InputAdornment,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
   Save as SaveIcon,
   Assignment as WorkOrderIcon,
   AttachMoney as MoneyIcon,
-  Percent as PercentIcon,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -51,10 +47,6 @@ import {
 } from '../../features/invoices/invoicesApiSlice';
 
 const validationSchema = Yup.object({
-  subtotal: Yup.number().min(0, 'Subtotal cannot be negative'),
-  taxRate: Yup.number().min(0, 'Tax rate cannot be negative').max(1, 'Tax rate cannot exceed 100%'),
-  isTaxExempt: Yup.boolean(),
-  taxType: Yup.string().oneOf(['none', 'commercial', 'residential']),
   status: Yup.string().oneOf(['draft', 'sent', 'paid', 'overdue', 'cancelled']),
   dueDate: Yup.date().required('Due date is required'),
   notes: Yup.string(),
@@ -69,10 +61,6 @@ const EditInvoice = () => {
 
   const formik = useFormik({
     initialValues: {
-      subtotal: 0,
-      taxRate: 0,
-      isTaxExempt: true,
-      taxType: 'none',
       status: 'draft',
       dueDate: new Date(),
       notes: '',
@@ -81,10 +69,6 @@ const EditInvoice = () => {
     onSubmit: async (values) => {
       try {
         const updateData = {
-          subtotal: values.subtotal,
-          taxRate: values.taxRate,
-          isTaxExempt: values.isTaxExempt,
-          taxType: values.taxType,
           status: values.status,
           dueDate: values.dueDate instanceof Date ? values.dueDate.toISOString() : new Date(values.dueDate).toISOString(),
           notes: values.notes,
@@ -118,10 +102,6 @@ const EditInvoice = () => {
         }
 
         formik.setValues({
-          subtotal: invoice.subtotal || 0,
-          taxRate: invoice.taxRate || 0,
-          isTaxExempt: invoice.isTaxExempt !== false,
-          taxType: invoice.taxType || 'none',
           status: invoice.status || 'draft',
           dueDate: dueDateValue,
           notes: invoice.notes || '',
@@ -130,10 +110,6 @@ const EditInvoice = () => {
         console.warn('Error setting form values:', error);
         // Set default values if there's an error
         formik.setValues({
-          subtotal: invoice.subtotal || 0,
-          taxRate: invoice.taxRate || 0,
-          isTaxExempt: invoice.isTaxExempt !== false,
-          taxType: invoice.taxType || 'none',
           status: invoice.status || 'draft',
           dueDate: new Date(),
           notes: invoice.notes || '',
@@ -171,8 +147,6 @@ const EditInvoice = () => {
     console.log('EditInvoice: Invoice total:', invoice?.total);
     console.log('EditInvoice: Invoice subtotal:', invoice?.subtotal);
     console.log('EditInvoice: Invoice tax:', invoice?.tax);
-    console.log('EditInvoice: Invoice taxRate:', invoice?.taxRate);
-    console.log('EditInvoice: Invoice isTaxExempt:', invoice?.isTaxExempt);
     console.log('EditInvoice: Invoice workOrders:', invoice?.workOrders);
   }
 
@@ -209,10 +183,6 @@ const EditInvoice = () => {
     }).format(amount || 0);
   };
 
-  // Calculate tax and total based on form values
-  const calculatedTax = formik.values.isTaxExempt ? 0 : (formik.values.subtotal * formik.values.taxRate);
-  const calculatedTotal = formik.values.subtotal + calculatedTax;
-
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
@@ -238,10 +208,10 @@ const EditInvoice = () => {
               <Grid item xs={12} md={3}>
                 <Box sx={{ textAlign: 'center' }}>
                   <Typography variant="h4" color="primary" fontWeight="bold">
-                    {formatCurrency(calculatedTotal)}
+                    {formatCurrency(invoice.total)}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    Calculated Total
+                    Total Amount
                   </Typography>
                 </Box>
               </Grid>
@@ -278,34 +248,6 @@ const EditInvoice = () => {
                 </Box>
               </Grid>
             </Grid>
-          </CardContent>
-        </Card>
-
-        {/* Cost Summary */}
-        <Card sx={{ mb: 3 }}>
-          <CardHeader title="Cost Summary" />
-          <CardContent>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body1">Subtotal:</Typography>
-              <Typography variant="body1" fontWeight="medium">
-                {formatCurrency(formik.values.subtotal)}
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body1">
-                Tax ({formik.values.isTaxExempt ? 'Exempt' : `${(formik.values.taxRate * 100).toFixed(1)}%`}):
-              </Typography>
-              <Typography variant="body1" fontWeight="medium">
-                {formatCurrency(calculatedTax)}
-              </Typography>
-            </Box>
-            <Divider sx={{ my: 1 }} />
-            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Typography variant="h6">Total:</Typography>
-              <Typography variant="h6" color="primary">
-                {formatCurrency(calculatedTotal)}
-              </Typography>
-            </Box>
           </CardContent>
         </Card>
 
@@ -391,106 +333,38 @@ const EditInvoice = () => {
           </Card>
         )}
 
+        {/* Cost Summary */}
+        <Card sx={{ mb: 3 }}>
+          <CardHeader title="Cost Summary" />
+          <CardContent>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2">Subtotal:</Typography>
+              <Typography variant="body2">
+                {formatCurrency(invoice.subtotal)}
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2">Tax:</Typography>
+              <Typography variant="body2">
+                {formatCurrency(invoice.tax)}
+              </Typography>
+            </Box>
+            <Divider sx={{ my: 1 }} />
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Typography variant="h6">Total:</Typography>
+              <Typography variant="h6">
+                {formatCurrency(invoice.total)}
+              </Typography>
+            </Box>
+          </CardContent>
+        </Card>
+
         {/* Edit Form */}
         <form onSubmit={formik.handleSubmit}>
           <Card>
             <CardHeader title="Edit Invoice Details" />
             <CardContent>
               <Grid container spacing={3}>
-                {/* Financial Fields */}
-                <Grid item xs={12}>
-                  <Typography variant="h6" gutterBottom>
-                    Financial Information
-                  </Typography>
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    name="subtotal"
-                    label="Subtotal"
-                    type="number"
-                    value={formik.values.subtotal}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    error={formik.touched.subtotal && Boolean(formik.errors.subtotal)}
-                    helperText={formik.touched.subtotal && formik.errors.subtotal}
-                    InputProps={{
-                      startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                      step: '0.01'
-                    }}
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={formik.values.isTaxExempt}
-                        onChange={(e) => formik.setFieldValue('isTaxExempt', e.target.checked)}
-                        name="isTaxExempt"
-                      />
-                    }
-                    label="Tax Exempt (Commercial Property)"
-                  />
-                  <Typography variant="caption" color="textSecondary" display="block">
-                    Enable for commercial properties (no tax), disable for residential properties (with tax)
-                  </Typography>
-                </Grid>
-
-                {!formik.values.isTaxExempt && (
-                  <>
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        fullWidth
-                        name="taxRate"
-                        label="Tax Rate"
-                        type="number"
-                        value={formik.values.taxRate}
-                        onChange={formik.handleChange}
-                        onBlur={formik.handleBlur}
-                        error={formik.touched.taxRate && Boolean(formik.errors.taxRate)}
-                        helperText={formik.touched.taxRate && formik.errors.taxRate}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">%</InputAdornment>,
-                          endAdornment: <InputAdornment position="end">/100</InputAdornment>,
-                          step: '0.001'
-                        }}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} sm={6}>
-                      <FormControl
-                        fullWidth
-                        error={formik.touched.taxType && Boolean(formik.errors.taxType)}
-                      >
-                        <InputLabel>Tax Type</InputLabel>
-                        <Select
-                          name="taxType"
-                          value={formik.values.taxType}
-                          onChange={formik.handleChange}
-                          onBlur={formik.handleBlur}
-                          label="Tax Type"
-                        >
-                          <MenuItem value="none">None</MenuItem>
-                          <MenuItem value="commercial">Commercial</MenuItem>
-                          <MenuItem value="residential">Residential</MenuItem>
-                        </Select>
-                        <FormHelperText>
-                          {formik.touched.taxType && formik.errors.taxType}
-                        </FormHelperText>
-                      </FormControl>
-                    </Grid>
-                  </>
-                )}
-
-                {/* Status and Date */}
-                <Grid item xs={12}>
-                  <Typography variant="h6" gutterBottom>
-                    Invoice Settings
-                  </Typography>
-                </Grid>
-
                 <Grid item xs={12} sm={6}>
                   <FormControl
                     fullWidth

@@ -9,10 +9,20 @@ const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
-const hpp = require('hpp');
 const cookieParser = require('cookie-parser');
 const compression = require('compression');
-const authRoutes = require('./routes/authRoutes');
+const buildingRoutes = require('./routes/buildingRoutes');
+const workOrderRoutes = require('./routes/workOrderRoutes');
+const userRoutes = require('./routes/userRoutes');
+const invoiceRoutes = require('./routes/invoiceRoutes');
+const scheduleRoutes = require('./routes/scheduleRoutes');
+const workerScheduleRoutes = require('./routes/workerScheduleRoutes');
+const timeTrackingRoutes = require('./routes/timeTrackingRoutes');
+const projectEstimateRoutes = require('./routes/projectEstimateRoutes');
+const searchRoutes = require('./routes/searchRoutes');
+const setupRoutes = require('./routes/setupRoutes');
+const migrationRoutes = require('./routes/migrationRoutes');
+const photoRoutes = require('./routes/photoRoutes');
 
 // Import routes
 const AppError = require('./utils/appError');
