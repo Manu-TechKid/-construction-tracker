@@ -37,11 +37,33 @@ exports.getInvoice = catchAsync(async (req, res, next) => {
     });
 });
 
-// Create invoice from work orders
+// @desc    Create invoice from work orders with flexible tax calculation
+// @route   POST /api/v1/invoices
+// @access  Private
 exports.createInvoice = catchAsync(async (req, res, next) => {
-    const { buildingId, workOrderIds, dueDate, notes, invoiceNumber, totalAmount } = req.body;
+    const {
+        buildingId,
+        workOrderIds,
+        dueDate,
+        notes,
+        invoiceNumber,
+        subtotal,
+        taxRate = 0,
+        isTaxExempt = true,
+        taxType = 'none'
+    } = req.body;
 
-    console.log('createInvoice called with:', { buildingId, workOrderIds, dueDate, notes, invoiceNumber, totalAmount });
+    console.log('createInvoice called with:', {
+        buildingId,
+        workOrderIds,
+        dueDate,
+        notes,
+        invoiceNumber,
+        subtotal,
+        taxRate,
+        isTaxExempt,
+        taxType
+    });
 
     // Validate required fields
     if (!buildingId) {
@@ -70,7 +92,7 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
     }
 
     // Calculate totals using either services or estimated/actual costs
-    let subtotal = 0;
+    let calculatedSubtotal = 0;
     const invoiceWorkOrders = workOrders.map(wo => {
         let totalPrice = 0;
 
@@ -84,7 +106,7 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
             totalPrice = wo.actualCost || wo.estimatedCost || 0;
         }
 
-        subtotal += totalPrice;
+        calculatedSubtotal += totalPrice;
 
         return {
             workOrder: wo._id,
@@ -95,16 +117,17 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
         };
     });
 
-    const tax = subtotal * 0.1; // 10% tax
-    const total = subtotal + tax;
+    // Use provided subtotal or calculated subtotal
+    const finalSubtotal = subtotal !== undefined ? subtotal : calculatedSubtotal;
 
-    // Create invoice with manual number if provided
+    // Create invoice with tax calculation
     const invoiceData = {
         building: buildingId,
         workOrders: invoiceWorkOrders,
-        subtotal,
-        tax,
-        total,
+        subtotal: finalSubtotal,
+        taxRate: taxRate,
+        isTaxExempt: isTaxExempt,
+        taxType: taxType,
         dueDate: dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
         notes,
         createdBy: req.user ? req.user._id : null
@@ -158,81 +181,79 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
             return next(new AppError(`Validation failed: ${Object.values(error.errors).map(err => err.message).join(', ')}`, 400));
         }
 
+        return next(new AppError('Failed to create invoice', 500));
     }
 });
 
-// Update invoice
+// @desc    Update invoice with tax calculation support
+// @route   PATCH /api/v1/invoices/:id
+// @access  Private
 exports.updateInvoice = catchAsync(async (req, res, next) => {
-  const allowedFields = [
-    'invoiceNumber', 'dueDate', 'notes', 'status', 'subtotal', 'tax', 'total',
-    'workOrders', 'taxSettings', 'discountAmount', 'additionalFees'
-  ];
+    const { subtotal, taxRate, isTaxExempt, taxType, notes, status, dueDate } = req.body;
 
-  // Filter request body to only allow specific fields
-  const updateData = {};
-  Object.keys(req.body).forEach(key => {
-    if (allowedFields.includes(key)) {
-      updateData[key] = req.body[key];
-    }
-  });
-
-  // Handle tax settings
-  if (updateData.taxSettings) {
-    updateData.taxSettings = {
-      taxType: updateData.taxSettings.taxType || 'commercial',
-      customTaxRate: updateData.taxSettings.customTaxRate || 10,
-    };
-  }
-
-  // Recalculate totals if workOrders are being updated
-  if (updateData.workOrders) {
-    const subtotal = updateData.workOrders.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
-    updateData.subtotal = subtotal;
-
-    // Apply discount if provided
-    if (req.body.discountAmount) {
-      updateData.subtotal = Math.max(0, subtotal - req.body.discountAmount);
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) {
+        return next(new AppError('No invoice found with that ID', 404));
     }
 
-    // Add additional fees if provided
-    if (req.body.additionalFees) {
-      updateData.subtotal += req.body.additionalFees;
+    // Prepare update data
+    const updateData = {};
+
+    if (subtotal !== undefined) updateData.subtotal = subtotal;
+    if (taxRate !== undefined) updateData.taxRate = taxRate;
+    if (isTaxExempt !== undefined) updateData.isTaxExempt = isTaxExempt;
+    if (taxType !== undefined) updateData.taxType = taxType;
+    if (notes !== undefined) updateData.notes = notes;
+    if (status !== undefined) updateData.status = status;
+    if (dueDate !== undefined) updateData.dueDate = dueDate;
+
+    // Update invoice (this will trigger the pre-save hook to recalculate tax and total)
+    const updatedInvoice = await Invoice.findByIdAndUpdate(
+        req.params.id,
+        updateData,
+        {
+            new: true,
+            runValidators: true
+        }
+    ).populate('building', 'name address')
+     .populate('workOrders.workOrder', 'title description apartmentNumber');
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            invoice: updatedInvoice
+        }
+    });
+});
+
+// Mark invoice as paid
+exports.markAsPaid = catchAsync(async (req, res, next) => {
+    const invoice = await Invoice.findByIdAndUpdate(
+        req.params.id,
+        {
+            status: 'paid',
+            paidDate: new Date()
+        },
+        { new: true }
+    );
+
+    if (!invoice) {
+        return next(new AppError('No invoice found with that ID', 404));
     }
 
-    // Calculate tax based on settings
-    let tax = 0;
-    if (updateData.taxSettings) {
-      if (updateData.taxSettings.taxType === 'residential') {
-        tax = updateData.subtotal * 0.10;
-      } else if (updateData.taxSettings.taxType === 'custom') {
-        tax = updateData.subtotal * (updateData.taxSettings.customTaxRate / 100);
-      }
-    }
+    // Update work orders billing status to paid
+    const workOrderIds = invoice.workOrders.map(wo => wo.workOrder);
+    await WorkOrder.updateMany(
+        { _id: { $in: workOrderIds } },
+        { billingStatus: 'paid' }
+    );
 
-    updateData.tax = tax;
-    updateData.total = updateData.subtotal + tax;
-  }
-
-  const invoice = await Invoice.findByIdAndUpdate(
-    req.params.id,
-    updateData,
-    {
-      new: true,
-      runValidators: true
-    }
-  ).populate('building', 'name address')
-   .populate('workOrders.workOrder', 'title description apartmentNumber');
-
-  if (!invoice) {
-    return next(new AppError('No invoice found with that ID', 404));
-  }
-
-  res.status(200).json({
-    status: 'success',
-    data: {
-      invoice
-    }
-  });
+    res.status(200).json({
+        status: 'success',
+        data: {
+            invoice
+        }
+    });
 });
 
 // Update payment information
@@ -439,5 +460,3 @@ exports.getAgingReport = catchAsync(async (req, res, next) => {
         }
     });
 });
-
-module.exports = exports;

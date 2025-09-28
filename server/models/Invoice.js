@@ -42,6 +42,24 @@ const invoiceSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    taxRate: {
+        type: Number,
+        default: 0,
+        min: [0, 'Tax rate cannot be negative'],
+        max: [1, 'Tax rate cannot exceed 100%'],
+        comment: 'Tax rate as decimal (e.g., 0.10 for 10%)'
+    },
+    taxType: {
+        type: String,
+        enum: ['none', 'commercial', 'residential'],
+        default: 'none',
+        comment: 'Type of tax applied - none for commercial, residential for residential properties'
+    },
+    isTaxExempt: {
+        type: Boolean,
+        default: true,
+        comment: 'True for commercial properties (no tax), false for residential (with tax)'
+    },
     total: {
         type: Number,
         required: true
@@ -106,7 +124,6 @@ invoiceSchema.pre('save', async function(next) {
             this.invoiceNumber = `INV-${new Date().getFullYear()}-${String(nextNumber).padStart(4, '0')}`;
         } catch (err) {
             // Fallback to timestamp if there's an error
-            this.invoiceNumber = `INV-${new Date().getTime()}`;
         }
     } else {
         // Format the invoice number to ensure consistency
@@ -115,4 +132,20 @@ invoiceSchema.pre('save', async function(next) {
     next();
 });
 
-module.exports = mongoose.model('Invoice', invoiceSchema);
+// Pre-save hook to calculate totals based on tax settings
+invoiceSchema.pre('save', function(next) {
+    // Calculate tax if tax rate is set and not tax exempt
+    if (this.taxRate > 0 && !this.isTaxExempt) {
+        this.tax = this.subtotal * this.taxRate;
+        this.taxType = 'residential';
+    } else {
+        this.tax = 0;
+        this.taxType = 'none';
+        this.taxRate = 0;
+    }
+
+    // Calculate total
+    this.total = this.subtotal + this.tax;
+
+    next();
+});
