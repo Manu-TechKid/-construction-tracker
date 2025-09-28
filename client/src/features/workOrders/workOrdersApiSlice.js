@@ -13,7 +13,7 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
         return `/work-orders?${searchParams.toString()}`;
       },
       providesTags: (result) => 
-        result ? [...result.data.map(({ _id }) => ({ type: 'WorkOrder', id: _id })), { type: 'WorkOrder', id: 'LIST' }] : [{ type: 'WorkOrder', id: 'LIST' }],
+        result?.data?.workOrders ? [...result.data.workOrders.map(({ _id }) => ({ type: 'WorkOrder', id: _id })), { type: 'WorkOrder', id: 'LIST' }] : [{ type: 'WorkOrder', id: 'LIST' }],
     }),
     getWorkOrder: builder.query({
       query: (id) => `/work-orders/${id}`,

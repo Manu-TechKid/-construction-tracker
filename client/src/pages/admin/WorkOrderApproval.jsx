@@ -64,6 +64,7 @@ const WorkOrderApproval = () => {
   const { 
     data: pendingData, 
     isLoading: isPendingLoading, 
+    error: pendingError,
     refetch: refetchPending 
   } = useGetWorkOrdersQuery({ 
     status: 'completed',
@@ -72,7 +73,8 @@ const WorkOrderApproval = () => {
   
   const { 
     data: approvedData, 
-    isLoading: isApprovedLoading 
+    isLoading: isApprovedLoading,
+    error: approvedError 
   } = useGetWorkOrdersQuery({ 
     billingStatus: 'invoiced'
   });
@@ -114,7 +116,7 @@ const WorkOrderApproval = () => {
 
       await updateWorkOrder({
         id: workOrderId,
-        workOrder: updateData
+        ...updateData
       }).unwrap();
       
       toast.success(`Work order ${approved ? 'approved for billing' : 'rejected'} successfully`);
@@ -246,8 +248,14 @@ const WorkOrderApproval = () => {
                 <Box display="flex" justifyContent="center" p={3}>
                   <CircularProgress />
                 </Box>
+              ) : pendingError ? (
+                <Alert severity="error">
+                  Error loading pending work orders: {pendingError?.data?.message || pendingError?.message || 'Unknown error'}
+                </Alert>
               ) : pendingWorkOrders.length === 0 ? (
-                <Alert severity="info">No work orders pending approval</Alert>
+                <Alert severity="info">
+                  No work orders pending approval. Work orders must be completed before they can be approved for billing.
+                </Alert>
               ) : (
                 <TableContainer>
                   <Table>
@@ -350,6 +358,14 @@ const WorkOrderApproval = () => {
                 <Box display="flex" justifyContent="center" p={3}>
                   <CircularProgress />
                 </Box>
+              ) : approvedError ? (
+                <Alert severity="error">
+                  Error loading approved work orders: {approvedError?.data?.message || approvedError?.message || 'Unknown error'}
+                </Alert>
+              ) : approvedWorkOrders.length === 0 ? (
+                <Alert severity="info">
+                  No approved work orders found. Work orders will appear here after being approved for billing.
+                </Alert>
               ) : (
                 <TableContainer>
                   <Table>
