@@ -145,19 +145,20 @@ const ProjectsPendingApproval = () => {
 
   const handleApproval = async (projectId, approved, reason = '') => {
     try {
-      await approveProject({
+      const result = await approveProject({
         id: projectId,
         approved,
         rejectionReason: reason
       }).unwrap();
-      
+
       toast.success(`Project ${approved ? 'approved' : 'rejected'} successfully`);
       setApprovalDialog(false);
       setRejectionReason('');
       refetchPending();
       refetchProjects();
     } catch (error) {
-      toast.error(`Failed to ${approved ? 'approve' : 'reject'} project`);
+      console.error('Approval error:', error);
+      toast.error(`Failed to ${approved ? 'approve' : 'reject'} project: ${error?.data?.message || error?.message || 'Unknown error'}`);
     }
   };
 
@@ -165,13 +166,14 @@ const ProjectsPendingApproval = () => {
     try {
       const confirmed = window.confirm('Delete this project estimate? This action cannot be undone.');
       if (!confirmed) return;
-      
+
       await deleteProject(projectId).unwrap();
       toast.success('Project estimate deleted successfully');
       refetchProjects();
       refetchPending();
     } catch (error) {
-      toast.error('Failed to delete project estimate');
+      console.error('Delete error:', error);
+      toast.error(`Failed to delete project estimate: ${error?.data?.message || error?.message || 'Unknown error'}`);
     }
   };
 
@@ -179,13 +181,14 @@ const ProjectsPendingApproval = () => {
     try {
       const confirmed = window.confirm('Convert this project estimate to a work order?');
       if (!confirmed) return;
-      
+
       await convertToWorkOrder(projectId).unwrap();
       toast.success('Project estimate converted to work order successfully');
       refetchProjects();
       refetchPending();
     } catch (error) {
-      toast.error('Failed to convert project estimate');
+      console.error('Convert error:', error);
+      toast.error(`Failed to convert project estimate: ${error?.data?.message || error?.message || 'Unknown error'}`);
     }
   };
 
