@@ -54,12 +54,7 @@ import WorkerDashboard from './pages/workers/WorkerDashboard';
 import EditWorker from './pages/workers/EditWorker';
 import WorkerDetails from './pages/workers/WorkerDetails';
 import WorkerSchedules from './pages/workers/WorkerSchedules';
-import WorkerApproval from './pages/admin/WorkerApproval';
-import WorkOrderApproval from './pages/admin/WorkOrderApproval';
-import TimeTrackingManagement from './pages/admin/TimeTrackingManagement';
-import Setup from './pages/admin/Setup';
-import SiteVisit from './pages/estimates/SiteVisit';
-import ApartmentSearch from './pages/search/ApartmentSearch';
+import ProjectsPendingApproval from './pages/admin/ProjectsPendingApproval';
 
 // Route Protection
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -392,6 +387,16 @@ const AppContent = () => {
                     <WorkOrderApproval />
                   </RoleBasedRoute>
                 } 
+              />
+
+              {/* Pending Project Approval */}
+              <Route
+                path="projects-pending-approval"
+                element={
+                  <RoleBasedRoute requiredPermissions={['view:costs', 'manage:users']}>
+                    <ProjectsPendingApproval />
+                  </RoleBasedRoute>
+                }
               />
 
               {/* System Setup - Admin Only */}

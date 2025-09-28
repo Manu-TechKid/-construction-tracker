@@ -73,8 +73,8 @@ const Dashboard = () => {
     }
 
     // Handle work orders data
-    if (workOrdersData?.data) {
-      const workOrders = workOrdersData.data || [];
+    if (workOrdersData?.data?.workOrders) {
+      const workOrders = Array.isArray(workOrdersData.data.workOrders) ? workOrdersData.data.workOrders : [];
       const pendingOrders = workOrders.filter(order => order.status === 'pending');
       const completedOrders = workOrders.filter(order => order.status === 'completed');
       const inProgressOrders = workOrders.filter(order => order.status === 'in_progress');
@@ -91,7 +91,9 @@ const Dashboard = () => {
 
   // Get building status with actual work order counts
   const buildingStatusData = buildingsData?.data?.buildings?.map(building => {
-    const buildingWorkOrders = workOrdersData?.data?.filter(wo => wo.building?._id === building._id) || [];
+    const buildingWorkOrders = Array.isArray(workOrdersData?.data?.workOrders) 
+      ? workOrdersData.data.workOrders.filter(wo => wo.building?._id === building._id) 
+      : [];
     return {
       id: building._id,
       name: building.name,
@@ -101,10 +103,12 @@ const Dashboard = () => {
   }) || [];
 
   // Get worker availability with actual names and work order counts
-  const workerAvailabilityData = (usersData?.data?.users || []).map(worker => {
-    const assignedOrders = workOrdersData?.data?.filter(wo =>
-      wo.assignedTo?.some(assignment => assignment.worker?._id === worker._id)
-    ) || [];
+  const workerAvailabilityData = (Array.isArray(usersData?.data?.users) ? usersData.data.users : []).map(worker => {
+    const assignedOrders = Array.isArray(workOrdersData?.data?.workOrders)
+      ? workOrdersData.data.workOrders.filter(wo =>
+          wo.assignedTo?.some(assignment => assignment.worker?._id === worker._id)
+        )
+      : [];
 
     return {
       id: worker._id,
