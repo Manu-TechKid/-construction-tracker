@@ -158,62 +158,81 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
             return next(new AppError(`Validation failed: ${Object.values(error.errors).map(err => err.message).join(', ')}`, 400));
         }
 
-        return next(new AppError('Failed to create invoice', 500));
     }
 });
 
 // Update invoice
 exports.updateInvoice = catchAsync(async (req, res, next) => {
-    const invoice = await Invoice.findByIdAndUpdate(
-        req.params.id,
-        req.body,
-        {
-            new: true,
-            runValidators: true
-        }
-    ).populate('building', 'name address')
-     .populate('workOrders.workOrder', 'title description apartmentNumber');
+  const allowedFields = [
+    'invoiceNumber', 'dueDate', 'notes', 'status', 'subtotal', 'tax', 'total',
+    'workOrders', 'taxSettings', 'discountAmount', 'additionalFees'
+  ];
 
-    if (!invoice) {
-        return next(new AppError('No invoice found with that ID', 404));
+  // Filter request body to only allow specific fields
+  const updateData = {};
+  Object.keys(req.body).forEach(key => {
+    if (allowedFields.includes(key)) {
+      updateData[key] = req.body[key];
+    }
+  });
+
+  // Handle tax settings
+  if (updateData.taxSettings) {
+    updateData.taxSettings = {
+      taxType: updateData.taxSettings.taxType || 'commercial',
+      customTaxRate: updateData.taxSettings.customTaxRate || 10,
+    };
+  }
+
+  // Recalculate totals if workOrders are being updated
+  if (updateData.workOrders) {
+    const subtotal = updateData.workOrders.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
+    updateData.subtotal = subtotal;
+
+    // Apply discount if provided
+    if (req.body.discountAmount) {
+      updateData.subtotal = Math.max(0, subtotal - req.body.discountAmount);
     }
 
-    res.status(200).json({
-        status: 'success',
-        data: {
-            invoice
-        }
-    });
-});
-
-// Mark invoice as paid
-exports.markAsPaid = catchAsync(async (req, res, next) => {
-    const invoice = await Invoice.findByIdAndUpdate(
-        req.params.id,
-        {
-            status: 'paid',
-            paidDate: new Date()
-        },
-        { new: true }
-    );
-
-    if (!invoice) {
-        return next(new AppError('No invoice found with that ID', 404));
+    // Add additional fees if provided
+    if (req.body.additionalFees) {
+      updateData.subtotal += req.body.additionalFees;
     }
 
-    // Update work orders billing status to paid
-    const workOrderIds = invoice.workOrders.map(wo => wo.workOrder);
-    await WorkOrder.updateMany(
-        { _id: { $in: workOrderIds } },
-        { billingStatus: 'paid' }
-    );
+    // Calculate tax based on settings
+    let tax = 0;
+    if (updateData.taxSettings) {
+      if (updateData.taxSettings.taxType === 'residential') {
+        tax = updateData.subtotal * 0.10;
+      } else if (updateData.taxSettings.taxType === 'custom') {
+        tax = updateData.subtotal * (updateData.taxSettings.customTaxRate / 100);
+      }
+    }
 
-    res.status(200).json({
-        status: 'success',
-        data: {
-            invoice
-        }
-    });
+    updateData.tax = tax;
+    updateData.total = updateData.subtotal + tax;
+  }
+
+  const invoice = await Invoice.findByIdAndUpdate(
+    req.params.id,
+    updateData,
+    {
+      new: true,
+      runValidators: true
+    }
+  ).populate('building', 'name address')
+   .populate('workOrders.workOrder', 'title description apartmentNumber');
+
+  if (!invoice) {
+    return next(new AppError('No invoice found with that ID', 404));
+  }
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      invoice
+    }
+  });
 });
 
 // Update payment information
