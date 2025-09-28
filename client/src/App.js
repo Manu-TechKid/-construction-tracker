@@ -55,6 +55,10 @@ import EditWorker from './pages/workers/EditWorker';
 import WorkerDetails from './pages/workers/WorkerDetails';
 import WorkerApproval from './pages/admin/WorkerApproval';
 import WorkOrderApproval from './pages/admin/WorkOrderApproval';
+import TimeTrackingManagement from './pages/admin/TimeTrackingManagement';
+import Setup from './pages/admin/Setup';
+import SiteVisit from './pages/estimates/SiteVisit';
+import ApartmentSearch from './pages/search/ApartmentSearch';
 import WorkerSchedules from './pages/workers/WorkerSchedules';
 import ProjectsPendingApproval from './pages/admin/ProjectsPendingApproval';
 
