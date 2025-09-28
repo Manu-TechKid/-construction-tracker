@@ -1,7 +1,7 @@
 const express = require('express');
 const projectEstimateController = require('../controllers/projectEstimateController');
 const authController = require('../controllers/authController');
-const { restrictToRoles } = require('../middleware/auth');
+const { restrictToRoles } = require('../middleware/roleMiddleware');
 
 const router = express.Router();
 
