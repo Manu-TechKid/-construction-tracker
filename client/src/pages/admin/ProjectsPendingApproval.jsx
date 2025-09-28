@@ -25,39 +25,38 @@ import {
   ListItemAvatar,
   IconButton,
   Tabs,
-  Tab,
   Badge,
   useTheme,
   useMediaQuery,
   Fab,
   ImageList,
-  ImageListItem
+  ImageListItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow
 } from '@mui/material';
 import {
-  CheckCircle as ApproveIcon,
+  CheckCircle as approveIcon,
   Cancel as RejectIcon,
   Schedule as TimeIcon,
-  LocationOn as LocationIcon,
-  PhotoCamera as PhotoIcon,
-  Notes as NotesIcon,
-  Person as PersonIcon,
-  Work as WorkIcon,
-  Business as BuildingIcon,
   Timeline as ProgressIcon,
   Refresh as RefreshIcon,
   FilterList as FilterIcon,
   Visibility as ViewIcon,
   Edit as EditIcon,
-  Add as AddIcon
+  AttachMoney as MoneyIcon,
+  Assignment as AssignmentIcon
 } from '@mui/icons-material';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
 import {
-  useGetPendingApprovalsQuery,
-  useApproveTimeSessionMutation,
-  useGetTimeSessionsQuery
-} from '../../features/timeTracking/timeTrackingApiSlice';
+  useGetWorkOrdersQuery,
+  useUpdateWorkOrderMutation
+} from '../../features/workOrders/workOrdersApiSlice';
 
 const ProjectsPendingApproval = () => {
   const theme = useTheme();

@@ -182,12 +182,12 @@ const DashboardLayout = () => {
       });
     }
 
-    // Projects Pending Approval - for admins/managers
+    // Work Order Approval - for admins/managers
     if (!isWorker && hasPermission(['view:costs', 'manage:users'])) {
       items.push({
-        text: 'Projects Pending Approval',
+        text: 'Work Order Approval',
         icon: <ProjectApprovalIcon />,
-        path: '/projects-pending-approval',
+        path: '/work-order-approval',
         permission: 'view:costs'
       });
     }

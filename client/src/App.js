@@ -55,7 +55,7 @@ import EditWorker from './pages/workers/EditWorker';
 import WorkerDetails from './pages/workers/WorkerDetails';
 import WorkerSchedules from './pages/workers/WorkerSchedules';
 import WorkerApproval from './pages/admin/WorkerApproval';
-import ProjectsPendingApproval from './pages/admin/ProjectsPendingApproval';
+import WorkOrderApproval from './pages/admin/WorkOrderApproval';
 import TimeTrackingManagement from './pages/admin/TimeTrackingManagement';
 import Setup from './pages/admin/Setup';
 import SiteVisit from './pages/estimates/SiteVisit';
@@ -384,12 +384,12 @@ const AppContent = () => {
                 } 
               />
 
-              {/* Projects Pending Approval */}
+              {/* Work Order Approval */}
               <Route 
-                path="projects-pending-approval" 
+                path="work-order-approval" 
                 element={
                   <RoleBasedRoute requiredPermissions={['view:costs', 'manage:users']}>
-                    <ProjectsPendingApproval />
+                    <WorkOrderApproval />
                   </RoleBasedRoute>
                 } 
               />
