@@ -59,8 +59,7 @@ import TimeTrackingManagement from './pages/admin/TimeTrackingManagement';
 import Setup from './pages/admin/Setup';
 import SiteVisit from './pages/estimates/SiteVisit';
 import ApartmentSearch from './pages/search/ApartmentSearch';
-import ProjectsPendingApproval from './pages/admin/ProjectsPendingApproval';
-import CreateProjectEstimate from './pages/project-estimates/CreateProjectEstimate';
+import WorkerSchedules from './pages/workers/WorkerSchedules';
 
 // Route Protection
 import ProtectedRoute from './components/auth/ProtectedRoute';
