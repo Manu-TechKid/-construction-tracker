@@ -27,52 +27,6 @@ import {
   Paper,
   Chip,
   Divider,
-} from '@mui/material';
-import {
-  ArrowBack as ArrowBackIcon,
-  Save as SaveIcon,
-  Assignment as WorkOrderIcon,
-  AttachMoney as MoneyIcon,
-} from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { useFormik } from 'formik';
-import * as Yup from 'yup';
-import { toast } from 'react-toastify';
-
-import {
-  useGetInvoiceQuery,
-  useUpdateInvoiceMutation
-} from '../../features/invoices/invoicesApiSlice';
-import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Card,
-  CardContent,
-  CardHeader,
-  Container,
-  Grid,
-  Typography,
-  Button,
-  IconButton,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormHelperText,
-  CircularProgress,
-  Alert,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Chip,
-  Divider,
   Switch,
   FormControlLabel,
   InputAdornment,
