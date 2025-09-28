@@ -60,6 +60,8 @@ import Setup from './pages/admin/Setup';
 import SiteVisit from './pages/estimates/SiteVisit';
 import ApartmentSearch from './pages/search/ApartmentSearch';
 import WorkerSchedules from './pages/workers/WorkerSchedules';
+import ProjectsPendingApproval from './pages/admin/ProjectsPendingApproval';
+import CreateProjectEstimate from './pages/project-estimates/CreateProjectEstimate';
 
 // Route Protection
 import ProtectedRoute from './components/auth/ProtectedRoute';
