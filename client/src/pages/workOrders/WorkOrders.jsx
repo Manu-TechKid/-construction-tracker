@@ -133,7 +133,7 @@ const WorkOrders = () => {
     { value: 'cancelled', label: 'Cancelled', icon: <CancelledIcon /> },
   ];
 
-  const workOrders = workOrdersData?.data || [];
+  const workOrders = workOrdersData?.data?.workOrders || [];
 
   const filteredWorkOrders = useMemo(() => {
     return workOrders

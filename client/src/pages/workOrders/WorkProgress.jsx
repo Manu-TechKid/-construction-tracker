@@ -42,7 +42,7 @@ const WorkProgress = () => {
     );
   }
 
-  const workOrders = workOrdersData?.data || [];
+  const workOrders = workOrdersData?.data?.workOrders || [];
   
   // Calculate statistics
   const totalOrders = workOrders.length;
