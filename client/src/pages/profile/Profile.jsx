@@ -160,7 +160,7 @@ const Profile = () => {
 
                 <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
                   {!isEditing ? (
-                    <Button variant="contained" onClick={handleEdit}>
+                    <Button variant="contained" startIcon={<EditIcon />} onClick={handleEdit}>
                       Edit Profile
                     </Button>
                   ) : (
@@ -178,6 +178,7 @@ const Profile = () => {
                       </Button>
                     </>
                   )}
+                </Box>
               </form>
             </CardContent>
           </Card>
