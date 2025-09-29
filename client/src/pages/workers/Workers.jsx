@@ -51,7 +51,7 @@ import {
   FilterList as FilterIcon,
   Search as SearchIcon
 } from '@mui/icons-material';
-import { useGetWorkersQuery, useDeleteWorkerMutation, useUpdateWorkerApprovalMutation, useCreateWorkerMutation, useUpdateWorkerMutation } from '../../features/workers/workersApiSlice';
+import { useGetUsersQuery, useDeleteUserMutation, useUpdateUserMutation, useCreateUserMutation } from '../../features/users/usersApiSlice';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -96,7 +96,6 @@ const Workers = () => {
     phone: '',
     password: '',
     skills: [],
-    paymentType: 'hourly',
     hourlyRate: '',
     contractRate: '',
     notes: ''
@@ -104,41 +103,39 @@ const Workers = () => {
 
   // API calls with error boundaries
   const { 
-    data: allWorkersData, 
+    data: usersData, 
     isLoading, 
     error, 
     refetch 
-  } = useGetWorkersQuery(filters, {
+  } = useGetUsersQuery({ 
+    role: 'worker',
+    isActive: true,
+    approvalStatus: 'approved',
+    ...filters 
+  }, {
     refetchOnMountOrArgChange: true,
     onError: (error) => {
       toast.error(error?.data?.message || 'Failed to load workers');
     }
   });
 
-  const [deleteWorker, { isLoading: isDeleting }] = useDeleteWorkerMutation();
-  const [updateWorkerApproval, { isLoading: isUpdatingApproval }] = useUpdateWorkerApprovalMutation();
-  const [createWorker, { isLoading: isCreating }] = useCreateWorkerMutation();
-  const [updateWorker, { isLoading: isUpdating }] = useUpdateWorkerMutation();
+  const workers = usersData?.data?.users || [];
+  
+  const [deleteWorker, { isLoading: isDeleting }] = useDeleteUserMutation();
+  const [updateWorker, { isLoading: isUpdating }] = useUpdateUserMutation();
+  const [createWorker, { isLoading: isCreating }] = useCreateUserMutation();
 
   // Filter workers based on tab
   const filteredWorkers = useMemo(() => {
-    if (!allWorkersData?.data?.users) return [];
+    if (!workers) return [];
     
-    const workers = allWorkersData.data.users;
-    
-    // Filter by tab
-    if (tabValue === 1) return workers.filter(w => w.workerProfile?.approvalStatus === 'pending');
-    if (tabValue === 2) return workers.filter(w => w.workerProfile?.approvalStatus === 'approved');
-    if (tabValue === 3) return workers.filter(w => w.workerProfile?.approvalStatus === 'rejected');
-    
+    // Since we're already filtering for approved workers in the query,
+    // we can just return the workers directly
     return workers;
-  }, [allWorkersData, tabValue]);
+  }, [workers]);
 
-  // Get counts for each tab
-  const allWorkers = allWorkersData?.data?.users || [];
-  const pendingCount = allWorkers.filter(w => w.workerProfile?.approvalStatus === 'pending').length;
-  const approvedCount = allWorkers.filter(w => w.workerProfile?.approvalStatus === 'approved').length;
-  const rejectedCount = allWorkers.filter(w => w.workerProfile?.approvalStatus === 'rejected').length;
+  // Get counts for approved workers only
+  const approvedCount = workers.length;
 
   // Handle worker edit button click
   const handleEditClick = (worker) => {

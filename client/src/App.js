@@ -54,6 +54,7 @@ import WorkerDashboard from './pages/workers/WorkerDashboard';
 import EditWorker from './pages/workers/EditWorker';
 import WorkerDetails from './pages/workers/WorkerDetails';
 import WorkerApproval from './pages/admin/WorkerApproval';
+import UserManagement from './pages/admin/UserManagement';
 import WorkOrderApproval from './pages/admin/WorkOrderApproval';
 import TimeTrackingManagement from './pages/admin/TimeTrackingManagement';
 import Setup from './pages/admin/Setup';
@@ -382,6 +383,16 @@ const AppContent = () => {
                 element={
                   <RoleBasedRoute requiredPermissions={['approve:workers']}>
                     <WorkerApproval />
+                  </RoleBasedRoute>
+                } 
+              />
+
+              {/* User Management - New comprehensive user management */}
+              <Route 
+                path="user-management" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['manage:users']}>
+                    <UserManagement />
                   </RoleBasedRoute>
                 } 
               />

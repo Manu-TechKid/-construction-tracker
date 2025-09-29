@@ -182,6 +182,16 @@ const DashboardLayout = () => {
       });
     }
 
+    // User Management - for admins (comprehensive user management)
+    if (!isWorker && hasPermission(['manage:users'])) {
+      items.push({
+        text: 'User Management',
+        icon: <PeopleIcon />,
+        path: '/user-management',
+        permission: 'manage:users'
+      });
+    }
+
     // Pending Project Approval - for admins/managers
     if (!isWorker && hasPermission(['view:costs', 'manage:users'])) {
       items.push({

@@ -189,7 +189,7 @@ exports.updateUser = catchAsync(async (req, res, next) => {
     }
     
     // Update basic fields
-    const allowedFields = ['name', 'email', 'phone', 'isActive'];
+    const allowedFields = ['name', 'email', 'phone', 'isActive', 'role', 'approvalStatus'];
     allowedFields.forEach(field => {
         if (req.body[field] !== undefined) {
             user[field] = req.body[field];
@@ -201,20 +201,32 @@ exports.updateUser = catchAsync(async (req, res, next) => {
         user.password = req.body.password;
     }
     
-    // Update worker profile if user is a worker
-    if (user.role === 'worker') {
+    // Initialize or update worker profile if user is being set as worker
+    if (req.body.role === 'worker' || user.role === 'worker') {
+        // Initialize worker profile if it doesn't exist
+        if (!user.workerProfile) {
+            user.workerProfile = {
+                skills: [],
+                paymentType: 'hourly',
+                status: 'active',
+                approvalStatus: req.body.approvalStatus || 'approved'
+            };
+        }
+        
         // Handle both nested workerProfile and flat structure
         const workerData = req.body.workerProfile || req.body;
-        const workerFields = ['skills', 'paymentType', 'hourlyRate', 'contractRate', 'status', 'notes'];
+        const workerFields = ['skills', 'paymentType', 'hourlyRate', 'contractRate', 'status', 'notes', 'approvalStatus'];
         
         workerFields.forEach(field => {
             if (workerData[field] !== undefined) {
-                if (!user.workerProfile) {
-                    user.workerProfile = {};
-                }
                 user.workerProfile[field] = workerData[field];
             }
         });
+
+        // Set worker profile approval status based on main approval status
+        if (req.body.approvalStatus) {
+            user.workerProfile.approvalStatus = req.body.approvalStatus;
+        }
     }
     
     await user.save();
