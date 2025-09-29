@@ -37,7 +37,7 @@ const createSendToken = (user, statusCode, res) => {
 };
 
 exports.signup = catchAsync(async (req, res, next) => {
-  const { name, email, password, passwordConfirm, role, phone } = req.body;
+  const { name, email, password, passwordConfirm, phone } = req.body;
 
   // Check if user already exists
   const existingUser = await User.findOne({ email: email.toLowerCase() });
@@ -50,49 +50,45 @@ exports.signup = catchAsync(async (req, res, next) => {
     return next(new AppError('Passwords do not match', 400));
   }
 
-  // Create user data
+  // Create user data - ALL registrations are pending approval
   const userData = {
     name,
     email: email.toLowerCase(),
     password,
     phone,
-    role: role || 'worker' // Default to worker
+    role: 'pending', // All users start as pending
+    isActive: false, // Account inactive until approved
+    approvalStatus: 'pending'
   };
 
-  // If registering as worker, initialize worker profile
-  if (userData.role === 'worker') {
-    userData.workerProfile = {
-      skills: [],
-      paymentType: 'hourly',
-      status: 'active',
-      approvalStatus: 'pending', // Self-registered workers need approval
-      notes: 'Self-registered worker - pending approval'
-    };
-  }
+  // Initialize worker profile for all registrations (admin will assign final role)
+  userData.workerProfile = {
+    skills: [],
+    paymentType: 'hourly',
+    status: 'inactive',
+    approvalStatus: 'pending',
+    notes: 'Registration pending admin approval - role to be assigned'
+  };
 
   const newUser = await User.create(userData);
 
-  // If worker registration, notify admins
-  if (newUser.role === 'worker') {
-    await notifyAdminsOfWorkerRegistration(newUser);
-    
-    // Send different response for pending workers
-    res.status(201).json({
-      status: 'success',
-      message: 'Registration successful! Your account is pending admin approval.',
-      data: {
-        user: {
-          _id: newUser._id,
-          name: newUser.name,
-          email: newUser.email,
-          role: newUser.role,
-          approvalStatus: newUser.workerProfile.approvalStatus
-        }
+  // Notify admins of new registration
+  await notifyAdminsOfWorkerRegistration(newUser);
+  
+  // Send response for pending approval
+  res.status(201).json({
+    status: 'success',
+    message: 'Registration submitted successfully! Your account is pending admin approval.',
+    data: {
+      user: {
+        _id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        approvalStatus: newUser.approvalStatus
       }
-    });
-  } else {
-    createSendToken(newUser, 201, res);
-  }
+    }
+  });
 });
 
 exports.login = catchAsync(async (req, res, next) => {
@@ -110,14 +106,13 @@ exports.login = catchAsync(async (req, res, next) => {
     return next(new AppError('Incorrect email or password', 401));
   }
 
-  // 3) Check if worker is approved
-  if (user.role === 'worker' && user.workerProfile?.approvalStatus !== 'approved') {
-    const statusMessages = {
-      pending: 'Your account is pending admin approval. Please wait for approval.',
-      rejected: 'Your account has been rejected. Please contact administration.'
-    };
-    
-    return next(new AppError(statusMessages[user.workerProfile.approvalStatus] || 'Account not approved', 403));
+  // 3) Check if user is approved (applies to ALL users now)
+  if (user.role === 'pending' || user.approvalStatus === 'pending') {
+    return next(new AppError('Your account is pending admin approval. Please wait for approval.', 403));
+  }
+  
+  if (user.approvalStatus === 'rejected') {
+    return next(new AppError('Your account has been rejected. Please contact administration.', 403));
   }
 
   // 4) Check if user is active
