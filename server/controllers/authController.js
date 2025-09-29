@@ -56,24 +56,18 @@ exports.signup = catchAsync(async (req, res, next) => {
     email: email.toLowerCase(),
     password,
     phone,
-    role: 'pending', // All users start as pending
-    isActive: false, // Account inactive until approved
-    approvalStatus: 'pending'
-  };
-
-  // Initialize worker profile for all registrations (admin will assign final role)
-  userData.workerProfile = {
-    skills: [],
-    paymentType: 'hourly',
-    status: 'inactive',
-    approvalStatus: 'pending',
-    notes: 'Registration pending admin approval - role to be assigned'
+    // Use model defaults for role, isActive, and approvalStatus
   };
 
   const newUser = await User.create(userData);
 
-  // Notify admins of new registration
-  await notifyAdminsOfWorkerRegistration(newUser);
+  // Try to notify admins of new registration (don't block registration if this fails)
+  try {
+    await notifyAdminsOfWorkerRegistration(newUser);
+  } catch (emailError) {
+    console.error('Failed to send admin notification email:', emailError);
+    // Continue with registration even if email fails
+  }
   
   // Send response for pending approval
   res.status(201).json({
@@ -236,39 +230,48 @@ async function notifyAdminsOfWorkerRegistration(worker) {
       isActive: true 
     }).select('email name');
 
+    if (admins.length === 0) {
+      console.log('No active admins found to notify');
+      return;
+    }
+
     // Send notification emails
-    const emailPromises = admins.map(admin => {
-      return sendEmail({
-        email: admin.email,
-        subject: 'New Worker Registration - Approval Required',
-        message: `
-          Hello ${admin.name},
-          
-          A new worker has registered and requires approval:
-          
-          Name: ${worker.name}
-          Email: ${worker.email}
-          Phone: ${worker.phone || 'Not provided'}
-          
-          Please log in to the admin panel to review and approve this worker.
-          
-          Best regards,
-          Construction Tracker System
-        `
-      });
+    const emailPromises = admins.map(async (admin) => {
+      try {
+        return await sendEmail({
+          email: admin.email,
+          subject: 'New Worker Registration - Approval Required',
+          message: `
+            Hello ${admin.name},
+            
+            A new worker has registered and requires approval:
+            
+            Name: ${worker.name}
+            Email: ${worker.email}
+            Phone: ${worker.phone || 'Not provided'}
+            
+            Please log in to the admin panel to review and approve this worker.
+            
+            Best regards,
+            Construction Tracker System
+          `
+        });
+      } catch (emailError) {
+        console.error(`Failed to send email to ${admin.email}:`, emailError);
+        // Don't throw, just log the error
+      }
     });
 
     await Promise.allSettled(emailPromises);
-    console.log(`Notified ${admins.length} admins of new worker registration: ${worker.email}`);
-    
+    console.log(`Notification emails sent to ${admins.length} admin(s)`);
   } catch (error) {
-    console.error('Failed to notify admins of worker registration:', error);
-    // Don't throw error - registration should still succeed
+    console.error('Error in notifyAdminsOfWorkerRegistration:', error);
+    // Don't re-throw, let the registration still succeed
   }
 }
 
 exports.forgotPassword = catchAsync(async (req, res, next) => {
-  // 1) Get user based on POSTed email
+  // 1) Get user based on POSTED email
   const user = await User.findOne({ email: req.body.email });
   if (!user) {
     return next(new AppError('There is no user with email address.', 404));

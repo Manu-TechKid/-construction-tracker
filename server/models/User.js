@@ -24,8 +24,8 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['admin', 'manager', 'supervisor', 'worker'],
-        default: 'worker'
+        enum: ['admin', 'manager', 'supervisor', 'worker', 'pending'],
+        default: 'pending'
     },
     phone: {
         type: String,
@@ -33,7 +33,12 @@ const userSchema = new mongoose.Schema({
     },
     isActive: {
         type: Boolean,
-        default: true
+        default: false
+    },
+    approvalStatus: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending'
     },
     lastLogin: Date,
     passwordChangedAt: Date,
