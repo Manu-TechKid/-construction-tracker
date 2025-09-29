@@ -123,7 +123,20 @@ const ProjectsPendingApproval = () => {
     }
   };
 
-  const getBuildingName = (buildingId) => {
+  const getBuildingName = (project) => {
+    // Handle both populated and non-populated building data
+    if (project.building && typeof project.building === 'object') {
+      // Building is populated as an object
+      return project.building.name || 'Unknown Building';
+    }
+    
+    // Check if buildingId exists and is populated
+    if (project.buildingId && typeof project.buildingId === 'object') {
+      return project.buildingId.name || 'Unknown Building';
+    }
+    
+    // Building is just an ID, find it in the buildings list
+    const buildingId = project.building || project.buildingId;
     const building = buildings.find(b => b._id === buildingId);
     return building?.name || 'Unknown Building';
   };
@@ -418,7 +431,7 @@ const ProjectsPendingApproval = () => {
                               )}
                             </Box>
                           </TableCell>
-                          <TableCell>{getBuildingName(project.building)}</TableCell>
+                          <TableCell>{getBuildingName(project)}</TableCell>
                           <TableCell>${(project.estimatedPrice || 0).toFixed(2)}</TableCell>
                           <TableCell>${(project.estimatedCost || 0).toFixed(2)}</TableCell>
                           <TableCell>
@@ -528,7 +541,7 @@ const ProjectsPendingApproval = () => {
                       {projects.map((project) => (
                         <TableRow key={project._id}>
                           <TableCell>{project.title}</TableCell>
-                          <TableCell>{getBuildingName(project.building)}</TableCell>
+                          <TableCell>{getBuildingName(project)}</TableCell>
                           <TableCell>
                             <Chip 
                               label={project.status} 
@@ -653,7 +666,7 @@ const ProjectsPendingApproval = () => {
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2">Building</Typography>
-                  <Typography>{getBuildingName(selectedProject.building)}</Typography>
+                  <Typography>{getBuildingName(selectedProject)}</Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2">Apartment</Typography>

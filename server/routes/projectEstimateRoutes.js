@@ -33,7 +33,10 @@ router
     projectEstimateController.uploadProjectPhotos,
     projectEstimateController.updateProjectEstimate
   )
-  .delete(projectEstimateController.deleteProjectEstimate);
+  .delete(
+    restrictToRoles('admin', 'manager'),
+    projectEstimateController.deleteProjectEstimate
+  );
 
 // Admin/Manager only routes
 router.use(restrictToRoles('admin', 'manager'));
