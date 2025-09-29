@@ -13,7 +13,7 @@ router.post('/logout', authController.logout);
 // Protect all routes after this middleware
 router.use(authController.protect);
 
-// Protected route (requires authentication)
+// Protected routes (requires authentication)
 router.get('/me', (req, res) => {
     res.status(200).json({
         status: 'success',
@@ -22,5 +22,7 @@ router.get('/me', (req, res) => {
         }
     });
 });
+
+router.patch('/change-password', authController.changePassword);
 
 module.exports = router;

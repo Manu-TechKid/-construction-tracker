@@ -11,11 +11,14 @@ import {
   Divider,
   Alert,
   CircularProgress,
+  Container,
 } from '@mui/material';
+import { Lock as LockIcon, Person as PersonIcon, Edit as EditIcon } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { selectCurrentUser } from '../../features/auth/authSlice';
+import ChangePassword from '../../components/auth/ChangePassword';
 
 const validationSchema = Yup.object({
   name: Yup.string().required('Name is required'),
@@ -29,6 +32,7 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   const formik = useFormik({
     initialValues: {
@@ -65,7 +69,7 @@ const Profile = () => {
   };
 
   return (
-    <Box>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" component="h1" gutterBottom>
         My Profile
       </Typography>
@@ -85,7 +89,7 @@ const Profile = () => {
                 <Avatar
                   sx={{ width: 80, height: 80, mr: 2, bgcolor: 'primary.main' }}
                 >
-                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  <PersonIcon sx={{ fontSize: 40 }} />
                 </Avatar>
                 <Box>
                   <Typography variant="h5">{user?.name || 'User'}</Typography>
@@ -174,18 +178,17 @@ const Profile = () => {
                       </Button>
                     </>
                   )}
-                </Box>
               </form>
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Account Info Card */}
+        {/* Security Card */}
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Account Information
+                🔒 Account Security
               </Typography>
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" color="text.secondary">
@@ -200,22 +203,40 @@ const Profile = () => {
                   Account Status
                 </Typography>
                 <Typography variant="body1" color="success.main">
-                  Active
+                  {user?.isActive ? 'Active' : 'Inactive'}
                 </Typography>
               </Box>
-              <Box sx={{ mb: 2 }}>
+              <Box sx={{ mb: 3 }}>
                 <Typography variant="body2" color="text.secondary">
                   Last Login
                 </Typography>
                 <Typography variant="body1">
-                  {new Date().toLocaleDateString()}
+                  {user?.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
                 </Typography>
               </Box>
+              
+              <Divider sx={{ mb: 2 }} />
+              
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<LockIcon />}
+                onClick={() => setChangePasswordOpen(true)}
+                sx={{ mb: 1 }}
+              >
+                Change Password
+              </Button>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
-    </Box>
+
+      {/* Change Password Dialog */}
+      <ChangePassword
+        open={changePasswordOpen}
+        onClose={() => setChangePasswordOpen(false)}
+      />
+    </Container>
   );
 };
 

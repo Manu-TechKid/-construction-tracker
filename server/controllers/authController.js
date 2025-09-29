@@ -351,3 +351,36 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
   // 4) Log user in, send JWT
   createSendToken(user, 200, res);
 });
+
+exports.changePassword = catchAsync(async (req, res, next) => {
+  const { currentPassword, newPassword, confirmPassword } = req.body;
+
+  // 1) Validate input
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    return next(new AppError('Please provide current password, new password, and confirmation', 400));
+  }
+
+  if (newPassword !== confirmPassword) {
+    return next(new AppError('New password and confirmation do not match', 400));
+  }
+
+  if (newPassword.length < 6) {
+    return next(new AppError('New password must be at least 6 characters long', 400));
+  }
+
+  // 2) Get user with password
+  const user = await User.findById(req.user.id).select('+password');
+
+  // 3) Check if current password is correct
+  if (!(await user.correctPassword(currentPassword, user.password))) {
+    return next(new AppError('Current password is incorrect', 401));
+  }
+
+  // 4) Update password
+  user.password = newPassword;
+  user.passwordChangedAt = new Date();
+  await user.save();
+
+  // 5) Log user in with new password, send JWT
+  createSendToken(user, 200, res);
+});
