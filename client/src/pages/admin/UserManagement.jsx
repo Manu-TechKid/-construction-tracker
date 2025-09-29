@@ -266,14 +266,24 @@ const UserManagement = () => {
         <Typography variant="h4" component="h1">
           👥 User Management
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<RefreshIcon />}
-          onClick={refetch}
-          disabled={isLoading}
-        >
-          Refresh
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setCreateDialogOpen(true)}
+            color="primary"
+          >
+            Create User
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={refetch}
+            disabled={isLoading}
+          >
+            Refresh
+          </Button>
+        </Box>
       </Box>
 
       {/* Summary Cards */}

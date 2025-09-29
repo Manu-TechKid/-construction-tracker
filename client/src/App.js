@@ -53,7 +53,6 @@ import BuildingSchedule from './pages/scheduling/BuildingSchedule';
 import WorkerDashboard from './pages/workers/WorkerDashboard';
 import EditWorker from './pages/workers/EditWorker';
 import WorkerDetails from './pages/workers/WorkerDetails';
-import WorkerApproval from './pages/admin/WorkerApproval';
 import UserManagement from './pages/admin/UserManagement';
 import WorkOrderApproval from './pages/admin/WorkOrderApproval';
 import TimeTrackingManagement from './pages/admin/TimeTrackingManagement';
@@ -377,17 +376,7 @@ const AppContent = () => {
                 element={<ApartmentSearch />} 
               />
 
-              {/* Worker Approval */}
-              <Route 
-                path="worker-approval" 
-                element={
-                  <RoleBasedRoute requiredPermissions={['approve:workers']}>
-                    <WorkerApproval />
-                  </RoleBasedRoute>
-                } 
-              />
-
-              {/* User Management - New comprehensive user management */}
+              {/* User Management - Comprehensive user management */}
               <Route 
                 path="user-management" 
                 element={

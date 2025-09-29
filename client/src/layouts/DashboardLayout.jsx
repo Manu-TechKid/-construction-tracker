@@ -172,16 +172,6 @@ const DashboardLayout = () => {
       });
     }
 
-    // Worker Approval - for admins
-    if (!isWorker && hasPermission(['approve:workers'])) {
-      items.push({
-        text: 'Worker Approval',
-        icon: <ApprovalIcon />,
-        path: '/worker-approval',
-        permission: 'approve:workers'
-      });
-    }
-
     // User Management - for admins (comprehensive user management)
     if (!isWorker && hasPermission(['manage:users'])) {
       items.push({
