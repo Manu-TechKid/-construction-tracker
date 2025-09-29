@@ -46,8 +46,6 @@ import {
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
   Work as WorkIcon,
-  CheckCircle as ApproveIcon,
-  Cancel as RejectIcon,
   FilterList as FilterIcon,
   Search as SearchIcon
 } from '@mui/icons-material';
@@ -289,22 +287,23 @@ const Workers = () => {
     }
   };
 
-  // Handle approval actions
-  const handleApprovalAction = async (worker, action) => {
-    try {
-      await updateWorkerApproval({
-        id: worker._id,
-        approvalStatus: action,
-        notes: `${action === 'approved' ? 'Approved' : 'Rejected'} by admin`
-      }).unwrap();
-      
-      toast.success(`Worker ${action === 'approved' ? 'approved' : 'rejected'} successfully`);
-      refetch();
-    } catch (error) {
-      console.error('Approval failed:', error);
-      toast.error(error?.data?.message || 'Failed to update worker approval');
-    }
-  };
+  // Handle approval actions (removed - not needed for approved workers page)
+  // const handleApprovalAction = async (worker, action) => {
+  //   try {
+  //     await updateWorker({
+  //       id: worker._id,
+  //       userData: {
+  //         approvalStatus: action,
+  //         isActive: action === 'approved'
+  //       }
+  //     }).unwrap();
+  //     toast.success(`Worker ${action} successfully`);
+  //     refetch();
+  //   } catch (error) {
+  //     console.error('Approval error:', error);
+  //     toast.error(error?.data?.message || 'Approval failed');
+  //   }
+  // };
 
   // Reset worker form
   const resetWorkerForm = () => {
@@ -373,10 +372,7 @@ const Workers = () => {
           variant="scrollable"
           scrollButtons="auto"
         >
-          <Tab label={`All Workers (${allWorkers.length})`} />
-          <Tab label={`Pending (${pendingCount})`} />
-          <Tab label={`Approved (${approvedCount})`} />
-          <Tab label={`Rejected (${rejectedCount})`} />
+          <Tab label={`Active Workers (${approvedCount})`} />
         </Tabs>
       </Box>
 
@@ -411,7 +407,7 @@ const Workers = () => {
                     </Box>
                     <IconButton
                       onClick={(e) => handleMenuClick(e, worker)}
-                      disabled={isDeleting || isUpdatingApproval}
+                      disabled={isDeleting || isUpdating}
                     >
                       <MoreVertIcon />
                     </IconButton>
@@ -652,7 +648,7 @@ const Workers = () => {
               handleEditClick(selectedWorker);
               setAnchorEl(null);
             }}
-            disabled={isUpdatingApproval}
+            disabled={isUpdating}
           >
             <EditIcon sx={{ mr: 1 }} />
             Edit
@@ -664,38 +660,12 @@ const Workers = () => {
               setAnchorEl(null);
               setDeleteDialogOpen(true);
             }}
-            disabled={isDeleting || isUpdatingApproval}
+            disabled={isDeleting || isUpdating}
             sx={{ color: 'error.main' }}
           >
             <DeleteIcon sx={{ mr: 1 }} />
             Delete
           </MenuItem>
-        )}
-        {hasPermission(['approve:workers']) && selectedWorker?.workerProfile?.approvalStatus === 'pending' && (
-          <>
-            <MenuItem 
-              onClick={() => {
-                handleApprovalAction(selectedWorker, 'approved');
-                handleMenuClose();
-              }}
-              disabled={isUpdatingApproval}
-              sx={{ color: 'success.main' }}
-            >
-              <ApproveIcon sx={{ mr: 1 }} />
-              Approve
-            </MenuItem>
-            <MenuItem 
-              onClick={() => {
-                handleApprovalAction(selectedWorker, 'rejected');
-                handleMenuClose();
-              }}
-              disabled={isUpdatingApproval}
-              sx={{ color: 'error.main' }}
-            >
-              <RejectIcon sx={{ mr: 1 }} />
-              Reject
-            </MenuItem>
-          </>
         )}
       </Menu>
     </Box>
