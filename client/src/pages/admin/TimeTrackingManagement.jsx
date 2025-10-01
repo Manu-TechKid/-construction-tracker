@@ -48,17 +48,18 @@ import {
   Refresh as RefreshIcon,
   PhotoCamera as PhotoIcon,
   Notes as NotesIcon,
-  Timeline as StatsIcon,
-  Delete as DeleteIcon
+  Timeline as ProgressIcon
 } from '@mui/icons-material';
 import { format, parseISO, differenceInHours, differenceInMinutes } from 'date-fns';
 import { toast } from 'react-toastify';
+import { useAuth } from '../../hooks/useAuth';
+import TimeSessionDetails from '../../components/timeTracking/TimeSessionDetails';
 import {
   useGetTimeSessionsQuery,
   useGetPendingApprovalsQuery,
   useApproveTimeSessionMutation,
-  useGetTimeStatsQuery,
-  useDeleteTimeSessionMutation
+  useDeleteTimeSessionMutation,
+  useGetTimeStatsQuery
 } from '../../features/timeTracking/timeTrackingApiSlice';
 import { useGetUsersQuery } from '../../features/users/usersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
@@ -66,37 +67,37 @@ import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice
 const TimeTrackingManagement = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { user } = useAuth();
   
   // State
-  const [selectedTab, setSelectedTab] = useState(0);
+  const [activeTab, setActiveTab] = useState(0);
   const [filters, setFilters] = useState({
-    startDate: '',
-    endDate: '',
     workerId: '',
     buildingId: '',
-    status: ''
+    status: '',
+    startDate: '',
+    endDate: ''
   });
   const [selectedSession, setSelectedSession] = useState(null);
   const [detailsDialog, setDetailsDialog] = useState(false);
   const [approvalDialog, setApprovalDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
-
-  // API queries
+  
+  // API calls
   const { data: sessionsData, isLoading: sessionsLoading, refetch: refetchSessions } = useGetTimeSessionsQuery(filters);
   const { data: pendingData, isLoading: pendingLoading, refetch: refetchPending } = useGetPendingApprovalsQuery();
   const { data: statsData, isLoading: statsLoading } = useGetTimeStatsQuery(filters);
   const { data: usersData } = useGetUsersQuery({ role: 'worker' });
   const { data: buildingsData } = useGetBuildingsQuery();
-
-  // Mutations
-  const [approveTimeSession, { isLoading: isApproving }] = useApproveTimeSessionMutation();
-  const [deleteTimeSession, { isLoading: isDeleting }] = useDeleteTimeSessionMutation();
-
+  
+  const [approveTimeSession] = useApproveTimeSessionMutation();
+  const [deleteTimeSession] = useDeleteTimeSessionMutation();
+  
+  const sessions = sessionsData?.data?.sessions || [];
+  const pendingSessions = pendingData?.data?.sessions || [];
+  const stats = statsData?.data?.stats || {};
   const workers = usersData?.data?.users || [];
   const buildings = buildingsData?.data?.buildings || [];
-  const sessions = sessionsData?.data?.sessions || [];
-  const pendingApprovals = pendingData?.data?.sessions || [];
-  const stats = statsData?.data || {};
 
   // Helper functions
   const formatDuration = (startTime, endTime) => {

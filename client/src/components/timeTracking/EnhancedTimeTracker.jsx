@@ -24,7 +24,14 @@ import {
   ListItemAvatar,
   Fab,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  ImageList,
+  ImageListItem,
+  ImageListItemBar
 } from '@mui/material';
 import {
   PlayArrow as ClockInIcon,
@@ -39,11 +46,16 @@ import {
   Schedule as TimeIcon,
   PhotoCamera,
   Delete as DeleteIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  Business as BuildingIcon,
+  Edit as EditIcon,
+  Visibility as ViewIcon
 } from '@mui/icons-material';
 import { format, formatDistanceToNow } from 'date-fns';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
+import { useBuildingContext } from '../../contexts/BuildingContext';
+import BuildingSelector from '../common/BuildingSelector';
 import {
   useClockInMutation,
   useClockOutMutation,
@@ -53,15 +65,18 @@ import {
   useAddProgressUpdateMutation
 } from '../../features/timeTracking/timeTrackingApiSlice';
 
-const EnhancedTimeTracker = ({ workOrderId, buildingId }) => {
+const EnhancedTimeTracker = ({ workOrderId }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { user } = useAuth();
+  const { selectedBuilding } = useBuildingContext();
   
   // State management
   const [currentTime, setCurrentTime] = useState(new Date());
   const [elapsedTime, setElapsedTime] = useState(0);
   const [breakTime, setBreakTime] = useState(0);
+  const [isOnBreak, setIsOnBreak] = useState(false);
+  const [breakStartTime, setBreakStartTime] = useState(null);
   const [location, setLocation] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [notes, setNotes] = useState('');
@@ -70,11 +85,14 @@ const EnhancedTimeTracker = ({ workOrderId, buildingId }) => {
   const [progressNotes, setProgressNotes] = useState('');
   const [breakDialog, setBreakDialog] = useState(false);
   const [breakReason, setBreakReason] = useState('');
+  const [photoViewDialog, setPhotoViewDialog] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
   
   // Refs
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const breakTimerRef = useRef(null);
   
   // API hooks
   const { data: statusData, refetch: refetchStatus } = useGetWorkerStatusQuery(user?.id, {
@@ -238,18 +256,23 @@ const EnhancedTimeTracker = ({ workOrderId, buildingId }) => {
 
   // Handle clock in
   const handleClockIn = async () => {
+    if (!selectedBuilding) {
+      toast.error('Please select a building before clocking in');
+      return;
+    }
+
     try {
       const loc = await getCurrentLocation();
       
       const formData = new FormData();
       formData.append('workerId', user.id);
+      formData.append('buildingId', selectedBuilding._id);
       formData.append('latitude', loc.latitude);
       formData.append('longitude', loc.longitude);
       formData.append('accuracy', loc.accuracy);
       formData.append('notes', notes);
       
       if (workOrderId) formData.append('workOrderId', workOrderId);
-      if (buildingId) formData.append('buildingId', buildingId);
       
       photos.forEach((photo, index) => {
         formData.append('photos', photo.file);
@@ -257,7 +280,7 @@ const EnhancedTimeTracker = ({ workOrderId, buildingId }) => {
 
       await clockIn(formData).unwrap();
       
-      toast.success('Successfully clocked in!');
+      toast.success(`Successfully clocked in at ${selectedBuilding.name}!`);
       setPhotos([]);
       setNotes('');
       refetchStatus();
@@ -305,7 +328,9 @@ const EnhancedTimeTracker = ({ workOrderId, buildingId }) => {
         longitude: loc.longitude
       }).unwrap();
       
-      toast.success('Break started');
+      setIsOnBreak(true);
+      setBreakStartTime(new Date());
+      toast.success('Break started - timer paused');
       setBreakDialog(false);
       setBreakReason('');
       refetchStatus();
@@ -318,7 +343,9 @@ const EnhancedTimeTracker = ({ workOrderId, buildingId }) => {
   const handleEndBreak = async () => {
     try {
       await endBreak({ workerId: user.id }).unwrap();
-      toast.success('Break ended');
+      setIsOnBreak(false);
+      setBreakStartTime(null);
+      toast.success('Break ended - timer resumed');
       refetchStatus();
     } catch (error) {
       toast.error(error?.data?.message || 'Failed to end break');
@@ -354,11 +381,44 @@ const EnhancedTimeTracker = ({ workOrderId, buildingId }) => {
 
   return (
     <Box sx={{ maxWidth: 800, mx: 'auto', p: 2 }}>
+      {/* Building Selection */}
+      {!isActive && (
+        <Card elevation={2} sx={{ mb: 3, bgcolor: 'primary.50' }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <BuildingIcon color="primary" />
+              Select Building
+            </Typography>
+            <BuildingSelector />
+            {!selectedBuilding && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                Please select a building before clocking in. This helps track your work location.
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Current Building Display */}
+      {isActive && activeSession?.building && (
+        <Card elevation={2} sx={{ mb: 3, bgcolor: 'success.50' }}>
+          <CardContent>
+            <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <BuildingIcon color="success" />
+              Working at: {activeSession.building.name}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {activeSession.building.address}
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Main Time Display */}
       <Card elevation={3} sx={{ mb: 3 }}>
         <CardContent>
           <Grid container spacing={3} alignItems="center">
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={4}>
               <Box textAlign="center">
                 <Typography variant="h6" color="textSecondary" gutterBottom>
                   Current Time
@@ -372,19 +432,33 @@ const EnhancedTimeTracker = ({ workOrderId, buildingId }) => {
               </Box>
             </Grid>
             
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={4}>
               <Box textAlign="center">
                 <Typography variant="h6" color="textSecondary" gutterBottom>
-                  {isPaused ? 'Break Time' : 'Work Time'}
+                  Work Time
                 </Typography>
-                <Typography variant="h3" color={isPaused ? 'warning.main' : 'success.main'}>
-                  {formatTime(isPaused ? breakTime : elapsedTime)}
+                <Typography variant="h3" color="success.main">
+                  {formatTime(elapsedTime)}
                 </Typography>
                 <Chip 
-                  label={isActive ? (isPaused ? 'On Break' : 'Working') : 'Not Clocked In'} 
-                  color={isActive ? (isPaused ? 'warning' : 'success') : 'default'}
-                  icon={isActive ? (isPaused ? <BreakIcon /> : <TimeIcon />) : <TimeIcon />}
+                  label={isActive ? (isOnBreak ? 'Paused (On Break)' : 'Active') : 'Not Started'} 
+                  color={isActive ? (isOnBreak ? 'warning' : 'success') : 'default'}
+                  icon={isActive ? (isOnBreak ? <BreakIcon /> : <TimeIcon />) : <TimeIcon />}
                 />
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <Box textAlign="center">
+                <Typography variant="h6" color="textSecondary" gutterBottom>
+                  Break Time
+                </Typography>
+                <Typography variant="h3" color="warning.main">
+                  {formatTime(breakTime)}
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  {isOnBreak ? 'Currently on break' : 'Total breaks today'}
+                </Typography>
               </Box>
             </Grid>
           </Grid>
@@ -404,7 +478,7 @@ const EnhancedTimeTracker = ({ workOrderId, buildingId }) => {
                   size="large"
                   startIcon={<ClockInIcon />}
                   onClick={handleClockIn}
-                  disabled={isClockingIn}
+                  disabled={isClockingIn || !selectedBuilding}
                   sx={{ py: 2 }}
                 >
                   {isClockingIn ? 'Clocking In...' : 'Clock In'}
@@ -412,58 +486,111 @@ const EnhancedTimeTracker = ({ workOrderId, buildingId }) => {
               </Grid>
             ) : (
               <>
-                <Grid item xs={12} sm={4}>
+                <Grid item xs={12} sm={6}>
                   <Button
                     fullWidth
                     variant="contained"
                     color="error"
+                    size="large"
                     startIcon={<ClockOutIcon />}
                     onClick={handleClockOut}
                     disabled={isClockingOut}
+                    sx={{ py: 2 }}
                   >
-                    Clock Out
+                    {isClockingOut ? 'Clocking Out...' : 'Clock Out'}
                   </Button>
                 </Grid>
-                <Grid item xs={12} sm={4}>
-                  {!isPaused ? (
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      color="warning"
-                      startIcon={<BreakIcon />}
-                      onClick={() => setBreakDialog(true)}
-                      disabled={isStartingBreak}
-                    >
-                      Start Break
-                    </Button>
-                  ) : (
+                <Grid item xs={12} sm={6}>
+                  {isOnBreak ? (
                     <Button
                       fullWidth
                       variant="contained"
                       color="success"
+                      size="large"
                       startIcon={<ResumeIcon />}
                       onClick={handleEndBreak}
                       disabled={isEndingBreak}
+                      sx={{ py: 2 }}
                     >
-                      End Break
+                      {isEndingBreak ? 'Resuming...' : 'Resume Work'}
+                    </Button>
+                  ) : (
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      color="warning"
+                      size="large"
+                      startIcon={<BreakIcon />}
+                      onClick={() => setBreakDialog(true)}
+                      disabled={isStartingBreak}
+                      sx={{ py: 2 }}
+                    >
+                      Take Break
                     </Button>
                   )}
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    startIcon={<ProgressIcon />}
-                    onClick={() => setProgressDialog(true)}
-                  >
-                    Update Progress
-                  </Button>
                 </Grid>
               </>
             )}
           </Grid>
         </CardContent>
       </Card>
+
+      {/* Quick Actions */}
+      {isActive && (
+        <Card elevation={2} sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Quick Actions
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={6} sm={3}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<CameraIcon />}
+                  onClick={handlePhotoCapture}
+                  size="small"
+                >
+                  Add Photo
+                </Button>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<ProgressIcon />}
+                  onClick={() => setProgressDialog(true)}
+                  size="small"
+                >
+                  Update Progress
+                </Button>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<LocationIcon />}
+                  onClick={getCurrentLocation}
+                  size="small"
+                >
+                  Update Location
+                </Button>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<NotesIcon />}
+                  onClick={() => document.getElementById('notes-field')?.focus()}
+                  size="small"
+                >
+                  Add Notes
+                </Button>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Photos and Notes Section */}
       <Card elevation={2} sx={{ mb: 3 }}>
@@ -518,13 +645,14 @@ const EnhancedTimeTracker = ({ workOrderId, buildingId }) => {
           
           {/* Notes Field */}
           <TextField
+            id="notes-field"
             fullWidth
             multiline
             rows={3}
-            label="Notes"
+            label="Add notes about your work"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Add notes about your work..."
+            placeholder="Describe what you're working on, any issues, or progress updates..."
           />
         </CardContent>
       </Card>
