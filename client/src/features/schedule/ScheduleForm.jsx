@@ -17,7 +17,8 @@ import {
   Box,
   Typography
 } from '@mui/material';
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useSnackbar } from 'notistack';
@@ -34,9 +35,7 @@ const validationSchema = Yup.object({
   worker: Yup.string().required('Worker is required'),
   date: Yup.date().required('Date is required'),
   startTime: Yup.date().required('Start time is required'),
-  endTime: Yup.date()
-    .required('End time is required')
-    .min(Yup.ref('startTime'), 'End time must be after start time'),
+  endTime: Yup.date().required('End time is required'),
   status: Yup.string().required('Status is required'),
   notes: Yup.string(),
 });
@@ -57,8 +56,8 @@ const ScheduleForm = ({
       workOrder: initialValues?.workOrder?._id || '',
       worker: initialValues?.worker?._id || '',
       date: initialValues?.date ? new Date(initialValues.date) : new Date(),
-      startTime: initialValues?.startTime ? new Date(initialValues.startTime) : new Date(),
-      endTime: initialValues?.endTime ? new Date(initialValues.endTime) : new Date(Date.now() + 3600000), // 1 hour later
+      startTime: initialValues?.startTime ? new Date(`1970-01-01T${new Date(initialValues.startTime).toTimeString().split(' ')[0]}`) : new Date(`1970-01-01T08:00:00`),
+      endTime: initialValues?.endTime ? new Date(`1970-01-01T${new Date(initialValues.endTime).toTimeString().split(' ')[0]}`) : new Date(`1970-01-01T17:00:00`),
       status: initialValues?.status || 'scheduled',
       notes: initialValues?.notes || '',
     },
@@ -67,12 +66,27 @@ const ScheduleForm = ({
       try {
         setIsSubmitting(true);
         
+        // Combine date with start and end times
+        const startDateTime = new Date(values.date);
+        const endDateTime = new Date(values.date);
+        
+        if (values.startTime) {
+          startDateTime.setHours(values.startTime.getHours(), values.startTime.getMinutes());
+        }
+        
+        if (values.endTime) {
+          endDateTime.setHours(values.endTime.getHours(), values.endTime.getMinutes());
+        }
+        
         // Format dates for API
         const scheduleData = {
-          ...values,
-          startTime: values.startTime.toISOString(),
-          endTime: values.endTime.toISOString(),
+          workOrder: values.workOrder,
+          worker: values.worker,
           date: values.date.toISOString().split('T')[0],
+          startTime: startDateTime.toISOString(),
+          endTime: endDateTime.toISOString(),
+          status: values.status,
+          notes: values.notes,
         };
 
         await onSubmit(scheduleData);
@@ -94,8 +108,8 @@ const ScheduleForm = ({
         workOrder: initialValues.workOrder?._id || '',
         worker: initialValues.worker?._id || '',
         date: initialValues.date ? new Date(initialValues.date) : new Date(),
-        startTime: initialValues.startTime ? new Date(initialValues.startTime) : new Date(),
-        endTime: initialValues.endTime ? new Date(initialValues.endTime) : new Date(Date.now() + 3600000),
+        startTime: initialValues.startTime ? new Date(`1970-01-01T${new Date(initialValues.startTime).toTimeString().split(' ')[0]}`) : new Date(`1970-01-01T08:00:00`),
+        endTime: initialValues.endTime ? new Date(`1970-01-01T${new Date(initialValues.endTime).toTimeString().split(' ')[0]}`) : new Date(`1970-01-01T17:00:00`),
         status: initialValues.status || 'scheduled',
         notes: initialValues.notes || '',
       });
@@ -155,37 +169,61 @@ const ScheduleForm = ({
 
             <Grid item xs={12} sm={6}>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DateTimePicker
-                  label="Start Time"
-                  value={formik.values.startTime}
-                  onChange={(date) => formik.setFieldValue('startTime', date)}
-                  renderInput={(params) => (
-                    <TextField 
-                      {...params} 
-                      fullWidth 
-                      error={formik.touched.startTime && Boolean(formik.errors.startTime)}
-                      helperText={formik.touched.startTime && formik.errors.startTime}
-                    />
-                  )}
+                <DatePicker
+                  label="Date"
+                  value={formik.values.date}
+                  onChange={(date) => formik.setFieldValue('date', date)}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      error: formik.touched.date && Boolean(formik.errors.date),
+                      helperText: formik.touched.date && formik.errors.date
+                    }
+                  }}
                 />
               </LocalizationProvider>
             </Grid>
 
             <Grid item xs={12} sm={6}>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DateTimePicker
+                <TimePicker
+                  label="Start Time"
+                  value={formik.values.startTime}
+                  onChange={(time) => formik.setFieldValue('startTime', time)}
+                  ampm={true}
+                  views={['hours', 'minutes']}
+                  format="hh:mm a"
+                  minTime={new Date(0, 0, 0, 0, 0)} // 12:00 AM
+                  maxTime={new Date(0, 0, 0, 23, 59)} // 11:59 PM
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      error: formik.touched.startTime && Boolean(formik.errors.startTime),
+                      helperText: formik.touched.startTime && formik.errors.startTime
+                    }
+                  }}
+                />
+              </LocalizationProvider>
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <TimePicker
                   label="End Time"
                   value={formik.values.endTime}
-                  minDateTime={formik.values.startTime}
-                  onChange={(date) => formik.setFieldValue('endTime', date)}
-                  renderInput={(params) => (
-                    <TextField 
-                      {...params} 
-                      fullWidth 
-                      error={formik.touched.endTime && Boolean(formik.errors.endTime)}
-                      helperText={formik.touched.endTime && formik.errors.endTime}
-                    />
-                  )}
+                  onChange={(time) => formik.setFieldValue('endTime', time)}
+                  ampm={true}
+                  views={['hours', 'minutes']}
+                  format="hh:mm a"
+                  minTime={new Date(0, 0, 0, 0, 0)} // 12:00 AM
+                  maxTime={new Date(0, 0, 0, 23, 59)} // 11:59 PM
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      error: formik.touched.endTime && Boolean(formik.errors.endTime),
+                      helperText: formik.touched.endTime && formik.errors.endTime
+                    }
+                  }}
                 />
               </LocalizationProvider>
             </Grid>

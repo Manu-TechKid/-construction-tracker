@@ -879,6 +879,11 @@ const WorkerSchedules = () => {
                         formik.setFieldValue('endTime', newEndTime);
                       }
                     }}
+                    ampm={true}
+                    views={['hours', 'minutes']}
+                    format="hh:mm a"
+                    minTime={new Date(0, 0, 0, 0, 0)} // 12:00 AM
+                    maxTime={new Date(0, 0, 0, 23, 59)} // 11:59 PM
                     slotProps={{
                       textField: {
                         fullWidth: true,
@@ -894,6 +899,11 @@ const WorkerSchedules = () => {
                     label="End Time"
                     value={formik.values.endTime}
                     onChange={(newValue) => formik.setFieldValue('endTime', newValue)}
+                    ampm={true}
+                    views={['hours', 'minutes']}
+                    format="hh:mm a"
+                    minTime={new Date(0, 0, 0, 0, 0)} // 12:00 AM
+                    maxTime={new Date(0, 0, 0, 23, 59)} // 11:59 PM
                     slotProps={{
                       textField: {
                         fullWidth: true,
