@@ -48,7 +48,9 @@ import {
   Refresh as RefreshIcon,
   PhotoCamera as PhotoIcon,
   Notes as NotesIcon,
-  Timeline as ProgressIcon
+  Timeline as ProgressIcon,
+  Timeline as StatsIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { format, parseISO, differenceInHours, differenceInMinutes } from 'date-fns';
 import { toast } from 'react-toastify';
@@ -71,6 +73,7 @@ const TimeTrackingManagement = () => {
   
   // State
   const [activeTab, setActiveTab] = useState(0);
+  const [selectedTab, setSelectedTab] = useState(0);
   const [filters, setFilters] = useState({
     workerId: '',
     buildingId: '',
@@ -90,11 +93,12 @@ const TimeTrackingManagement = () => {
   const { data: usersData } = useGetUsersQuery({ role: 'worker' });
   const { data: buildingsData } = useGetBuildingsQuery();
   
-  const [approveTimeSession] = useApproveTimeSessionMutation();
-  const [deleteTimeSession] = useDeleteTimeSessionMutation();
+  const [approveTimeSession, { isLoading: isApproving }] = useApproveTimeSessionMutation();
+  const [deleteTimeSession, { isLoading: isDeleting }] = useDeleteTimeSessionMutation();
   
   const sessions = sessionsData?.data?.sessions || [];
   const pendingSessions = pendingData?.data?.sessions || [];
+  const pendingApprovals = pendingData?.data?.sessions || [];
   const stats = statsData?.data?.stats || {};
   const workers = usersData?.data?.users || [];
   const buildings = buildingsData?.data?.buildings || [];
