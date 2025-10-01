@@ -55,21 +55,11 @@ exports.signup = catchAsync(async (req, res, next) => {
     name,
     email: email.toLowerCase(),
     password,
-    phone,
-    // Use model defaults for role, isActive, and approvalStatus
   };
 
   const newUser = await User.create(userData);
 
-  // Try to notify admins of new registration (don't block registration if this fails)
-  try {
-    await notifyAdminsOfWorkerRegistration(newUser);
-  } catch (emailError) {
-    console.error('Failed to send admin notification email:', emailError);
-    // Continue with registration even if email fails
-  }
-  
-  // Send response for pending approval
+  // Send immediate response for better UX
   res.status(201).json({
     status: 'success',
     message: 'Registration submitted successfully! Your account is pending admin approval.',
@@ -79,12 +69,25 @@ exports.signup = catchAsync(async (req, res, next) => {
         name: newUser.name,
         email: newUser.email,
         role: newUser.role,
-        approvalStatus: newUser.approvalStatus
+        approvalStatus: newUser.approvalStatus,
+        isActive: newUser.isActive
       }
+    }
+  });
+
+  // Send admin notification asynchronously (don't wait for it)
+  setImmediate(async () => {
+    try {
+      await notifyAdminsOfWorkerRegistration(newUser);
+      console.log('Admin notification emails sent successfully');
+    } catch (emailError) {
+      console.error('Failed to send admin notification email:', emailError);
+      // Registration already completed, so this doesn't affect user experience
     }
   });
 });
 
+// Login controller
 exports.login = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
 

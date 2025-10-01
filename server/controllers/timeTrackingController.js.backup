@@ -435,3 +435,192 @@ exports.deleteTimeSession = catchAsync(async (req, res, next) => {
     data: null
   });
 });
+  });
+
+  if (!activeSession) {
+    return next(new AppError('No active time session found', 400));
+  }
+
+  // Check if there's already an active break
+  const activeBreak = activeSession.breaks.find(b => !b.endTime);
+  if (activeBreak) {
+    return next(new AppError('Break is already active', 400));
+  }
+
+  activeSession.breaks.push({
+    startTime: new Date(),
+    reason,
+    location: {
+      latitude,
+      longitude
+    }
+  });
+
+  activeSession.status = 'paused';
+  await activeSession.save();
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      session: activeSession
+    }
+  });
+});
+
+// End break
+exports.endBreak = catchAsync(async (req, res, next) => {
+  const { workerId } = req.body;
+
+  const activeSession = await TimeSession.findOne({
+    worker: workerId,
+    status: 'paused'
+  });
+
+  if (!activeSession) {
+    return next(new AppError('No paused time session found', 400));
+  }
+
+  // Find the active break
+  const activeBreak = activeSession.breaks.find(b => !b.endTime);
+  if (!activeBreak) {
+    return next(new AppError('No active break found', 400));
+  }
+
+  activeBreak.endTime = new Date();
+  activeBreak.duration = Math.round((activeBreak.endTime - activeBreak.startTime) / (1000 * 60)); // Minutes
+
+  // Add break time to total break time
+  activeSession.breakTime += activeBreak.duration;
+  activeSession.status = 'active';
+
+  await activeSession.save();
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      session: activeSession
+    }
+  });
+});
+
+// Approve time session (Admin/Manager only)
+exports.approveTimeSession = catchAsync(async (req, res, next) => {
+  const { sessionId } = req.params;
+  const { approved, rejectionReason } = req.body;
+
+  const session = await TimeSession.findById(sessionId);
+  if (!session) {
+    return next(new AppError('Time session not found', 404));
+  }
+
+  session.isApproved = approved;
+  session.approvedBy = req.user.id;
+  session.approvedAt = new Date();
+  
+  if (!approved && rejectionReason) {
+    session.rejectionReason = rejectionReason;
+  }
+
+  await session.save();
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      session
+    }
+  });
+});
+
+// Get pending approvals (Admin/Manager only)
+exports.getPendingApprovals = catchAsync(async (req, res, next) => {
+  const { page = 1, limit = 10 } = req.query;
+  const skip = (page - 1) * limit;
+
+  const [sessions, total] = await Promise.all([
+    TimeSession.find({ isApproved: false, status: 'completed' })
+      .populate([
+        { path: 'worker', select: 'name email' },
+        { path: 'workOrder', select: 'title description' },
+        { path: 'building', select: 'name address' }
+      ])
+      .sort({ clockOutTime: -1 })
+      .skip(skip)
+      .limit(parseInt(limit)),
+    TimeSession.countDocuments({ isApproved: false, status: 'completed' })
+  ]);
+
+  res.status(200).json({
+    status: 'success',
+    results: sessions.length,
+    totalPages: Math.ceil(total / limit),
+    currentPage: parseInt(page),
+    data: {
+      sessions
+    }
+  });
+});
+
+// Get time tracking statistics
+exports.getTimeStats = catchAsync(async (req, res, next) => {
+  const { workerId, buildingId, startDate, endDate } = req.query;
+
+  const filter = { status: 'completed' };
+  if (workerId) filter.worker = workerId;
+  if (buildingId) filter.building = buildingId;
+
+  if (startDate || endDate) {
+    filter.clockInTime = {};
+    if (startDate) filter.clockInTime.$gte = new Date(startDate);
+    if (endDate) filter.clockInTime.$lte = new Date(endDate);
+  }
+
+  const stats = await TimeSession.aggregate([
+    { $match: filter },
+    {
+      $group: {
+        _id: null,
+        totalSessions: { $sum: 1 },
+        totalHours: { $sum: '$totalHours' },
+        totalBreakTime: { $sum: '$breakTime' },
+        averageHoursPerSession: { $avg: '$totalHours' },
+        approvedSessions: {
+          $sum: { $cond: ['$isApproved', 1, 0] }
+        },
+        pendingSessions: {
+          $sum: { $cond: ['$isApproved', 0, 1] }
+        }
+      }
+    }
+  ]);
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      stats: stats[0] || {
+        totalSessions: 0,
+        totalHours: 0,
+        totalBreakTime: 0,
+        averageHoursPerSession: 0,
+        approvedSessions: 0,
+        pendingSessions: 0
+      }
+    }
+  });
+});
+
+// Delete time session (Admin/Manager only)
+exports.deleteTimeSession = catchAsync(async (req, res, next) => {
+  const { sessionId } = req.params;
+
+  const session = await TimeSession.findById(sessionId);
+  if (!session) {
+    return next(new AppError('Time session not found', 404));
+  }
+
+  await TimeSession.findByIdAndDelete(sessionId);
+
+  res.status(204).json({
+    status: 'success',
+    data: null
+  });
+});

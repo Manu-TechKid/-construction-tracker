@@ -94,10 +94,16 @@ const Register = () => {
 
       {registrationSuccess ? (
         <Alert severity="success" sx={{ mb: 3 }}>
-          <Typography variant="h6" gutterBottom>Registration Submitted Successfully!</Typography>
-          <Typography variant="body2">
+          <Typography variant="h6" gutterBottom>✅ Registration Submitted Successfully!</Typography>
+          <Typography variant="body2" sx={{ mb: 2 }}>
             Your account has been submitted for approval. An administrator will review your request and assign your role. 
             You will receive an email notification once your account is approved.
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            <strong>Next Steps:</strong>
+            <br />• Your registration is now in the admin approval queue
+            <br />• You cannot log in until an admin approves your account
+            <br />• Check your email for approval notifications
           </Typography>
           <Box sx={{ mt: 2 }}>
             <Button variant="outlined" onClick={() => navigate('/login')}>
