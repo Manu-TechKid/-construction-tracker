@@ -851,23 +851,23 @@ const WorkOrders = () => {
           mb: 3,
           boxShadow: 3,
           border: '3px solid #1976d2',
-          backgroundColor: '#e3f2fd',
-          minHeight: '200px'
+          backgroundColor: '#e3f2fd'
         }}>
-          <CardContent>
-            <Typography variant="h5" gutterBottom sx={{ mb: 2, fontWeight: 'bold', color: '#1976d2' }}>
+          <CardContent sx={{ pb: 2 }}>
+            <Typography variant="h5" gutterBottom sx={{ mb: 1.5, fontWeight: 'bold', color: '#1976d2' }}>
               🔍 Filter Work Orders
             </Typography>
             <Typography variant="body2" sx={{ mb: 2, color: '#666' }}>
-              Total Work Orders: {workOrders.length} | Filtered: {filteredWorkOrders.length}
+              Total: {workOrders.length} | Filtered: {filteredWorkOrders.length}
               {filters.startDate && filters.endDate && (
-                <span> | Date Range: {format(filters.startDate, 'MMM dd')} - {format(filters.endDate, 'MMM dd, yyyy')}</span>
+                <span> | {format(filters.startDate, 'MMM dd')} - {format(filters.endDate, 'MMM dd, yyyy')}</span>
               )}
             </Typography>
             
-            {/* Basic Filters Row */}
-            <Grid container spacing={2} sx={{ mb: 2 }}>
-              <Grid item xs={12} sm={6} md={4}>
+            {/* All Filters in One Compact Layout */}
+            <Grid container spacing={2}>
+              {/* Row 1: Building, Status, Quick Month Filters */}
+              <Grid item xs={12} sm={6} md={3}>
                 <TextField
                   select
                   fullWidth
@@ -878,13 +878,6 @@ const WorkOrders = () => {
                   variant="outlined"
                   size="small"
                   disabled={isLoadingBuildings || Boolean(buildingsError)}
-                  helperText={
-                    isLoadingBuildings 
-                      ? 'Loading buildings...' 
-                      : buildingsError 
-                      ? 'Error loading buildings' 
-                      : ''
-                  }
                   error={Boolean(buildingsError)}
                 >
                   <MenuItem value="">
@@ -894,7 +887,6 @@ const WorkOrders = () => {
                     try {
                       let buildings = [];
                       
-                      // Handle different possible data structures
                       if (buildingsData?.data?.buildings && Array.isArray(buildingsData.data.buildings)) {
                         buildings = buildingsData.data.buildings;
                       } else if (buildingsData?.data && Array.isArray(buildingsData.data)) {
@@ -920,13 +912,9 @@ const WorkOrders = () => {
                     }
                   })()}
                 </TextField>
-                {buildingsError && (
-                  <Typography color="error" variant="caption">
-                    Error loading buildings
-                  </Typography>
-                )}
               </Grid>
-              <Grid item xs={12} sm={6} md={4}>
+              
+              <Grid item xs={12} sm={6} md={3}>
                 <TextField
                   select
                   fullWidth
@@ -950,96 +938,123 @@ const WorkOrders = () => {
                   ))}
                 </TextField>
               </Grid>
-              <Grid item xs={12} md={4} sx={{ display: 'flex', alignItems: 'flex-end' }}>
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  onClick={() => setFilters({ building: '', status: '', startDate: null, endDate: null })}
-                  disabled={!filters.building && !filters.status && !filters.startDate && !filters.endDate}
-                  fullWidth
-                  size="large"
-                  sx={{ height: '40px' }}
-                >
-                  Clear All Filters
-                </Button>
+              
+              <Grid item xs={12} sm={6} md={3}>
+                <DatePicker
+                  label="Start Date"
+                  value={filters.startDate}
+                  onChange={(date) => handleDateFilterChange('startDate', date)}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      size: 'small',
+                      variant: 'outlined'
+                    }
+                  }}
+                />
+              </Grid>
+              
+              <Grid item xs={12} sm={6} md={3}>
+                <DatePicker
+                  label="End Date"
+                  value={filters.endDate}
+                  onChange={(date) => handleDateFilterChange('endDate', date)}
+                  minDate={filters.startDate}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      size: 'small',
+                      variant: 'outlined'
+                    }
+                  }}
+                />
+              </Grid>
+              
+              {/* Row 2: Quick Date Filter Buttons */}
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Typography variant="subtitle2" sx={{ color: '#1976d2', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <CalendarIcon fontSize="small" /> Quick Date Filters:
+                  </Typography>
+                  <Stack 
+                    direction="row" 
+                    spacing={1} 
+                    flexWrap="wrap" 
+                    useFlexGap
+                    sx={{
+                      '& .MuiButton-root': {
+                        minWidth: 'auto',
+                        px: 1.5,
+                        py: 0.5,
+                        fontSize: '0.75rem',
+                        textTransform: 'none'
+                      }
+                    }}
+                  >
+                    <Button 
+                      size="small" 
+                      variant={filters.startDate && format(filters.startDate, 'yyyy-MM-dd') === format(startOfWeek(new Date()), 'yyyy-MM-dd') ? 'contained' : 'outlined'}
+                      onClick={() => setQuickDateFilter('thisWeek')}
+                    >
+                      This Week
+                    </Button>
+                    <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('lastWeek')}>
+                      Last Week
+                    </Button>
+                    <Button 
+                      size="small" 
+                      variant={filters.startDate && format(filters.startDate, 'yyyy-MM') === format(startOfMonth(new Date()), 'yyyy-MM') ? 'contained' : 'outlined'}
+                      onClick={() => setQuickDateFilter('thisMonth')}
+                    >
+                      This Month
+                    </Button>
+                    <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('lastMonth')}>
+                      Last Month
+                    </Button>
+                    <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('monthsBack', 2)}>
+                      2 Months Ago
+                    </Button>
+                    <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('monthsBack', 3)}>
+                      3 Months Ago
+                    </Button>
+                    <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('thisYear')}>
+                      This Year
+                    </Button>
+                    <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('lastYear')}>
+                      Last Year
+                    </Button>
+                    <Button 
+                      size="small" 
+                      variant="text" 
+                      color="secondary" 
+                      onClick={() => setQuickDateFilter('clear')}
+                      sx={{ ml: 1 }}
+                    >
+                      Clear Dates
+                    </Button>
+                  </Stack>
+                </Box>
+              </Grid>
+              
+              {/* Row 3: Clear All Button */}
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    onClick={() => setFilters({ building: '', status: '', startDate: null, endDate: null })}
+                    disabled={!filters.building && !filters.status && !filters.startDate && !filters.endDate}
+                    sx={{ 
+                      minWidth: 200,
+                      height: '36px',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    Clear All Filters
+                  </Button>
+                </Box>
               </Grid>
             </Grid>
-            
-            <Divider sx={{ my: 2, borderColor: '#1976d2' }} />
-            
-            {/* Date Range Filters */}
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="h6" sx={{ mb: 1, fontWeight: 'bold', color: '#1976d2', display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CalendarIcon /> Date Range Filters
-              </Typography>
-              
-              {/* Quick Date Buttons */}
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ mb: 1, color: '#666' }}>Quick Filters:</Typography>
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('thisWeek')}>
-                    This Week
-                  </Button>
-                  <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('lastWeek')}>
-                    Last Week
-                  </Button>
-                  <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('thisMonth')}>
-                    This Month
-                  </Button>
-                  <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('lastMonth')}>
-                    Last Month
-                  </Button>
-                  <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('monthsBack', 2)}>
-                    2 Months Ago
-                  </Button>
-                  <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('monthsBack', 3)}>
-                    3 Months Ago
-                  </Button>
-                  <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('thisYear')}>
-                    This Year
-                  </Button>
-                  <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('lastYear')}>
-                    Last Year
-                  </Button>
-                  <Button size="small" variant="text" color="secondary" onClick={() => setQuickDateFilter('clear')}>
-                    Clear Dates
-                  </Button>
-                </Stack>
-              </Box>
-              
-              {/* Custom Date Range */}
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <DatePicker
-                    label="Start Date"
-                    value={filters.startDate}
-                    onChange={(date) => handleDateFilterChange('startDate', date)}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        size: 'small',
-                        variant: 'outlined'
-                      }
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <DatePicker
-                    label="End Date"
-                    value={filters.endDate}
-                    onChange={(date) => handleDateFilterChange('endDate', date)}
-                    minDate={filters.startDate}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        size: 'small',
-                        variant: 'outlined'
-                      }
-                    }}
-                  />
-                </Grid>
-              </Grid>
-            </Box>
           </CardContent>
         </Card>
       </LocalizationProvider>
