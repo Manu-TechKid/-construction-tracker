@@ -333,11 +333,19 @@ const WorkOrders = () => {
   }, [filteredWorkOrders]);
 
   if (isLoading) {
-    return <CircularProgress />;
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <CircularProgress />
+      </Box>
+    );
   }
 
   if (error) {
-    return <Alert severity="error">Error loading work orders.</Alert>;
+    return (
+      <Box p={3}>
+        <Alert severity="error">Error loading work orders: {error?.message || 'Unknown error'}</Alert>
+      </Box>
+    );
   }
 
 
@@ -889,9 +897,15 @@ const WorkOrders = () => {
     },
   ];
 
-  // Optional: Enable debug logging by uncommenting the lines below
-  // console.log('Buildings Data:', buildingsData);
-  // console.log('Current Filters:', filters);
+  // Debug logging
+  console.log('WorkOrders Debug:', {
+    workOrdersCount: workOrders.length,
+    buildingsCount: buildings.length,
+    filters,
+    stats,
+    isLoading,
+    error
+  });
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -916,7 +930,7 @@ const WorkOrders = () => {
               <FilterIcon />
               Work Order Filters
               <Chip 
-                label={`${stats.total} work orders found`}
+                label={`${stats?.total || 0} work orders found`}
                 size="small" 
                 color="primary" 
               />
@@ -962,11 +976,13 @@ const WorkOrders = () => {
                         label="Building"
                       >
                         <MenuItem value="">All Buildings</MenuItem>
-                        {buildings.map((building) => (
+                        {buildings && buildings.length > 0 ? buildings.map((building) => (
                           <MenuItem key={building._id} value={building._id}>
                             {building.name}
                           </MenuItem>
-                        ))}
+                        )) : (
+                          <MenuItem disabled>No buildings available</MenuItem>
+                        )}
                       </Select>
                     </FormControl>
                   </Grid>
@@ -1068,22 +1084,22 @@ const WorkOrders = () => {
                   <Grid container spacing={2}>
                     <Grid item xs={6} sm={3}>
                       <Typography variant="body2" color="primary">
-                        <strong>Total: {stats.total}</strong>
+                        <strong>Total: {stats?.total || 0}</strong>
                       </Typography>
                     </Grid>
                     <Grid item xs={6} sm={3}>
                       <Typography variant="body2" color="success.main">
-                        <strong>Completed: {stats.completed}</strong>
+                        <strong>Completed: {stats?.completed || 0}</strong>
                       </Typography>
                     </Grid>
                     <Grid item xs={6} sm={3}>
                       <Typography variant="body2" color="info.main">
-                        <strong>In Progress: {stats.inProgress}</strong>
+                        <strong>In Progress: {stats?.inProgress || 0}</strong>
                       </Typography>
                     </Grid>
                     <Grid item xs={6} sm={3}>
                       <Typography variant="body2" color="warning.main">
-                        <strong>Pending: {stats.pending}</strong>
+                        <strong>Pending: {stats?.pending || 0}</strong>
                       </Typography>
                     </Grid>
                   </Grid>
