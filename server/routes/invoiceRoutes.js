@@ -11,6 +11,9 @@ router.use(authController.protect);
 // Get unbilled work orders (available to all authenticated users)
 router.get('/building/:buildingId/unbilled', invoiceController.getUnbilledWorkOrders);
 
+// Get filtered work orders for invoice creation
+router.get('/work-orders/filtered', invoiceController.getFilteredWorkOrders);
+
 // Worker routes (view only)
 router.get('/my-invoices', invoiceController.getMyInvoices);
 

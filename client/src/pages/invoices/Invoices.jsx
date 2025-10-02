@@ -27,7 +27,12 @@ import {
   Grid,
   Alert,
   CircularProgress,
+  Stack,
 } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { startOfMonth, endOfMonth, format, isWithinInterval } from 'date-fns';
 import {
   Add as AddIcon,
   MoreVert as MoreVertIcon,
@@ -49,6 +54,12 @@ const Invoices = () => {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterBuilding, setFilterBuilding] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  
+  // Monthly filtering state
+  const [monthFilter, setMonthFilter] = useState({
+    startDate: startOfMonth(new Date()),
+    endDate: endOfMonth(new Date())
+  });
 
   const { data: invoicesData, isLoading, error } = useGetInvoicesQuery();
   const { data: buildingsData } = useGetBuildingsQuery();
@@ -118,8 +129,40 @@ const Invoices = () => {
   const filteredInvoices = invoices.filter(invoice => {
     const statusMatch = !filterStatus || invoice.status === filterStatus;
     const buildingMatch = !filterBuilding || invoice.building?._id === filterBuilding;
-    return statusMatch && buildingMatch;
+    
+    // Date range filter
+    const invoiceDate = new Date(invoice.createdAt);
+    const dateMatch = isWithinInterval(invoiceDate, {
+      start: monthFilter.startDate,
+      end: monthFilter.endDate
+    });
+    
+    return statusMatch && buildingMatch && dateMatch;
   });
+  
+  // Quick month filter functions
+  const setQuickMonthFilter = (monthsBack = 0) => {
+    const targetDate = new Date();
+    targetDate.setMonth(targetDate.getMonth() - monthsBack);
+    
+    setMonthFilter({
+      startDate: startOfMonth(targetDate),
+      endDate: endOfMonth(targetDate)
+    });
+  };
+  
+  // Calculate totals for current filter
+  const calculateTotals = () => {
+    const totalAmount = filteredInvoices.reduce((sum, invoice) => sum + (invoice.total || 0), 0);
+    const paidAmount = filteredInvoices
+      .filter(invoice => invoice.status === 'paid')
+      .reduce((sum, invoice) => sum + (invoice.total || 0), 0);
+    const pendingAmount = totalAmount - paidAmount;
+    
+    return { totalAmount, paidAmount, pendingAmount };
+  };
+  
+  const totals = calculateTotals();
 
   if (isLoading) return (
     <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
@@ -148,46 +191,177 @@ const Invoices = () => {
         </Button>
       </Box>
 
-      {/* Filters */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  label="Status"
+      {/* Enhanced Filters with Monthly Selection */}
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Invoice Filters & History
+            </Typography>
+            
+            {/* Quick Month Selection */}
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Quick Month Selection:
+              </Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap">
+                <Button 
+                  size="small" 
+                  variant={monthFilter.startDate.getMonth() === new Date().getMonth() ? 'contained' : 'outlined'}
+                  onClick={() => setQuickMonthFilter(0)}
                 >
-                  <MenuItem value="">All Statuses</MenuItem>
-                  <MenuItem value="draft">Draft</MenuItem>
-                  <MenuItem value="sent">Sent</MenuItem>
-                  <MenuItem value="paid">Paid</MenuItem>
-                  <MenuItem value="overdue">Overdue</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Building</InputLabel>
-                <Select
-                  value={filterBuilding}
-                  onChange={(e) => setFilterBuilding(e.target.value)}
-                  label="Building"
+                  This Month
+                </Button>
+                <Button 
+                  size="small" 
+                  variant="outlined"
+                  onClick={() => setQuickMonthFilter(1)}
                 >
-                  <MenuItem value="">All Buildings</MenuItem>
-                  {buildings.map((building) => (
-                    <MenuItem key={building._id} value={building._id}>
-                      {building.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                  Last Month
+                </Button>
+                <Button 
+                  size="small" 
+                  variant="outlined"
+                  onClick={() => setQuickMonthFilter(2)}
+                >
+                  2 Months Ago
+                </Button>
+                <Button 
+                  size="small" 
+                  variant="outlined"
+                  onClick={() => setQuickMonthFilter(3)}
+                >
+                  3 Months Ago
+                </Button>
+                <Button 
+                  size="small" 
+                  variant="outlined"
+                  onClick={() => setMonthFilter({
+                    startDate: startOfMonth(new Date(new Date().getFullYear(), 8, 1)), // September
+                    endDate: endOfMonth(new Date(new Date().getFullYear(), 8, 30))
+                  })}
+                >
+                  September 2025
+                </Button>
+                <Button 
+                  size="small" 
+                  variant="outlined"
+                  onClick={() => setMonthFilter({
+                    startDate: startOfMonth(new Date(new Date().getFullYear(), 9, 1)), // October
+                    endDate: endOfMonth(new Date(new Date().getFullYear(), 9, 31))
+                  })}
+                >
+                  October 2025
+                </Button>
+                <Button 
+                  size="small" 
+                  variant="outlined"
+                  onClick={() => setMonthFilter({
+                    startDate: startOfMonth(new Date(new Date().getFullYear(), 10, 1)), // November
+                    endDate: endOfMonth(new Date(new Date().getFullYear(), 10, 30))
+                  })}
+                >
+                  November 2025
+                </Button>
+              </Stack>
+            </Box>
+            
+            <Grid container spacing={2} alignItems="center">
+              {/* Date Range */}
+              <Grid item xs={12} md={3}>
+                <DatePicker
+                  label="Start Date"
+                  value={monthFilter.startDate}
+                  onChange={(date) => setMonthFilter(prev => ({ ...prev, startDate: date }))}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      size: 'small'
+                    }
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <DatePicker
+                  label="End Date"
+                  value={monthFilter.endDate}
+                  onChange={(date) => setMonthFilter(prev => ({ ...prev, endDate: date }))}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      size: 'small'
+                    }
+                  }}
+                />
+              </Grid>
+              
+              {/* Status Filter */}
+              <Grid item xs={12} sm={6} md={3}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Status</InputLabel>
+                  <Select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    label="Status"
+                  >
+                    <MenuItem value="">All Statuses</MenuItem>
+                    <MenuItem value="draft">Draft</MenuItem>
+                    <MenuItem value="sent">Sent</MenuItem>
+                    <MenuItem value="paid">Paid</MenuItem>
+                    <MenuItem value="overdue">Overdue</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              {/* Building Filter */}
+              <Grid item xs={12} sm={6} md={3}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Building</InputLabel>
+                  <Select
+                    value={filterBuilding}
+                    onChange={(e) => setFilterBuilding(e.target.value)}
+                    label="Building"
+                  >
+                    <MenuItem value="">All Buildings</MenuItem>
+                    {buildings.map((building) => (
+                      <MenuItem key={building._id} value={building._id}>
+                        {building.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
             </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
+            
+            {/* Summary Stats */}
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Period: {format(monthFilter.startDate, 'MMM dd, yyyy')} - {format(monthFilter.endDate, 'MMM dd, yyyy')}
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={4}>
+                  <Typography variant="body2" color="primary">
+                    <strong>Total: ${totals.totalAmount.toFixed(2)}</strong>
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <Typography variant="body2" color="success.main">
+                    <strong>Paid: ${totals.paidAmount.toFixed(2)}</strong>
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <Typography variant="body2" color="warning.main">
+                    <strong>Pending: ${totals.pendingAmount.toFixed(2)}</strong>
+                  </Typography>
+                </Grid>
+              </Grid>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Found {filteredInvoices.length} invoices in selected period
+              </Typography>
+            </Box>
+          </CardContent>
+        </Card>
+      </LocalizationProvider>
 
       {/* Invoices Table */}
       <Card>

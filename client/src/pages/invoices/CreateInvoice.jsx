@@ -28,14 +28,25 @@ import {
   Checkbox,
   FormControlLabel,
   Divider,
-  CircularProgress
+  CircularProgress,
+  Chip,
+  Stack,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material';
-import { ArrowBack as ArrowBackIcon, Save as SaveIcon } from '@mui/icons-material';
+import { 
+  ArrowBack as ArrowBackIcon, 
+  Save as SaveIcon,
+  FilterList as FilterIcon,
+  ExpandMore as ExpandMoreIcon
+} from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
-import { useGetUnbilledWorkOrdersQuery, useCreateInvoiceMutation } from '../../features/invoices/invoicesApiSlice';
+import { useGetFilteredWorkOrdersQuery, useCreateInvoiceMutation } from '../../features/invoices/invoicesApiSlice';
 
 const validationSchema = Yup.object({
   buildingId: Yup.string().required('Building is required'),
@@ -56,23 +67,56 @@ const CreateInvoice = () => {
   const [selectedWorkOrders, setSelectedWorkOrders] = useState([]);
   const [selectedBuildingId, setSelectedBuildingId] = useState('');
   
+  // Enhanced filtering state
+  const [filters, setFilters] = useState({
+    startDate: startOfMonth(new Date()),
+    endDate: endOfMonth(new Date()),
+    workType: '',
+    workSubType: '',
+    status: 'completed' // Default to completed work orders
+  });
+  
   const { data: buildingsResponse, isLoading: isLoadingBuildings, error: buildingsError } = useGetBuildingsQuery();
   const buildings = buildingsResponse?.data?.buildings || [];
+  
+  // Work type options for filtering
+  const workTypes = [
+    { value: 'painting', label: 'Painting' },
+    { value: 'cleaning', label: 'Cleaning' },
+    { value: 'repair', label: 'Repairs' },
+    { value: 'maintenance', label: 'Maintenance' },
+    { value: 'installation', label: 'Installation' },
+    { value: 'inspection', label: 'Inspection' }
+  ];
+  
+  const workSubTypes = {
+    painting: ['interior', 'exterior', 'touch-up', 'primer', 'doors', 'ceilings', 'cabinets'],
+    cleaning: ['apartment', 'carpet', 'deep-clean', 'move-out', 'touch-up', 'gutter'],
+    repair: ['plumbing', 'electrical', 'hvac', 'flooring', 'drywall', 'appliance'],
+    maintenance: ['preventive', 'routine', 'seasonal', 'emergency'],
+    installation: ['fixtures', 'appliances', 'flooring', 'electrical'],
+    inspection: ['move-in', 'move-out', 'routine', 'damage-assessment']
+  };
 
-  // Fetch unbilled work orders when a building is selected
+  // Fetch filtered work orders when a building is selected
   const {
-    data: unbilledWorkOrdersData,
+    data: filteredWorkOrdersData,
     isLoading: isLoadingWorkOrders,
     error: workOrdersError
-  } = useGetUnbilledWorkOrdersQuery(
-    selectedBuildingId || '',
+  } = useGetFilteredWorkOrdersQuery(
+    {
+      buildingId: selectedBuildingId,
+      ...filters,
+      startDate: filters.startDate?.toISOString(),
+      endDate: filters.endDate?.toISOString()
+    },
     {
       skip: !selectedBuildingId,
       refetchOnMountOrArgChange: true
     }
   );
 
-  const workOrders = unbilledWorkOrdersData?.data || [];
+  const workOrders = filteredWorkOrdersData?.data || [];
 
   // Debug logging - only run when values actually change
   useEffect(() => {
@@ -89,12 +133,42 @@ const CreateInvoice = () => {
 
   const [createInvoice, { isLoading: isCreating }] = useCreateInvoiceMutation();
 
-  // Calculate total amount from selected work orders
+  // Calculate total amount from selected work orders with proper cost calculation
   const calculateTotal = () => {
     return selectedWorkOrders.reduce((total, workOrder) => {
-      // Use the price field (what customer pays) instead of cost fields
-      return total + (workOrder.price || workOrder.estimatedCost || workOrder.actualCost || 0);
+      let workOrderTotal = 0;
+      
+      // Priority 1: Calculate from services if available
+      if (workOrder.services && workOrder.services.length > 0) {
+        workOrderTotal = workOrder.services.reduce((sum, service) => {
+          return sum + (service.laborCost || 0) + (service.materialCost || 0);
+        }, 0);
+      }
+      // Priority 2: Use price field (what customer pays)
+      else if (workOrder.price && workOrder.price > 0) {
+        workOrderTotal = workOrder.price;
+      }
+      // Priority 3: Fall back to actual cost
+      else if (workOrder.actualCost && workOrder.actualCost > 0) {
+        workOrderTotal = workOrder.actualCost;
+      }
+      // Priority 4: Use estimated cost
+      else {
+        workOrderTotal = workOrder.estimatedCost || 0;
+      }
+      
+      return total + workOrderTotal;
     }, 0);
+  };
+  
+  // Get individual work order cost for display
+  const getWorkOrderCost = (workOrder) => {
+    if (workOrder.services && workOrder.services.length > 0) {
+      return workOrder.services.reduce((sum, service) => {
+        return sum + (service.laborCost || 0) + (service.materialCost || 0);
+      }, 0);
+    }
+    return workOrder.price || workOrder.actualCost || workOrder.estimatedCost || 0;
   };
 
   const formik = useFormik({
@@ -216,6 +290,43 @@ const CreateInvoice = () => {
       console.error('Error changing building:', error);
       toast.error('Error selecting building');
     }
+  };
+  
+  const handleFilterChange = (filterName, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterName]: value,
+      // Reset workSubType when workType changes
+      ...(filterName === 'workType' && { workSubType: '' })
+    }));
+    // Clear selected work orders when filters change
+    setSelectedWorkOrders([]);
+    formik.setFieldValue('workOrderIds', []);
+  };
+  
+  const resetFilters = () => {
+    setFilters({
+      startDate: startOfMonth(new Date()),
+      endDate: endOfMonth(new Date()),
+      workType: '',
+      workSubType: '',
+      status: 'completed'
+    });
+    setSelectedWorkOrders([]);
+    formik.setFieldValue('workOrderIds', []);
+  };
+  
+  const setMonthFilter = (monthsBack = 0) => {
+    const targetDate = new Date();
+    targetDate.setMonth(targetDate.getMonth() - monthsBack);
+    
+    setFilters(prev => ({
+      ...prev,
+      startDate: startOfMonth(targetDate),
+      endDate: endOfMonth(targetDate)
+    }));
+    setSelectedWorkOrders([]);
+    formik.setFieldValue('workOrderIds', []);
   };
 
   // Error boundary for the component
@@ -344,17 +455,170 @@ const CreateInvoice = () => {
             <Card sx={{ mb: 3 }}>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  Select Work Orders
+                  Filter Work Orders
                 </Typography>
+                
+                {/* Enhanced Filtering Section */}
+                <Accordion sx={{ mb: 2 }}>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <FilterIcon />
+                      <Typography variant="subtitle1">Advanced Filters</Typography>
+                      <Chip 
+                        label={`${format(filters.startDate, 'MMM yyyy')} - ${workOrders.length} orders`}
+                        size="small" 
+                        color="primary" 
+                      />
+                    </Box>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <Grid container spacing={2}>
+                      {/* Quick Month Filters */}
+                      <Grid item xs={12}>
+                        <Typography variant="subtitle2" gutterBottom>Quick Month Selection:</Typography>
+                        <Stack direction="row" spacing={1} flexWrap="wrap">
+                          <Button 
+                            size="small" 
+                            variant={filters.startDate.getMonth() === new Date().getMonth() ? 'contained' : 'outlined'}
+                            onClick={() => setMonthFilter(0)}
+                          >
+                            This Month
+                          </Button>
+                          <Button 
+                            size="small" 
+                            variant={filters.startDate.getMonth() === new Date(new Date().setMonth(new Date().getMonth() - 1)).getMonth() ? 'contained' : 'outlined'}
+                            onClick={() => setMonthFilter(1)}
+                          >
+                            Last Month
+                          </Button>
+                          <Button 
+                            size="small" 
+                            variant="outlined"
+                            onClick={() => setMonthFilter(2)}
+                          >
+                            2 Months Ago
+                          </Button>
+                          <Button 
+                            size="small" 
+                            variant="outlined"
+                            onClick={() => setMonthFilter(3)}
+                          >
+                            3 Months Ago
+                          </Button>
+                        </Stack>
+                      </Grid>
+                      
+                      {/* Date Range */}
+                      <Grid item xs={12} md={6}>
+                        <DatePicker
+                          label="Start Date"
+                          value={filters.startDate}
+                          onChange={(date) => handleFilterChange('startDate', date)}
+                          slotProps={{
+                            textField: {
+                              fullWidth: true,
+                              size: 'small'
+                            }
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <DatePicker
+                          label="End Date"
+                          value={filters.endDate}
+                          onChange={(date) => handleFilterChange('endDate', date)}
+                          slotProps={{
+                            textField: {
+                              fullWidth: true,
+                              size: 'small'
+                            }
+                          }}
+                        />
+                      </Grid>
+                      
+                      {/* Work Type Filter */}
+                      <Grid item xs={12} md={4}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel>Work Type</InputLabel>
+                          <Select
+                            value={filters.workType}
+                            onChange={(e) => handleFilterChange('workType', e.target.value)}
+                            label="Work Type"
+                          >
+                            <MenuItem value="">All Types</MenuItem>
+                            {workTypes.map((type) => (
+                              <MenuItem key={type.value} value={type.value}>
+                                {type.label}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      
+                      {/* Work Sub Type Filter */}
+                      <Grid item xs={12} md={4}>
+                        <FormControl fullWidth size="small" disabled={!filters.workType}>
+                          <InputLabel>Sub Type</InputLabel>
+                          <Select
+                            value={filters.workSubType}
+                            onChange={(e) => handleFilterChange('workSubType', e.target.value)}
+                            label="Sub Type"
+                          >
+                            <MenuItem value="">All Sub Types</MenuItem>
+                            {filters.workType && workSubTypes[filters.workType]?.map((subType) => (
+                              <MenuItem key={subType} value={subType}>
+                                {subType.charAt(0).toUpperCase() + subType.slice(1).replace('-', ' ')}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      
+                      {/* Status Filter */}
+                      <Grid item xs={12} md={4}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel>Status</InputLabel>
+                          <Select
+                            value={filters.status}
+                            onChange={(e) => handleFilterChange('status', e.target.value)}
+                            label="Status"
+                          >
+                            <MenuItem value="">All Statuses</MenuItem>
+                            <MenuItem value="completed">Completed</MenuItem>
+                            <MenuItem value="in_progress">In Progress</MenuItem>
+                            <MenuItem value="pending">Pending</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      
+                      {/* Reset Button */}
+                      <Grid item xs={12}>
+                        <Button 
+                          variant="outlined" 
+                          size="small" 
+                          onClick={resetFilters}
+                          sx={{ mt: 1 }}
+                        >
+                          Reset Filters
+                        </Button>
+                      </Grid>
+                    </Grid>
+                  </AccordionDetails>
+                </Accordion>
 
-                {/* Debug Information */}
+                {/* Filter Summary */}
                 <Alert severity="info" sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2">Debug Information:</Typography>
-                  <Typography variant="body2">Selected Building ID: {selectedBuildingId}</Typography>
-                  <Typography variant="body2">Loading: {isLoadingWorkOrders ? 'Yes' : 'No'}</Typography>
-                  <Typography variant="body2">Error: {workOrdersError ? 'Yes' : 'No'}</Typography>
-                  <Typography variant="body2">Work Orders Count: {workOrders.length}</Typography>
-                  <Typography variant="body2">Selected Work Orders: {selectedWorkOrders.length}</Typography>
+                  <Typography variant="subtitle2">Filter Results:</Typography>
+                  <Typography variant="body2">
+                    Period: {format(filters.startDate, 'MMM dd, yyyy')} - {format(filters.endDate, 'MMM dd, yyyy')}
+                  </Typography>
+                  <Typography variant="body2">
+                    Type: {filters.workType ? workTypes.find(t => t.value === filters.workType)?.label : 'All'}
+                    {filters.workSubType && ` > ${filters.workSubType}`}
+                  </Typography>
+                  <Typography variant="body2">
+                    Status: {filters.status || 'All'} | Found: {workOrders.length} work orders | Selected: {selectedWorkOrders.length}
+                  </Typography>
                 </Alert>
 
                 {isLoadingWorkOrders ? (
@@ -400,7 +664,7 @@ const CreateInvoice = () => {
                         <TableRow>
                           <TableCell padding="checkbox">Select</TableCell>
                           <TableCell>Title</TableCell>
-                          <TableCell>Description</TableCell>
+                          <TableCell>Type & Date</TableCell>
                           <TableCell>Status</TableCell>
                           <TableCell align="right">Cost</TableCell>
                         </TableRow>
@@ -420,9 +684,14 @@ const CreateInvoice = () => {
                               <small style={{ color: '#666' }}>ID: {workOrder._id}</small>
                             </TableCell>
                             <TableCell>
-                              {workOrder.description || 'No description'}
-                              <br />
-                              <small style={{ color: '#666' }}>Apt: {workOrder.apartmentNumber || 'N/A'}</small>
+                              <Typography variant="body2">
+                                {workOrder.workType?.name || 'Unknown Type'}
+                                {workOrder.workSubType?.name && ` - ${workOrder.workSubType.name}`}
+                              </Typography>
+                              <small style={{ color: '#666' }}>
+                                Apt: {workOrder.apartmentNumber || 'N/A'} | 
+                                {workOrder.scheduledDate ? format(new Date(workOrder.scheduledDate), 'MMM dd, yyyy') : 'No date'}
+                              </small>
                             </TableCell>
                             <TableCell>
                               {workOrder.status || 'Unknown'}
@@ -430,10 +699,14 @@ const CreateInvoice = () => {
                               <small style={{ color: '#666' }}>Billing: {workOrder.billingStatus || 'pending'}</small>
                             </TableCell>
                             <TableCell align="right">
-                              ${((workOrder.price || workOrder.estimatedCost || workOrder.actualCost || 0)).toFixed(2)}
+                              ${getWorkOrderCost(workOrder).toFixed(2)}
                               <br />
                               <small style={{ color: '#666' }}>
-                                Price: ${workOrder.price || 0} | Cost: ${workOrder.cost || workOrder.actualCost || 0}
+                                {workOrder.services?.length > 0 ? (
+                                  `Services: ${workOrder.services.length}`
+                                ) : (
+                                  `Price: $${workOrder.price || 0} | Cost: $${workOrder.actualCost || 0}`
+                                )}
                               </small>
                             </TableCell>
                           </TableRow>

@@ -55,6 +55,21 @@ export const invoicesApiSlice = apiSlice.injectEndpoints({
       query: (buildingId) => `/invoices/building/${buildingId}/unbilled`,
       providesTags: ['WorkOrder'],
     }),
+    getFilteredWorkOrders: builder.query({
+      query: (filters) => {
+        const params = new URLSearchParams();
+        
+        if (filters.buildingId) params.append('buildingId', filters.buildingId);
+        if (filters.startDate) params.append('startDate', filters.startDate);
+        if (filters.endDate) params.append('endDate', filters.endDate);
+        if (filters.workType) params.append('workType', filters.workType);
+        if (filters.workSubType) params.append('workSubType', filters.workSubType);
+        if (filters.status) params.append('status', filters.status);
+        
+        return `/invoices/work-orders/filtered?${params.toString()}`;
+      },
+      providesTags: ['WorkOrder'],
+    }),
   }),
 });
 
@@ -66,4 +81,5 @@ export const {
   useMarkInvoiceAsPaidMutation,
   useDeleteInvoiceMutation,
   useGetUnbilledWorkOrdersQuery,
+  useGetFilteredWorkOrdersQuery,
 } = invoicesApiSlice;

@@ -69,19 +69,28 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
         return next(new AppError('No eligible work orders found for invoicing. Work orders may already be invoiced.', 400));
     }
 
-    // Calculate totals using either services or estimated/actual costs
+    // Calculate totals using consistent logic with frontend
     let subtotal = 0;
     const invoiceWorkOrders = workOrders.map(wo => {
         let totalPrice = 0;
 
-        // Try to calculate from services first
+        // Priority 1: Calculate from services if available
         if (wo.services && wo.services.length > 0) {
             totalPrice = wo.services.reduce((sum, service) => {
                 return sum + (service.laborCost || 0) + (service.materialCost || 0);
             }, 0);
-        } else {
-            // Fall back to estimated or actual cost
-            totalPrice = wo.actualCost || wo.estimatedCost || 0;
+        }
+        // Priority 2: Use price field (what customer pays)
+        else if (wo.price && wo.price > 0) {
+            totalPrice = wo.price;
+        }
+        // Priority 3: Fall back to actual cost
+        else if (wo.actualCost && wo.actualCost > 0) {
+            totalPrice = wo.actualCost;
+        }
+        // Priority 4: Use estimated cost
+        else {
+            totalPrice = wo.estimatedCost || 0;
         }
 
         subtotal += totalPrice;
@@ -91,7 +100,17 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
             description: `${wo.title || 'Work Order'} (Apt: ${wo.apartmentNumber || 'N/A'})`,
             quantity: 1,
             unitPrice: totalPrice,
-            totalPrice: totalPrice
+            totalPrice: totalPrice,
+            // Add debug info
+            costBreakdown: {
+                services: wo.services?.length || 0,
+                price: wo.price || 0,
+                actualCost: wo.actualCost || 0,
+                estimatedCost: wo.estimatedCost || 0,
+                calculatedFrom: wo.services?.length > 0 ? 'services' : 
+                               wo.price > 0 ? 'price' : 
+                               wo.actualCost > 0 ? 'actualCost' : 'estimatedCost'
+            }
         };
     });
 
@@ -308,6 +327,92 @@ exports.getUnbilledWorkOrders = catchAsync(async (req, res, next) => {
         results: workOrders.length,
         data: workOrders
     });
+});
+
+// Get filtered work orders for invoice creation
+exports.getFilteredWorkOrders = catchAsync(async (req, res, next) => {
+    const { 
+        buildingId, 
+        startDate, 
+        endDate, 
+        workType, 
+        workSubType, 
+        status 
+    } = req.query;
+
+    if (!buildingId) {
+        return next(new AppError('Building ID is required', 400));
+    }
+
+    console.log('getFilteredWorkOrders called with filters:', req.query);
+
+    // Build the query object
+    const query = {
+        building: buildingId,
+        // Only get work orders that can be invoiced
+        $or: [
+            { billingStatus: { $exists: false } },
+            { billingStatus: 'pending' },
+            { billingStatus: null }
+        ]
+    };
+
+    // Add date range filter
+    if (startDate || endDate) {
+        query.scheduledDate = {};
+        if (startDate) {
+            query.scheduledDate.$gte = new Date(startDate);
+        }
+        if (endDate) {
+            query.scheduledDate.$lte = new Date(endDate);
+        }
+    }
+
+    // Add work type filter
+    if (workType) {
+        query.workType = workType;
+    }
+
+    // Add work sub type filter
+    if (workSubType) {
+        query.workSubType = workSubType;
+    }
+
+    // Add status filter
+    if (status) {
+        query.status = status;
+    }
+
+    console.log('Final query:', JSON.stringify(query, null, 2));
+
+    try {
+        // Find work orders with filters
+        const workOrders = await WorkOrder.find(query)
+            .populate('building', 'name address')
+            .populate('workType', 'name')
+            .populate('workSubType', 'name')
+            .populate('assignedTo.worker', 'name email')
+            .sort('-scheduledDate');
+
+        console.log('Found filtered work orders:', workOrders.length);
+
+        res.status(200).json({
+            status: 'success',
+            results: workOrders.length,
+            data: workOrders,
+            filters: {
+                buildingId,
+                startDate,
+                endDate,
+                workType,
+                workSubType,
+                status
+            }
+        });
+    } catch (error) {
+        console.error('Error in getFilteredWorkOrders:', error);
+        return next(new AppError('Error fetching filtered work orders', 500));
+    }
 });
 
 // Delete invoice
