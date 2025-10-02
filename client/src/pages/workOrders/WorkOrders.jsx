@@ -846,218 +846,222 @@ const WorkOrders = () => {
       </Box>
 
       {/* FILTERS SECTION */}
-      <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <Card sx={{
-          mb: 3,
-          boxShadow: 3,
-          border: '3px solid #1976d2',
-          backgroundColor: '#e3f2fd'
-        }}>
-          <CardContent sx={{ pb: 2 }}>
-            <Typography variant="h5" gutterBottom sx={{ mb: 1.5, fontWeight: 'bold', color: '#1976d2' }}>
-              🔍 Filter Work Orders
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 2, color: '#666' }}>
-              Total: {workOrders.length} | Filtered: {filteredWorkOrders.length}
-              {filters.startDate && filters.endDate && (
-                <span> | {format(filters.startDate, 'MMM dd')} - {format(filters.endDate, 'MMM dd, yyyy')}</span>
-              )}
-            </Typography>
-            
-            {/* All Filters in One Compact Layout */}
-            <Grid container spacing={2}>
-              {/* Row 1: Building, Status, Quick Month Filters */}
-              <Grid item xs={12} sm={6} md={3}>
-                <TextField
-                  select
-                  fullWidth
-                  label="Building"
-                  name="building"
-                  value={filters.building}
-                  onChange={handleFilterChange}
-                  variant="outlined"
-                  size="small"
-                  disabled={isLoadingBuildings || Boolean(buildingsError)}
-                  error={Boolean(buildingsError)}
-                >
-                  <MenuItem value="">
-                    <em>All Buildings</em>
-                  </MenuItem>
-                  {(() => {
-                    try {
-                      let buildings = [];
-                      
-                      if (buildingsData?.data?.buildings && Array.isArray(buildingsData.data.buildings)) {
-                        buildings = buildingsData.data.buildings;
-                      } else if (buildingsData?.data && Array.isArray(buildingsData.data)) {
-                        buildings = buildingsData.data;
-                      } else if (buildingsData?.buildings && Array.isArray(buildingsData.buildings)) {
-                        buildings = buildingsData.buildings;
-                      } else if (Array.isArray(buildingsData)) {
-                        buildings = buildingsData;
-                      }
-                      
-                      return buildings.map(building => (
-                        <MenuItem key={building._id || building.id} value={building._id || building.id}>
-                          {building.name || building.title || 'Unnamed Building'}
-                        </MenuItem>
-                      ));
-                    } catch (error) {
-                      console.error('Error rendering building options:', error);
-                      return (
-                        <MenuItem disabled>
-                          Error loading buildings
-                        </MenuItem>
-                      );
+      <Card sx={{
+        mb: 3,
+        boxShadow: 3,
+        border: '3px solid #1976d2',
+        backgroundColor: '#e3f2fd'
+      }}>
+        <CardContent sx={{ pb: 2 }}>
+          <Typography variant="h5" gutterBottom sx={{ mb: 1.5, fontWeight: 'bold', color: '#1976d2' }}>
+            🔍 Filter Work Orders
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 2, color: '#666' }}>
+            Total: {workOrders.length} | Filtered: {filteredWorkOrders.length}
+            {filters.startDate && filters.endDate && (
+              <span> | {filters.startDate ? format(new Date(filters.startDate), 'MMM dd') : ''} - {filters.endDate ? format(new Date(filters.endDate), 'MMM dd, yyyy') : ''}</span>
+            )}
+          </Typography>
+          
+          {/* All Filters in One Compact Layout */}
+          <Grid container spacing={2}>
+            {/* Row 1: Building, Status, Date Inputs */}
+            <Grid item xs={12} sm={6} md={3}>
+              <TextField
+                select
+                fullWidth
+                label="Building"
+                name="building"
+                value={filters.building}
+                onChange={handleFilterChange}
+                variant="outlined"
+                size="small"
+                disabled={isLoadingBuildings || Boolean(buildingsError)}
+                error={Boolean(buildingsError)}
+              >
+                <MenuItem value="">
+                  <em>All Buildings</em>
+                </MenuItem>
+                {(() => {
+                  try {
+                    let buildings = [];
+                    
+                    if (buildingsData?.data?.buildings && Array.isArray(buildingsData.data.buildings)) {
+                      buildings = buildingsData.data.buildings;
+                    } else if (buildingsData?.data && Array.isArray(buildingsData.data)) {
+                      buildings = buildingsData.data;
+                    } else if (buildingsData?.buildings && Array.isArray(buildingsData.buildings)) {
+                      buildings = buildingsData.buildings;
+                    } else if (Array.isArray(buildingsData)) {
+                      buildings = buildingsData;
                     }
-                  })()}
-                </TextField>
-              </Grid>
-              
-              <Grid item xs={12} sm={6} md={3}>
-                <TextField
-                  select
-                  fullWidth
-                  label="Status"
-                  name="status"
-                  value={filters.status}
-                  onChange={handleFilterChange}
-                  variant="outlined"
-                  size="small"
-                >
-                  <MenuItem value="">
-                    <em>All Statuses</em>
-                  </MenuItem>
-                  {statusOptions.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        {option.icon}
-                        {option.label}
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-              
-              <Grid item xs={12} sm={6} md={3}>
-                <DatePicker
-                  label="Start Date"
-                  value={filters.startDate}
-                  onChange={(date) => handleDateFilterChange('startDate', date)}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      size: 'small',
-                      variant: 'outlined'
-                    }
-                  }}
-                />
-              </Grid>
-              
-              <Grid item xs={12} sm={6} md={3}>
-                <DatePicker
-                  label="End Date"
-                  value={filters.endDate}
-                  onChange={(date) => handleDateFilterChange('endDate', date)}
-                  minDate={filters.startDate}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      size: 'small',
-                      variant: 'outlined'
-                    }
-                  }}
-                />
-              </Grid>
-              
-              {/* Row 2: Quick Date Filter Buttons */}
-              <Grid item xs={12}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <Typography variant="subtitle2" sx={{ color: '#1976d2', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <CalendarIcon fontSize="small" /> Quick Date Filters:
-                  </Typography>
-                  <Stack 
-                    direction="row" 
-                    spacing={1} 
-                    flexWrap="wrap" 
-                    useFlexGap
-                    sx={{
-                      '& .MuiButton-root': {
-                        minWidth: 'auto',
-                        px: 1.5,
-                        py: 0.5,
-                        fontSize: '0.75rem',
-                        textTransform: 'none'
-                      }
-                    }}
-                  >
-                    <Button 
-                      size="small" 
-                      variant={filters.startDate && format(filters.startDate, 'yyyy-MM-dd') === format(startOfWeek(new Date()), 'yyyy-MM-dd') ? 'contained' : 'outlined'}
-                      onClick={() => setQuickDateFilter('thisWeek')}
-                    >
-                      This Week
-                    </Button>
-                    <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('lastWeek')}>
-                      Last Week
-                    </Button>
-                    <Button 
-                      size="small" 
-                      variant={filters.startDate && format(filters.startDate, 'yyyy-MM') === format(startOfMonth(new Date()), 'yyyy-MM') ? 'contained' : 'outlined'}
-                      onClick={() => setQuickDateFilter('thisMonth')}
-                    >
-                      This Month
-                    </Button>
-                    <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('lastMonth')}>
-                      Last Month
-                    </Button>
-                    <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('monthsBack', 2)}>
-                      2 Months Ago
-                    </Button>
-                    <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('monthsBack', 3)}>
-                      3 Months Ago
-                    </Button>
-                    <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('thisYear')}>
-                      This Year
-                    </Button>
-                    <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('lastYear')}>
-                      Last Year
-                    </Button>
-                    <Button 
-                      size="small" 
-                      variant="text" 
-                      color="secondary" 
-                      onClick={() => setQuickDateFilter('clear')}
-                      sx={{ ml: 1 }}
-                    >
-                      Clear Dates
-                    </Button>
-                  </Stack>
-                </Box>
-              </Grid>
-              
-              {/* Row 3: Clear All Button */}
-              <Grid item xs={12}>
-                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
-                  <Button
-                    variant="outlined"
-                    color="primary"
-                    onClick={() => setFilters({ building: '', status: '', startDate: null, endDate: null })}
-                    disabled={!filters.building && !filters.status && !filters.startDate && !filters.endDate}
-                    sx={{ 
-                      minWidth: 200,
-                      height: '36px',
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    Clear All Filters
-                  </Button>
-                </Box>
-              </Grid>
+                    
+                    return buildings.map(building => (
+                      <MenuItem key={building._id || building.id} value={building._id || building.id}>
+                        {building.name || building.title || 'Unnamed Building'}
+                      </MenuItem>
+                    ));
+                  } catch (error) {
+                    console.error('Error rendering building options:', error);
+                    return (
+                      <MenuItem disabled>
+                        Error loading buildings
+                      </MenuItem>
+                    );
+                  }
+                })()}
+              </TextField>
             </Grid>
-          </CardContent>
-        </Card>
-      </LocalizationProvider>
+            
+            <Grid item xs={12} sm={6} md={3}>
+              <TextField
+                select
+                fullWidth
+                label="Status"
+                name="status"
+                value={filters.status}
+                onChange={handleFilterChange}
+                variant="outlined"
+                size="small"
+              >
+                <MenuItem value="">
+                  <em>All Statuses</em>
+                </MenuItem>
+                {statusOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      {option.icon}
+                      {option.label}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={3}>
+              <TextField
+                type="date"
+                fullWidth
+                label="Start Date"
+                name="startDate"
+                value={filters.startDate ? format(new Date(filters.startDate), 'yyyy-MM-dd') : ''}
+                onChange={(e) => {
+                  const date = e.target.value ? new Date(e.target.value) : null;
+                  handleDateFilterChange('startDate', date);
+                }}
+                variant="outlined"
+                size="small"
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={3}>
+              <TextField
+                type="date"
+                fullWidth
+                label="End Date"
+                name="endDate"
+                value={filters.endDate ? format(new Date(filters.endDate), 'yyyy-MM-dd') : ''}
+                onChange={(e) => {
+                  const date = e.target.value ? new Date(e.target.value) : null;
+                  handleDateFilterChange('endDate', date);
+                }}
+                variant="outlined"
+                size="small"
+                InputLabelProps={{ shrink: true }}
+                inputProps={{
+                  min: filters.startDate ? format(new Date(filters.startDate), 'yyyy-MM-dd') : undefined
+                }}
+              />
+            </Grid>
+            
+            {/* Row 2: Quick Date Filter Buttons */}
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Typography variant="subtitle2" sx={{ color: '#1976d2', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <CalendarIcon fontSize="small" /> Quick Date Filters:
+                </Typography>
+                <Stack 
+                  direction="row" 
+                  spacing={1} 
+                  flexWrap="wrap" 
+                  useFlexGap
+                  sx={{
+                    '& .MuiButton-root': {
+                      minWidth: 'auto',
+                      px: 1.5,
+                      py: 0.5,
+                      fontSize: '0.75rem',
+                      textTransform: 'none'
+                    }
+                  }}
+                >
+                  <Button 
+                    size="small" 
+                    variant="outlined"
+                    onClick={() => setQuickDateFilter('thisWeek')}
+                  >
+                    This Week
+                  </Button>
+                  <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('lastWeek')}>
+                    Last Week
+                  </Button>
+                  <Button 
+                    size="small" 
+                    variant="outlined"
+                    onClick={() => setQuickDateFilter('thisMonth')}
+                  >
+                    This Month
+                  </Button>
+                  <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('lastMonth')}>
+                    Last Month
+                  </Button>
+                  <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('monthsBack', 2)}>
+                    2 Months Ago
+                  </Button>
+                  <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('monthsBack', 3)}>
+                    3 Months Ago
+                  </Button>
+                  <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('thisYear')}>
+                    This Year
+                  </Button>
+                  <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('lastYear')}>
+                    Last Year
+                  </Button>
+                  <Button 
+                    size="small" 
+                    variant="text" 
+                    color="secondary" 
+                    onClick={() => setQuickDateFilter('clear')}
+                    sx={{ ml: 1 }}
+                  >
+                    Clear Dates
+                  </Button>
+                </Stack>
+              </Box>
+            </Grid>
+            
+            {/* Row 3: Clear All Button */}
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  onClick={() => setFilters({ building: '', status: '', startDate: null, endDate: null })}
+                  disabled={!filters.building && !filters.status && !filters.startDate && !filters.endDate}
+                  sx={{ 
+                    minWidth: 200,
+                    height: '36px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Clear All Filters
+                </Button>
+              </Box>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
 
       <Box sx={{ flex: 1, width: '100%' }}>
         <DataGrid
