@@ -82,6 +82,7 @@ const WorkOrders = () => {
     status: '',
     workType: '',
     priority: '',
+    datePeriod: '',
     startDate: null,
     endDate: null
   });
@@ -172,6 +173,7 @@ const WorkOrders = () => {
       status: '',
       workType: '',
       priority: '',
+      datePeriod: '',
       startDate: null,
       endDate: null
     });
@@ -913,132 +915,44 @@ const WorkOrders = () => {
               🔍 Advanced Work Order Filters
             </Typography>
             
-            {/* Quick Date Filter Buttons */}
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
-                📅 Quick Date Filters:
-              </Typography>
-              <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ gap: 1 }}>
-                <Button 
-                  size="small" 
+            <Grid container spacing={2}>
+              {/* Date Period Filter */}
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  select
+                  fullWidth
+                  label="Date Period"
+                  name="datePeriod"
+                  value={filters.datePeriod || ''}
+                  onChange={(e) => {
+                    const period = e.target.value;
+                    setFilters(prev => ({ ...prev, datePeriod: period }));
+                    if (period) {
+                      setQuickDateFilter(period);
+                    } else {
+                      setFilters(prev => ({ ...prev, startDate: null, endDate: null }));
+                    }
+                  }}
                   variant="outlined"
-                  onClick={() => setQuickDateFilter('today')}
-                  sx={{ mb: 1 }}
+                  size="small"
                 >
-                  Today
-                </Button>
-                <Button 
-                  size="small" 
-                  variant="outlined"
-                  onClick={() => setQuickDateFilter('yesterday')}
-                  sx={{ mb: 1 }}
-                >
-                  Yesterday
-                </Button>
-                <Button 
-                  size="small" 
-                  variant="outlined"
-                  onClick={() => setQuickDateFilter('thisWeek')}
-                  sx={{ mb: 1 }}
-                >
-                  This Week
-                </Button>
-                <Button 
-                  size="small" 
-                  variant="outlined"
-                  onClick={() => setQuickDateFilter('lastWeek')}
-                  sx={{ mb: 1 }}
-                >
-                  Last Week
-                </Button>
-                <Button 
-                  size="small" 
-                  variant="outlined"
-                  onClick={() => setQuickDateFilter('thisMonth')}
-                  sx={{ mb: 1 }}
-                >
-                  This Month
-                </Button>
-                <Button 
-                  size="small" 
-                  variant="outlined"
-                  onClick={() => setQuickDateFilter('lastMonth')}
-                  sx={{ mb: 1 }}
-                >
-                  Last Month
-                </Button>
-                <Button 
-                  size="small" 
-                  variant="outlined"
-                  onClick={() => setQuickDateFilter('last30Days')}
-                  sx={{ mb: 1 }}
-                >
-                  Last 30 Days
-                </Button>
-                <Button 
-                  size="small" 
-                  variant="outlined"
-                  onClick={() => setQuickDateFilter('last90Days')}
-                  sx={{ mb: 1 }}
-                >
-                  Last 90 Days
-                </Button>
-                <Button 
-                  size="small" 
-                  variant="outlined"
-                  onClick={() => setQuickDateFilter('thisYear')}
-                  sx={{ mb: 1 }}
-                >
-                  This Year
-                </Button>
-              </Stack>
-            </Box>
-            
-            {/* Advanced Filters Accordion */}
-            <Accordion sx={{ mb: 2 }}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <FilterIcon />
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>Advanced Filters</Typography>
-                  <Chip 
-                    label={`${filteredWorkOrders.length} of ${workOrders.length} orders`}
-                    size="small" 
-                    color="primary" 
-                  />
-                </Box>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Grid container spacing={2}>
-                  {/* Date Range */}
-                  <Grid item xs={12} md={3}>
-                    <DatePicker
-                      label="Start Date"
-                      value={filters.startDate}
-                      onChange={(date) => handleDateFilterChange('startDate', date)}
-                      slotProps={{
-                        textField: {
-                          fullWidth: true,
-                          size: 'small'
-                        }
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={3}>
-                    <DatePicker
-                      label="End Date"
-                      value={filters.endDate}
-                      onChange={(date) => handleDateFilterChange('endDate', date)}
-                      slotProps={{
-                        textField: {
-                          fullWidth: true,
-                          size: 'small'
-                        }
-                      }}
-                    />
-                  </Grid>
-                  
-                  {/* Building Filter */}
-                  <Grid item xs={12} md={3}>
+                  <MenuItem value="">
+                    <em>All Dates</em>
+                  </MenuItem>
+                  <MenuItem value="today">Today</MenuItem>
+                  <MenuItem value="yesterday">Yesterday</MenuItem>
+                  <MenuItem value="thisWeek">This Week</MenuItem>
+                  <MenuItem value="lastWeek">Last Week</MenuItem>
+                  <MenuItem value="thisMonth">This Month</MenuItem>
+                  <MenuItem value="lastMonth">Last Month</MenuItem>
+                  <MenuItem value="last30Days">Last 30 Days</MenuItem>
+                  <MenuItem value="last90Days">Last 90 Days</MenuItem>
+                  <MenuItem value="thisYear">This Year</MenuItem>
+                </TextField>
+              </Grid>
+              
+              {/* Building Filter */}
+              <Grid item xs={12} sm={6} md={3}>
                     <TextField
                       select
                       fullWidth
@@ -1083,9 +997,9 @@ const WorkOrders = () => {
                       })()}
                     </TextField>
                   </Grid>
-                  
-                  {/* Status Filter */}
-                  <Grid item xs={12} md={3}>
+              
+              {/* Status Filter */}
+              <Grid item xs={12} sm={6} md={3}>
                     <TextField
                       select
                       fullWidth
@@ -1109,9 +1023,9 @@ const WorkOrders = () => {
                       ))}
                     </TextField>
                   </Grid>
-                  
-                  {/* Work Type Filter */}
-                  <Grid item xs={12} md={6}>
+              
+              {/* Work Type Filter */}
+              <Grid item xs={12} sm={6} md={3}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Work Type</InputLabel>
                       <Select
@@ -1128,9 +1042,9 @@ const WorkOrders = () => {
                       </Select>
                     </FormControl>
                   </Grid>
-                  
-                  {/* Priority Filter */}
-                  <Grid item xs={12} md={6}>
+              
+              {/* Priority Filter */}
+              <Grid item xs={12} sm={6} md={3}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Priority</InputLabel>
                       <Select
@@ -1147,32 +1061,28 @@ const WorkOrders = () => {
                       </Select>
                     </FormControl>
                   </Grid>
-                  
-                  {/* Clear Filters Button */}
-                  <Grid item xs={12}>
-                    <Button
-                      variant="outlined"
-                      color="primary"
-                      onClick={resetFilters}
-                      disabled={!filters.building && !filters.status && !filters.workType && !filters.priority && !filters.startDate && !filters.endDate}
-                      fullWidth
-                      size="large"
-                      sx={{ mt: 1 }}
-                    >
-                      Clear All Filters
-                    </Button>
-                  </Grid>
-                </Grid>
-              </AccordionDetails>
-            </Accordion>
+              
+              {/* Clear Filters Button */}
+              <Grid item xs={12}>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  onClick={resetFilters}
+                  disabled={!filters.building && !filters.status && !filters.workType && !filters.priority && !filters.datePeriod}
+                  fullWidth
+                  size="large"
+                  sx={{ mt: 1 }}
+                >
+                  Clear All Filters
+                </Button>
+              </Grid>
+            </Grid>
             
             {/* Filter Summary */}
             <Alert severity="info" sx={{ mt: 2 }}>
               <Typography variant="subtitle2">Filter Results:</Typography>
               <Typography variant="body2">
-                {filters.startDate && filters.endDate && (
-                  <>Period: {format(filters.startDate, 'MMM dd, yyyy')} - {format(filters.endDate, 'MMM dd, yyyy')} | </>
-                )}
+                Date: {filters.datePeriod ? filters.datePeriod.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()) : 'All'} | 
                 Building: {filters.building ? 'Selected' : 'All'} | 
                 Status: {filters.status || 'All'} | 
                 Type: {filters.workType || 'All'} | 
