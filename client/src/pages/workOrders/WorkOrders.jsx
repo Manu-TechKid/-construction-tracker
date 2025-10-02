@@ -28,9 +28,7 @@ import {
   Cancel as CancelledIcon,
   CalendarToday as CalendarIcon,
 } from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+// Removed unused DatePicker imports to prevent errors
 import { DataGrid } from '@mui/x-data-grid';
 import { useAuth } from '../../hooks/useAuth';
 import { useGetWorkOrdersQuery, useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
@@ -275,11 +273,45 @@ const WorkOrders = () => {
   }, [workOrders, filters]);
 
   if (isLoading) {
-    return <CircularProgress />;
+    return (
+      <Box sx={{ height: 'calc(100vh - 120px)', width: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+          <Typography variant="h4" component="h1">
+            Work Orders
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => navigate('/work-orders/new')}
+          >
+            Create Work Order
+          </Button>
+        </Box>
+        <Box display="flex" justifyContent="center" alignItems="center" flex={1}>
+          <CircularProgress />
+        </Box>
+      </Box>
+    );
   }
 
   if (error) {
-    return <Alert severity="error">Error loading work orders.</Alert>;
+    return (
+      <Box sx={{ height: 'calc(100vh - 120px)', width: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+          <Typography variant="h4" component="h1">
+            Work Orders
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => navigate('/work-orders/new')}
+          >
+            Create Work Order
+          </Button>
+        </Box>
+        <Alert severity="error">Error loading work orders.</Alert>
+      </Box>
+    );
   }
 
 
@@ -831,9 +863,12 @@ const WorkOrders = () => {
     },
   ];
 
-  // Optional: Enable debug logging by uncommenting the lines below
-  // console.log('Buildings Data:', buildingsData);
-  // console.log('Current Filters:', filters);
+  // Debug logging to check if component is rendering
+  console.log('WorkOrders component rendering...');
+  console.log('Buildings Data:', buildingsData);
+  console.log('Current Filters:', filters);
+  console.log('Work Orders:', workOrders);
+  console.log('Filtered Work Orders:', filteredWorkOrders);
 
   return (
     <Box sx={{ height: 'calc(100vh - 120px)', width: '100%', display: 'flex', flexDirection: 'column' }}>
