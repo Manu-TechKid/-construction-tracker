@@ -15,6 +15,13 @@ import {
   Menu,
   ListItemIcon,
   ListItemText,
+  Stack,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  FormControl,
+  InputLabel,
+  Select,
 } from '@mui/material';
 import { 
   Add as AddIcon, 
@@ -24,12 +31,34 @@ import {
   CheckCircle as CompletedIcon,
   Pause as OnHoldIcon,
   Cancel as CancelledIcon,
+  FilterList as FilterIcon,
+  ExpandMore as ExpandMoreIcon,
+  CalendarToday as CalendarIcon,
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useAuth } from '../../hooks/useAuth';
 import { useGetWorkOrdersQuery, useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
-import { format } from 'date-fns';
+import { 
+  format, 
+  startOfDay, 
+  endOfDay, 
+  startOfWeek, 
+  endOfWeek, 
+  startOfMonth, 
+  endOfMonth, 
+  startOfYear, 
+  endOfYear,
+  subDays,
+  subWeeks,
+  subMonths,
+  subYears,
+  isWithinInterval,
+  parseISO
+} from 'date-fns';
 import { toast } from 'react-toastify';
 
 const getStatusChipColor = (status) => {
@@ -218,18 +247,6 @@ const WorkOrders = () => {
     { value: 'lastYear', label: 'Last Year' },
     { value: 'custom', label: 'Custom Range' }
   ];
-  
-  // Calculate statistics for current filter
-  const getFilterStats = () => {
-    const total = filteredWorkOrders.length;
-    const completed = filteredWorkOrders.filter(wo => wo.status === 'completed').length;
-    const inProgress = filteredWorkOrders.filter(wo => wo.status === 'in_progress').length;
-    const pending = filteredWorkOrders.filter(wo => wo.status === 'pending').length;
-    
-    return { total, completed, inProgress, pending };
-  };
-  
-  const stats = getFilterStats();
 
   const filteredWorkOrders = useMemo(() => {
     return workOrders
@@ -304,6 +321,16 @@ const WorkOrders = () => {
         cost: wo.cost || wo.actualCost || 0, // Map old actualCost to new cost field
       }));
   }, [workOrders, filters]);
+
+  // Calculate statistics for current filter
+  const stats = useMemo(() => {
+    const total = filteredWorkOrders.length;
+    const completed = filteredWorkOrders.filter(wo => wo.status === 'completed').length;
+    const inProgress = filteredWorkOrders.filter(wo => wo.status === 'in_progress').length;
+    const pending = filteredWorkOrders.filter(wo => wo.status === 'pending').length;
+    
+    return { total, completed, inProgress, pending };
+  }, [filteredWorkOrders]);
 
   if (isLoading) {
     return <CircularProgress />;
