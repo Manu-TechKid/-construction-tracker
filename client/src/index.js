@@ -11,6 +11,7 @@ import { store } from './app/store';
 import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
 import './index.css';
+import './styles/global.css';
 import reportWebVitals from './reportWebVitals';
 
 const localeMap = {

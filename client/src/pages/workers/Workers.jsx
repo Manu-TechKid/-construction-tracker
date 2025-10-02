@@ -408,6 +408,14 @@ const Workers = () => {
                     <IconButton
                       onClick={(e) => handleMenuClick(e, worker)}
                       disabled={isDeleting || isUpdating}
+                      size="large"
+                      sx={{ 
+                        minWidth: 48, 
+                        minHeight: 48,
+                        '&:hover': {
+                          backgroundColor: 'action.hover'
+                        }
+                      }}
                     >
                       <MoreVertIcon />
                     </IconButton>
@@ -632,6 +640,25 @@ const Workers = () => {
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
+        PaperProps={{
+          sx: {
+            minWidth: 200,
+            '& .MuiMenuItem-root': {
+              minHeight: 48,
+              px: 2,
+              py: 1.5,
+              fontSize: '1rem'
+            }
+          }
+        }}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
       >
         <MenuItem 
           onClick={() => {
@@ -642,18 +669,16 @@ const Workers = () => {
           <VisibilityIcon sx={{ mr: 1 }} />
           View Details
         </MenuItem>
-        {hasPermission(['update:workers']) && (
-          <MenuItem 
-            onClick={() => {
-              handleEditClick(selectedWorker);
-              setAnchorEl(null);
-            }}
-            disabled={isUpdating}
-          >
-            <EditIcon sx={{ mr: 1 }} />
-            Edit
-          </MenuItem>
-        )}
+        <MenuItem 
+          onClick={() => {
+            handleEditClick(selectedWorker);
+            setAnchorEl(null);
+          }}
+          disabled={isUpdating}
+        >
+          <EditIcon sx={{ mr: 1 }} />
+          Edit
+        </MenuItem>
         {hasPermission(['delete:workers']) && (
           <MenuItem 
             onClick={() => {

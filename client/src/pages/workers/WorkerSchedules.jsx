@@ -856,11 +856,23 @@ const WorkerSchedules = () => {
                     label="Date"
                     value={formik.values.date}
                     onChange={(newValue) => formik.setFieldValue('date', newValue)}
+                    format="MM/dd/yyyy"
                     slotProps={{
                       textField: {
                         fullWidth: true,
                         error: formik.touched.date && Boolean(formik.errors.date),
                         helperText: formik.touched.date && formik.errors.date
+                      },
+                      actionBar: {
+                        actions: ['accept', 'cancel', 'today']
+                      },
+                      layout: {
+                        sx: {
+                          '.MuiPickersLayout-contentWrapper': {
+                            display: 'flex',
+                            flexDirection: 'column'
+                          }
+                        }
                       }
                     }}
                   />
@@ -882,13 +894,26 @@ const WorkerSchedules = () => {
                     ampm={true}
                     views={['hours', 'minutes']}
                     format="hh:mm a"
-                    minTime={new Date(0, 0, 0, 0, 0)} // 12:00 AM
-                    maxTime={new Date(0, 0, 0, 23, 59)} // 11:59 PM
+                    openTo="hours"
                     slotProps={{
                       textField: {
                         fullWidth: true,
                         error: formik.touched.startTime && Boolean(formik.errors.startTime),
                         helperText: formik.touched.startTime && formik.errors.startTime
+                      },
+                      actionBar: {
+                        actions: ['accept', 'cancel']
+                      },
+                      layout: {
+                        sx: {
+                          '.MuiClock-root': {
+                            display: 'flex !important'
+                          },
+                          '.MuiPickersLayout-contentWrapper': {
+                            display: 'flex',
+                            flexDirection: 'column'
+                          }
+                        }
                       }
                     }}
                   />
@@ -902,13 +927,26 @@ const WorkerSchedules = () => {
                     ampm={true}
                     views={['hours', 'minutes']}
                     format="hh:mm a"
-                    minTime={new Date(0, 0, 0, 0, 0)} // 12:00 AM
-                    maxTime={new Date(0, 0, 0, 23, 59)} // 11:59 PM
+                    openTo="hours"
                     slotProps={{
                       textField: {
                         fullWidth: true,
                         error: formik.touched.endTime && Boolean(formik.errors.endTime),
                         helperText: formik.touched.endTime && formik.errors.endTime
+                      },
+                      actionBar: {
+                        actions: ['accept', 'cancel']
+                      },
+                      layout: {
+                        sx: {
+                          '.MuiClock-root': {
+                            display: 'flex !important'
+                          },
+                          '.MuiPickersLayout-contentWrapper': {
+                            display: 'flex',
+                            flexDirection: 'column'
+                          }
+                        }
                       }
                     }}
                   />

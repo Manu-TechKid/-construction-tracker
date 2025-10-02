@@ -55,6 +55,22 @@ const commonTheme = {
         root: {
           borderRadius: 8,
           padding: '8px 16px',
+          minHeight: 36,
+          '@media (max-width: 768px)': {
+            minHeight: 44,
+            padding: '12px 20px',
+          },
+        },
+      },
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          '@media (max-width: 768px)': {
+            minWidth: 48,
+            minHeight: 48,
+            padding: 12,
+          },
         },
       },
     },
@@ -63,6 +79,107 @@ const commonTheme = {
         root: {
           borderRadius: 12,
           boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+        },
+      },
+    },
+    MuiMenu: {
+      styleOverrides: {
+        paper: {
+          '@media (max-width: 768px)': {
+            minWidth: 200,
+            '& .MuiMenuItem-root': {
+              minHeight: 48,
+              padding: '12px 16px',
+              fontSize: '1rem',
+            },
+          },
+        },
+      },
+    },
+    MuiMenuItem: {
+      styleOverrides: {
+        root: {
+          '@media (max-width: 768px)': {
+            minHeight: 48,
+            padding: '12px 16px',
+            fontSize: '1rem',
+          },
+        },
+      },
+    },
+    // Time Picker specific fixes
+    MuiClock: {
+      styleOverrides: {
+        root: {
+          display: 'flex !important',
+          '@media (max-width: 768px)': {
+            width: '100%',
+            maxWidth: 280,
+          },
+        },
+      },
+    },
+    MuiClockPointer: {
+      styleOverrides: {
+        root: {
+          '@media (max-width: 768px)': {
+            '&:focus': {
+              outline: '2px solid',
+              outlineColor: 'primary.main',
+            },
+          },
+        },
+      },
+    },
+    MuiPickersLayout: {
+      styleOverrides: {
+        root: {
+          '@media (max-width: 768px)': {
+            '& .MuiPickersLayout-contentWrapper': {
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+            },
+          },
+        },
+      },
+    },
+    MuiDateCalendar: {
+      styleOverrides: {
+        root: {
+          '@media (max-width: 768px)': {
+            width: '100%',
+            maxWidth: 320,
+          },
+        },
+      },
+    },
+    // Table responsiveness
+    MuiTable: {
+      styleOverrides: {
+        root: {
+          '@media (max-width: 768px)': {
+            '& .MuiTableCell-root': {
+              padding: '8px 4px',
+              fontSize: '0.875rem',
+            },
+          },
+        },
+      },
+    },
+    MuiTableCell: {
+      styleOverrides: {
+        root: {
+          '@media (max-width: 768px)': {
+            padding: '8px 4px',
+            fontSize: '0.875rem',
+            '&:first-of-type': {
+              paddingLeft: 8,
+            },
+            '&:last-of-type': {
+              paddingRight: 8,
+            },
+          },
         },
       },
     },

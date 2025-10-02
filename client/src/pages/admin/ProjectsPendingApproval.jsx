@@ -464,6 +464,15 @@ const ProjectsPendingApproval = () => {
                                 <ViewIcon />
                               </IconButton>
                             </Tooltip>
+                            <Tooltip title="Edit Project">
+                              <IconButton 
+                                size="small" 
+                                color="primary"
+                                onClick={() => window.open(`/project-estimates/edit/${project._id}`, '_blank')}
+                              >
+                                <EditIcon />
+                              </IconButton>
+                            </Tooltip>
                             {project.photos && project.photos.length > 0 && (
                               <Tooltip title={`${project.photos.length} Photos`}>
                                 <IconButton size="small">
@@ -565,6 +574,15 @@ const ProjectsPendingApproval = () => {
                                 onClick={() => handleViewDetails(project)}
                               >
                                 <ViewIcon />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Edit Project">
+                              <IconButton 
+                                size="small" 
+                                color="primary"
+                                onClick={() => window.open(`/project-estimates/edit/${project._id}`, '_blank')}
+                              >
+                                <EditIcon />
                               </IconButton>
                             </Tooltip>
                             {project.status === 'approved' && (
