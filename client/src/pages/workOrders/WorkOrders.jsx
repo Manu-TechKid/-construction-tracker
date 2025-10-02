@@ -240,10 +240,15 @@ const WorkOrders = () => {
         if (filters.startDate && filters.endDate && wo.scheduledDate) {
           try {
             const workOrderDate = new Date(wo.scheduledDate);
-            dateMatch = isWithinInterval(workOrderDate, {
-              start: filters.startDate,
-              end: filters.endDate
-            });
+            // Check if workOrderDate is valid
+            if (isNaN(workOrderDate.getTime())) {
+              dateMatch = true; // Include if date parsing fails
+            } else {
+              dateMatch = isWithinInterval(workOrderDate, {
+                start: new Date(filters.startDate),
+                end: new Date(filters.endDate)
+              });
+            }
           } catch (error) {
             console.warn('Error parsing date for work order:', wo._id, error);
             dateMatch = true; // Include if date parsing fails
@@ -858,8 +863,8 @@ const WorkOrders = () => {
           </Typography>
           <Typography variant="body2" sx={{ mb: 2, color: '#666' }}>
             Total: {workOrders.length} | Filtered: {filteredWorkOrders.length}
-            {filters.startDate && filters.endDate && (
-              <span> | {filters.startDate ? format(new Date(filters.startDate), 'MMM dd') : ''} - {filters.endDate ? format(new Date(filters.endDate), 'MMM dd, yyyy') : ''}</span>
+            {filters.startDate instanceof Date && filters.endDate instanceof Date && !isNaN(filters.startDate.getTime()) && !isNaN(filters.endDate.getTime()) && (
+              <span> | {format(filters.startDate, 'MMM dd')} - {format(filters.endDate, 'MMM dd, yyyy')}</span>
             )}
           </Typography>
           
@@ -944,7 +949,7 @@ const WorkOrders = () => {
                 fullWidth
                 label="Start Date"
                 name="startDate"
-                value={filters.startDate ? format(new Date(filters.startDate), 'yyyy-MM-dd') : ''}
+                value={filters.startDate instanceof Date && !isNaN(filters.startDate.getTime()) ? format(filters.startDate, 'yyyy-MM-dd') : ''}
                 onChange={(e) => {
                   const date = e.target.value ? new Date(e.target.value) : null;
                   handleDateFilterChange('startDate', date);
@@ -961,7 +966,7 @@ const WorkOrders = () => {
                 fullWidth
                 label="End Date"
                 name="endDate"
-                value={filters.endDate ? format(new Date(filters.endDate), 'yyyy-MM-dd') : ''}
+                value={filters.endDate instanceof Date && !isNaN(filters.endDate.getTime()) ? format(filters.endDate, 'yyyy-MM-dd') : ''}
                 onChange={(e) => {
                   const date = e.target.value ? new Date(e.target.value) : null;
                   handleDateFilterChange('endDate', date);
@@ -970,7 +975,7 @@ const WorkOrders = () => {
                 size="small"
                 InputLabelProps={{ shrink: true }}
                 inputProps={{
-                  min: filters.startDate ? format(new Date(filters.startDate), 'yyyy-MM-dd') : undefined
+                  min: filters.startDate instanceof Date && !isNaN(filters.startDate.getTime()) ? format(filters.startDate, 'yyyy-MM-dd') : undefined
                 }}
               />
             </Grid>
