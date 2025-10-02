@@ -16,12 +16,7 @@ import {
   ListItemIcon,
   ListItemText,
   Stack,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  FormControl,
-  InputLabel,
-  Select,
+  Divider,
 } from '@mui/material';
 import { 
   Add as AddIcon, 
@@ -31,17 +26,16 @@ import {
   CheckCircle as CompletedIcon,
   Pause as OnHoldIcon,
   Cancel as CancelledIcon,
-  FilterList as FilterIcon,
-  ExpandMore as ExpandMoreIcon,
+  CalendarToday as CalendarIcon,
 } from '@mui/icons-material';
-import { DataGrid } from '@mui/x-data-grid';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { DataGrid } from '@mui/x-data-grid';
 import { useAuth } from '../../hooks/useAuth';
 import { useGetWorkOrdersQuery, useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, isWithinInterval, subDays, subWeeks, subMonths } from 'date-fns';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, subWeeks, subMonths, subYears } from 'date-fns';
 import { toast } from 'react-toastify';
 
 const getStatusChipColor = (status) => {
@@ -76,33 +70,12 @@ const WorkOrders = () => {
   } = useGetBuildingsQuery();
   const [updateWorkOrder] = useUpdateWorkOrderMutation();
 
-  // Enhanced filtering state with date capabilities
   const [filters, setFilters] = useState({ 
     building: '', 
     status: '',
-    workType: '',
-    priority: '',
-    datePeriod: '',
     startDate: null,
     endDate: null
   });
-  
-  // Work type options for filtering
-  const workTypes = [
-    { value: 'painting', label: 'Painting' },
-    { value: 'cleaning', label: 'Cleaning' },
-    { value: 'repair', label: 'Repairs' },
-    { value: 'maintenance', label: 'Maintenance' },
-    { value: 'installation', label: 'Installation' },
-    { value: 'inspection', label: 'Inspection' }
-  ];
-  
-  const priorityOptions = [
-    { value: 'low', label: 'Low' },
-    { value: 'medium', label: 'Medium' },
-    { value: 'high', label: 'High' },
-    { value: 'urgent', label: 'Urgent' }
-  ];
   const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
 
@@ -111,32 +84,22 @@ const WorkOrders = () => {
   }, [filters]);
   
   const handleDateFilterChange = useCallback((field, value) => {
-    setFilters(prev => ({ ...prev, [field]: value }));
-  }, []);
+    setFilters({ ...filters, [field]: value });
+  }, [filters]);
   
-  // Quick date filter functions
-  const setQuickDateFilter = useCallback((type) => {
+  const setQuickDateFilter = useCallback((type, amount = 0) => {
     const now = new Date();
     let startDate, endDate;
     
     switch (type) {
-      case 'today':
-        startDate = startOfDay(now);
-        endDate = endOfDay(now);
-        break;
-      case 'yesterday':
-        const yesterday = subDays(now, 1);
-        startDate = startOfDay(yesterday);
-        endDate = endOfDay(yesterday);
-        break;
       case 'thisWeek':
-        startDate = startOfWeek(now, { weekStartsOn: 1 }); // Monday
-        endDate = endOfWeek(now, { weekStartsOn: 1 });
+        startDate = startOfWeek(now);
+        endDate = endOfWeek(now);
         break;
       case 'lastWeek':
-        const lastWeekStart = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
-        startDate = lastWeekStart;
-        endDate = endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
+        const lastWeek = subWeeks(now, 1);
+        startDate = startOfWeek(lastWeek);
+        endDate = endOfWeek(lastWeek);
         break;
       case 'thisMonth':
         startDate = startOfMonth(now);
@@ -147,36 +110,29 @@ const WorkOrders = () => {
         startDate = startOfMonth(lastMonth);
         endDate = endOfMonth(lastMonth);
         break;
-      case 'last30Days':
-        startDate = subDays(now, 30);
-        endDate = now;
-        break;
-      case 'last90Days':
-        startDate = subDays(now, 90);
-        endDate = now;
+      case 'monthsBack':
+        const targetMonth = subMonths(now, amount);
+        startDate = startOfMonth(targetMonth);
+        endDate = endOfMonth(targetMonth);
         break;
       case 'thisYear':
-        startDate = new Date(now.getFullYear(), 0, 1);
-        endDate = new Date(now.getFullYear(), 11, 31);
+        startDate = startOfYear(now);
+        endDate = endOfYear(now);
         break;
-      default:
+      case 'lastYear':
+        const lastYear = subYears(now, 1);
+        startDate = startOfYear(lastYear);
+        endDate = endOfYear(lastYear);
+        break;
+      case 'clear':
         startDate = null;
         endDate = null;
+        break;
+      default:
+        return;
     }
     
     setFilters(prev => ({ ...prev, startDate, endDate }));
-  }, []);
-  
-  const resetFilters = useCallback(() => {
-    setFilters({ 
-      building: '', 
-      status: '',
-      workType: '',
-      priority: '',
-      datePeriod: '',
-      startDate: null,
-      endDate: null
-    });
   }, []);
 
   const handleStatusClick = useCallback((event, workOrder) => {
@@ -278,36 +234,23 @@ const WorkOrders = () => {
         const statusMatch = filters.status 
           ? wo.status === filters.status 
           : true;
-          
-        // Handle work type filter
-        const workTypeMatch = filters.workType
-          ? (wo.workType?.name && wo.workType.name.toLowerCase().includes(filters.workType.toLowerCase())) ||
-            (typeof wo.workType === 'string' && wo.workType.toLowerCase().includes(filters.workType.toLowerCase()))
-          : true;
-          
-        // Handle priority filter
-        const priorityMatch = filters.priority
-          ? wo.priority === filters.priority
-          : true;
-          
+        
         // Handle date range filter
         let dateMatch = true;
-        if (filters.startDate || filters.endDate) {
-          const workOrderDate = wo.scheduledDate ? new Date(wo.scheduledDate) : new Date(wo.createdAt);
-          
-          if (filters.startDate && filters.endDate) {
+        if (filters.startDate && filters.endDate && wo.scheduledDate) {
+          try {
+            const workOrderDate = new Date(wo.scheduledDate);
             dateMatch = isWithinInterval(workOrderDate, {
               start: filters.startDate,
               end: filters.endDate
             });
-          } else if (filters.startDate) {
-            dateMatch = workOrderDate >= filters.startDate;
-          } else if (filters.endDate) {
-            dateMatch = workOrderDate <= filters.endDate;
+          } catch (error) {
+            console.warn('Error parsing date for work order:', wo._id, error);
+            dateMatch = true; // Include if date parsing fails
           }
         }
           
-        return buildingMatch && statusMatch && workTypeMatch && priorityMatch && dateMatch;
+        return buildingMatch && statusMatch && dateMatch;
       })
       .map(wo => ({
         ...wo,
@@ -902,196 +845,201 @@ const WorkOrders = () => {
         </Button>
       </Box>
 
-      {/* ENHANCED FILTERS SECTION WITH DATE FILTERING */}
+      {/* FILTERS SECTION */}
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <Card sx={{
           mb: 3,
           boxShadow: 3,
           border: '3px solid #1976d2',
           backgroundColor: '#e3f2fd',
+          minHeight: '200px'
         }}>
           <CardContent>
             <Typography variant="h5" gutterBottom sx={{ mb: 2, fontWeight: 'bold', color: '#1976d2' }}>
-              🔍 Advanced Work Order Filters
+              🔍 Filter Work Orders
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 2, color: '#666' }}>
+              Total Work Orders: {workOrders.length} | Filtered: {filteredWorkOrders.length}
+              {filters.startDate && filters.endDate && (
+                <span> | Date Range: {format(filters.startDate, 'MMM dd')} - {format(filters.endDate, 'MMM dd, yyyy')}</span>
+              )}
             </Typography>
             
-            <Grid container spacing={2}>
-              {/* Date Period Filter */}
-              <Grid item xs={12} sm={6} md={3}>
+            {/* Basic Filters Row */}
+            <Grid container spacing={2} sx={{ mb: 2 }}>
+              <Grid item xs={12} sm={6} md={4}>
                 <TextField
                   select
                   fullWidth
-                  label="Date Period"
-                  name="datePeriod"
-                  value={filters.datePeriod || ''}
-                  onChange={(e) => {
-                    const period = e.target.value;
-                    setFilters(prev => ({ ...prev, datePeriod: period }));
-                    if (period) {
-                      setQuickDateFilter(period);
-                    } else {
-                      setFilters(prev => ({ ...prev, startDate: null, endDate: null }));
+                  label="Building"
+                  name="building"
+                  value={filters.building}
+                  onChange={handleFilterChange}
+                  variant="outlined"
+                  size="small"
+                  disabled={isLoadingBuildings || Boolean(buildingsError)}
+                  helperText={
+                    isLoadingBuildings 
+                      ? 'Loading buildings...' 
+                      : buildingsError 
+                      ? 'Error loading buildings' 
+                      : ''
+                  }
+                  error={Boolean(buildingsError)}
+                >
+                  <MenuItem value="">
+                    <em>All Buildings</em>
+                  </MenuItem>
+                  {(() => {
+                    try {
+                      let buildings = [];
+                      
+                      // Handle different possible data structures
+                      if (buildingsData?.data?.buildings && Array.isArray(buildingsData.data.buildings)) {
+                        buildings = buildingsData.data.buildings;
+                      } else if (buildingsData?.data && Array.isArray(buildingsData.data)) {
+                        buildings = buildingsData.data;
+                      } else if (buildingsData?.buildings && Array.isArray(buildingsData.buildings)) {
+                        buildings = buildingsData.buildings;
+                      } else if (Array.isArray(buildingsData)) {
+                        buildings = buildingsData;
+                      }
+                      
+                      return buildings.map(building => (
+                        <MenuItem key={building._id || building.id} value={building._id || building.id}>
+                          {building.name || building.title || 'Unnamed Building'}
+                        </MenuItem>
+                      ));
+                    } catch (error) {
+                      console.error('Error rendering building options:', error);
+                      return (
+                        <MenuItem disabled>
+                          Error loading buildings
+                        </MenuItem>
+                      );
                     }
-                  }}
+                  })()}
+                </TextField>
+                {buildingsError && (
+                  <Typography color="error" variant="caption">
+                    Error loading buildings
+                  </Typography>
+                )}
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  select
+                  fullWidth
+                  label="Status"
+                  name="status"
+                  value={filters.status}
+                  onChange={handleFilterChange}
                   variant="outlined"
                   size="small"
                 >
                   <MenuItem value="">
-                    <em>All Dates</em>
+                    <em>All Statuses</em>
                   </MenuItem>
-                  <MenuItem value="today">Today</MenuItem>
-                  <MenuItem value="yesterday">Yesterday</MenuItem>
-                  <MenuItem value="thisWeek">This Week</MenuItem>
-                  <MenuItem value="lastWeek">Last Week</MenuItem>
-                  <MenuItem value="thisMonth">This Month</MenuItem>
-                  <MenuItem value="lastMonth">Last Month</MenuItem>
-                  <MenuItem value="last30Days">Last 30 Days</MenuItem>
-                  <MenuItem value="last90Days">Last 90 Days</MenuItem>
-                  <MenuItem value="thisYear">This Year</MenuItem>
+                  {statusOptions.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        {option.icon}
+                        {option.label}
+                      </Box>
+                    </MenuItem>
+                  ))}
                 </TextField>
               </Grid>
-              
-              {/* Building Filter */}
-              <Grid item xs={12} sm={6} md={3}>
-                    <TextField
-                      select
-                      fullWidth
-                      label="Building"
-                      name="building"
-                      value={filters.building}
-                      onChange={handleFilterChange}
-                      variant="outlined"
-                      size="small"
-                      disabled={isLoadingBuildings || Boolean(buildingsError)}
-                    >
-                      <MenuItem value="">
-                        <em>All Buildings</em>
-                      </MenuItem>
-                      {(() => {
-                        try {
-                          let buildings = [];
-                          
-                          if (buildingsData?.data?.buildings && Array.isArray(buildingsData.data.buildings)) {
-                            buildings = buildingsData.data.buildings;
-                          } else if (buildingsData?.data && Array.isArray(buildingsData.data)) {
-                            buildings = buildingsData.data;
-                          } else if (buildingsData?.buildings && Array.isArray(buildingsData.buildings)) {
-                            buildings = buildingsData.buildings;
-                          } else if (Array.isArray(buildingsData)) {
-                            buildings = buildingsData;
-                          }
-                          
-                          return buildings.map(building => (
-                            <MenuItem key={building._id || building.id} value={building._id || building.id}>
-                              {building.name || building.title || 'Unnamed Building'}
-                            </MenuItem>
-                          ));
-                        } catch (error) {
-                          console.error('Error rendering building options:', error);
-                          return (
-                            <MenuItem disabled>
-                              Error loading buildings
-                            </MenuItem>
-                          );
-                        }
-                      })()}
-                    </TextField>
-                  </Grid>
-              
-              {/* Status Filter */}
-              <Grid item xs={12} sm={6} md={3}>
-                    <TextField
-                      select
-                      fullWidth
-                      label="Status"
-                      name="status"
-                      value={filters.status}
-                      onChange={handleFilterChange}
-                      variant="outlined"
-                      size="small"
-                    >
-                      <MenuItem value="">
-                        <em>All Statuses</em>
-                      </MenuItem>
-                      {statusOptions.map((option) => (
-                        <MenuItem key={option.value} value={option.value}>
-                          <Box display="flex" alignItems="center" gap={1}>
-                            {option.icon}
-                            {option.label}
-                          </Box>
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  </Grid>
-              
-              {/* Work Type Filter */}
-              <Grid item xs={12} sm={6} md={3}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Work Type</InputLabel>
-                      <Select
-                        value={filters.workType}
-                        onChange={(e) => handleFilterChange({ target: { name: 'workType', value: e.target.value } })}
-                        label="Work Type"
-                      >
-                        <MenuItem value="">All Types</MenuItem>
-                        {workTypes.map((type) => (
-                          <MenuItem key={type.value} value={type.value}>
-                            {type.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-              
-              {/* Priority Filter */}
-              <Grid item xs={12} sm={6} md={3}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Priority</InputLabel>
-                      <Select
-                        value={filters.priority}
-                        onChange={(e) => handleFilterChange({ target: { name: 'priority', value: e.target.value } })}
-                        label="Priority"
-                      >
-                        <MenuItem value="">All Priorities</MenuItem>
-                        {priorityOptions.map((priority) => (
-                          <MenuItem key={priority.value} value={priority.value}>
-                            {priority.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-              
-              {/* Clear Filters Button */}
-              <Grid item xs={12}>
+              <Grid item xs={12} md={4} sx={{ display: 'flex', alignItems: 'flex-end' }}>
                 <Button
                   variant="outlined"
                   color="primary"
-                  onClick={resetFilters}
-                  disabled={!filters.building && !filters.status && !filters.workType && !filters.priority && !filters.datePeriod}
+                  onClick={() => setFilters({ building: '', status: '', startDate: null, endDate: null })}
+                  disabled={!filters.building && !filters.status && !filters.startDate && !filters.endDate}
                   fullWidth
                   size="large"
-                  sx={{ mt: 1 }}
+                  sx={{ height: '40px' }}
                 >
                   Clear All Filters
                 </Button>
               </Grid>
             </Grid>
             
-            {/* Filter Summary */}
-            <Alert severity="info" sx={{ mt: 2 }}>
-              <Typography variant="subtitle2">Filter Results:</Typography>
-              <Typography variant="body2">
-                Date: {filters.datePeriod ? filters.datePeriod.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()) : 'All'} | 
-                Building: {filters.building ? 'Selected' : 'All'} | 
-                Status: {filters.status || 'All'} | 
-                Type: {filters.workType || 'All'} | 
-                Priority: {filters.priority || 'All'}
+            <Divider sx={{ my: 2, borderColor: '#1976d2' }} />
+            
+            {/* Date Range Filters */}
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="h6" sx={{ mb: 1, fontWeight: 'bold', color: '#1976d2', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CalendarIcon /> Date Range Filters
               </Typography>
-              <Typography variant="body2" sx={{ mt: 0.5, fontWeight: 'bold' }}>
-                Showing {filteredWorkOrders.length} of {workOrders.length} work orders
-              </Typography>
-            </Alert>
+              
+              {/* Quick Date Buttons */}
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1, color: '#666' }}>Quick Filters:</Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('thisWeek')}>
+                    This Week
+                  </Button>
+                  <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('lastWeek')}>
+                    Last Week
+                  </Button>
+                  <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('thisMonth')}>
+                    This Month
+                  </Button>
+                  <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('lastMonth')}>
+                    Last Month
+                  </Button>
+                  <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('monthsBack', 2)}>
+                    2 Months Ago
+                  </Button>
+                  <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('monthsBack', 3)}>
+                    3 Months Ago
+                  </Button>
+                  <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('thisYear')}>
+                    This Year
+                  </Button>
+                  <Button size="small" variant="outlined" onClick={() => setQuickDateFilter('lastYear')}>
+                    Last Year
+                  </Button>
+                  <Button size="small" variant="text" color="secondary" onClick={() => setQuickDateFilter('clear')}>
+                    Clear Dates
+                  </Button>
+                </Stack>
+              </Box>
+              
+              {/* Custom Date Range */}
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <DatePicker
+                    label="Start Date"
+                    value={filters.startDate}
+                    onChange={(date) => handleDateFilterChange('startDate', date)}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        size: 'small',
+                        variant: 'outlined'
+                      }
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <DatePicker
+                    label="End Date"
+                    value={filters.endDate}
+                    onChange={(date) => handleDateFilterChange('endDate', date)}
+                    minDate={filters.startDate}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        size: 'small',
+                        variant: 'outlined'
+                      }
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
           </CardContent>
         </Card>
       </LocalizationProvider>
