@@ -62,6 +62,18 @@ const getPriorityChipColor = (priority) => {
 const WorkOrders = () => {
   const navigate = useNavigate();
   const { canViewCosts } = useAuth();
+  
+  // Initialize state first
+  const [filters, setFilters] = useState({ 
+    building: '', 
+    status: '',
+    startDate: null,
+    endDate: null,
+    workType: '',
+    workSubType: ''
+  });
+
+  // Then use hooks that depend on state
   const { data: workOrdersData, isLoading, error } = useGetWorkOrdersQuery();
   const { 
     data: buildingsData, 
@@ -79,15 +91,6 @@ const WorkOrders = () => {
     error: workSubTypesError 
   } = useGetWorkSubTypesQuery(filters.workType || undefined);
   const [updateWorkOrder] = useUpdateWorkOrderMutation();
-
-  const [filters, setFilters] = useState({ 
-    building: '', 
-    status: '',
-    startDate: null,
-    endDate: null,
-    workType: '',
-    workSubType: ''
-  });
   const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
 
