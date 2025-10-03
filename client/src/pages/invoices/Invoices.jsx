@@ -371,6 +371,7 @@ const Invoices = () => {
               <TableRow>
                 <TableCell>Invoice #</TableCell>
                 <TableCell>Building</TableCell>
+                <TableCell>Categories</TableCell>
                 <TableCell>Issue Date</TableCell>
                 <TableCell>Due Date</TableCell>
                 <TableCell>Total</TableCell>
@@ -381,7 +382,7 @@ const Invoices = () => {
             <TableBody>
               {filteredInvoices.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">
+                  <TableCell colSpan={8} align="center">
                     <Box py={4}>
                       <ReceiptIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                       <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -417,6 +418,58 @@ const Invoices = () => {
                       <Typography variant="caption" color="text.secondary">
                         {invoice.building?.address || ''}
                       </Typography>
+                    </TableCell>
+                    <TableCell>
+                      {(() => {
+                        try {
+                          const workOrders = invoice.workOrders || [];
+                          if (workOrders.length === 0) return <Typography variant="body2" color="text.secondary">No work orders</Typography>;
+                          
+                          // Get unique work types
+                          const workTypes = [...new Set(workOrders.map(item => {
+                            const workType = item.workOrder?.workType;
+                            return workType?.name || workType?.code || 'Other';
+                          }))].filter(Boolean);
+                          
+                          if (workTypes.length === 0) return <Typography variant="body2" color="text.secondary">No categories</Typography>;
+                          
+                          return (
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                              {workTypes.slice(0, 3).map((type, index) => {
+                                let icon = '';
+                                switch (type.toLowerCase()) {
+                                  case 'painting': icon = '🎨'; break;
+                                  case 'cleaning': icon = '🧹'; break;
+                                  case 'repair': icon = '🔧'; break;
+                                  case 'maintenance': icon = '⚙️'; break;
+                                  case 'inspection': icon = '🔍'; break;
+                                  default: icon = '📋'; break;
+                                }
+                                return (
+                                  <Chip
+                                    key={index}
+                                    label={`${icon} ${type.charAt(0).toUpperCase() + type.slice(1)}`}
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{ fontSize: '0.7rem', height: '20px' }}
+                                  />
+                                );
+                              })}
+                              {workTypes.length > 3 && (
+                                <Chip
+                                  label={`+${workTypes.length - 3}`}
+                                  size="small"
+                                  variant="outlined"
+                                  sx={{ fontSize: '0.7rem', height: '20px' }}
+                                />
+                              )}
+                            </Box>
+                          );
+                        } catch (error) {
+                          console.warn('Error rendering work types:', error);
+                          return <Typography variant="body2" color="text.secondary">Error</Typography>;
+                        }
+                      })()}
                     </TableCell>
                     <TableCell>
                       {(() => {

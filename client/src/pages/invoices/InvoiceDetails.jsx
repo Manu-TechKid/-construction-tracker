@@ -320,6 +320,7 @@ const InvoiceDetails = () => {
                         <TableHead>
                           <TableRow>
                             <TableCell>Work Order</TableCell>
+                            <TableCell>Category</TableCell>
                             <TableCell>Description</TableCell>
                             <TableCell align="right">Quantity</TableCell>
                             <TableCell align="right">Price</TableCell>
@@ -351,6 +352,51 @@ const InvoiceDetails = () => {
                                     }
                                   })()}
                                 </Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Box>
+                                  <Typography variant="body2" fontWeight="medium">
+                                    {(() => {
+                                      try {
+                                        const workType = item.workOrder?.workType;
+                                        if (!workType) return 'No Category';
+                                        
+                                        // Get work type name with icon
+                                        const typeName = workType.name || workType.code || 'Unknown';
+                                        let icon = '';
+                                        switch (typeName.toLowerCase()) {
+                                          case 'painting': icon = '🎨'; break;
+                                          case 'cleaning': icon = '🧹'; break;
+                                          case 'repair': icon = '🔧'; break;
+                                          case 'maintenance': icon = '⚙️'; break;
+                                          case 'inspection': icon = '🔍'; break;
+                                          default: icon = '📋'; break;
+                                        }
+                                        return `${icon} ${typeName.charAt(0).toUpperCase() + typeName.slice(1)}`;
+                                      } catch (error) {
+                                        console.warn('Error rendering work type:', error);
+                                        return 'No Category';
+                                      }
+                                    })()}
+                                  </Typography>
+                                  {(() => {
+                                    try {
+                                      const workSubType = item.workOrder?.workSubType;
+                                      if (workSubType && (workSubType.name || workSubType.code)) {
+                                        const subTypeName = workSubType.name || workSubType.code;
+                                        return (
+                                          <Typography variant="caption" color="textSecondary">
+                                            {subTypeName.charAt(0).toUpperCase() + subTypeName.slice(1).replace(/[-_]/g, ' ')}
+                                          </Typography>
+                                        );
+                                      }
+                                      return null;
+                                    } catch (error) {
+                                      console.warn('Error rendering work sub-type:', error);
+                                      return null;
+                                    }
+                                  })()}
+                                </Box>
                               </TableCell>
                               <TableCell>
                                 {(() => {
@@ -422,6 +468,60 @@ const InvoiceDetails = () => {
         
         {/* Sidebar */}
         <Grid item xs={12} md={4}>
+          {/* Category Summary */}
+          {(() => {
+            try {
+              const workOrders = invoice.workOrders || [];
+              if (workOrders.length === 0) return null;
+              
+              // Group by work type
+              const categoryTotals = workOrders.reduce((acc, item) => {
+                const workType = item.workOrder?.workType;
+                const typeName = workType?.name || workType?.code || 'Other';
+                const total = item.totalPrice || (item.quantity * (item.workOrder?.price || item.unitPrice || 0));
+                
+                if (!acc[typeName]) {
+                  acc[typeName] = { count: 0, total: 0 };
+                }
+                acc[typeName].count += 1;
+                acc[typeName].total += total;
+                return acc;
+              }, {});
+              
+              return Object.keys(categoryTotals).length > 1 ? (
+                <Card sx={{ mb: 3 }}>
+                  <CardHeader title="Category Breakdown" />
+                  <CardContent>
+                    {Object.entries(categoryTotals).map(([category, data]) => {
+                      let icon = '';
+                      switch (category.toLowerCase()) {
+                        case 'painting': icon = '🎨'; break;
+                        case 'cleaning': icon = '🧹'; break;
+                        case 'repair': icon = '🔧'; break;
+                        case 'maintenance': icon = '⚙️'; break;
+                        case 'inspection': icon = '🔍'; break;
+                        default: icon = '📋'; break;
+                      }
+                      return (
+                        <Box key={category} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                          <Typography variant="body2">
+                            {icon} {category.charAt(0).toUpperCase() + category.slice(1)} ({data.count})
+                          </Typography>
+                          <Typography variant="body2" fontWeight="medium">
+                            ${data.total.toFixed(2)}
+                          </Typography>
+                        </Box>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              ) : null;
+            } catch (error) {
+              console.warn('Error rendering category summary:', error);
+              return null;
+            }
+          })()}
+          
           {/* Cost Summary */}
           <Card sx={{ mb: 3 }}>
             <CardHeader title="Cost Summary" />
