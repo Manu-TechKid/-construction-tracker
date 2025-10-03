@@ -359,13 +359,22 @@ exports.getFilteredWorkOrders = catchAsync(async (req, res, next) => {
 
     // Add date range filter
     if (startDate || endDate) {
-        query.scheduledDate = {};
-        if (startDate) {
-            query.scheduledDate.$gte = new Date(startDate);
-        }
-        if (endDate) {
-            query.scheduledDate.$lte = new Date(endDate);
-        }
+        // Use scheduledDate if available, otherwise fall back to createdAt
+        query.$or = [
+            {
+                scheduledDate: {
+                    ...(startDate && { $gte: new Date(startDate) }),
+                    ...(endDate && { $lte: new Date(endDate) })
+                }
+            },
+            {
+                scheduledDate: { $exists: false },
+                createdAt: {
+                    ...(startDate && { $gte: new Date(startDate) }),
+                    ...(endDate && { $lte: new Date(endDate) })
+                }
+            }
+        ];
     }
 
     // Add work type filter

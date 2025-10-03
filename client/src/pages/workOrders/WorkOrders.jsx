@@ -633,9 +633,11 @@ const WorkOrders = () => {
                       }}
                       onError={(e) => {
                         console.warn('Error loading image:', currentFullPhotoUrl);
-                        e.target.style.display = 'none';
-                        e.target.parentElement.style.backgroundColor = '#f5f5f5';
-                        e.target.parentElement.style.border = '1px dashed #ccc';
+                        // Show blank white placeholder instead of hiding the image
+                        e.target.style.display = 'block';
+                        e.target.style.backgroundColor = '#ffffff';
+                        e.target.style.border = '1px solid #e0e0e0';
+                        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZmZmZmZmIiBzdHJva2U9IiNlMGUwZTAiLz4KPC9zdmc+';
                       }}
                     />
                     {index === 2 && photos.length > 3 && (
@@ -798,7 +800,17 @@ const WorkOrders = () => {
         try {
           if (!params.row) return 'N/A';
           const apartmentNumber = params.row.apartmentNumber || 'N/A';
-          return apartmentNumber === 'N/A' ? 'No apartment' : `Apt ${apartmentNumber}`;
+
+          // Check if apartmentNumber is a number (digits only) or contains text
+          if (apartmentNumber === 'N/A') {
+            return 'No apartment';
+          } else if (/^\d+$/.test(apartmentNumber.trim())) {
+            // If it's only digits, add "Apt" prefix
+            return `Apt ${apartmentNumber}`;
+          } else {
+            // If it contains text (like "Hallway"), return as-is
+            return apartmentNumber;
+          }
         } catch (error) {
           console.warn('Error getting apartment number:', error);
           return 'N/A';
@@ -816,6 +828,14 @@ const WorkOrders = () => {
             return <Typography variant="body2" color="textSecondary">No apartment</Typography>;
           }
 
+          // Check if apartmentNumber is a number (digits only) or contains text
+          let displayText = apartmentNumber;
+          if (/^\d+$/.test(apartmentNumber.trim())) {
+            // If it's only digits, add "Apt" prefix
+            displayText = `Apt ${apartmentNumber}`;
+          }
+          // If it contains text (like "Hallway"), use as-is
+
           return (
             <Typography
               variant="body2"
@@ -825,7 +845,7 @@ const WorkOrders = () => {
                 lineHeight: 1.4
               }}
             >
-              Apt {apartmentNumber}
+              {displayText}
             </Typography>
           );
         } catch (error) {

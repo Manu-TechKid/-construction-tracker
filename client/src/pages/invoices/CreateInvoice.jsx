@@ -106,9 +106,11 @@ const CreateInvoice = () => {
   } = useGetFilteredWorkOrdersQuery(
     {
       buildingId: selectedBuildingId,
-      ...filters,
       startDate: filters.startDate?.toISOString(),
-      endDate: filters.endDate?.toISOString()
+      endDate: filters.endDate?.toISOString(),
+      workType: filters.workType || undefined,
+      workSubType: filters.workSubType || undefined,
+      status: filters.status || undefined
     },
     {
       skip: !selectedBuildingId,
