@@ -849,224 +849,340 @@ const WorkOrders = () => {
         </Button>
       </Box>
 
-      {/* FILTERS SECTION */}
+      {/* ENHANCED FILTERS SECTION */}
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <Card sx={{
-          mb: 3,
-          boxShadow: 3,
-          border: '3px solid #1976d2',
-          backgroundColor: '#e3f2fd',
-          minHeight: '200px'
+          mb: 4,
+          boxShadow: '0 8px 32px rgba(25, 118, 210, 0.15)',
+          border: '2px solid #1976d2',
+          borderRadius: '16px',
+          background: 'linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%)',
+          overflow: 'visible'
         }}>
-          <CardContent>
-            <Typography variant="h5" gutterBottom sx={{ mb: 2, fontWeight: 'bold', color: '#1976d2' }}>
-              🔍 Filter Work Orders
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 2, color: '#666' }}>
-              Total Work Orders: {workOrders.length} | Filtered: {filteredWorkOrders.length}
-              {(filters.startDate || filters.endDate) && (
-                <span> | Date Range: {filters.startDate ? format(filters.startDate, 'MMM dd, yyyy') : 'Start'} - {filters.endDate ? format(filters.endDate, 'MMM dd, yyyy') : 'End'}</span>
-              )}
-            </Typography>
-            
-            {/* Quick Date Filter Buttons */}
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle2" gutterBottom sx={{ color: '#1976d2', fontWeight: 'bold' }}>
-                📅 Quick Date Filters:
-              </Typography>
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                <Button 
-                  size="small" 
-                  variant="outlined"
-                  onClick={() => setQuickDateFilter('today')}
-                  sx={{ mb: 1 }}
-                >
-                  Today
-                </Button>
-                <Button 
-                  size="small" 
-                  variant="outlined"
-                  onClick={() => setQuickDateFilter('thisWeek')}
-                  sx={{ mb: 1 }}
-                >
-                  This Week
-                </Button>
-                <Button 
-                  size="small" 
-                  variant="outlined"
-                  onClick={() => setQuickDateFilter('thisMonth')}
-                  sx={{ mb: 1 }}
-                >
-                  This Month
-                </Button>
-                <Button 
-                  size="small" 
-                  variant="outlined"
-                  onClick={() => setQuickDateFilter('lastMonth')}
-                  sx={{ mb: 1 }}
-                >
-                  Last Month
-                </Button>
-                <Button 
-                  size="small" 
-                  variant="outlined"
-                  onClick={() => setQuickDateFilter('thisYear')}
-                  sx={{ mb: 1 }}
-                >
-                  This Year
-                </Button>
-                <Button 
-                  size="small" 
-                  variant="outlined"
-                  onClick={() => setQuickDateFilter('last30Days')}
-                  sx={{ mb: 1 }}
-                >
-                  Last 30 Days
-                </Button>
-                <Button 
-                  size="small" 
-                  variant="outlined"
-                  onClick={() => setQuickDateFilter('last90Days')}
-                  sx={{ mb: 1 }}
-                >
-                  Last 90 Days
-                </Button>
-              </Stack>
+          <CardContent sx={{ p: 4 }}>
+            {/* Header Section */}
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              mb: 3,
+              flexWrap: 'wrap',
+              gap: 2
+            }}>
+              <Box>
+                <Typography variant="h4" sx={{ 
+                  fontWeight: 'bold', 
+                  color: '#1976d2',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  mb: 1
+                }}>
+                  🔍 Advanced Work Order Filters
+                </Typography>
+                <Typography variant="body1" sx={{ 
+                  color: '#555',
+                  fontSize: '1.1rem'
+                }}>
+                  Total: <strong>{workOrders.length}</strong> | 
+                  Filtered: <strong style={{ color: '#1976d2' }}>{filteredWorkOrders.length}</strong>
+                  {(filters.startDate || filters.endDate) && (
+                    <span style={{ color: '#9c27b0', marginLeft: '8px' }}>
+                      📅 {filters.startDate ? format(filters.startDate, 'MMM dd, yyyy') : 'Start'} → {filters.endDate ? format(filters.endDate, 'MMM dd, yyyy') : 'End'}
+                    </span>
+                  )}
+                </Typography>
+              </Box>
+              
+              {/* Clear All Filters - Top Right */}
+              <Button
+                variant="contained"
+                color="error"
+                onClick={clearAllFilters}
+                disabled={!filters.building && !filters.status && !filters.startDate && !filters.endDate}
+                size="large"
+                startIcon={<FilterIcon />}
+                sx={{ 
+                  minWidth: '180px',
+                  height: '48px',
+                  borderRadius: '24px',
+                  textTransform: 'none',
+                  fontSize: '1rem',
+                  fontWeight: 'bold',
+                  boxShadow: '0 4px 12px rgba(244, 67, 54, 0.3)'
+                }}
+              >
+                Clear All Filters
+              </Button>
             </Box>
             
-            <Grid container spacing={2}>
-              {/* Date Range Filters */}
-              <Grid item xs={12} sm={6} md={3}>
-                <DatePicker
-                  label="Start Date"
-                  value={filters.startDate}
-                  onChange={(date) => handleDateFilterChange('startDate', date)}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      size: 'small',
-                      variant: 'outlined'
-                    }
-                  }}
-                />
+            {/* Quick Date Filter Buttons Section */}
+            <Box sx={{ 
+              mb: 3, 
+              p: 2, 
+              backgroundColor: 'rgba(255, 255, 255, 0.7)',
+              borderRadius: '12px',
+              border: '1px solid rgba(25, 118, 210, 0.2)'
+            }}>
+              <Typography variant="h6" gutterBottom sx={{ 
+                color: '#1976d2', 
+                fontWeight: 'bold',
+                mb: 2,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}>
+                📅 Quick Date Filters
+              </Typography>
+              <Grid container spacing={1}>
+                {[
+                  { key: 'today', label: 'Today', color: 'primary' },
+                  { key: 'thisWeek', label: 'This Week', color: 'secondary' },
+                  { key: 'thisMonth', label: 'This Month', color: 'success' },
+                  { key: 'lastMonth', label: 'Last Month', color: 'warning' },
+                  { key: 'thisYear', label: 'This Year', color: 'info' },
+                  { key: 'last30Days', label: 'Last 30 Days', color: 'primary' },
+                  { key: 'last90Days', label: 'Last 90 Days', color: 'secondary' }
+                ].map((filter) => (
+                  <Grid item xs={6} sm={4} md={3} lg={2} xl={1.7} key={filter.key}>
+                    <Button 
+                      variant="outlined"
+                      color={filter.color}
+                      onClick={() => setQuickDateFilter(filter.key)}
+                      fullWidth
+                      sx={{
+                        height: '40px',
+                        borderRadius: '20px',
+                        textTransform: 'none',
+                        fontWeight: 'medium',
+                        fontSize: '0.9rem',
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                        },
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {filter.label}
+                    </Button>
+                  </Grid>
+                ))}
               </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <DatePicker
-                  label="End Date"
-                  value={filters.endDate}
-                  onChange={(date) => handleDateFilterChange('endDate', date)}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      size: 'small',
-                      variant: 'outlined'
-                    }
-                  }}
-                />
-              </Grid>
+            </Box>
+            
+            {/* Main Filter Controls */}
+            <Box sx={{
+              p: 3,
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              borderRadius: '12px',
+              border: '1px solid rgba(25, 118, 210, 0.2)'
+            }}>
+              <Typography variant="h6" gutterBottom sx={{ 
+                color: '#1976d2', 
+                fontWeight: 'bold',
+                mb: 3,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}>
+                🎯 Detailed Filters
+              </Typography>
               
-              {/* Building Filter */}
-              <Grid item xs={12} sm={6} md={3}>
-                <TextField
-                  select
-                  fullWidth
-                  label="Building"
-                  name="building"
-                  value={filters.building}
-                  onChange={handleFilterChange}
-                  variant="outlined"
-                  size="small"
-                  disabled={isLoadingBuildings || Boolean(buildingsError)}
-                  helperText={
-                    isLoadingBuildings 
-                      ? 'Loading buildings...' 
-                      : buildingsError 
-                      ? 'Error loading buildings' 
-                      : ''
-                  }
-                  error={Boolean(buildingsError)}
-                >
-                  <MenuItem value="">
-                    <em>All Buildings</em>
-                  </MenuItem>
-                  {(() => {
-                    try {
-                      let buildings = [];
-                      
-                      // Handle different possible data structures
-                      if (buildingsData?.data?.buildings && Array.isArray(buildingsData.data.buildings)) {
-                        buildings = buildingsData.data.buildings;
-                      } else if (buildingsData?.data && Array.isArray(buildingsData.data)) {
-                        buildings = buildingsData.data;
-                      } else if (buildingsData?.buildings && Array.isArray(buildingsData.buildings)) {
-                        buildings = buildingsData.buildings;
-                      } else if (Array.isArray(buildingsData)) {
-                        buildings = buildingsData;
+              <Grid container spacing={3}>
+                {/* Date Range Filters */}
+                <Grid item xs={12} md={6} lg={3}>
+                  <Box sx={{ 
+                    p: 2, 
+                    border: '2px dashed #1976d2', 
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(25, 118, 210, 0.05)'
+                  }}>
+                    <Typography variant="subtitle2" sx={{ 
+                      color: '#1976d2', 
+                      fontWeight: 'bold', 
+                      mb: 1.5,
+                      textAlign: 'center'
+                    }}>
+                      📅 Start Date
+                    </Typography>
+                    <DatePicker
+                      label="From Date"
+                      value={filters.startDate}
+                      onChange={(date) => handleDateFilterChange('startDate', date)}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          size: 'medium',
+                          variant: 'outlined',
+                          sx: {
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '8px'
+                            }
+                          }
+                        }
+                      }}
+                    />
+                  </Box>
+                </Grid>
+                
+                <Grid item xs={12} md={6} lg={3}>
+                  <Box sx={{ 
+                    p: 2, 
+                    border: '2px dashed #9c27b0', 
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(156, 39, 176, 0.05)'
+                  }}>
+                    <Typography variant="subtitle2" sx={{ 
+                      color: '#9c27b0', 
+                      fontWeight: 'bold', 
+                      mb: 1.5,
+                      textAlign: 'center'
+                    }}>
+                      📅 End Date
+                    </Typography>
+                    <DatePicker
+                      label="To Date"
+                      value={filters.endDate}
+                      onChange={(date) => handleDateFilterChange('endDate', date)}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          size: 'medium',
+                          variant: 'outlined',
+                          sx: {
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '8px'
+                            }
+                          }
+                        }
+                      }}
+                    />
+                  </Box>
+                </Grid>
+                
+                {/* Building Filter */}
+                <Grid item xs={12} md={6} lg={3}>
+                  <Box sx={{ 
+                    p: 2, 
+                    border: '2px dashed #2e7d32', 
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(46, 125, 50, 0.05)'
+                  }}>
+                    <Typography variant="subtitle2" sx={{ 
+                      color: '#2e7d32', 
+                      fontWeight: 'bold', 
+                      mb: 1.5,
+                      textAlign: 'center'
+                    }}>
+                      🏢 Building
+                    </Typography>
+                    <TextField
+                      select
+                      fullWidth
+                      label="Select Building"
+                      name="building"
+                      value={filters.building}
+                      onChange={handleFilterChange}
+                      variant="outlined"
+                      size="medium"
+                      disabled={isLoadingBuildings || Boolean(buildingsError)}
+                      helperText={
+                        isLoadingBuildings 
+                          ? 'Loading buildings...' 
+                          : buildingsError 
+                          ? 'Error loading buildings' 
+                          : ''
                       }
-                      
-                      return buildings.map(building => (
-                        <MenuItem key={building._id || building.id} value={building._id || building.id}>
-                          {building.name || building.title || 'Unnamed Building'}
+                      error={Boolean(buildingsError)}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '8px'
+                        }
+                      }}
+                    >
+                      <MenuItem value="">
+                        <em>All Buildings</em>
+                      </MenuItem>
+                      {(() => {
+                        try {
+                          let buildings = [];
+                          
+                          // Handle different possible data structures
+                          if (buildingsData?.data?.buildings && Array.isArray(buildingsData.data.buildings)) {
+                            buildings = buildingsData.data.buildings;
+                          } else if (buildingsData?.data && Array.isArray(buildingsData.data)) {
+                            buildings = buildingsData.data;
+                          } else if (buildingsData?.buildings && Array.isArray(buildingsData.buildings)) {
+                            buildings = buildingsData.buildings;
+                          } else if (Array.isArray(buildingsData)) {
+                            buildings = buildingsData;
+                          }
+                          
+                          return buildings.map(building => (
+                            <MenuItem key={building._id || building.id} value={building._id || building.id}>
+                              {building.name || building.title || 'Unnamed Building'}
+                            </MenuItem>
+                          ));
+                        } catch (error) {
+                          console.error('Error rendering building options:', error);
+                          return (
+                            <MenuItem disabled>
+                              Error loading buildings
+                            </MenuItem>
+                          );
+                        }
+                      })()}
+                    </TextField>
+                  </Box>
+                </Grid>
+                
+                {/* Status Filter */}
+                <Grid item xs={12} md={6} lg={3}>
+                  <Box sx={{ 
+                    p: 2, 
+                    border: '2px dashed #ed6c02', 
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(237, 108, 2, 0.05)'
+                  }}>
+                    <Typography variant="subtitle2" sx={{ 
+                      color: '#ed6c02', 
+                      fontWeight: 'bold', 
+                      mb: 1.5,
+                      textAlign: 'center'
+                    }}>
+                      📊 Status
+                    </Typography>
+                    <TextField
+                      select
+                      fullWidth
+                      label="Select Status"
+                      name="status"
+                      value={filters.status}
+                      onChange={handleFilterChange}
+                      variant="outlined"
+                      size="medium"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '8px'
+                        }
+                      }}
+                    >
+                      <MenuItem value="">
+                        <em>All Statuses</em>
+                      </MenuItem>
+                      {statusOptions.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            {option.icon}
+                            {option.label}
+                          </Box>
                         </MenuItem>
-                      ));
-                    } catch (error) {
-                      console.error('Error rendering building options:', error);
-                      return (
-                        <MenuItem disabled>
-                          Error loading buildings
-                        </MenuItem>
-                      );
-                    }
-                  })()}
-                </TextField>
-                {buildingsError && (
-                  <Typography color="error" variant="caption">
-                    Error loading buildings
-                  </Typography>
-                )}
+                      ))}
+                    </TextField>
+                  </Box>
+                </Grid>
               </Grid>
-              
-              {/* Status Filter */}
-              <Grid item xs={12} sm={6} md={3}>
-                <TextField
-                  select
-                  fullWidth
-                  label="Status"
-                  name="status"
-                  value={filters.status}
-                  onChange={handleFilterChange}
-                  variant="outlined"
-                  size="small"
-                >
-                  <MenuItem value="">
-                    <em>All Statuses</em>
-                  </MenuItem>
-                  {statusOptions.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        {option.icon}
-                        {option.label}
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-              
-              {/* Clear Filters Button */}
-              <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={clearAllFilters}
-                  disabled={!filters.building && !filters.status && !filters.startDate && !filters.endDate}
-                  size="large"
-                  startIcon={<FilterIcon />}
-                  sx={{ minWidth: '200px' }}
-                >
-                  Clear All Filters
-                </Button>
-              </Grid>
-            </Grid>
+            </Box>
           </CardContent>
         </Card>
       </LocalizationProvider>
