@@ -34,6 +34,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useAuth } from '../../hooks/useAuth';
 import { useGetWorkOrdersQuery, useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
+import { useGetWorkTypesQuery, useGetWorkSubTypesQuery } from '../../features/setup/setupApiSlice';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, isWithinInterval, parseISO } from 'date-fns';
 import { toast } from 'react-toastify';
 
@@ -67,13 +68,25 @@ const WorkOrders = () => {
     isLoading: isLoadingBuildings, 
     error: buildingsError 
   } = useGetBuildingsQuery();
+  const { 
+    data: workTypesData, 
+    isLoading: isLoadingWorkTypes, 
+    error: workTypesError 
+  } = useGetWorkTypesQuery();
+  const { 
+    data: workSubTypesData, 
+    isLoading: isLoadingWorkSubTypes, 
+    error: workSubTypesError 
+  } = useGetWorkSubTypesQuery(filters.workType || undefined);
   const [updateWorkOrder] = useUpdateWorkOrderMutation();
 
   const [filters, setFilters] = useState({ 
     building: '', 
     status: '',
     startDate: null,
-    endDate: null
+    endDate: null,
+    workType: '',
+    workSubType: ''
   });
   const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
@@ -129,8 +142,13 @@ const WorkOrders = () => {
   }, [filters]);
   
   const clearAllFilters = useCallback(() => {
-    setFilters({ building: '', status: '', startDate: null, endDate: null });
+    setFilters({ building: '', status: '', startDate: null, endDate: null, workType: '', workSubType: '' });
   }, []);
+  
+  const handleWorkTypeChange = useCallback((e) => {
+    const workType = e.target.value;
+    setFilters({ ...filters, workType, workSubType: '' }); // Clear sub-type when work type changes
+  }, [filters]);
 
   const handleStatusClick = useCallback((event, workOrder) => {
     event.stopPropagation();
@@ -253,8 +271,24 @@ const WorkOrders = () => {
             dateMatch = !filters.startDate && !filters.endDate;
           }
         }
+        
+        // Handle work type filter
+        const workTypeMatch = filters.workType 
+          ? wo.workType?._id === filters.workType || 
+            (typeof wo.workType === 'string' && wo.workType === filters.workType) ||
+            wo.workType?.name?.toLowerCase() === filters.workType.toLowerCase() ||
+            wo.workType?.code?.toLowerCase() === filters.workType.toLowerCase()
+          : true;
+        
+        // Handle work sub-type filter
+        const workSubTypeMatch = filters.workSubType 
+          ? wo.workSubType?._id === filters.workSubType || 
+            (typeof wo.workSubType === 'string' && wo.workSubType === filters.workSubType) ||
+            wo.workSubType?.name?.toLowerCase() === filters.workSubType.toLowerCase() ||
+            wo.workSubType?.code?.toLowerCase() === filters.workSubType.toLowerCase()
+          : true;
           
-        return buildingMatch && statusMatch && dateMatch;
+        return buildingMatch && statusMatch && dateMatch && workTypeMatch && workSubTypeMatch;
       })
       .map(wo => ({
         ...wo,
@@ -891,6 +925,22 @@ const WorkOrders = () => {
                       📅 {filters.startDate ? format(filters.startDate, 'MMM dd, yyyy') : 'Start'} → {filters.endDate ? format(filters.endDate, 'MMM dd, yyyy') : 'End'}
                     </span>
                   )}
+                  {filters.workType && (
+                    <span style={{ color: '#2e7d32', marginLeft: '8px' }}>
+                      🏷️ {(() => {
+                        const workType = workTypesData?.data?.find(wt => wt._id === filters.workType || wt.name === filters.workType);
+                        return workType?.name || filters.workType;
+                      })()} 
+                      {filters.workSubType && (
+                        <span style={{ color: '#ed6c02' }}>
+                          → {(() => {
+                            const workSubType = workSubTypesData?.data?.find(wst => wst._id === filters.workSubType || wst.name === filters.workSubType);
+                            return workSubType?.name || filters.workSubType;
+                          })()}
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </Typography>
               </Box>
               
@@ -899,7 +949,7 @@ const WorkOrders = () => {
                 variant="contained"
                 color="error"
                 onClick={clearAllFilters}
-                disabled={!filters.building && !filters.status && !filters.startDate && !filters.endDate}
+                disabled={!filters.building && !filters.status && !filters.startDate && !filters.endDate && !filters.workType && !filters.workSubType}
                 size="large"
                 startIcon={<FilterIcon />}
                 sx={{ 
@@ -989,8 +1039,146 @@ const WorkOrders = () => {
               </Typography>
               
               <Grid container spacing={3}>
+                {/* Work Type Filter */}
+                <Grid item xs={12} md={6} lg={2.4}>
+                  <Box sx={{ 
+                    p: 2, 
+                    border: '2px dashed #ff9800', 
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(255, 152, 0, 0.05)'
+                  }}>
+                    <Typography variant="subtitle2" sx={{ 
+                      color: '#ff9800', 
+                      fontWeight: 'bold', 
+                      mb: 1.5,
+                      textAlign: 'center'
+                    }}>
+                      🏷️ Work Type
+                    </Typography>
+                    <TextField
+                      select
+                      fullWidth
+                      label="Select Category"
+                      name="workType"
+                      value={filters.workType}
+                      onChange={handleWorkTypeChange}
+                      variant="outlined"
+                      size="medium"
+                      disabled={isLoadingWorkTypes || Boolean(workTypesError)}
+                      helperText={
+                        isLoadingWorkTypes 
+                          ? 'Loading categories...' 
+                          : workTypesError 
+                          ? 'Error loading categories' 
+                          : ''
+                      }
+                      error={Boolean(workTypesError)}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '8px'
+                        }
+                      }}
+                    >
+                      <MenuItem value="">
+                        <em>All Categories</em>
+                      </MenuItem>
+                      {(() => {
+                        try {
+                          const workTypes = workTypesData?.data || [];
+                          return workTypes.map(workType => (
+                            <MenuItem key={workType._id} value={workType._id}>
+                              <Box display="flex" alignItems="center" gap={1}>
+                                {workType.name === 'painting' && '🎨'}
+                                {workType.name === 'cleaning' && '🧹'}
+                                {workType.name === 'repair' && '🔧'}
+                                {workType.name === 'maintenance' && '⚙️'}
+                                {workType.name === 'inspection' && '🔍'}
+                                {workType.name === 'other' && '📋'}
+                                {workType.name || workType.code || 'Unnamed Category'}
+                              </Box>
+                            </MenuItem>
+                          ));
+                        } catch (error) {
+                          console.error('Error rendering work type options:', error);
+                          return (
+                            <MenuItem disabled>
+                              Error loading categories
+                            </MenuItem>
+                          );
+                        }
+                      })()}
+                    </TextField>
+                  </Box>
+                </Grid>
+                
+                {/* Work Sub-Type Filter */}
+                <Grid item xs={12} md={6} lg={2.4}>
+                  <Box sx={{ 
+                    p: 2, 
+                    border: '2px dashed #ff5722', 
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(255, 87, 34, 0.05)'
+                  }}>
+                    <Typography variant="subtitle2" sx={{ 
+                      color: '#ff5722', 
+                      fontWeight: 'bold', 
+                      mb: 1.5,
+                      textAlign: 'center'
+                    }}>
+                      🎯 Sub-Category
+                    </Typography>
+                    <TextField
+                      select
+                      fullWidth
+                      label="Select Sub-Category"
+                      name="workSubType"
+                      value={filters.workSubType}
+                      onChange={handleFilterChange}
+                      variant="outlined"
+                      size="medium"
+                      disabled={!filters.workType || isLoadingWorkSubTypes || Boolean(workSubTypesError)}
+                      helperText={
+                        !filters.workType 
+                          ? 'Select category first' 
+                          : isLoadingWorkSubTypes 
+                          ? 'Loading sub-categories...' 
+                          : workSubTypesError 
+                          ? 'Error loading sub-categories' 
+                          : ''
+                      }
+                      error={Boolean(workSubTypesError)}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '8px'
+                        }
+                      }}
+                    >
+                      <MenuItem value="">
+                        <em>All Sub-Categories</em>
+                      </MenuItem>
+                      {(() => {
+                        try {
+                          const workSubTypes = workSubTypesData?.data || [];
+                          return workSubTypes.map(workSubType => (
+                            <MenuItem key={workSubType._id} value={workSubType._id}>
+                              {workSubType.name || workSubType.code || 'Unnamed Sub-Category'}
+                            </MenuItem>
+                          ));
+                        } catch (error) {
+                          console.error('Error rendering work sub-type options:', error);
+                          return (
+                            <MenuItem disabled>
+                              Error loading sub-categories
+                            </MenuItem>
+                          );
+                        }
+                      })()}
+                    </TextField>
+                  </Box>
+                </Grid>
+                
                 {/* Date Range Filters */}
-                <Grid item xs={12} md={6} lg={3}>
+                <Grid item xs={12} md={6} lg={2.4}>
                   <Box sx={{ 
                     p: 2, 
                     border: '2px dashed #1976d2', 
@@ -1025,7 +1213,7 @@ const WorkOrders = () => {
                   </Box>
                 </Grid>
                 
-                <Grid item xs={12} md={6} lg={3}>
+                <Grid item xs={12} md={6} lg={2.4}>
                   <Box sx={{ 
                     p: 2, 
                     border: '2px dashed #9c27b0', 
@@ -1061,7 +1249,7 @@ const WorkOrders = () => {
                 </Grid>
                 
                 {/* Building Filter */}
-                <Grid item xs={12} md={6} lg={3}>
+                <Grid item xs={12} md={6} lg={2.4}>
                   <Box sx={{ 
                     p: 2, 
                     border: '2px dashed #2e7d32', 
@@ -1137,7 +1325,7 @@ const WorkOrders = () => {
                 </Grid>
                 
                 {/* Status Filter */}
-                <Grid item xs={12} md={6} lg={3}>
+                <Grid item xs={12} md={6} lg={2.4}>
                   <Box sx={{ 
                     p: 2, 
                     border: '2px dashed #ed6c02', 
