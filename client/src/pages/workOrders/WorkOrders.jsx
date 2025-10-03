@@ -280,7 +280,8 @@ const WorkOrders = () => {
           ? wo.workType?._id === filters.workType || 
             (typeof wo.workType === 'string' && wo.workType === filters.workType) ||
             wo.workType?.name?.toLowerCase() === filters.workType.toLowerCase() ||
-            wo.workType?.code?.toLowerCase() === filters.workType.toLowerCase()
+            wo.workType?.code?.toLowerCase() === filters.workType.toLowerCase() ||
+            wo.workType === filters.workType
           : true;
         
         // Handle work sub-type filter
@@ -288,7 +289,8 @@ const WorkOrders = () => {
           ? wo.workSubType?._id === filters.workSubType || 
             (typeof wo.workSubType === 'string' && wo.workSubType === filters.workSubType) ||
             wo.workSubType?.name?.toLowerCase() === filters.workSubType.toLowerCase() ||
-            wo.workSubType?.code?.toLowerCase() === filters.workSubType.toLowerCase()
+            wo.workSubType?.code?.toLowerCase() === filters.workSubType.toLowerCase() ||
+            wo.workSubType === filters.workSubType
           : true;
           
         return buildingMatch && statusMatch && dateMatch && workTypeMatch && workSubTypeMatch;
@@ -931,14 +933,24 @@ const WorkOrders = () => {
                   {filters.workType && (
                     <span style={{ color: '#2e7d32', marginLeft: '8px' }}>
                       🏷️ {(() => {
-                        const workType = workTypesData?.data?.find(wt => wt._id === filters.workType || wt.name === filters.workType);
-                        return workType?.name || filters.workType;
+                        try {
+                          const workTypes = workTypesData?.data?.workTypes || [];
+                          const workType = workTypes.find(wt => wt._id === filters.workType || wt.name === filters.workType);
+                          return workType?.name || filters.workType;
+                        } catch (error) {
+                          return filters.workType;
+                        }
                       })()} 
                       {filters.workSubType && (
                         <span style={{ color: '#ed6c02' }}>
                           → {(() => {
-                            const workSubType = workSubTypesData?.data?.find(wst => wst._id === filters.workSubType || wst.name === filters.workSubType);
-                            return workSubType?.name || filters.workSubType;
+                            try {
+                              const workSubTypes = workSubTypesData?.data?.workSubTypes || [];
+                              const workSubType = workSubTypes.find(wst => wst._id === filters.workSubType || wst.name === filters.workSubType);
+                              return workSubType?.name || filters.workSubType;
+                            } catch (error) {
+                              return filters.workSubType;
+                            }
                           })()}
                         </span>
                       )}
@@ -1087,7 +1099,7 @@ const WorkOrders = () => {
                       </MenuItem>
                       {(() => {
                         try {
-                          const workTypes = workTypesData?.data || [];
+                          const workTypes = workTypesData?.data?.workTypes || [];
                           return workTypes.map(workType => (
                             <MenuItem key={workType._id} value={workType._id}>
                               <Box display="flex" alignItems="center" gap={1}>
@@ -1161,7 +1173,7 @@ const WorkOrders = () => {
                       </MenuItem>
                       {(() => {
                         try {
-                          const workSubTypes = workSubTypesData?.data || [];
+                          const workSubTypes = workSubTypesData?.data?.workSubTypes || [];
                           return workSubTypes.map(workSubType => (
                             <MenuItem key={workSubType._id} value={workSubType._id}>
                               {workSubType.name || workSubType.code || 'Unnamed Sub-Category'}
