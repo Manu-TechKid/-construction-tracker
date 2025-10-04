@@ -19,7 +19,6 @@ import {
 } from '@mui/material';
 import { 
   Add as AddIcon, 
-  View as ViewIcon,
   FilterList as FilterIcon,
   Pending as PendingIcon,
   CheckCircle as CompletedIcon,
@@ -27,6 +26,7 @@ import {
   PauseCircle as OnHoldIcon,
   Cancel as CancelledIcon,
   PhotoCamera as PhotoIcon,
+  Visibility as ViewIcon,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
