@@ -158,6 +158,21 @@ const PhotoUpload = ({ photos = [], onPhotosChange, maxPhotos = 10, workOrderId 
     return '';
   };
 
+  const getPhotoTypeColor = (type) => {
+    switch (type) {
+      case 'before':
+        return 'primary';
+      case 'during':
+        return 'warning';
+      case 'after':
+        return 'success';
+      case 'issue':
+        return 'error';
+      default:
+        return 'default';
+    }
+  };
+
   const getPhotoTypeLabel = (type) => {
     switch (type) {
       case 'before':
