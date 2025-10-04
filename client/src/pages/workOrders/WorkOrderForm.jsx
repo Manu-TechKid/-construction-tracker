@@ -71,7 +71,7 @@ const WorkOrderForm = () => {
     }),
     onSubmit: async (values) => {
       try {
-        // Format the data correctly for the backend, including photos
+        // First, create/update the work order without photos
         const formattedValues = {
           ...values,
           // Ensure apartmentNumber is mapped correctly
@@ -84,16 +84,11 @@ const WorkOrderForm = () => {
           // Ensure workType and workSubType are just IDs
           workType: values.workType && typeof values.workType === 'object' ? values.workType._id : values.workType,
           workSubType: values.workSubType && typeof values.workSubType === 'object' ? values.workSubType._id : values.workSubType,
-          // Include photos in the work order data - ensure they are properly formatted
-          photos: photos && Array.isArray(photos) ? photos.map(photo => ({
-            url: photo.url,
-            caption: photo.caption || '',
-            type: photo.type || 'other',
-            uploadedAt: photo.uploadedAt || new Date().toISOString()
-          })) : []
+          // Remove photos from main work order data - they'll be uploaded separately
+          photos: []
         };
 
-        console.log('Submitting work order with data:', formattedValues);
+        console.log('Submitting work order without photos:', formattedValues);
 
         let workOrderId = id;
         if (isEdit) {
@@ -101,6 +96,24 @@ const WorkOrderForm = () => {
         } else {
           const newWorkOrder = await createWorkOrder(formattedValues).unwrap();
           workOrderId = newWorkOrder.data._id;
+        }
+
+        // Now upload photos if there are any
+        if (photos && photos.length > 0) {
+          const photosToUpload = photos.filter(photo => photo.file && !photo.isUploaded);
+
+          if (photosToUpload.length > 0) {
+            try {
+              // Upload photos to the work order
+              await photoService.uploadWorkOrderPhotos(workOrderId, photosToUpload.map(p => p.file));
+
+              // Refresh the work order data to get the updated photos
+              // The work order should now have the correct photo URLs from the server
+            } catch (photoError) {
+              console.error('Photo upload failed:', photoError);
+              toast.warning('Work order saved but photo upload failed. Please try uploading photos again.');
+            }
+          }
         }
 
         console.log(`Work order saved with ${photos?.length || 0} photos`);
@@ -115,7 +128,7 @@ const WorkOrderForm = () => {
           pauseOnHover: false,
           draggable: true,
         });
-        
+
         // Immediate navigation without delay
         navigate('/work-orders', { replace: true });
       } catch (error) {

@@ -135,24 +135,24 @@ const PhotoUpload = ({ photos = [], onPhotosChange, maxPhotos = 10, workOrderId 
       // This is a full URL
       return photo.url;
     } else if (photo.url) {
-      // This is a relative URL from the server, construct full URL
+      // This is a relative URL from the server, construct full URL without /api/v1
       const baseUrl = process.env.REACT_APP_API_URL || window.location.origin;
-      const cleanBaseUrl = baseUrl.replace(/\/api\/v1\/api\/v1/g, '/api/v1').replace(/\/+$/, '');
+      const cleanBaseUrl = baseUrl.replace(/\/api\/v1\/api\/v1/g, '').replace(/\/+$/, '');
       return `${cleanBaseUrl}${photo.url}`;
     } else if (photo.thumbnail) {
       // Use thumbnail if available
       const baseUrl = process.env.REACT_APP_API_URL || window.location.origin;
-      const cleanBaseUrl = baseUrl.replace(/\/api\/v1\/api\/v1/g, '/api/v1').replace(/\/+$/, '');
+      const cleanBaseUrl = baseUrl.replace(/\/api\/v1\/api\/v1/g, '').replace(/\/+$/, '');
       return `${cleanBaseUrl}${photo.thumbnail}`;
     } else if (photo.medium) {
       // Use medium if available
       const baseUrl = process.env.REACT_APP_API_URL || window.location.origin;
-      const cleanBaseUrl = baseUrl.replace(/\/api\/v1\/api\/v1/g, '/api/v1').replace(/\/+$/, '');
+      const cleanBaseUrl = baseUrl.replace(/\/api\/v1\/api\/v1/g, '').replace(/\/+$/, '');
       return `${cleanBaseUrl}${photo.medium}`;
     } else if (photo.original) {
       // Use original if available
       const baseUrl = process.env.REACT_APP_API_URL || window.location.origin;
-      const cleanBaseUrl = baseUrl.replace(/\/api\/v1\/api\/v1/g, '/api/v1').replace(/\/+$/, '');
+      const cleanBaseUrl = baseUrl.replace(/\/api\/v1\/api\/v1/g, '').replace(/\/+$/, '');
       return `${cleanBaseUrl}${photo.original}`;
     }
     return '';
