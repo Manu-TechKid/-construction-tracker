@@ -333,29 +333,26 @@ const EditInvoice = () => {
           </Card>
         )}
 
-        {/* Cost Summary */}
+        {/* Cost Summary - Show only actual work order prices */}
         <Card sx={{ mb: 3 }}>
           <CardHeader title="Cost Summary" />
           <CardContent>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2">Subtotal:</Typography>
+              <Typography variant="body2">Total Work Order Value:</Typography>
               <Typography variant="body2">
-                {formatCurrency(invoice.subtotal)}
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2">Tax:</Typography>
-              <Typography variant="body2">
-                {formatCurrency(invoice.tax)}
+                {formatCurrency(invoice.total)}
               </Typography>
             </Box>
             <Divider sx={{ my: 1 }} />
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Typography variant="h6">Total:</Typography>
+              <Typography variant="h6">Invoice Total:</Typography>
               <Typography variant="h6">
                 {formatCurrency(invoice.total)}
               </Typography>
             </Box>
+            <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
+              * Invoice shows actual work order prices with no additional fees or taxes
+            </Typography>
           </CardContent>
         </Card>
 

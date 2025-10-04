@@ -1,5 +1,7 @@
 const Invoice = require('../models/Invoice');
 const WorkOrder = require('../models/WorkOrder');
+const WorkType = require('../models/WorkType');
+const WorkSubType = require('../models/WorkSubType');
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
 
@@ -389,14 +391,60 @@ exports.getFilteredWorkOrders = catchAsync(async (req, res, next) => {
         conditions.push({ $or: dateConditions });
     }
 
-    // 4. Work type filter (optional)
+    // 4. Work type filter (optional) - handle both ObjectId and string values
     if (workType && workType.trim()) {
-        conditions.push({ workType: workType.trim() });
+        const trimmedWorkType = workType.trim();
+        // Check if it's a valid ObjectId format
+        if (/^[0-9a-fA-F]{24}$/.test(trimmedWorkType)) {
+            conditions.push({ workType: trimmedWorkType });
+        } else {
+            // If it's not an ObjectId, try to find the WorkType by name/code and get its ID
+            try {
+                const workTypeDoc = await WorkType.findOne({
+                    $or: [
+                        { name: { $regex: trimmedWorkType, $options: 'i' } },
+                        { code: { $regex: trimmedWorkType, $options: 'i' } }
+                    ]
+                });
+                if (workTypeDoc) {
+                    conditions.push({ workType: workTypeDoc._id });
+                } else {
+                    console.log(`WorkType not found for: ${trimmedWorkType}`);
+                    // Don't add the condition if work type doesn't exist
+                }
+            } catch (error) {
+                console.error('Error looking up work type:', error);
+                // Don't add the condition if there's an error
+            }
+        }
     }
 
-    // 5. Work sub type filter (optional)
+    // 5. Work sub type filter (optional) - handle both ObjectId and string values
     if (workSubType && workSubType.trim()) {
-        conditions.push({ workSubType: workSubType.trim() });
+        const trimmedWorkSubType = workSubType.trim();
+        // Check if it's a valid ObjectId format
+        if (/^[0-9a-fA-F]{24}$/.test(trimmedWorkSubType)) {
+            conditions.push({ workSubType: trimmedWorkSubType });
+        } else {
+            // If it's not an ObjectId, try to find the WorkSubType by name/code and get its ID
+            try {
+                const workSubTypeDoc = await WorkSubType.findOne({
+                    $or: [
+                        { name: { $regex: trimmedWorkSubType, $options: 'i' } },
+                        { code: { $regex: trimmedWorkSubType, $options: 'i' } }
+                    ]
+                });
+                if (workSubTypeDoc) {
+                    conditions.push({ workSubType: workSubTypeDoc._id });
+                } else {
+                    console.log(`WorkSubType not found for: ${trimmedWorkSubType}`);
+                    // Don't add the condition if work sub type doesn't exist
+                }
+            } catch (error) {
+                console.error('Error looking up work sub type:', error);
+                // Don't add the condition if there's an error
+            }
+        }
     }
 
     // 6. Status filter (optional)

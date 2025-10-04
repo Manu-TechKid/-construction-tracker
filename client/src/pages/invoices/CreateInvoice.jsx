@@ -629,14 +629,31 @@ const CreateInvoice = () => {
                   </Box>
                 ) : workOrdersError ? (
                   <Alert severity="error">
-                    Error loading work orders: {workOrdersError?.message || 'Unknown error'}
+                    <Typography variant="subtitle2" gutterBottom>
+                      Error loading work orders
+                    </Typography>
+                    <Typography variant="body2" gutterBottom>
+                      {workOrdersError?.data?.message || workOrdersError?.message || 'Unable to load work orders for this building'}
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary" gutterBottom>
+                      Building ID: {selectedBuildingId}
+                    </Typography>
                     <br />
-                    <small>Building ID: {selectedBuildingId}</small>
-                    <br />
+                    <Typography variant="caption" color="textSecondary">
+                      This might be due to:
+                    </Typography>
+                    <ul style={{ margin: 0, paddingLeft: '1rem' }}>
+                      <li>No unbilled work orders found for this building</li>
+                      <li>Network connectivity issues</li>
+                      <li>Building may not exist or you don't have permission to view it</li>
+                    </ul>
                     <Button
                       variant="outlined"
                       size="small"
-                      onClick={() => window.location.reload()}
+                      onClick={() => {
+                        // Refetch the data
+                        window.location.reload();
+                      }}
                       sx={{ mt: 1 }}
                     >
                       Retry

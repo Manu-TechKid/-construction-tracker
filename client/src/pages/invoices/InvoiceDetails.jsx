@@ -522,31 +522,18 @@ const InvoiceDetails = () => {
             }
           })()}
           
-          {/* Cost Summary */}
+          {/* Cost Summary - Show only actual work order prices */}
           <Card sx={{ mb: 3 }}>
             <CardHeader title="Cost Summary" />
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Subtotal:</Typography>
+                <Typography variant="body2">Total Work Order Value:</Typography>
                 <Typography variant="body2">
                   {(() => {
                     try {
-                      return `$${invoice.subtotal?.toFixed(2) || '0.00'}`;
+                      return `$${invoice.total?.toFixed(2) || '0.00'}`;
                     } catch (error) {
-                      console.warn('Error rendering subtotal:', error);
-                      return '$0.00';
-                    }
-                  })()}
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Tax:</Typography>
-                <Typography variant="body2">
-                  {(() => {
-                    try {
-                      return `$${invoice.tax?.toFixed(2) || '0.00'}`;
-                    } catch (error) {
-                      console.warn('Error rendering tax:', error);
+                      console.warn('Error rendering total:', error);
                       return '$0.00';
                     }
                   })()}
@@ -554,7 +541,7 @@ const InvoiceDetails = () => {
               </Box>
               <Divider sx={{ my: 1 }} />
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="h6">Total:</Typography>
+                <Typography variant="h6">Invoice Total:</Typography>
                 <Typography variant="h6">
                   {(() => {
                     try {
@@ -566,6 +553,9 @@ const InvoiceDetails = () => {
                   })()}
                 </Typography>
               </Box>
+              <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
+                * Invoice shows actual work order prices with no additional fees or taxes
+              </Typography>
             </CardContent>
           </Card>
           
