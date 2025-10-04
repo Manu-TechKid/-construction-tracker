@@ -349,14 +349,20 @@ exports.getFilteredWorkOrders = catchAsync(async (req, res, next) => {
 
     // Build the query object
     const query = {
-        building: buildingId,
-        // Only get work orders that can be invoiced
+        building: buildingId
+    };
+
+    // Build conditions array for $and
+    const conditions = [];
+
+    // Only get work orders that can be invoiced
+    conditions.push({
         $or: [
             { billingStatus: { $exists: false } },
             { billingStatus: 'pending' },
             { billingStatus: null }
         ]
-    };
+    });
 
     console.log('Initial query object:', JSON.stringify(query, null, 2));
 
@@ -364,8 +370,8 @@ exports.getFilteredWorkOrders = catchAsync(async (req, res, next) => {
     if (startDate || endDate) {
         const dateConditions = [];
 
+        // First condition: work orders with scheduledDate in range
         if (startDate || endDate) {
-            // First condition: work orders with scheduledDate in range
             const scheduledDateCondition = {};
             if (startDate) {
                 scheduledDateCondition.$gte = new Date(startDate);
@@ -376,13 +382,15 @@ exports.getFilteredWorkOrders = catchAsync(async (req, res, next) => {
                 console.log('Parsed endDate:', new Date(endDate));
             }
 
-            dateConditions.push({
-                scheduledDate: scheduledDateCondition
-            });
+            if (Object.keys(scheduledDateCondition).length > 0) {
+                dateConditions.push({
+                    scheduledDate: scheduledDateCondition
+                });
+            }
         }
 
+        // Second condition: work orders without scheduledDate, but createdAt in range
         if (startDate || endDate) {
-            // Second condition: work orders without scheduledDate, but createdAt in range
             const createdAtCondition = {};
             if (startDate) {
                 createdAtCondition.$gte = new Date(startDate);
@@ -391,43 +399,40 @@ exports.getFilteredWorkOrders = catchAsync(async (req, res, next) => {
                 createdAtCondition.$lte = new Date(endDate);
             }
 
-            dateConditions.push({
-                scheduledDate: { $exists: false },
-                createdAt: createdAtCondition
-            });
+            if (Object.keys(createdAtCondition).length > 0) {
+                dateConditions.push({
+                    scheduledDate: { $exists: false },
+                    createdAt: createdAtCondition
+                });
+            }
         }
 
-        // Combine with AND - must match billing status AND date range
-        query.$and = [
-            {
-                $or: [
-                    { billingStatus: { $exists: false } },
-                    { billingStatus: 'pending' },
-                    { billingStatus: null }
-                ]
-            },
-            {
+        // Add date conditions
+        if (dateConditions.length > 0) {
+            conditions.push({
                 $or: dateConditions
-            }
-        ];
-
-        // Remove the original $or since we're using $and now
-        delete query.$or;
+            });
+        }
     }
 
     // Add work type filter
     if (workType) {
-        query.workType = workType;
+        conditions.push({ workType: workType });
     }
 
     // Add work sub type filter
     if (workSubType) {
-        query.workSubType = workSubType;
+        conditions.push({ workSubType: workSubType });
     }
 
     // Add status filter
     if (status) {
-        query.status = status;
+        conditions.push({ status: status });
+    }
+
+    // Apply conditions to query
+    if (conditions.length > 0) {
+        query.$and = conditions;
     }
 
     console.log('Final query object:', JSON.stringify(query, null, 2));
