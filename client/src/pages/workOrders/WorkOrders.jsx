@@ -1598,6 +1598,5 @@ const WorkOrders = () => {
       </Dialog>
     </Box>
   );
-};
 
 export default WorkOrders;
