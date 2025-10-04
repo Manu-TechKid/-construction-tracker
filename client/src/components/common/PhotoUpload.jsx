@@ -126,19 +126,36 @@ const PhotoUpload = ({ photos = [], onPhotosChange, maxPhotos = 10, workOrderId 
     toast.success('Photo updated successfully');
   };
 
-  const getPhotoTypeColor = (type) => {
-    switch (type) {
-      case 'before':
-        return 'primary';
-      case 'during':
-        return 'warning';
-      case 'after':
-        return 'success';
-      case 'issue':
-        return 'error';
-      default:
-        return 'default';
+  const getPhotoUrl = (photo) => {
+    // Handle different photo URL formats
+    if (photo.url && photo.url.startsWith('blob:')) {
+      // This is a blob URL from a newly uploaded file
+      return photo.url;
+    } else if (photo.url && photo.url.startsWith('http')) {
+      // This is a full URL
+      return photo.url;
+    } else if (photo.url) {
+      // This is a relative URL from the server, construct full URL
+      const baseUrl = process.env.REACT_APP_API_URL || window.location.origin;
+      const cleanBaseUrl = baseUrl.replace(/\/api\/v1\/api\/v1/g, '/api/v1').replace(/\/+$/, '');
+      return `${cleanBaseUrl}${photo.url}`;
+    } else if (photo.thumbnail) {
+      // Use thumbnail if available
+      const baseUrl = process.env.REACT_APP_API_URL || window.location.origin;
+      const cleanBaseUrl = baseUrl.replace(/\/api\/v1\/api\/v1/g, '/api/v1').replace(/\/+$/, '');
+      return `${cleanBaseUrl}${photo.thumbnail}`;
+    } else if (photo.medium) {
+      // Use medium if available
+      const baseUrl = process.env.REACT_APP_API_URL || window.location.origin;
+      const cleanBaseUrl = baseUrl.replace(/\/api\/v1\/api\/v1/g, '/api/v1').replace(/\/+$/, '');
+      return `${cleanBaseUrl}${photo.medium}`;
+    } else if (photo.original) {
+      // Use original if available
+      const baseUrl = process.env.REACT_APP_API_URL || window.location.origin;
+      const cleanBaseUrl = baseUrl.replace(/\/api\/v1\/api\/v1/g, '/api/v1').replace(/\/+$/, '');
+      return `${cleanBaseUrl}${photo.original}`;
     }
+    return '';
   };
 
   const getPhotoTypeLabel = (type) => {
@@ -213,7 +230,7 @@ const PhotoUpload = ({ photos = [], onPhotosChange, maxPhotos = 10, workOrderId 
               <Card>
                   <Box sx={{ position: 'relative' }}>
                     <img
-                      src={photo.url}
+                      src={getPhotoUrl(photo)}
                       alt={photo.caption || 'Work order photo'}
                       style={{
                         width: '100%',
@@ -225,14 +242,12 @@ const PhotoUpload = ({ photos = [], onPhotosChange, maxPhotos = 10, workOrderId 
                         padding: '4px',
                       }}
                       onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.parentElement.style.backgroundColor = '#f8f9fa';
-                        e.target.parentElement.style.border = '2px dashed #dee2e6';
-                        e.target.parentElement.style.height = '200px';
-                        e.target.parentElement.style.display = 'flex';
-                        e.target.parentElement.style.alignItems = 'center';
-                        e.target.parentElement.style.justifyContent = 'center';
-                        e.target.parentElement.innerHTML = '<span style="color: #6c757d;">Image not available</span>';
+                        console.warn('Error loading image:', getPhotoUrl(photo));
+                        // Show blank white placeholder instead of hiding the image
+                        e.target.style.display = 'block';
+                        e.target.style.backgroundColor = '#ffffff';
+                        e.target.style.border = '1px solid #e0e0e0';
+                        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjZmZmZmZmIiBzdHJva2U9IiNlMGUwZTAiLz4KPC9zdmc+';
                       }}
                     />
                     <Box

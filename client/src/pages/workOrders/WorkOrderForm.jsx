@@ -44,7 +44,7 @@ const WorkOrderForm = () => {
   const isEdit = Boolean(id);
   const [photos, setPhotos] = useState([]);
 
-  // Removed photo functionality - not working properly
+  // API mutations for work orders
 
   const formik = useFormik({
     initialValues: {
@@ -149,7 +149,6 @@ const WorkOrderForm = () => {
 
   const [createWorkOrder, { isLoading: isCreating }] = useCreateWorkOrderMutation();
   const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
-  // Photo functionality removed
 
   useEffect(() => {
     if (isEdit && workOrderData?.data) {
