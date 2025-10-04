@@ -5,7 +5,6 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import * as Yup from 'yup';
-import { toast } from 'react-toastify';
 import {
   Box,
   Button,
@@ -23,7 +22,8 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowBack as ArrowBackIcon, Save as SaveIcon } from '@mui/icons-material';
+import { toast } from 'react-toastify';
+import photoService from '../../services/photoService';
 import PhotoUpload from '../../components/common/PhotoUpload';
 import { useGetBuildingsQuery, useGetBuildingQuery } from '../../features/buildings/buildingsApiSlice';
 import { useGetUsersQuery } from '../../features/users/usersApiSlice';
