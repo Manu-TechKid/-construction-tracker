@@ -645,7 +645,6 @@ const WorkOrders = () => {
                     {index === 2 && photos.length > 3 && (
                       <Box
                         sx={{
-{{ ... }}
                           position: 'absolute',
                           top: 0,
                           left: 0,
