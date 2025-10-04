@@ -141,15 +141,6 @@ const EditInvoice = () => {
 
   const invoice = invoiceData?.data?.invoice;
 
-  // Debug logging for development
-  if (process.env.NODE_ENV === 'development') {
-    console.log('EditInvoice: Final invoice object:', invoice);
-    console.log('EditInvoice: Invoice total:', invoice?.total);
-    console.log('EditInvoice: Invoice subtotal:', invoice?.subtotal);
-    console.log('EditInvoice: Invoice tax:', invoice?.tax);
-    console.log('EditInvoice: Invoice workOrders:', invoice?.workOrders);
-  }
-
   if (!invoice) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4 }}>

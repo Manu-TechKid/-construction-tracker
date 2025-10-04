@@ -114,24 +114,32 @@ const CreateInvoice = () => {
     },
     {
       skip: !selectedBuildingId,
-      refetchOnMountOrArgChange: true
+      // Remove refetchOnMountOrArgChange to prevent excessive refetching
+      // refetchOnMountOrArgChange: true
     }
   );
 
   const workOrders = filteredWorkOrdersData?.data || [];
 
-  // Debug logging - only run when values actually change
+  // Debug logging - only run when major changes occur (less frequently)
   useEffect(() => {
-    if (selectedBuildingId || workOrders.length > 0) {
+    if (selectedBuildingId) {
       console.log('CreateInvoice Debug:', {
         selectedBuildingId,
         isLoadingWorkOrders,
         workOrdersError,
         workOrdersCount: workOrders.length,
-        selectedWorkOrdersCount: selectedWorkOrders.length
+        selectedWorkOrdersCount: selectedWorkOrders.length,
+        filters: {
+          startDate: filters.startDate?.toISOString(),
+          endDate: filters.endDate?.toISOString(),
+          workType: filters.workType,
+          workSubType: filters.workSubType,
+          status: filters.status
+        }
       });
     }
-  }, [selectedBuildingId, isLoadingWorkOrders, workOrders.length, selectedWorkOrders.length]);
+  }, [selectedBuildingId, workOrders.length, filters.workType, filters.status]); // Reduced dependencies
 
   const [createInvoice, { isLoading: isCreating }] = useCreateInvoiceMutation();
 
@@ -475,6 +483,26 @@ const CreateInvoice = () => {
                   </AccordionSummary>
                   <AccordionDetails>
                     <Grid container spacing={2}>
+                      {/* Show All Work Orders Button */}
+                      <Grid item xs={12}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => setFilters({
+                            startDate: startOfMonth(new Date()),
+                            endDate: endOfMonth(new Date()),
+                            workType: '',
+                            workSubType: '',
+                            status: ''
+                          })}
+                          sx={{ mr: 1 }}
+                        >
+                          Show All Work Orders
+                        </Button>
+                        <Typography variant="caption" color="textSecondary">
+                          Click to view all unbilled work orders for this building before applying filters
+                        </Typography>
+                      </Grid>
                       {/* Quick Month Filters */}
                       <Grid item xs={12}>
                         <Typography variant="subtitle2" gutterBottom>Quick Month Selection:</Typography>
@@ -599,9 +627,20 @@ const CreateInvoice = () => {
                           variant="outlined" 
                           size="small" 
                           onClick={resetFilters}
-                          sx={{ mt: 1 }}
+                          sx={{ mt: 1, mr: 1 }}
                         >
                           Reset Filters
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => {
+                            // Force refresh the work orders query
+                            window.location.reload();
+                          }}
+                          sx={{ mt: 1 }}
+                        >
+                          Refresh Data
                         </Button>
                       </Grid>
                     </Grid>
@@ -651,7 +690,7 @@ const CreateInvoice = () => {
                       variant="outlined"
                       size="small"
                       onClick={() => {
-                        // Refetch the data
+                        // Force refresh the work orders query
                         window.location.reload();
                       }}
                       sx={{ mt: 1 }}
