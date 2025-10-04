@@ -114,8 +114,9 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
         };
     });
 
-    const tax = subtotal * 0.1; // 10% tax
-    const total = subtotal + tax;
+    // NO TAX - invoices should not include tax
+    const tax = 0;
+    const total = subtotal;
 
     // Create invoice with manual number if provided
     const invoiceData = {
@@ -357,24 +358,61 @@ exports.getFilteredWorkOrders = catchAsync(async (req, res, next) => {
         ]
     };
 
-    // Add date range filter
+    console.log('Initial query object:', JSON.stringify(query, null, 2));
+
+    // Add date range filter if provided
     if (startDate || endDate) {
-        // Use scheduledDate if available, otherwise fall back to createdAt
-        query.$or = [
+        const dateConditions = [];
+
+        if (startDate || endDate) {
+            // First condition: work orders with scheduledDate in range
+            const scheduledDateCondition = {};
+            if (startDate) {
+                scheduledDateCondition.$gte = new Date(startDate);
+                console.log('Parsed startDate:', new Date(startDate));
+            }
+            if (endDate) {
+                scheduledDateCondition.$lte = new Date(endDate);
+                console.log('Parsed endDate:', new Date(endDate));
+            }
+
+            dateConditions.push({
+                scheduledDate: scheduledDateCondition
+            });
+        }
+
+        if (startDate || endDate) {
+            // Second condition: work orders without scheduledDate, but createdAt in range
+            const createdAtCondition = {};
+            if (startDate) {
+                createdAtCondition.$gte = new Date(startDate);
+            }
+            if (endDate) {
+                createdAtCondition.$lte = new Date(endDate);
+            }
+
+            dateConditions.push({
+                scheduledDate: { $exists: false },
+                createdAt: createdAtCondition
+            });
+        }
+
+        // Combine with AND - must match billing status AND date range
+        query.$and = [
             {
-                scheduledDate: {
-                    ...(startDate && { $gte: new Date(startDate) }),
-                    ...(endDate && { $lte: new Date(endDate) })
-                }
+                $or: [
+                    { billingStatus: { $exists: false } },
+                    { billingStatus: 'pending' },
+                    { billingStatus: null }
+                ]
             },
             {
-                scheduledDate: { $exists: false },
-                createdAt: {
-                    ...(startDate && { $gte: new Date(startDate) }),
-                    ...(endDate && { $lte: new Date(endDate) })
-                }
+                $or: dateConditions
             }
         ];
+
+        // Remove the original $or since we're using $and now
+        delete query.$or;
     }
 
     // Add work type filter
@@ -391,6 +429,8 @@ exports.getFilteredWorkOrders = catchAsync(async (req, res, next) => {
     if (status) {
         query.status = status;
     }
+
+    console.log('Final query object:', JSON.stringify(query, null, 2));
 
     console.log('Final query:', JSON.stringify(query, null, 2));
 
