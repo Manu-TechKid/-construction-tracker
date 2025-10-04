@@ -53,7 +53,7 @@ exports.uploadWorkOrderPhotos = catchAsync(async (req, res, next) => {
     return next(new AppError('No work order found with that ID', 404));
   }
 
-  if (!req.files || req.files.length === 0) {
+  if (!req.files || !req.files.photos || req.files.photos.length === 0) {
     return next(new AppError('Please upload at least one photo', 400));
   }
 
@@ -61,7 +61,7 @@ exports.uploadWorkOrderPhotos = catchAsync(async (req, res, next) => {
   const outputDir = path.join(__dirname, '../public/uploads/photos');
 
   // Process and optimize each uploaded file
-  for (const file of req.files) {
+  for (const file of req.files.photos) {
     try {
       const optimizationResult = await optimizePhoto(
         file.path,
@@ -120,12 +120,12 @@ exports.uploadReminderPhotos = catchAsync(async (req, res, next) => {
     return next(new AppError('No reminder found with that ID', 404));
   }
 
-  if (!req.files || req.files.length === 0) {
+  if (!req.files || !req.files.photos || req.files.photos.length === 0) {
     return next(new AppError('Please upload at least one photo', 400));
   }
 
   // Process uploaded files
-  const photos = req.files.map(file => ({
+  const photos = req.files.photos.map(file => ({
     url: `/uploads/${file.filename}`,
     caption: req.body.description || '',
     type: req.body.type || 'other',

@@ -201,7 +201,7 @@ const WorkOrderDetails = () => {
                                     e.target.parentElement.style.display = 'flex';
                                     e.target.parentElement.style.alignItems = 'center';
                                     e.target.parentElement.style.justifyContent = 'center';
-                                    e.target.parentElement.innerHTML = '<span style="color: #999;">Image not available</span>';
+                                    e.target.parentElement.innerHTML = '<span style="color: #999; font-size: 11px;">Photo unavailable</span>';
                                   }}
                                 />
                                 {photo.type && (

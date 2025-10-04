@@ -16,32 +16,28 @@ import {
   ListItemIcon,
   ListItemText,
   Stack,
-  Dialog,
-  DialogTitle,
-  DialogContent,
 } from '@mui/material';
-import { DataGrid } from '@mui/x-data-grid';
 import { 
   Add as AddIcon, 
-  FilterList as FilterIcon,
-  Pending as PendingIcon,
-  CheckCircle as CompletedIcon,
-  Schedule as InProgressIcon,
-  PauseCircle as OnHoldIcon,
-  Cancel as CancelledIcon,
-  PhotoCamera as PhotoIcon,
   Visibility as ViewIcon,
+  Schedule as PendingIcon,
+  PlayArrow as InProgressIcon,
+  CheckCircle as CompletedIcon,
+  Pause as OnHoldIcon,
+  Cancel as CancelledIcon,
+  FilterList as FilterIcon,
 } from '@mui/icons-material';
+import { DataGrid } from '@mui/x-data-grid';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import PhotoUpload from '../../components/common/PhotoUpload';
 import { useAuth } from '../../hooks/useAuth';
 import { useGetWorkOrdersQuery, useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { useGetWorkTypesQuery, useGetWorkSubTypesQuery } from '../../features/setup/setupApiSlice';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, isWithinInterval, parseISO } from 'date-fns';
 import { toast } from 'react-toastify';
+
 const getStatusChipColor = (status) => {
   switch (status) {
     case 'completed': return 'success';
@@ -95,8 +91,6 @@ const WorkOrders = () => {
     error: workSubTypesError 
   } = useGetWorkSubTypesQuery(filters.workType || undefined);
   const [updateWorkOrder] = useUpdateWorkOrderMutation();
-  const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
-  const [selectedWorkOrderForPhotos, setSelectedWorkOrderForPhotos] = useState(null);
   const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
 
@@ -164,32 +158,44 @@ const WorkOrders = () => {
     setStatusMenuAnchor(event.currentTarget);
     setSelectedWorkOrder(workOrder);
   }, []);
+
   const handleStatusClose = useCallback(() => {
     setStatusMenuAnchor(null);
     setSelectedWorkOrder(null);
-  const handleManagePhotos = useCallback((workOrder) => {
-    setSelectedWorkOrderForPhotos(workOrder);
-    setPhotoDialogOpen(true);
   }, []);
 
-  const handlePhotosChange = useCallback(async (updatedPhotos) => {
-    if (!selectedWorkOrderForPhotos) return;
-
+  const handleStatusUpdate = useCallback(async (newStatus) => {
+    if (!selectedWorkOrder) return;
+    
     try {
       await updateWorkOrder({
-        id: selectedWorkOrderForPhotos._id,
-        photos: updatedPhotos
+        id: selectedWorkOrder._id,
+        status: newStatus
       }).unwrap();
-      toast.success('Photos updated successfully');
-      setPhotoDialogOpen(false);
-      setSelectedWorkOrderForPhotos(null);
+      
+      toast.success(`Work order status updated to ${newStatus}`, {
+        position: "top-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: true,
+      });
+      handleStatusClose();
     } catch (error) {
-      console.error('Error updating photos:', error);
-      toast.error('Failed to update photos');
+      console.error('Failed to update status:', error);
+      toast.error('Failed to update work order status', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     }
-  }, [selectedWorkOrderForPhotos, updateWorkOrder]);
+  }, [selectedWorkOrder, updateWorkOrder, handleStatusClose]);
 
-  const getStatusIcon = useCallback((status) => {
+  const getStatusIcon = (status) => {
     switch (status) {
       case 'pending': return <PendingIcon />;
       case 'in_progress': return <InProgressIcon />;
@@ -198,7 +204,7 @@ const WorkOrders = () => {
       case 'cancelled': return <CancelledIcon />;
       default: return <PendingIcon />;
     }
-  }, []);
+  };
 
   const statusOptions = [
     { value: 'pending', label: 'Pending', icon: <PendingIcon /> },
@@ -633,12 +639,13 @@ const WorkOrders = () => {
                         e.target.parentElement.style.display = 'flex';
                         e.target.parentElement.style.alignItems = 'center';
                         e.target.parentElement.style.justifyContent = 'center';
-                        e.target.parentElement.innerHTML = '<span style="color: #999; font-size: 10px;">Image not available</span>';
+                        e.target.parentElement.style.flexDirection = 'column';
                       }}
                     />
                     {index === 2 && photos.length > 3 && (
                       <Box
                         sx={{
+{{ ... }}
                           position: 'absolute',
                           top: 0,
                           left: 0,
@@ -663,23 +670,7 @@ const WorkOrders = () => {
           );
         } catch (error) {
           console.warn('Error rendering photos cell:', error);
-          return (
-            <Box
-              sx={{
-                display: 'flex',
-                gap: 0.5,
-                alignItems: 'center',
-                maxWidth: 180,
-                overflow: 'hidden',
-                minHeight: '45px',
-                justifyContent: 'center'
-              }}
-            >
-              <Typography variant="caption" color="textSecondary" sx={{ fontStyle: 'italic' }}>
-                Photos unavailable
-              </Typography>
-            </Box>
-          );
+          return <Typography variant="body2" color="textSecondary">Error</Typography>;
         }
       },
     },
@@ -878,7 +869,7 @@ const WorkOrders = () => {
             return <Typography variant="body2" color="textSecondary">No actions</Typography>;
           }
           return (
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box>
               <Button
                 size="small"
                 startIcon={<ViewIcon />}
@@ -891,27 +882,6 @@ const WorkOrders = () => {
               >
                 View
               </Button>
-              {(params.row.photos && params.row.photos.length > 0) && (
-                <Button
-                  size="small"
-                  startIcon={<PhotoIcon />}
-                  onClick={() => handleManagePhotos(params.row)}
-                  sx={{
-                    fontSize: '0.75rem',
-                    padding: '4px 8px',
-                    minWidth: 'auto',
-                    color: 'primary.main',
-                    border: '1px solid',
-                    borderColor: 'primary.main',
-                    '&:hover': {
-                      backgroundColor: 'primary.main',
-                      color: 'white',
-                    }
-                  }}
-                >
-                  Photos ({params.row.photos.length})
-                </Button>
-              )}
             </Box>
           );
         } catch (error) {
@@ -1563,40 +1533,8 @@ const WorkOrders = () => {
           </MenuItem>
         ))}
       </Menu>
-
-      {/* Photo Management Dialog */}
-      <Dialog
-        open={photoDialogOpen}
-        onClose={() => setPhotoDialogOpen(false)}
-        maxWidth="lg"
-        fullWidth
-        PaperProps={{
-          sx: { minHeight: '70vh' }
-        }}
-      >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">
-            Manage Photos - {selectedWorkOrderForPhotos?.title || 'Work Order'}
-          </Typography>
-          <Button
-            onClick={() => setPhotoDialogOpen(false)}
-            sx={{ minWidth: 'auto' }}
-          >
-            ✕
-          </Button>
-        </DialogTitle>
-        <DialogContent dividers sx={{ p: 0 }}>
-          {selectedWorkOrderForPhotos && (
-            <PhotoUpload
-              photos={selectedWorkOrderForPhotos.photos || []}
-              onPhotosChange={handlePhotosChange}
-              maxPhotos={10}
-              workOrderId={selectedWorkOrderForPhotos._id}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </Box>
   );
+};
 
 export default WorkOrders;

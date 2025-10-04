@@ -232,7 +232,7 @@ const PhotoUpload = ({ photos = [], onPhotosChange, maxPhotos = 10, workOrderId 
                         e.target.parentElement.style.display = 'flex';
                         e.target.parentElement.style.alignItems = 'center';
                         e.target.parentElement.style.justifyContent = 'center';
-                        e.target.parentElement.innerHTML = '<span style="color: #6c757d;">Image not available</span>';
+                        e.target.parentElement.innerHTML = '<span style="color: #6c757d; font-size: 12px;">Preview unavailable</span>';
                       }}
                     />
                     <Box
