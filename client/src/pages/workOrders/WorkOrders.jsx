@@ -16,7 +16,11 @@ import {
   ListItemIcon,
   ListItemText,
   Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
 } from '@mui/material';
+import { DataGrid } from '@mui/x-data-grid';
 import { 
   Add as AddIcon, 
   FilterList as FilterIcon,
@@ -91,8 +95,8 @@ const WorkOrders = () => {
     error: workSubTypesError 
   } = useGetWorkSubTypesQuery(filters.workType || undefined);
   const [updateWorkOrder] = useUpdateWorkOrderMutation();
-  const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
-  const [selectedWorkOrderForPhotos, setSelectedWorkOrderForPhotos] = useState(null);
+  const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
+  const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
 
   const handleFilterChange = useCallback((e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
@@ -162,13 +166,12 @@ const WorkOrders = () => {
     setStatusMenuAnchor(null);
     setSelectedWorkOrder(null);
   }, []);
-
   const handleManagePhotos = (workOrder) => {
     setSelectedWorkOrderForPhotos(workOrder);
     setPhotoDialogOpen(true);
   };
 
-  const handlePhotosChange = async (updatedPhotos) => {
+  const handlePhotosChange = useCallback(async (updatedPhotos) => {
     if (!selectedWorkOrderForPhotos) return;
 
     try {
@@ -183,9 +186,9 @@ const WorkOrders = () => {
       console.error('Error updating photos:', error);
       toast.error('Failed to update photos');
     }
-  };
+  }, [selectedWorkOrderForPhotos, updateWorkOrder]);
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = useCallback((status) => {
     switch (status) {
       case 'pending': return <PendingIcon />;
       case 'in_progress': return <InProgressIcon />;
@@ -194,7 +197,7 @@ const WorkOrders = () => {
       case 'cancelled': return <CancelledIcon />;
       default: return <PendingIcon />;
     }
-  };
+  }, []);
 
   const statusOptions = [
     { value: 'pending', label: 'Pending', icon: <PendingIcon /> },
