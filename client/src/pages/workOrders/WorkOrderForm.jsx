@@ -5,6 +5,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import * as Yup from 'yup';
+import { toast } from 'react-toastify';
 import {
   Box,
   Button,
@@ -22,8 +23,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { toast } from 'react-toastify';
-import photoService from '../../services/photoService';
+import { ArrowBack as ArrowBackIcon, Save as SaveIcon } from '@mui/icons-material';
 import PhotoUpload from '../../components/common/PhotoUpload';
 import { useGetBuildingsQuery, useGetBuildingQuery } from '../../features/buildings/buildingsApiSlice';
 import { useGetUsersQuery } from '../../features/users/usersApiSlice';
@@ -44,7 +44,7 @@ const WorkOrderForm = () => {
   const isEdit = Boolean(id);
   const [photos, setPhotos] = useState([]);
 
-  // API mutations for work orders
+  // Removed photo functionality - not working properly
 
   const formik = useFormik({
     initialValues: {
@@ -71,7 +71,7 @@ const WorkOrderForm = () => {
     }),
     onSubmit: async (values) => {
       try {
-        // First, create/update the work order without photos
+        // Format the data correctly for the backend, including photos
         const formattedValues = {
           ...values,
           // Ensure apartmentNumber is mapped correctly
@@ -84,11 +84,16 @@ const WorkOrderForm = () => {
           // Ensure workType and workSubType are just IDs
           workType: values.workType && typeof values.workType === 'object' ? values.workType._id : values.workType,
           workSubType: values.workSubType && typeof values.workSubType === 'object' ? values.workSubType._id : values.workSubType,
-          // Remove photos from main work order data - they'll be uploaded separately
-          photos: []
+          // Include photos in the work order data - ensure they are properly formatted
+          photos: photos && Array.isArray(photos) ? photos.map(photo => ({
+            url: photo.url,
+            caption: photo.caption || '',
+            type: photo.type || 'other',
+            uploadedAt: photo.uploadedAt || new Date().toISOString()
+          })) : []
         };
 
-        console.log('Submitting work order without photos:', formattedValues);
+        console.log('Submitting work order with data:', formattedValues);
 
         let workOrderId = id;
         if (isEdit) {
@@ -96,24 +101,6 @@ const WorkOrderForm = () => {
         } else {
           const newWorkOrder = await createWorkOrder(formattedValues).unwrap();
           workOrderId = newWorkOrder.data._id;
-        }
-
-        // Now upload photos if there are any
-        if (photos && photos.length > 0) {
-          const photosToUpload = photos.filter(photo => photo.file && !photo.isUploaded);
-
-          if (photosToUpload.length > 0) {
-            try {
-              // Upload photos to the work order
-              await photoService.uploadWorkOrderPhotos(workOrderId, photosToUpload.map(p => p.file));
-
-              // Refresh the work order data to get the updated photos
-              // The work order should now have the correct photo URLs from the server
-            } catch (photoError) {
-              console.error('Photo upload failed:', photoError);
-              toast.warning('Work order saved but photo upload failed. Please try uploading photos again.');
-            }
-          }
         }
 
         console.log(`Work order saved with ${photos?.length || 0} photos`);
@@ -128,7 +115,7 @@ const WorkOrderForm = () => {
           pauseOnHover: false,
           draggable: true,
         });
-
+        
         // Immediate navigation without delay
         navigate('/work-orders', { replace: true });
       } catch (error) {
@@ -162,6 +149,7 @@ const WorkOrderForm = () => {
 
   const [createWorkOrder, { isLoading: isCreating }] = useCreateWorkOrderMutation();
   const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
+  // Photo functionality removed
 
   useEffect(() => {
     if (isEdit && workOrderData?.data) {

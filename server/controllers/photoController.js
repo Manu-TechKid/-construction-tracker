@@ -48,12 +48,12 @@ exports.uploadSitePhotos = upload.fields([
 // @access  Private
 exports.uploadWorkOrderPhotos = catchAsync(async (req, res, next) => {
   const workOrder = await WorkOrder.findById(req.params.id);
-
+  
   if (!workOrder) {
     return next(new AppError('No work order found with that ID', 404));
   }
 
-  if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
+  if (!req.files || req.files.length === 0) {
     return next(new AppError('Please upload at least one photo', 400));
   }
 
@@ -87,7 +87,7 @@ exports.uploadWorkOrderPhotos = catchAsync(async (req, res, next) => {
       console.error('Photo optimization failed:', error);
       // Fallback to original file if optimization fails
       const photoData = {
-        url: `/uploads/photos/${file.filename}`,
+        url: `/uploads/${file.filename}`,
         caption: req.body.description || '',
         type: req.body.type || 'other',
         uploadedBy: req.user.id,
