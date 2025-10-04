@@ -347,15 +347,13 @@ exports.getFilteredWorkOrders = catchAsync(async (req, res, next) => {
 
     console.log('getFilteredWorkOrders called with filters:', req.query);
 
-    // Build the query object
-    const query = {
-        building: buildingId
-    };
-
-    // Build conditions array for $and
+    // Build base query conditions
     const conditions = [];
 
-    // Only get work orders that can be invoiced
+    // 1. Building filter (required)
+    conditions.push({ building: buildingId });
+
+    // 2. Billing status filter (required - only unbilled work orders)
     conditions.push({
         $or: [
             { billingStatus: { $exists: false } },
@@ -364,80 +362,52 @@ exports.getFilteredWorkOrders = catchAsync(async (req, res, next) => {
         ]
     });
 
-    console.log('Initial query object:', JSON.stringify(query, null, 2));
-
-    // Add date range filter if provided
+    // 3. Date range filter (optional)
     if (startDate || endDate) {
         const dateConditions = [];
 
-        // First condition: work orders with scheduledDate in range
+        // Work orders with scheduledDate in range
         if (startDate || endDate) {
             const scheduledDateCondition = {};
-            if (startDate) {
-                scheduledDateCondition.$gte = new Date(startDate);
-                console.log('Parsed startDate:', new Date(startDate));
-            }
-            if (endDate) {
-                scheduledDateCondition.$lte = new Date(endDate);
-                console.log('Parsed endDate:', new Date(endDate));
-            }
-
-            if (Object.keys(scheduledDateCondition).length > 0) {
-                dateConditions.push({
-                    scheduledDate: scheduledDateCondition
-                });
-            }
+            if (startDate) scheduledDateCondition.$gte = new Date(startDate);
+            if (endDate) scheduledDateCondition.$lte = new Date(endDate);
+            dateConditions.push({ scheduledDate: scheduledDateCondition });
         }
 
-        // Second condition: work orders without scheduledDate, but createdAt in range
+        // Work orders without scheduledDate, but createdAt in range
         if (startDate || endDate) {
             const createdAtCondition = {};
-            if (startDate) {
-                createdAtCondition.$gte = new Date(startDate);
-            }
-            if (endDate) {
-                createdAtCondition.$lte = new Date(endDate);
-            }
-
-            if (Object.keys(createdAtCondition).length > 0) {
-                dateConditions.push({
-                    scheduledDate: { $exists: false },
-                    createdAt: createdAtCondition
-                });
-            }
-        }
-
-        // Add date conditions
-        if (dateConditions.length > 0) {
-            conditions.push({
-                $or: dateConditions
+            if (startDate) createdAtCondition.$gte = new Date(startDate);
+            if (endDate) createdAtCondition.$lte = new Date(endDate);
+            dateConditions.push({
+                scheduledDate: { $exists: false },
+                createdAt: createdAtCondition
             });
         }
+
+        // Add date conditions (must match one of these)
+        conditions.push({ $or: dateConditions });
     }
 
-    // Add work type filter
-    if (workType) {
-        conditions.push({ workType: workType });
+    // 4. Work type filter (optional)
+    if (workType && workType.trim()) {
+        conditions.push({ workType: workType.trim() });
     }
 
-    // Add work sub type filter
-    if (workSubType) {
-        conditions.push({ workSubType: workSubType });
+    // 5. Work sub type filter (optional)
+    if (workSubType && workSubType.trim()) {
+        conditions.push({ workSubType: workSubType.trim() });
     }
 
-    // Add status filter
-    if (status) {
-        conditions.push({ status: status });
+    // 6. Status filter (optional)
+    if (status && status.trim()) {
+        conditions.push({ status: status.trim() });
     }
 
-    // Apply conditions to query
-    if (conditions.length > 0) {
-        query.$and = conditions;
-    }
+    // Build the final query - all conditions must be met
+    const query = conditions.length > 1 ? { $and: conditions } : conditions[0];
 
     console.log('Final query object:', JSON.stringify(query, null, 2));
-
-    console.log('Final query:', JSON.stringify(query, null, 2));
 
     try {
         // Find work orders with filters

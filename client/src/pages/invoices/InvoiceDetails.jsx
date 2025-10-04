@@ -73,7 +73,7 @@ const InvoiceDetails = () => {
     );
   }
   
-  const invoice = invoiceData?.data;
+  const invoice = invoiceData?.data?.invoice;
   
   // Debug logging for development
   if (process.env.NODE_ENV === 'development') {
