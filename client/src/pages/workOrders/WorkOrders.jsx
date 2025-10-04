@@ -95,8 +95,8 @@ const WorkOrders = () => {
     error: workSubTypesError 
   } = useGetWorkSubTypesQuery(filters.workType || undefined);
   const [updateWorkOrder] = useUpdateWorkOrderMutation();
-  const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
-  const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
+  const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
+  const [selectedWorkOrderForPhotos, setSelectedWorkOrderForPhotos] = useState(null);
 
   const handleFilterChange = useCallback((e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
@@ -166,10 +166,10 @@ const WorkOrders = () => {
     setStatusMenuAnchor(null);
     setSelectedWorkOrder(null);
   }, []);
-  const handleManagePhotos = (workOrder) => {
+  const handleManagePhotos = useCallback((workOrder) => {
     setSelectedWorkOrderForPhotos(workOrder);
     setPhotoDialogOpen(true);
-  };
+  }, []);
 
   const handlePhotosChange = useCallback(async (updatedPhotos) => {
     if (!selectedWorkOrderForPhotos) return;
