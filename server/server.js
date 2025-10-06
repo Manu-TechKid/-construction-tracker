@@ -12,22 +12,7 @@ const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
 const cookieParser = require('cookie-parser');
 const compression = require('compression');
-const authRoutes = require('./routes/authRoutes');
-const buildingRoutes = require('./routes/buildingRoutes');
-const workOrderRoutes = require('./routes/workOrderRoutes');
-const userRoutes = require('./routes/userRoutes');
-const invoiceRoutes = require('./routes/invoiceRoutes');
-const scheduleRoutes = require('./routes/scheduleRoutes');
-const workerScheduleRoutes = require('./routes/workerScheduleRoutes');
-const timeTrackingRoutes = require('./routes/timeTrackingRoutes');
-const projectEstimateRoutes = require('./routes/projectEstimateRoutes');
-const searchRoutes = require('./routes/searchRoutes');
-const setupRoutes = require('./routes/setupRoutes');
-const migrationRoutes = require('./routes/migrationRoutes');
-const photoRoutes = require('./routes/photoRoutes');
-const noteRoutes = require('./routes/noteRoutes');
-const reminderRoutes = require('./routes/reminderRoutes');
-const uploadRoutes = require('./routes/uploadRoutes');
+// Individual route imports removed - now handled by centralized routes/index.js
 
 // Import routes
 const AppError = require('./utils/appError');
@@ -151,23 +136,8 @@ app.use('/api/v1', (req, res, next) => {
   next();
 });
 
-// API routes
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/users', userRoutes);
-app.use('/api/v1/buildings', buildingRoutes);
-app.use('/api/v1/work-orders', workOrderRoutes);
-app.use('/api/v1/invoices', invoiceRoutes);
-app.use('/api/v1/schedules', scheduleRoutes);
-app.use('/api/v1/notes', noteRoutes);
-app.use('/api/v1/reminders', reminderRoutes);
-app.use('/api/v1/uploads', uploadRoutes);
-app.use('/api/v1/search', searchRoutes);
-app.use('/api/v1/time-tracking', timeTrackingRoutes);
-app.use('/api/v1/project-estimates', projectEstimateRoutes);
-app.use('/api/v1/setup', setupRoutes);
-app.use('/api/v1/migration', migrationRoutes);
-app.use('/api/v1/photos', photoRoutes);
-app.use('/api/v1/worker-schedules', workerScheduleRoutes);
+// Use centralized route management
+app.use('/api/v1', routes);
 // Health check endpoints
 app.get('/api/v1/health', (req, res) => {
   res.json({ 

@@ -37,9 +37,7 @@ router.use('/search', searchRoutes);
 router.use('/project-estimates', projectEstimateRoutes);
 router.use('/migrations', migrationRoutes);
 
-// Direct access routes for frontend compatibility
-// Mount setupRoutes at root level so /work-types becomes available directly
-router.use('/', setupRoutes);
-router.use('/workers', userRoutes);
+// All routes are now properly organized above
+// Frontend should use /setup/work-types, /users for workers, etc.
 
 module.exports = router;
