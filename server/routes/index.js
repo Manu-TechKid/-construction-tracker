@@ -1,5 +1,6 @@
 const express = require('express');
 
+// Import route files
 const authRoutes = require('./authRoutes');
 const buildingRoutes = require('./buildingRoutes');
 const workOrderRoutes = require('./workOrderRoutes');
@@ -16,6 +17,12 @@ const timeTrackingRoutes = require('./timeTrackingRoutes');
 const searchRoutes = require('./searchRoutes');
 const projectEstimateRoutes = require('./projectEstimateRoutes');
 const migrationRoutes = require('./migrationRoutes');
+
+// Import controllers for direct routes
+const setupController = require('../controllers/setupController');
+const userController = require('../controllers/userController');
+const authController = require('../controllers/authController');
+const { restrictToRoles } = require('../middleware/roleMiddleware');
 
 const router = express.Router();
 
@@ -38,9 +45,6 @@ router.use('/project-estimates', projectEstimateRoutes);
 router.use('/migrations', migrationRoutes);
 
 // Direct routes for compatibility (frontend expects these at root level)
-const setupController = require('../controllers/setupController');
-const authController = require('../controllers/authController');
-const { restrictToRoles } = require('../middleware/roleMiddleware');
 
 // Work Types routes - direct access
 router.get('/work-types', setupController.getAllWorkTypes);
@@ -62,7 +66,6 @@ router.delete('/dropdown-configs/:id', authController.protect, restrictToRoles('
 router.get('/dropdown-options/:category', setupController.getDropdownOptions);
 
 // Workers routes - direct access (workers are users with worker role)
-const userController = require('../controllers/userController');
 
 router.get('/workers', userController.getAllWorkers);
 router.get('/workers/available', userController.getAvailableWorkers);
