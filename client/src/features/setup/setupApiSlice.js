@@ -1,21 +1,6 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { apiSlice } from '../../app/api/apiSlice';
 
-const baseQuery = fetchBaseQuery({
-  baseUrl: '/api/v1',
-  credentials: 'include',
-  prepareHeaders: (headers, { getState }) => {
-    const token = getState().auth.token;
-    if (token) {
-      headers.set('authorization', `Bearer ${token}`);
-    }
-    return headers;
-  },
-});
-
-export const setupApiSlice = createApi({
-  reducerPath: 'setupApi',
-  baseQuery,
-  tagTypes: ['WorkType', 'WorkSubType', 'DropdownConfig'],
+export const setupApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     // Work Types
     getWorkTypes: builder.query({
