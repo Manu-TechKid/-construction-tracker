@@ -4,12 +4,7 @@ RewriteEngine On
 # Handle React Router (client-side routing)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_URI} !^/api/
 RewriteRule ^ index.html [QSA,L]
-
-# Proxy API requests to Node.js server
-RewriteCond %{REQUEST_URI} ^/api/
-RewriteRule ^api/(.*)$ http://localhost:5000/api/$1 [P,L]
 
 # Security headers
 Header always set X-Content-Type-Options nosniff
