@@ -1,0 +1,125 @@
+/* Leaflet Container */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  border-radius: 8px;
+  z-index: 1;
+  background-color: #f5f5f5;
+}
+
+/* Popup styles */
+.leaflet-popup-content-wrapper {
+  border-radius: 6px;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.2);
+  padding: 0;
+  overflow: hidden;
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  padding: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  min-width: 200px;
+}
+
+.leaflet-popup-content h3 {
+  margin: 0 0 8px 0;
+  padding: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a365d;
+}
+
+.leaflet-popup-content p {
+  margin: 4px 0;
+  color: #4a5568;
+}
+
+.leaflet-popup-tip {
+  background: white;
+}
+
+/* Marker cluster styles */
+.marker-cluster {
+  background-clip: padding-box;
+  border-radius: 20px;
+  background-color: rgba(59, 130, 246, 0.6);
+}
+
+.marker-cluster div {
+  width: 30px;
+  height: 30px;
+  margin-left: 5px;
+  margin-top: 5px;
+  text-align: center;
+  border-radius: 15px;
+  background-color: rgba(37, 99, 235, 0.8);
+  color: white;
+  font-weight: bold;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Custom marker icons */
+.custom-marker {
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Map controls */
+.leaflet-control-zoom {
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.leaflet-bar a {
+  background-color: white;
+  color: #4a5568;
+  border-bottom: 1px solid #e2e8f0;
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  font-size: 18px;
+  transition: all 0.2s;
+}
+
+.leaflet-bar a:hover {
+  background-color: #f7fafc;
+  color: #2d3748;
+}
+
+.leaflet-bar a:first-child {
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+}
+
+.leaflet-bar a:last-child {
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+  border-bottom: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .leaflet-container {
+    min-height: 300px;
+  }
+  
+  .leaflet-popup-content {
+    min-width: 160px;
+    font-size: 13px;
+    padding: 8px;
+  }
+  
+  .leaflet-popup-content h3 {
+    font-size: 14px;
+    margin-bottom: 6px;
+  }
+}

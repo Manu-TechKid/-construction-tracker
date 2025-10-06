@@ -1,0 +1,53 @@
+{
+  "name": "construction-tracker",
+  "version": "1.0.0",
+  "description": "A comprehensive construction management application",
+  "private": true,
+  "scripts": {
+    "start": "node server/server.js",
+    "start:prod": "NODE_ENV=production node server/server.js",
+    "build": "npm install && npm --prefix client install --legacy-peer-deps && npm --prefix client run build && npm --prefix server install",
+    "build:prod": "NODE_ENV=production npm install && cd client && npm install --legacy-peer-deps && npm run build && cd ../server && npm install",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm start",
+    "heroku-postbuild": "npm --prefix client install --legacy-peer-deps && npm --prefix client run build",
+    "test": "cd server && npm test",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Manu-TechKid/-construction-tracker.git"
+  },
+  "keywords": [
+    "construction",
+    "management",
+    "tracking",
+    "react",
+    "node",
+    "mongodb"
+  ],
+  "author": "Manu-TechKid",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Manu-TechKid/-construction-tracker/issues"
+  },
+  "homepage": "https://github.com/Manu-TechKid/-construction-tracker#readme",
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "cacheDirectories": [
+    "node_modules",
+    "client/node_modules",
+    "server/node_modules"
+  ],
+  "dependencies": {
+    "axios": "^1.12.2",
+    "dotenv": "^17.2.2"
+  }
+}

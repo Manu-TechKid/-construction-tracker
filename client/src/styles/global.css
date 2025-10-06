@@ -1,0 +1,288 @@
+/* Global CSS for Construction Tracker - Cross-browser compatibility and responsive design */
+
+/* Reset and base styles */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ensure consistent touch targets on mobile */
+@media (max-width: 768px) {
+  button, 
+  [role="button"],
+  .MuiButton-root,
+  .MuiIconButton-root {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+  
+  /* Menu items should be easily tappable */
+  .MuiMenuItem-root {
+    min-height: 48px !important;
+    padding: 12px 16px !important;
+    font-size: 1rem !important;
+  }
+}
+
+/* Time Picker fixes for consistent display across devices */
+.MuiClock-root {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.MuiPickersLayout-root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.MuiPickersLayout-contentWrapper {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+/* Ensure clock is always visible on mobile */
+@media (max-width: 768px) {
+  .MuiClock-root {
+    width: 100% !important;
+    max-width: 280px !important;
+    margin: 0 auto !important;
+  }
+  
+  .MuiDateCalendar-root {
+    width: 100% !important;
+    max-width: 320px !important;
+    margin: 0 auto !important;
+  }
+  
+  .MuiPickersPopper-root {
+    z-index: 1300 !important;
+  }
+  
+  /* Improve touch targets for time picker */
+  .MuiClockNumber-root {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 1rem !important;
+  }
+  
+  .MuiClockPointer-root {
+    cursor: pointer !important;
+  }
+}
+
+/* Table responsiveness improvements */
+@media (max-width: 768px) {
+  .MuiTableContainer-root {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  
+  .MuiTable-root {
+    min-width: 650px !important;
+  }
+  
+  .MuiTableCell-root {
+    padding: 8px 4px !important;
+    font-size: 0.875rem !important;
+    white-space: nowrap !important;
+  }
+  
+  .MuiTableCell-root:first-of-type {
+    padding-left: 8px !important;
+  }
+  
+  .MuiTableCell-root:last-of-type {
+    padding-right: 8px !important;
+  }
+}
+
+/* Card improvements for mobile */
+@media (max-width: 768px) {
+  .MuiCard-root {
+    margin: 8px !important;
+    border-radius: 12px !important;
+  }
+  
+  .MuiCardContent-root {
+    padding: 16px !important;
+  }
+  
+  .MuiCardActions-root {
+    padding: 8px 16px !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+}
+
+/* Dialog improvements for mobile */
+@media (max-width: 768px) {
+  .MuiDialog-paper {
+    margin: 16px !important;
+    width: calc(100% - 32px) !important;
+    max-width: none !important;
+  }
+  
+  .MuiDialogTitle-root {
+    padding: 16px !important;
+    font-size: 1.25rem !important;
+  }
+  
+  .MuiDialogContent-root {
+    padding: 16px !important;
+  }
+  
+  .MuiDialogActions-root {
+    padding: 8px 16px 16px !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+}
+
+/* Form improvements for mobile */
+@media (max-width: 768px) {
+  .MuiTextField-root {
+    margin-bottom: 16px !important;
+  }
+  
+  .MuiInputBase-root {
+    font-size: 1rem !important;
+  }
+  
+  .MuiInputLabel-root {
+    font-size: 1rem !important;
+  }
+  
+  .MuiSelect-root {
+    font-size: 1rem !important;
+  }
+}
+
+/* Chip improvements for mobile */
+@media (max-width: 768px) {
+  .MuiChip-root {
+    font-size: 0.875rem !important;
+    height: 32px !important;
+  }
+  
+  .MuiChip-label {
+    padding: 0 8px !important;
+  }
+}
+
+/* Avatar improvements for mobile */
+@media (max-width: 768px) {
+  .MuiAvatar-root {
+    width: 40px !important;
+    height: 40px !important;
+  }
+  
+  .MuiAvatar-root.MuiAvatar-large {
+    width: 56px !important;
+    height: 56px !important;
+  }
+}
+
+/* Tooltip improvements for mobile */
+@media (max-width: 768px) {
+  .MuiTooltip-tooltip {
+    font-size: 0.875rem !important;
+    padding: 8px 12px !important;
+  }
+}
+
+/* Loading skeleton improvements */
+.MuiSkeleton-root {
+  border-radius: 8px !important;
+}
+
+/* Ensure proper scrolling on mobile */
+@media (max-width: 768px) {
+  .MuiContainer-root {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+  
+  /* Fix for iOS Safari viewport issues */
+  .MuiContainer-root {
+    min-height: -webkit-fill-available !important;
+  }
+}
+
+/* Cross-browser input styling */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+textarea,
+select {
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  border-radius: 4px !important;
+}
+
+/* Prevent zoom on input focus for iOS */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .MuiButton-root {
+    border: 2px solid !important;
+  }
+  
+  .MuiIconButton-root {
+    border: 1px solid !important;
+  }
+}
+
+/* Focus indicators for keyboard navigation */
+.MuiButton-root:focus-visible,
+.MuiIconButton-root:focus-visible,
+.MuiMenuItem-root:focus-visible {
+  outline: 2px solid #1976d2 !important;
+  outline-offset: 2px !important;
+}
+
+/* Print styles */
+@media print {
+  .MuiButton-root,
+  .MuiIconButton-root,
+  .MuiFab-root {
+    display: none !important;
+  }
+  
+  .MuiCard-root {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+  }
+}
