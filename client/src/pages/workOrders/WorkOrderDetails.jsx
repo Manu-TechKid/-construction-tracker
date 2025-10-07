@@ -51,9 +51,10 @@ const getPhotoUrl = (photo) => {
 
     if (!cleanPath) return null;
 
-    // Construct the clean URL with exactly one /photos/ segment
+    // Construct the clean URL - static files are served without /api/v1 prefix
     const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
-    return `${apiUrl}/api/v1/uploads/photos/${cleanPath}`;
+    const baseUrl = apiUrl.replace('/api/v1', ''); // Remove /api/v1 for static files
+    return `${baseUrl}/uploads/photos/${cleanPath}`;
   } catch (error) {
     console.error('Error processing photo URL:', { photo, error });
     return null;

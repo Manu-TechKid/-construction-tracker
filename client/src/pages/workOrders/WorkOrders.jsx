@@ -570,7 +570,7 @@ const WorkOrders = () => {
 
           // Fix double API path issue and ensure correct URL construction
           const baseUrl = process.env.REACT_APP_API_URL || window.location.origin;
-          const cleanBaseUrl = baseUrl.replace(/\/api\/v1\/api\/v1/g, '/api/v1').replace(/\/+$/, '');
+          const cleanBaseUrl = baseUrl.replace(/\/api\/v1\/api\/v1/g, '/api/v1').replace(/\/+$/, '').replace('/api/v1', '');
           const fullPhotoUrl = `${cleanBaseUrl}/uploads/photos/${photoUrl}`;
 
           return (
