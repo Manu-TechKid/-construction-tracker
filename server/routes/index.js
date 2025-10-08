@@ -1,7 +1,21 @@
 const express = require('express');
-const employmentRoutes = require('./employmentRoutes');
-
 const router = express.Router();
+
+// Import route modules
+const authRoutes = require('./authRoutes');
+const buildingRoutes = require('./buildingRoutes');
+const workOrderRoutes = require('./workOrderRoutes');
+const userRoutes = require('./userRoutes');
+const reminderRoutes = require('./reminderRoutes');
+const invoiceRoutes = require('./invoiceRoutes');
+const scheduleRoutes = require('./scheduleRoutes');
+const noteRoutes = require('./noteRoutes');
+const setupRoutes = require('./setupRoutes');
+const workerScheduleRoutes = require('./workerScheduleRoutes');
+const uploadRoutes = require('./uploadRoutes');
+const photoRoutes = require('./photoRoutes');
+const timeTrackingRoutes = require('./timeTrackingRoutes');
+const employmentRoutes = require('./employmentRoutes');
 
 // API routes
 router.use('/auth', authRoutes);
