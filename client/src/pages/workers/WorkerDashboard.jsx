@@ -32,22 +32,20 @@ import {
   Assessment as HoursIcon,
   Description as LetterIcon
 } from '@mui/icons-material';
-import { formatDate } from '../../utils/dateUtils';
-import EnhancedTimeTracker from '../../components/timeTracking/EnhancedTimeTracker';
+import { useAuth } from '../../hooks/useAuth';
 import { useGetWorkerAssignmentsQuery, useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 import { toast } from 'react-toastify';
+import { formatDate } from '../../utils/dateUtils';
+import EnhancedTimeTracker from '../../components/timeTracking/EnhancedTimeTracker';
 import WeeklyHoursSummary from '../../components/workers/WeeklyHoursSummary';
 import EmploymentReferenceLetter from '../../components/workers/EmploymentReferenceLetter';
 const WorkerDashboard = () => {
   const { user } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  
   const [completeDialog, setCompleteDialog] = useState({ open: false, workOrder: null });
   const [completionNotes, setCompletionNotes] = useState('');
   const [selectedTab, setSelectedTab] = useState(0);
-  
-  // Fetch worker's assigned work orders with real-time polling
   const { data: assignmentsData, isLoading, refetch, error } = useGetWorkerAssignmentsQuery(user?.id, {
     skip: !user?.id,
     pollingInterval: 30000, // Poll every 30 seconds for real-time updates

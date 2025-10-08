@@ -27,7 +27,8 @@ import {
   Person as PersonIcon,
   Schedule as TimeIcon,
   CalendarToday as CalendarIcon,
-  Print as PrintIcon
+  Print as PrintIcon,
+  Description as DescriptionIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'react-toastify';
