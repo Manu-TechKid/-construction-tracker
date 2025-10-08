@@ -28,14 +28,16 @@ import {
   Schedule as ScheduleIcon,
   Refresh as RefreshIcon,
   AccessTime as TimeIcon,
-  Dashboard as DashboardIcon
+  Dashboard as DashboardIcon,
+  Assessment as HoursIcon,
+  Description as LetterIcon
 } from '@mui/icons-material';
-import { useAuth } from '../../hooks/useAuth';
-import { useGetWorkerAssignmentsQuery, useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
-import { toast } from 'react-toastify';
 import { formatDate } from '../../utils/dateUtils';
 import EnhancedTimeTracker from '../../components/timeTracking/EnhancedTimeTracker';
-
+import { useGetWorkerAssignmentsQuery, useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
+import { toast } from 'react-toastify';
+import WeeklyHoursSummary from '../../components/workers/WeeklyHoursSummary';
+import EmploymentReferenceLetter from '../../components/workers/EmploymentReferenceLetter';
 const WorkerDashboard = () => {
   const { user } = useAuth();
   const theme = useTheme();
@@ -169,6 +171,16 @@ const WorkerDashboard = () => {
             icon={<TimeIcon />}
             iconPosition="start"
           />
+          <Tab 
+            label="Weekly Hours" 
+            icon={<HoursIcon />}
+            iconPosition="start"
+          />
+          <Tab 
+            label="Employment Letter" 
+            icon={<LetterIcon />}
+            iconPosition="start"
+          />
         </Tabs>
       </Paper>
 
@@ -277,6 +289,14 @@ const WorkerDashboard = () => {
 
       {selectedTab === 1 && (
         <EnhancedTimeTracker />
+      )}
+
+      {selectedTab === 2 && (
+        <WeeklyHoursSummary />
+      )}
+
+      {selectedTab === 3 && (
+        <EmploymentReferenceLetter />
       )}
 
       {/* Completion Dialog */}

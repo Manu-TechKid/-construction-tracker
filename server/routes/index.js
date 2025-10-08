@@ -1,21 +1,5 @@
 const express = require('express');
-
-const authRoutes = require('./authRoutes');
-const buildingRoutes = require('./buildingRoutes');
-const workOrderRoutes = require('./workOrderRoutes');
-const userRoutes = require('./userRoutes');
-const reminderRoutes = require('./reminderRoutes');
-const invoiceRoutes = require('./invoiceRoutes');
-const scheduleRoutes = require('./scheduleRoutes');
-const noteRoutes = require('./noteRoutes');
-const setupRoutes = require('./setupRoutes');
-const workerScheduleRoutes = require('./workerScheduleRoutes');
-const uploadRoutes = require('./uploadRoutes');
-const photoRoutes = require('./photoRoutes');
-const timeTrackingRoutes = require('./timeTrackingRoutes');
-const searchRoutes = require('./searchRoutes');
-const projectEstimateRoutes = require('./projectEstimateRoutes');
-const migrationRoutes = require('./migrationRoutes');
+const employmentRoutes = require('./employmentRoutes');
 
 const router = express.Router();
 
@@ -33,9 +17,7 @@ router.use('/worker-schedules', workerScheduleRoutes);
 router.use('/uploads', uploadRoutes);
 router.use('/photos', photoRoutes);
 router.use('/time-tracking', timeTrackingRoutes);
-router.use('/search', searchRoutes);
-router.use('/project-estimates', projectEstimateRoutes);
-router.use('/migrations', migrationRoutes);
+router.use('/employment', employmentRoutes);
 
 // All routes are now properly organized above
 // Frontend should use /setup/work-types, /users for workers, etc.
