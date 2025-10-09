@@ -152,6 +152,16 @@ const DashboardLayout = () => {
       });
     }
 
+    // Admin Worker Dashboard - Admin/Manager only
+    if (!isWorker && hasPermission(['admin', 'manager'])) {
+      items.push({
+        text: 'Worker Management',
+        icon: <PeopleIcon />,
+        path: '/workers/admin-dashboard',
+        permission: 'admin'
+      });
+    }
+
     // Worker Schedules - for scheduling workers
     if (!isWorker && hasPermission(['read:schedules'])) {
       items.push({

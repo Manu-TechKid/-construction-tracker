@@ -1,0 +1,209 @@
+========================================
+ SITEGROUND FRONTEND UPLOAD INSTRUCTIONS
+========================================
+
+✅ BUILD COMPLETE: 522.87 kB
+✅ GITHUB PUSH: In Progress (Check terminal)
+✅ RENDER: Will auto-deploy when push completes
+
+========================================
+STEP 1: LOCATE BUILD FILES
+========================================
+
+Folder Path:
+c:\Users\hintels\Desktop\sitegroud host\-construction-tracker-main\client\build
+
+What's Inside:
+✓ index.html (main page)
+✓ static/ folder (CSS, JS, media)
+✓ manifest.json
+✓ robots.txt
+✓ asset-manifest.json
+✓ favicon.ico
+
+========================================
+STEP 2: UPLOAD TO SITEGROUND
+========================================
+
+METHOD 1: cPanel File Manager (Easiest)
+---------------------------------------
+1. Login to SiteGround:
+   → https://my.siteground.com
+   
+2. Go to Site Tools:
+   → File Manager
+   
+3. Navigate to your folder:
+   → public_html (or subdomain folder)
+   
+4. BACKUP FIRST:
+   → Select all existing files
+   → Download as backup
+   → Then DELETE old files
+   
+5. Upload NEW files:
+   → Click "Upload"
+   → Select ALL files from: client\build
+   → Wait for upload to complete
+   
+6. Set Permissions:
+   → Files: 644
+   → Folders: 755
+
+METHOD 2: FileZilla FTP (Faster)
+---------------------------------
+1. Download FileZilla:
+   → https://filezilla-project.org/
+   
+2. Connect to SiteGround:
+   Host: [Your FTP host from SiteGround]
+   Username: [Your SiteGround username]
+   Password: [Your SiteGround password]
+   Port: 21
+   
+3. Navigate:
+   Local: c:\Users\hintels\Desktop\sitegroud host\-construction-tracker-main\client\build
+   Remote: /public_html/
+   
+4. Upload:
+   → Select all files in build folder
+   → Drag to right panel (remote)
+   → Wait for transfer to complete
+
+========================================
+STEP 3: VERIFY DEPLOYMENT
+========================================
+
+Backend (Render):
+-----------------
+1. Check Render Dashboard:
+   → https://dashboard.render.com
+   → Look for "Live" status (green)
+   → Estimated time: 5-10 minutes
+
+2. Test Health Endpoint:
+   → https://your-render-app.onrender.com/api/v1/health
+   → Should return: {"status":"healthy"}
+
+Frontend (SiteGround):
+----------------------
+1. Open your website URL in browser
+
+2. Hard refresh (Clear cache):
+   → Windows: Ctrl + Shift + R
+   → Or: Ctrl + F5
+
+3. Test Features:
+   ✓ Login works
+   ✓ Calendar shows correct dates (Oct 9 = Thursday)
+   ✓ Invoice creation has "Invoice Date" field
+   ✓ Schedules are bold and visible
+   ✓ Admin can access Workers → Admin Dashboard
+
+========================================
+TROUBLESHOOTING
+========================================
+
+Problem: "API Error" or "Network Error"
+Fix: Check API URL in environment variables
+     → Should point to: https://your-render-app.onrender.com/api/v1
+
+Problem: Calendar still shows wrong dates
+Fix: Hard refresh browser (Ctrl + Shift + R)
+     → Clear browser cache completely
+
+Problem: 404 errors on navigation
+Fix: SiteGround needs .htaccess for React Router
+     → Create .htaccess in public_html:
+     
+     <IfModule mod_rewrite.c>
+       RewriteEngine On
+       RewriteBase /
+       RewriteRule ^index\.html$ - [L]
+       RewriteCond %{REQUEST_FILENAME} !-f
+       RewriteCond %{REQUEST_FILENAME} !-d
+       RewriteCond %{REQUEST_FILENAME} !-l
+       RewriteRule . /index.html [L]
+     </IfModule>
+
+Problem: White screen
+Fix: Check browser console (F12)
+     → Look for errors
+     → Verify all files uploaded correctly
+     → Check file permissions
+
+========================================
+POST-DEPLOYMENT CHECKLIST
+========================================
+
+Backend (Render):
+[ ] Push to GitHub completed
+[ ] Render shows "Live" status
+[ ] Health endpoint responds
+[ ] No errors in Render logs
+
+Frontend (SiteGround):
+[ ] All files uploaded (check file count)
+[ ] Permissions set correctly
+[ ] .htaccess created (if needed)
+[ ] Website loads without errors
+
+Feature Testing:
+[ ] Login successful
+[ ] Calendar alignment correct (Oct 9 = Thursday)
+[ ] Both schedule pages work (sidebar + building)
+[ ] Invoice has "Invoice Date" field
+[ ] Due date validates after invoice date
+[ ] Schedules are bold and visible
+[ ] Admin dashboard accessible
+[ ] Building context persists on navigation
+
+========================================
+DEPLOYMENT SUMMARY
+========================================
+
+Files Changed: 13 files
+- Frontend: 8 files (4 modified, 1 new component, 3 docs)
+- Backend: 2 files (routes + model)
+- Documentation: 3 new files
+
+Build Size: 522.87 kB (gzipped)
+Build Status: ✅ SUCCESS (No errors)
+
+Issues Fixed:
+✅ Calendar day alignment (both schedules)
+✅ Project approval page (routes registered)
+✅ Invoice date field (custom dates)
+✅ Schedule visibility (bold, shadows)
+✅ Building context (persists)
+✅ Admin worker dashboard (new feature)
+
+Breaking Changes: NONE
+Database Migration: NOT REQUIRED
+
+========================================
+NEED HELP?
+========================================
+
+Check Documentation:
+→ DEPLOY_NOW.md (Detailed deployment guide)
+→ FIXES_IMPLEMENTATION_SUMMARY.md (Technical details)
+→ QUICK_DEPLOYMENT_GUIDE.md (Quick reference)
+
+Contact Support:
+→ Render: https://dashboard.render.com (Logs tab)
+→ SiteGround: https://my.siteground.com (Support)
+
+========================================
+✅ YOU'RE READY TO UPLOAD!
+========================================
+
+Next Steps:
+1. ✅ Build complete (client/build folder)
+2. ⏳ GitHub push (check terminal for completion)
+3. 🎯 Upload build files to SiteGround
+4. ⏳ Wait for Render deployment (~5-10 min)
+5. ✅ Test all features
+6. 🎉 Go live!
+
+Good luck with your deployment! 🚀
