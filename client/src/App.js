@@ -36,6 +36,7 @@ import WorkOrderDetails from './pages/workOrders/WorkOrderDetails';
 import WorkProgress from './pages/workOrders/WorkProgress';
 import Workers from './pages/workers/Workers';
 import CreateWorker from './pages/workers/CreateWorker';
+import AdminWorkerDashboard from './pages/workers/AdminWorkerDashboard';
 import Reminders from './pages/reminders/Reminders';
 import CreateReminder from './pages/reminders/CreateReminder';
 import EditReminder from './pages/reminders/EditReminder';
@@ -242,6 +243,14 @@ const AppContent = () => {
                 element={
                   <RoleBasedRoute requiredPermissions={['read:workers']}>
                     <Workers />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="workers/admin-dashboard" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['admin', 'manager']}>
+                    <AdminWorkerDashboard />
                   </RoleBasedRoute>
                 } 
               />

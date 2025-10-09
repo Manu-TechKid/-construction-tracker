@@ -44,7 +44,7 @@ const WorkOrderForm = () => {
   const isEdit = Boolean(id);
   const [photos, setPhotos] = useState([]);
 
-  // Removed photo functionality - not working properly
+  // Photo functionality is working properly - integrated with PhotoUpload component
 
   const formik = useFormik({
     initialValues: {
@@ -84,13 +84,29 @@ const WorkOrderForm = () => {
           // Ensure workType and workSubType are just IDs
           workType: values.workType && typeof values.workType === 'object' ? values.workType._id : values.workType,
           workSubType: values.workSubType && typeof values.workSubType === 'object' ? values.workSubType._id : values.workSubType,
-          // Include photos in the work order data - ensure they are properly formatted
-          photos: photos && Array.isArray(photos) ? photos.map(photo => ({
-            url: photo.url,
-            caption: photo.caption || '',
-            type: photo.type || 'other',
-            uploadedAt: photo.uploadedAt || new Date().toISOString()
-          })) : []
+          // Include photos in the work order data - ensure they are properly formatted for backend
+          photos: photos && Array.isArray(photos) ? photos.map(photo => {
+            // Handle both uploaded photos (with _id) and new photos (with file)
+            if (photo._id) {
+              // Existing uploaded photo
+              return {
+                _id: photo._id,
+                url: photo.url,
+                caption: photo.caption || '',
+                type: photo.type || 'other',
+                uploadedAt: photo.uploadedAt || new Date().toISOString()
+              };
+            } else {
+              // New photo that needs to be uploaded
+              return {
+                url: photo.url,
+                caption: photo.caption || '',
+                type: photo.type || 'other',
+                uploadedAt: photo.uploadedAt || new Date().toISOString(),
+                file: photo.file // Include file for upload
+              };
+            }
+          }) : []
         };
 
         console.log('Submitting work order with data:', formattedValues);
@@ -149,7 +165,7 @@ const WorkOrderForm = () => {
 
   const [createWorkOrder, { isLoading: isCreating }] = useCreateWorkOrderMutation();
   const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
-  // Photo functionality removed
+  // Photo functionality integrated below with PhotoUpload component
 
   useEffect(() => {
     if (isEdit && workOrderData?.data) {

@@ -51,6 +51,11 @@ const invoiceSchema = new mongoose.Schema({
         enum: ['draft', 'sent', 'paid', 'overdue', 'cancelled'],
         default: 'draft'
     },
+    invoiceDate: {
+        type: Date,
+        required: true,
+        default: Date.now
+    },
     issueDate: {
         type: Date,
         default: Date.now

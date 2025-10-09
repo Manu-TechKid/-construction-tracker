@@ -325,8 +325,8 @@ const WorkOrders = () => {
     {
       field: 'title',
       headerName: 'Title & Description',
-      flex: 2,
-      minWidth: 280,
+      flex: 1.5,
+      minWidth: 200,
       renderCell: (params) => {
         try {
           if (!params.row) {
@@ -375,8 +375,8 @@ const WorkOrders = () => {
     {
       field: 'building',
       headerName: 'Building',
-      flex: 1.8,
-      minWidth: 180,
+      flex: 1.2,
+      minWidth: 120,
       valueGetter: (params) => {
         try {
           if (!params.row) return 'N/A';
@@ -426,7 +426,7 @@ const WorkOrders = () => {
     {
       field: 'status',
       headerName: 'Status',
-      width: 130,
+      width: 100,
       renderCell: (params) => {
         try {
           if (!params.row) {
@@ -471,7 +471,7 @@ const WorkOrders = () => {
     {
       field: 'priority',
       headerName: 'Priority',
-      width: 100,
+      width: 80,
       renderCell: (params) => {
         try {
           if (!params.row) {
@@ -537,7 +537,7 @@ const WorkOrders = () => {
     {
       field: 'photos',
       headerName: 'Photos',
-      width: 160,
+      width: 120,
       renderCell: (params) => {
         try {
           if (!params.row) {
@@ -606,8 +606,8 @@ const WorkOrders = () => {
                     key={photo._id || index}
                     sx={{
                       position: 'relative',
-                      width: 45,
-                      height: 45,
+                      width: 35,
+                      height: 35,
                       borderRadius: 1,
                       overflow: 'hidden',
                       border: '1px solid',
@@ -676,7 +676,7 @@ const WorkOrders = () => {
     {
       field: 'scheduledDate',
       headerName: 'Scheduled Date',
-      width: 130,
+      width: 100,
       valueFormatter: (params) => {
         try {
           if (!params.value) return 'Not scheduled';
@@ -717,8 +717,8 @@ const WorkOrders = () => {
     {
       field: 'assignedTo',
       headerName: 'Assigned To',
-      flex: 1.3,
-      minWidth: 150,
+      flex: 1,
+      minWidth: 120,
       valueGetter: (params) => {
         try {
           if (!params.row || !params.row.assignedTo || !Array.isArray(params.row.assignedTo)) {
@@ -797,7 +797,7 @@ const WorkOrders = () => {
     {
       field: 'apartmentNumber',
       headerName: 'Apartment',
-      width: 100,
+      width: 80,
       valueGetter: (params) => {
         try {
           if (!params.row) return 'N/A';
@@ -859,8 +859,8 @@ const WorkOrders = () => {
     {
       field: 'actions',
       headerName: 'Actions',
-      flex: 0.8,
-      minWidth: 100,
+      flex: 0.6,
+      minWidth: 80,
       sortable: false,
       renderCell: (params) => {
         try {

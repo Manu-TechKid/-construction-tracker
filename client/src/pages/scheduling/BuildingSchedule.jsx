@@ -107,7 +107,13 @@ const BuildingSchedule = () => {
   const getMonthDays = () => {
     const start = startOfMonth(currentDate);
     const end = endOfMonth(currentDate);
-    return eachDayOfInterval({ start, end });
+    const days = eachDayOfInterval({ start, end });
+    
+    // Add padding days at the beginning to align with correct day of week
+    const startDayOfWeek = start.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const paddingDays = Array(startDayOfWeek).fill(null);
+    
+    return [...paddingDays, ...days];
   };
 
   const getSchedulesForDay = (day) => {
@@ -339,7 +345,24 @@ const BuildingSchedule = () => {
                 </Grid>
               ))}
               
-              {getMonthDays().map(day => {
+              {getMonthDays().map((day, index) => {
+                // Handle padding days (null values)
+                if (!day) {
+                  return (
+                    <Grid item xs={12/7} key={`padding-${index}`}>
+                      <Card 
+                        variant="outlined" 
+                        sx={{ 
+                          minHeight: 120, 
+                          p: 1,
+                          backgroundColor: 'grey.100',
+                          visibility: 'hidden'
+                        }}
+                      />
+                    </Grid>
+                  );
+                }
+                
                 const daySchedules = getSchedulesForDay(day);
                 const isToday = isSameDay(day, new Date());
                 return (
@@ -403,13 +426,21 @@ const BuildingSchedule = () => {
                             variant={schedule.status === 'completed' ? 'filled' : 'outlined'}
                             sx={{ 
                               mb: 0.5, 
-                              fontSize: '0.7rem',
-                              height: 20,
+                              fontSize: '0.75rem',
+                              height: 24,
                               display: 'block',
+                              fontWeight: 'bold',
+                              boxShadow: 1,
                               '& .MuiChip-label': {
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap',
+                                px: 1
+                              },
+                              '&:hover': {
+                                boxShadow: 3,
+                                transform: 'scale(1.05)',
+                                transition: 'all 0.2s'
                               }
                             }}
                             onClick={(e) => {

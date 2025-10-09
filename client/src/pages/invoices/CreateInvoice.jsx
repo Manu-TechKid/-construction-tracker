@@ -57,7 +57,8 @@ const validationSchema = Yup.object({
       'Invoice number can only contain letters, numbers, and hyphens'
     )
     .max(20, 'Invoice number must be 20 characters or less'),
-  dueDate: Yup.date().required('Due date is required').min(new Date(), 'Due date must be in the future'),
+  invoiceDate: Yup.date().required('Invoice date is required'),
+  dueDate: Yup.date().required('Due date is required').min(Yup.ref('invoiceDate'), 'Due date must be after invoice date'),
   notes: Yup.string(),
   workOrderIds: Yup.array().min(1, 'At least one work order must be selected')
 });
@@ -185,6 +186,7 @@ const CreateInvoice = () => {
     initialValues: {
       buildingId: '',
       invoiceNumber: '',
+      invoiceDate: new Date(), // Actual invoice date
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
       notes: '',
       workOrderIds: []
@@ -429,15 +431,30 @@ const CreateInvoice = () => {
                 
                 <Grid item xs={12} md={6}>
                   <DatePicker
+                    label="Invoice Date"
+                    value={formik.values.invoiceDate}
+                    onChange={(date) => formik.setFieldValue('invoiceDate', date)}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        error: formik.touched.invoiceDate && Boolean(formik.errors.invoiceDate),
+                        helperText: formik.touched.invoiceDate && formik.errors.invoiceDate || 'Actual date of the invoice (not system date)'
+                      }
+                    }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} md={6}>
+                  <DatePicker
                     label="Due Date"
                     value={formik.values.dueDate}
                     onChange={(date) => formik.setFieldValue('dueDate', date)}
-                    minDate={new Date()}
+                    minDate={formik.values.invoiceDate}
                     slotProps={{
                       textField: {
                         fullWidth: true,
                         error: formik.touched.dueDate && Boolean(formik.errors.dueDate),
-                        helperText: formik.touched.dueDate && formik.errors.dueDate
+                        helperText: formik.touched.dueDate && formik.errors.dueDate || 'Payment due date'
                       }
                     }}
                   />
