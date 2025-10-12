@@ -1,14 +1,15 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 // Compute API base URL
-// - If REACT_APP_API_URL is provided, use it (useful for local dev)
+// - First check if config.js has set window.REACT_APP_API_URL (production)
+// - Then check environment variable REACT_APP_API_URL (development)
 // - For local development, use localhost
 // - For production, use the deployed backend
 const apiBaseUrl =
-  process.env.REACT_APP_API_URL ||
+  (typeof window !== 'undefined' && window.REACT_APP_API_URL) ||
   (typeof window !== 'undefined' && window.location.hostname === 'localhost'
     ? 'http://localhost:5000/api/v1'
-    : (typeof window !== 'undefined' ? window.location.origin + '/api/v1' : ''));
+    : 'https://construction-tracker-webapp.onrender.com/api/v1');
 
 console.log('API Base URL:', apiBaseUrl);
 console.log('Environment:', process.env.NODE_ENV);
