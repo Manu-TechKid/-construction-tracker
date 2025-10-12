@@ -1,5 +1,6 @@
 const ProjectEstimate = require('../models/ProjectEstimate');
 const WorkOrder = require('../models/WorkOrder');
+const Invoice = require('../models/Invoice');
 const Building = require('../models/Building');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
@@ -314,6 +315,83 @@ exports.convertToWorkOrder = catchAsync(async (req, res, next) => {
       projectEstimate
     }
   });
+});
+
+// @desc    Convert project estimate to invoice
+// @route   POST /api/v1/project-estimates/:id/convert-to-invoice
+// @access  Private (Admin/Manager only)
+exports.convertToInvoice = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const {
+    invoiceNumber,
+    invoiceDate,
+    dueDate,
+    notes,
+  } = req.body || {};
+
+  const projectEstimate = await ProjectEstimate.findById(id)
+    .populate('building')
+    .populate('createdBy', 'name email');
+
+  if (!projectEstimate) {
+    return next(new AppError('Project estimate not found', 404));
+  }
+
+  if (projectEstimate.status !== 'approved' && projectEstimate.status !== 'converted') {
+    return next(new AppError('Only approved project estimates can be converted to invoices', 400));
+  }
+
+  if (projectEstimate.status === 'converted' && projectEstimate.workOrderId) {
+    return next(new AppError('Project estimate already converted to work order. Create invoice from work order instead.', 400));
+  }
+
+  try {
+    const invoicePayload = {
+      building: projectEstimate.building?._id || projectEstimate.building,
+      invoiceDate: invoiceDate || new Date(),
+      issueDate: invoiceDate || new Date(),
+      dueDate: dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      notes: notes || projectEstimate.notes,
+      createdBy: req.user ? req.user._id : projectEstimate.createdBy?._id,
+      workOrders: [
+        {
+          workOrder: null,
+          description: projectEstimate.description || projectEstimate.title,
+          quantity: 1,
+          unitPrice: projectEstimate.estimatedPrice || 0,
+          totalPrice: projectEstimate.estimatedPrice || 0,
+        },
+      ],
+      subtotal: projectEstimate.estimatedPrice || 0,
+      tax: 0,
+      total: projectEstimate.estimatedPrice || 0,
+    };
+
+    if (invoiceNumber && invoiceNumber.trim()) {
+      invoicePayload.invoiceNumber = invoiceNumber.trim().toUpperCase();
+    }
+
+    const invoice = await Invoice.create(invoicePayload);
+
+    projectEstimate.invoiceId = invoice._id;
+    projectEstimate.status = 'converted';
+    await projectEstimate.save();
+
+    const populatedInvoice = await Invoice.findById(invoice._id)
+      .populate('building', 'name address')
+      .populate('createdBy', 'name email');
+
+    res.status(201).json({
+      status: 'success',
+      data: {
+        invoice: populatedInvoice,
+        projectEstimate,
+      },
+    });
+  } catch (error) {
+    console.error('convertToInvoice error:', error);
+    return next(new AppError(error?.message || 'Failed to convert project estimate to invoice', 500));
+  }
 });
 
 // @desc    Get project estimates statistics

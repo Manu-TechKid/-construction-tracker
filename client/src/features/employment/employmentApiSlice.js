@@ -61,6 +61,7 @@ export const employmentApiSlice = apiSlice.injectEndpoints({
 export const {
   useGetMyEmploymentLetterQuery,
   useGenerateEmploymentLetterQuery,
+  useLazyGenerateEmploymentLetterQuery,
   useRequestEmploymentLetterMutation,
   useGetEmploymentRequestsQuery,
   useUpdateEmploymentRequestMutation,

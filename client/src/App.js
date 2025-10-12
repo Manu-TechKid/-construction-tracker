@@ -63,6 +63,8 @@ import ApartmentSearch from './pages/search/ApartmentSearch';
 import WorkerSchedules from './pages/workers/WorkerSchedules';
 import ProjectsPendingApproval from './pages/admin/ProjectsPendingApproval';
 import CreateProjectEstimate from './pages/project-estimates/CreateProjectEstimate';
+import EditProjectEstimate from './pages/project-estimates/EditProjectEstimate';
+import AdminEmploymentLetter from './pages/workers/AdminEmploymentLetter';
 
 // Route Protection
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -246,13 +248,13 @@ const AppContent = () => {
                   </RoleBasedRoute>
                 } 
               />
-              <Route 
-                path="workers/admin-dashboard" 
+              <Route
+                path="employment/letters/:workerId"
                 element={
                   <RoleBasedRoute requiredPermissions={['admin', 'manager']}>
-                    <AdminWorkerDashboard />
+                    <AdminEmploymentLetter />
                   </RoleBasedRoute>
-                } 
+                }
               />
               <Route 
                 path="workers/create" 
@@ -421,6 +423,14 @@ const AppContent = () => {
                 element={
                   <RoleBasedRoute requiredPermissions={['create:workorders']}>
                     <CreateProjectEstimate />
+                  </RoleBasedRoute>
+                }
+              />
+              <Route
+                path="project-estimates/:id/edit"
+                element={
+                  <RoleBasedRoute requiredPermissions={['update:workorders']}>
+                    <EditProjectEstimate />
                   </RoleBasedRoute>
                 }
               />

@@ -47,4 +47,7 @@ router.patch('/:id/approve', projectEstimateController.approveProjectEstimate);
 // Convert to work order
 router.post('/:id/convert', projectEstimateController.convertToWorkOrder);
 
+// Convert to invoice
+router.post('/:id/convert-to-invoice', projectEstimateController.convertToInvoice);
+
 module.exports = router;

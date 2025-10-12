@@ -95,6 +95,11 @@ const projectEstimateSchema = new mongoose.Schema({
     ref: 'WorkOrder',
     comment: 'Set when converted to work order'
   },
+  invoiceId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Invoice',
+    comment: 'Set when converted directly to invoice'
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

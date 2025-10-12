@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Box,
   Typography,
@@ -32,7 +32,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { startOfMonth, endOfMonth, format, isWithinInterval } from 'date-fns';
+import { startOfMonth, endOfMonth, format, isWithinInterval, endOfDay } from 'date-fns';
 import {
   Add as AddIcon,
   MoreVert as MoreVertIcon,
@@ -53,6 +53,7 @@ const Invoices = () => {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [filterStatus, setFilterStatus] = useState('');
   const [filterBuilding, setFilterBuilding] = useState('');
+  const [invoiceSearch, setInvoiceSearch] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
   // Monthly filtering state
@@ -126,19 +127,33 @@ const Invoices = () => {
     }
   };
 
-  const filteredInvoices = invoices.filter(invoice => {
-    const statusMatch = !filterStatus || invoice.status === filterStatus;
-    const buildingMatch = !filterBuilding || invoice.building?._id === filterBuilding;
-    
-    // Date range filter
-    const invoiceDate = new Date(invoice.createdAt);
-    const dateMatch = isWithinInterval(invoiceDate, {
-      start: monthFilter.startDate,
-      end: monthFilter.endDate
+  const filteredInvoices = useMemo(() => {
+    const normalizedSearch = invoiceSearch.trim().toLowerCase();
+    const startDate = monthFilter.startDate ? new Date(monthFilter.startDate) : null;
+    const endDate = monthFilter.endDate ? endOfDay(new Date(monthFilter.endDate)) : null;
+
+    return invoices.filter((invoice) => {
+      const statusMatch = !filterStatus || invoice.status === filterStatus;
+      const buildingMatch = !filterBuilding || invoice.building?._id === filterBuilding;
+      const invoiceNumberMatch = !normalizedSearch || (invoice.invoiceNumber || '').toLowerCase().includes(normalizedSearch);
+
+      const rawInvoiceDate = invoice.invoiceDate || invoice.issueDate || invoice.createdAt;
+      const invoiceDate = rawInvoiceDate ? new Date(rawInvoiceDate) : null;
+
+      let dateMatch = true;
+      if (invoiceDate && !isNaN(invoiceDate)) {
+        if (startDate && !isNaN(startDate) && endDate && !isNaN(endDate)) {
+          dateMatch = isWithinInterval(invoiceDate, { start: startDate, end: endDate });
+        } else if (startDate && !isNaN(startDate)) {
+          dateMatch = invoiceDate >= startDate;
+        } else if (endDate && !isNaN(endDate)) {
+          dateMatch = invoiceDate <= endDate;
+        }
+      }
+
+      return statusMatch && buildingMatch && invoiceNumberMatch && dateMatch;
     });
-    
-    return statusMatch && buildingMatch && dateMatch;
-  });
+  }, [invoices, filterStatus, filterBuilding, monthFilter.startDate, monthFilter.endDate, invoiceSearch]);
   
   // Quick month filter functions
   const setQuickMonthFilter = (monthsBack = 0) => {
@@ -207,7 +222,7 @@ const Invoices = () => {
               <Stack direction="row" spacing={1} flexWrap="wrap">
                 <Button 
                   size="small" 
-                  variant={monthFilter.startDate.getMonth() === new Date().getMonth() ? 'contained' : 'outlined'}
+                  variant={monthFilter.startDate && monthFilter.startDate.getMonth() === new Date().getMonth() ? 'contained' : 'outlined'}
                   onClick={() => setQuickMonthFilter(0)}
                 >
                   This Month
@@ -276,7 +291,9 @@ const Invoices = () => {
                   slotProps={{
                     textField: {
                       fullWidth: true,
-                      size: 'small'
+                      size: 'small',
+                      error: false,
+                      helperText: ''
                     }
                   }}
                 />
@@ -289,7 +306,9 @@ const Invoices = () => {
                   slotProps={{
                     textField: {
                       fullWidth: true,
-                      size: 'small'
+                      size: 'small',
+                      error: false,
+                      helperText: ''
                     }
                   }}
                 />
@@ -331,12 +350,22 @@ const Invoices = () => {
                   </Select>
                 </FormControl>
               </Grid>
+              {/* Invoice Search */}
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Search by Invoice #"
+                  value={invoiceSearch}
+                  onChange={(e) => setInvoiceSearch(e.target.value)}
+                />
+              </Grid>
             </Grid>
             
             {/* Summary Stats */}
             <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
               <Typography variant="subtitle2" gutterBottom>
-                Period: {format(monthFilter.startDate, 'MMM dd, yyyy')} - {format(monthFilter.endDate, 'MMM dd, yyyy')}
+                Period: {monthFilter.startDate ? format(monthFilter.startDate, 'MMM dd, yyyy') : 'N/A'} - {monthFilter.endDate ? format(monthFilter.endDate, 'MMM dd, yyyy') : 'N/A'}
               </Typography>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={4}>
@@ -372,6 +401,7 @@ const Invoices = () => {
                 <TableCell>Invoice #</TableCell>
                 <TableCell>Building</TableCell>
                 <TableCell>Categories</TableCell>
+                <TableCell>Invoice Date</TableCell>
                 <TableCell>Issue Date</TableCell>
                 <TableCell>Due Date</TableCell>
                 <TableCell>Total</TableCell>
@@ -382,7 +412,7 @@ const Invoices = () => {
             <TableBody>
               {filteredInvoices.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center">
+                  <TableCell colSpan={9} align="center">
                     <Box py={4}>
                       <ReceiptIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                       <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -468,6 +498,19 @@ const Invoices = () => {
                         } catch (error) {
                           console.warn('Error rendering work types:', error);
                           return <Typography variant="body2" color="text.secondary">Error</Typography>;
+                        }
+                      })()}
+                    </TableCell>
+                    <TableCell>
+                      {(() => {
+                        try {
+                          if (!invoice.invoiceDate) return 'N/A';
+                          const date = new Date(invoice.invoiceDate);
+                          if (isNaN(date.getTime())) return 'Invalid Date';
+                          return date.toLocaleDateString();
+                        } catch (error) {
+                          console.warn('Error formatting invoice date:', error);
+                          return 'Error';
                         }
                       })()}
                     </TableCell>

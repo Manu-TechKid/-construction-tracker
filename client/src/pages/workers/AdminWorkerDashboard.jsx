@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -24,7 +24,8 @@ import {
   Menu,
   MenuItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  Divider
 } from '@mui/material';
 import {
   Person as PersonIcon,
@@ -33,10 +34,14 @@ import {
   Description as DescriptionIcon,
   MoreVert as MoreVertIcon,
   Visibility as VisibilityIcon,
-  Email as EmailIcon
+  Email as EmailIcon,
+  Timeline as TimelineIcon,
+  MonetizationOn as MonetizationOnIcon
 } from '@mui/icons-material';
 import { useGetUsersQuery } from '../../features/users/usersApiSlice';
 import { useAuth } from '../../hooks/useAuth';
+import { useGetTimeSessionsQuery } from '../../features/timeTracking/timeTrackingApiSlice';
+import { format, startOfWeek, endOfWeek } from 'date-fns';
 
 const AdminWorkerDashboard = () => {
   const navigate = useNavigate();
@@ -44,6 +49,13 @@ const AdminWorkerDashboard = () => {
   const [tabValue, setTabValue] = useState(0);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedWorker, setSelectedWorker] = useState(null);
+  const [weekRange, setWeekRange] = useState(() => {
+    const now = new Date();
+    return {
+      start: startOfWeek(now, { weekStartsOn: 1 }),
+      end: endOfWeek(now, { weekStartsOn: 1 })
+    };
+  });
 
   // Fetch all workers
   const {
@@ -58,6 +70,74 @@ const AdminWorkerDashboard = () => {
   });
 
   const workers = usersData?.data?.users || [];
+
+  const {
+    data: sessionsData,
+    isFetching: isSessionsLoading,
+    error: sessionsError
+  } = useGetTimeSessionsQuery({
+    startDate: weekRange.start.toISOString(),
+    endDate: weekRange.end.toISOString()
+  });
+
+  const sessions = sessionsData?.data?.sessions || [];
+
+  const workerHours = useMemo(() => {
+    if (!sessions.length) return [];
+
+    const map = new Map();
+
+    sessions.forEach((session) => {
+      const workerRef = session.worker;
+      const workerId = typeof workerRef === 'object' ? workerRef?._id : workerRef;
+      if (!workerId) return;
+
+      const workerInfo = map.get(workerId) || {
+        workerId,
+        sessions: 0,
+        totalHours: 0,
+        totalBreakMinutes: 0
+      };
+
+      const start = session.clockInTime ? new Date(session.clockInTime) : null;
+      const end = session.clockOutTime ? new Date(session.clockOutTime) : null;
+
+      let hours = 0;
+      if (start && end && end > start) {
+        const durationMs = end.getTime() - start.getTime();
+        hours = durationMs / (1000 * 60 * 60);
+      } else if (session.totalHours) {
+        hours = session.totalHours;
+      }
+
+      const breakMinutes = session.breakTime || 0;
+      const netHours = Math.max(hours - breakMinutes / 60, 0);
+
+      workerInfo.sessions += 1;
+      workerInfo.totalHours += netHours;
+      workerInfo.totalBreakMinutes += breakMinutes;
+
+      map.set(workerId, workerInfo);
+    });
+
+    return Array.from(map.values()).map((entry) => {
+      const workerDetails = workers.find((w) => w._id === entry.workerId) || {};
+      const hourlyRate = workerDetails.workerProfile?.hourlyRate || 0;
+      const totalValue = entry.totalHours * hourlyRate;
+
+      return {
+        ...entry,
+        worker: workerDetails,
+        hourlyRate,
+        totalValue
+      };
+    }).sort((a, b) => b.totalHours - a.totalHours);
+  }, [sessions, workers]);
+
+  const totals = useMemo(() => ({
+    totalHours: workerHours.reduce((sum, item) => sum + item.totalHours, 0),
+    totalValue: workerHours.reduce((sum, item) => sum + item.totalValue, 0)
+  }), [workerHours]);
 
   const handleMenuClick = (event, worker) => {
     setAnchorEl(event.currentTarget);
@@ -75,8 +155,16 @@ const AdminWorkerDashboard = () => {
   };
 
   const handleViewEmploymentLetter = (worker) => {
-    navigate(`/employment/letter/${worker._id}`);
+    navigate(`/employment/letters/${worker._id}`);
     handleMenuClose();
+  };
+
+  const handleWeekChange = (direction) => {
+    const delta = direction === 'next' ? 7 : -7;
+    const start = new Date(weekRange.start);
+    start.setDate(start.getDate() + delta);
+    const end = endOfWeek(start, { weekStartsOn: 1 });
+    setWeekRange({ start, end });
   };
 
   const handleViewProfile = (worker) => {
@@ -316,17 +404,126 @@ const AdminWorkerDashboard = () => {
               <Typography variant="h6" gutterBottom>
                 Weekly Hours Summary
               </Typography>
-              <Button
-                variant="contained"
-                startIcon={<ScheduleIcon />}
-                onClick={() => navigate('/time-tracking')}
-                sx={{ mb: 2 }}
-              >
-                View Full Time Tracking
-              </Button>
-              <Alert severity="info" sx={{ mt: 2 }}>
-                Click "View Full Time Tracking" to see detailed weekly hours for all workers.
-              </Alert>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
+                <Button
+                  variant="outlined"
+                  onClick={() => handleWeekChange('prev')}
+                >
+                  Previous Week
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => handleWeekChange('next')}
+                >
+                  Next Week
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<ScheduleIcon />}
+                  onClick={() => navigate('/time-tracking')}
+                >
+                  View Full Time Tracking
+                </Button>
+              </Box>
+
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Week of {format(weekRange.start, 'MMM dd, yyyy')} - {format(weekRange.end, 'MMM dd, yyyy')}
+              </Typography>
+
+              {sessionsError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  Failed to load time sessions. {sessionsError?.data?.message || 'Unknown error'}
+                </Alert>
+              )}
+
+              <Grid container spacing={2} sx={{ mb: 2 }}>
+                <Grid item xs={12} md={6} lg={3}>
+                  <Card>
+                    <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <TimelineIcon color="primary" sx={{ fontSize: 32 }} />
+                      <Box>
+                        <Typography variant="h6">{totals.totalHours.toFixed(1)} hrs</Typography>
+                        <Typography variant="body2" color="text.secondary">Total Hours</Typography>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} md={6} lg={3}>
+                  <Card>
+                    <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <MonetizationOnIcon color="success" sx={{ fontSize: 32 }} />
+                      <Box>
+                        <Typography variant="h6">${totals.totalValue.toFixed(2)}</Typography>
+                        <Typography variant="body2" color="text.secondary">Total Value</Typography>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} md={6} lg={3}>
+                  <Card>
+                    <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <ScheduleIcon color="info" sx={{ fontSize: 32 }} />
+                      <Box>
+                        <Typography variant="h6">{workerHours.length}</Typography>
+                        <Typography variant="body2" color="text.secondary">Active Workers</Typography>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+
+              {isSessionsLoading ? (
+                <Box display="flex" justifyContent="center" py={4}>
+                  <CircularProgress />
+                </Box>
+              ) : workerHours.length === 0 ? (
+                <Alert severity="info">
+                  No time tracking sessions found for this week.
+                </Alert>
+              ) : (
+                <TableContainer component={Paper} variant="outlined">
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Worker</TableCell>
+                        <TableCell align="center">Sessions</TableCell>
+                        <TableCell align="center">Hours (net)</TableCell>
+                        <TableCell align="center">Break (min)</TableCell>
+                        <TableCell align="center">Hourly Rate</TableCell>
+                        <TableCell align="center">Total Value</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {workerHours.map((item) => (
+                        <TableRow key={item.workerId} hover>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                              <Avatar src={item.worker?.photo}>
+                                <PersonIcon />
+                              </Avatar>
+                              <Box>
+                                <Typography variant="body1" fontWeight="medium">
+                                  {item.worker?.name || 'Unknown Worker'}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  ID: {item.workerId.slice(-6)}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          </TableCell>
+                          <TableCell align="center">{item.sessions}</TableCell>
+                          <TableCell align="center">{item.totalHours.toFixed(2)}</TableCell>
+                          <TableCell align="center">{item.totalBreakMinutes}</TableCell>
+                          <TableCell align="center">
+                            ${item.hourlyRate ? item.hourlyRate.toFixed(2) : '0.00'}/hr
+                          </TableCell>
+                          <TableCell align="center">${item.totalValue.toFixed(2)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
             </Box>
           )}
 

@@ -1,6 +1,6 @@
 {
     "name": "client",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "private": true,
     "dependencies": {
         "@emotion/react": "^11.11.1",
@@ -15,7 +15,6 @@
         "@testing-library/react": "^13.4.0",
         "@testing-library/user-event": "^13.5.0",
         "axios": "^1.5.0",
-        "construction-tracker": "file:..",
         "date-fns": "^2.30.0",
         "formik": "^2.4.5",
         "i18next": "^23.6.0",
