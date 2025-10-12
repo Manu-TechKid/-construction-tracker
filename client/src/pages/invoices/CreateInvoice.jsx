@@ -186,8 +186,8 @@ const CreateInvoice = () => {
     initialValues: {
       buildingId: '',
       invoiceNumber: '',
-      invoiceDate: new Date(), // Actual invoice date
-      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      invoiceDate: new Date(), // Today's date as default
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from invoice date by default
       notes: '',
       workOrderIds: []
     },
@@ -206,6 +206,7 @@ const CreateInvoice = () => {
         const invoiceData = {
           buildingId: values.buildingId,
           workOrderIds: values.workOrderIds,
+          invoiceDate: values.invoiceDate instanceof Date ? values.invoiceDate.toISOString() : new Date(values.invoiceDate).toISOString(),
           dueDate: values.dueDate instanceof Date ? values.dueDate.toISOString() : new Date(values.dueDate).toISOString(),
           notes: values.notes,
           invoiceNumber: values.invoiceNumber?.trim() || undefined
@@ -433,12 +434,20 @@ const CreateInvoice = () => {
                   <DatePicker
                     label="Invoice Date"
                     value={formik.values.invoiceDate}
-                    onChange={(date) => formik.setFieldValue('invoiceDate', date)}
+                    onChange={(date) => {
+                      formik.setFieldValue('invoiceDate', date);
+                      // Auto-calculate due date based on invoice date + 30 days (or building's payment terms)
+                      if (date) {
+                        const dueDate = new Date(date);
+                        dueDate.setDate(dueDate.getDate() + 30); // Default 30 days
+                        formik.setFieldValue('dueDate', dueDate);
+                      }
+                    }}
                     slotProps={{
                       textField: {
                         fullWidth: true,
                         error: formik.touched.invoiceDate && Boolean(formik.errors.invoiceDate),
-                        helperText: formik.touched.invoiceDate && formik.errors.invoiceDate || 'Actual date of the invoice (not system date)'
+                        helperText: formik.touched.invoiceDate && formik.errors.invoiceDate
                       }
                     }}
                   />
@@ -449,12 +458,12 @@ const CreateInvoice = () => {
                     label="Due Date"
                     value={formik.values.dueDate}
                     onChange={(date) => formik.setFieldValue('dueDate', date)}
-                    minDate={formik.values.invoiceDate}
+                    minDate={formik.values.invoiceDate || new Date()}
                     slotProps={{
                       textField: {
                         fullWidth: true,
                         error: formik.touched.dueDate && Boolean(formik.errors.dueDate),
-                        helperText: formik.touched.dueDate && formik.errors.dueDate || 'Payment due date'
+                        helperText: formik.touched.dueDate && formik.errors.dueDate
                       }
                     }}
                   />

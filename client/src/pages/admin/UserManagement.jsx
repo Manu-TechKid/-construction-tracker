@@ -49,8 +49,7 @@ import {
   ManageAccounts as ManagerIcon,
   SupervisorAccount as SupervisorIcon,
   Add as AddIcon,
-  Edit as EditIcon,
-  LockReset as ResetIcon
+  Edit as EditIcon
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
@@ -62,7 +61,6 @@ const UserManagement = () => {
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [actionType, setActionType] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
@@ -72,10 +70,6 @@ const UserManagement = () => {
     phone: '',
     role: 'worker',
     password: 'TempPass123!'
-  });
-  const [passwordForm, setPasswordForm] = useState({
-    password: '',
-    confirmPassword: ''
   });
 
   // API hooks
@@ -97,35 +91,6 @@ const UserManagement = () => {
       case 1: return approvedUsers;
       case 2: return allUsers;
       default: return [];
-    }
-  };
-
-  const handleConfirmPasswordReset = async () => {
-    if (!selectedUser) return;
-
-    const { password, confirmPassword } = passwordForm;
-    if (!password || password.length < 8) {
-      toast.error('Password must be at least 8 characters long');
-      return;
-    }
-    if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
-
-    try {
-      await updateUser({
-        id: selectedUser._id,
-        userData: {
-          password,
-        },
-      }).unwrap();
-      toast.success('Password reset successfully');
-      setPasswordDialogOpen(false);
-      setSelectedUser(null);
-    } catch (error) {
-      console.error('Reset password error:', error);
-      toast.error(error?.data?.message || 'Failed to reset password');
     }
   };
 
@@ -153,12 +118,6 @@ const UserManagement = () => {
     setSelectedRole(user.role);
     setActionType('edit');
     setActionDialogOpen(true);
-  };
-
-  const handleResetPassword = (user) => {
-    setSelectedUser(user);
-    setPasswordForm({ password: '', confirmPassword: '' });
-    setPasswordDialogOpen(true);
   };
 
   const confirmAction = async () => {
@@ -542,16 +501,6 @@ const UserManagement = () => {
                             <EditIcon />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Reset Password">
-                          <IconButton
-                            color="info"
-                            size="small"
-                            onClick={() => handleResetPassword(user)}
-                            disabled={isUpdating}
-                          >
-                            <ResetIcon />
-                          </IconButton>
-                        </Tooltip>
                         <Tooltip title="Delete User">
                           <IconButton
                             color="error"
@@ -753,60 +702,6 @@ const UserManagement = () => {
             disabled={isCreating || !newUser.name || !newUser.email || !newUser.role}
           >
             {isCreating ? <CircularProgress size={20} /> : 'Create User'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Reset Password Dialog */}
-      <Dialog
-        open={passwordDialogOpen}
-        onClose={() => {
-          setPasswordDialogOpen(false);
-          setSelectedUser(null);
-        }}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>🔒 Reset Password</DialogTitle>
-        <DialogContent>
-          {selectedUser && (
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                User: {selectedUser.name}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Email: {selectedUser.email}
-              </Typography>
-            </Box>
-          )}
-
-          <TextField
-            fullWidth
-            margin="dense"
-            label="New Password"
-            type="password"
-            value={passwordForm.password}
-            onChange={(e) => setPasswordForm(prev => ({ ...prev, password: e.target.value }))}
-            helperText="Minimum 8 characters"
-          />
-          <TextField
-            fullWidth
-            margin="dense"
-            label="Confirm Password"
-            type="password"
-            value={passwordForm.confirmPassword}
-            onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setPasswordDialogOpen(false)}>Cancel</Button>
-          <Button
-            onClick={handleConfirmPasswordReset}
-            variant="contained"
-            color="primary"
-            disabled={isUpdating}
-          >
-            {isUpdating ? <CircularProgress size={20} /> : 'Reset Password'}
           </Button>
         </DialogActions>
       </Dialog>

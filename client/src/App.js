@@ -36,7 +36,6 @@ import WorkOrderDetails from './pages/workOrders/WorkOrderDetails';
 import WorkProgress from './pages/workOrders/WorkProgress';
 import Workers from './pages/workers/Workers';
 import CreateWorker from './pages/workers/CreateWorker';
-import AdminWorkerDashboard from './pages/workers/AdminWorkerDashboard';
 import Reminders from './pages/reminders/Reminders';
 import CreateReminder from './pages/reminders/CreateReminder';
 import EditReminder from './pages/reminders/EditReminder';
@@ -63,8 +62,6 @@ import ApartmentSearch from './pages/search/ApartmentSearch';
 import WorkerSchedules from './pages/workers/WorkerSchedules';
 import ProjectsPendingApproval from './pages/admin/ProjectsPendingApproval';
 import CreateProjectEstimate from './pages/project-estimates/CreateProjectEstimate';
-import EditProjectEstimate from './pages/project-estimates/EditProjectEstimate';
-import AdminEmploymentLetter from './pages/workers/AdminEmploymentLetter';
 
 // Route Protection
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -248,14 +245,6 @@ const AppContent = () => {
                   </RoleBasedRoute>
                 } 
               />
-              <Route
-                path="employment/letters/:workerId"
-                element={
-                  <RoleBasedRoute requiredPermissions={['admin', 'manager']}>
-                    <AdminEmploymentLetter />
-                  </RoleBasedRoute>
-                }
-              />
               <Route 
                 path="workers/create" 
                 element={
@@ -423,14 +412,6 @@ const AppContent = () => {
                 element={
                   <RoleBasedRoute requiredPermissions={['create:workorders']}>
                     <CreateProjectEstimate />
-                  </RoleBasedRoute>
-                }
-              />
-              <Route
-                path="project-estimates/:id/edit"
-                element={
-                  <RoleBasedRoute requiredPermissions={['update:workorders']}>
-                    <EditProjectEstimate />
                   </RoleBasedRoute>
                 }
               />

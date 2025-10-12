@@ -107,13 +107,39 @@ const BuildingSchedule = () => {
   const getMonthDays = () => {
     const start = startOfMonth(currentDate);
     const end = endOfMonth(currentDate);
-    const days = eachDayOfInterval({ start, end });
-    
-    // Add padding days at the beginning to align with correct day of week
-    const startDayOfWeek = start.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const paddingDays = Array(startDayOfWeek).fill(null);
-    
-    return [...paddingDays, ...days];
+
+    // Get all days in the month
+    const monthDays = eachDayOfInterval({ start, end });
+
+    // Find the first Monday of the month or the start of the month if it starts on Monday
+    const firstMonday = monthDays.find(day => {
+      const dayOfWeek = day.getDay();
+      // In JavaScript, getDay() returns 0 for Sunday, 1 for Monday, etc.
+      // We want Monday (1) as the first day
+      return dayOfWeek === 1; // Monday
+    });
+
+    // If the month starts on a Monday, return all days as is
+    if (firstMonday && firstMonday.getDate() === start.getDate()) {
+      return monthDays;
+    }
+
+    // Otherwise, we need to pad the beginning with days from the previous month
+    // to start with Monday
+    const startDate = firstMonday || start;
+    const paddedDays = [];
+
+    // Add days from previous month to fill the week starting with Monday
+    const daysToAdd = startDate.getDay() === 1 ? 0 : (startDate.getDay() === 0 ? 6 : startDate.getDay() - 1);
+
+    for (let i = daysToAdd; i > 0; i--) {
+      const prevDay = new Date(startDate);
+      prevDay.setDate(startDate.getDate() - i);
+      paddedDays.push(prevDay);
+    }
+
+    // Add all days from current month
+    return [...paddedDays, ...monthDays];
   };
 
   const getSchedulesForDay = (day) => {
@@ -323,83 +349,97 @@ const BuildingSchedule = () => {
           />
         </Box>
 
-        <Card>
+        <Card sx={{ mb: 3, border: '2px solid', borderColor: 'primary.main' }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>
               {format(currentDate, 'MMMM yyyy')} - {selectedBuilding.name}
             </Typography>
             
             <Grid container spacing={1}>
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
                 <Grid item xs={12/7} key={day}>
                   <Box sx={{ 
-                    p: 1, 
+                    p: 2, 
                     textAlign: 'center', 
                     fontWeight: 'bold',
                     backgroundColor: 'primary.main',
                     color: 'white',
-                    borderRadius: 1
+                    borderRadius: 1,
+                    fontSize: '1.1rem'
                   }}>
                     {day}
                   </Box>
                 </Grid>
               ))}
               
-              {getMonthDays().map((day, index) => {
-                // Handle padding days (null values)
-                if (!day) {
-                  return (
-                    <Grid item xs={12/7} key={`padding-${index}`}>
-                      <Card 
-                        variant="outlined" 
-                        sx={{ 
-                          minHeight: 120, 
-                          p: 1,
-                          backgroundColor: 'grey.100',
-                          visibility: 'hidden'
-                        }}
-                      />
-                    </Grid>
-                  );
-                }
-                
+              {getMonthDays().map(day => {
                 const daySchedules = getSchedulesForDay(day);
                 const isToday = isSameDay(day, new Date());
+                const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+                
                 return (
                   <Grid item xs={12/7} key={day.toISOString()}>
                     <Card 
                       variant="outlined" 
                       sx={{ 
-                        minHeight: 120, 
-                        p: 1,
+                        minHeight: 140, 
+                        p: 1.5,
                         backgroundColor: isToday 
-                          ? 'primary.light' 
+                          ? 'warning.light' 
                           : daySchedules.length > 0 
-                            ? 'action.hover' 
-                            : 'background.paper',
-                        cursor: 'pointer',
-                        border: isToday ? '2px solid' : '1px solid',
-                        borderColor: isToday ? 'primary.main' : 'divider',
-                        '&:hover': {
+                            ? 'success.light' 
+                            : isCurrentMonth 
+                              ? 'background.paper'
+                              : 'grey.50',
+                        cursor: isCurrentMonth ? 'pointer' : 'default',
+                        border: isToday ? '3px solid' : daySchedules.length > 0 ? '2px solid' : '1px solid',
+                        borderColor: isToday 
+                          ? 'warning.main' 
+                          : daySchedules.length > 0 
+                            ? 'success.main' 
+                            : isCurrentMonth 
+                              ? 'primary.main' 
+                              : 'grey.300',
+                        opacity: isCurrentMonth ? 1 : 0.5,
+                        position: 'relative',
+                        '&:hover': isCurrentMonth ? {
                           backgroundColor: 'action.selected',
                           transform: 'scale(1.02)',
-                          transition: 'all 0.2s'
-                        }
+                          transition: 'all 0.2s',
+                          boxShadow: 3
+                        } : {}
                       }}
-                      onClick={() => handleOpenDialog(null, day)}
+                      onClick={() => isCurrentMonth && handleOpenDialog(null, day)}
                     >
                       <Typography 
-                        variant="body2" 
+                        variant="h6" 
                         sx={{ 
                           mb: 1, 
                           fontWeight: isToday ? 'bold' : 'normal',
-                          color: isToday ? 'primary.main' : 'text.primary'
+                          color: isToday ? 'warning.contrastText' : isCurrentMonth ? 'text.primary' : 'text.secondary',
+                          textAlign: 'center',
+                          fontSize: '1.2rem'
                         }}
                       >
                         {format(day, 'd')}
                       </Typography>
                       
-                      {daySchedules.length === 0 && (
+                      {daySchedules.length > 0 && (
+                        <Chip
+                          label={`${daySchedules.length} schedule${daySchedules.length > 1 ? 's' : ''}`}
+                          size="small"
+                          color="primary"
+                          sx={{ 
+                            position: 'absolute',
+                            top: 5,
+                            right: 5,
+                            fontSize: '0.7rem',
+                            height: 20
+                          }}
+                        />
+                      )}
+                      
+                      {isCurrentMonth && daySchedules.length === 0 && (
                         <Typography 
                           variant="caption" 
                           sx={{ 
@@ -407,7 +447,7 @@ const BuildingSchedule = () => {
                             fontStyle: 'italic',
                             display: 'block',
                             textAlign: 'center',
-                            mt: 2
+                            mt: 1
                           }}
                         >
                           Click to add schedule
@@ -429,18 +469,11 @@ const BuildingSchedule = () => {
                               fontSize: '0.75rem',
                               height: 24,
                               display: 'block',
-                              fontWeight: 'bold',
-                              boxShadow: 1,
                               '& .MuiChip-label': {
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap',
-                                px: 1
-                              },
-                              '&:hover': {
-                                boxShadow: 3,
-                                transform: 'scale(1.05)',
-                                transition: 'all 0.2s'
+                                fontWeight: 'medium'
                               }
                             }}
                             onClick={(e) => {

@@ -14,11 +14,6 @@ import {
   ListItemIcon,
   CircularProgress,
   Alert,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
 } from '@mui/material';
 import {
   Assignment as AssignmentIcon,
@@ -26,7 +21,6 @@ import {
   Schedule as ScheduleIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material';
-import { format, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import { useGetWorkOrdersQuery } from '../../features/workOrders/workOrdersApiSlice';
 
 const WorkProgress = () => {
@@ -58,40 +52,6 @@ const WorkProgress = () => {
   const onHoldOrders = workOrders.filter(wo => wo.status === 'on_hold').length;
   
   const completionRate = totalOrders > 0 ? (completedOrders / totalOrders) * 100 : 0;
-
-  // New: Calculate hours data
-  const now = new Date();
-  const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Assuming Monday start
-  const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
-
-  // Aggregate hours by worker for the current week
-  const hoursByWorker = {};
-  workOrders.forEach(order => {
-    if (order.assignedTo && order.assignedTo.length > 0) {
-      order.assignedTo.forEach(assignment => {
-        const workerId = assignment.worker?._id;
-        const workerName = assignment.worker?.name || 'Unknown Worker';
-        const workerRate = assignment.worker?.workerProfile?.hourlyRate || 0;
-        const orderDate = new Date(order.scheduledDate || order.createdAt);
-        
-        if (isWithinInterval(orderDate, { start: weekStart, end: weekEnd })) {
-          const hours = order.actualHours || 0; // Assuming 'actualHours' field exists in work orders
-          if (!hoursByWorker[workerId]) {
-            hoursByWorker[workerId] = {
-              name: workerName,
-              totalHours: 0,
-              totalValue: 0,
-              rate: workerRate,
-            };
-          }
-          hoursByWorker[workerId].totalHours += hours;
-          hoursByWorker[workerId].totalValue += hours * workerRate;
-        }
-      });
-    }
-  });
-
-  const hoursArray = Object.values(hoursByWorker);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -183,47 +143,6 @@ const WorkProgress = () => {
               </Typography>
             </Box>
           </Box>
-        </CardContent>
-      </Card>
-
-      {/* New: Hours Control Section */}
-      <Card sx={{ mb: 4 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Hours Control - Week of {format(weekStart, 'MMM dd')} to {format(weekEnd, 'MMM dd, yyyy')}
-          </Typography>
-          {hoursArray.length > 0 ? (
-            <>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Total Weekly Hours: {hoursArray.reduce((sum, w) => sum + w.totalHours, 0)} | 
-                Total Value: ${hoursArray.reduce((sum, w) => sum + w.totalValue, 0).toFixed(2)}
-              </Typography>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Worker</TableCell>
-                    <TableCell align="right">Hours</TableCell>
-                    <TableCell align="right">Rate ($/hr)</TableCell>
-                    <TableCell align="right">Total Value ($)</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {hoursArray.map((worker) => (
-                    <TableRow key={worker.name}>
-                      <TableCell>{worker.name}</TableCell>
-                      <TableCell align="right">{worker.totalHours}</TableCell>
-                      <TableCell align="right">${worker.rate}</TableCell>
-                      <TableCell align="right">${worker.totalValue.toFixed(2)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </>
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              No hours recorded for this week. Enter hours in work orders to see data here.
-            </Typography>
-          )}
         </CardContent>
       </Card>
 

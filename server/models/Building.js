@@ -22,9 +22,10 @@ const buildingSchema = new mongoose.Schema({
         ref: 'User',
         required: [true, 'Administrator is required']
     },
-    administratorName: {
+    paymentTerms: {
         type: String,
-        trim: true
+        enum: ['net_15', 'net_30', 'net_60', 'net_90'],
+        default: 'net_30'
     },
     serviceManager: {
         type: String,

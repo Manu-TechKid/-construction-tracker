@@ -1,155 +1,132 @@
-# SiteGround Deployment Guide for Construction Tracker Frontend
+# 🚀 SiteGround Frontend Deployment Guide
 
-## ✅ Build Status
-- **Build Completed Successfully**: October 12, 2025
-- **Build Folder Location**: `client/build/`
-- **Build Size**: ~530KB (gzipped)
+## 📋 SiteGround Deployment Checklist
 
-## 📦 Files to Upload to SiteGround
+✅ **Production build created** - React app compiled successfully
+✅ **Static files ready** - All assets in `/client/build/` directory
+✅ **.htaccess configured** - React Router support enabled
+✅ **No hardcoded URLs** - API calls use relative paths
 
-### Step 1: Prepare Files
-The React build has been created in the `client/build/` folder. You need to upload:
-- All files and folders from `client/build/`
-- The `.htaccess` file (create this on SiteGround)
+## 🔧 SiteGround Deployment Steps
 
-### Step 2: Create .htaccess File
-Create a file named `.htaccess` in your SiteGround public_html folder with this content:
+### 1. **Upload Files to SiteGround**
 
-```apache
-<IfModule mod_rewrite.c>
-  RewriteEngine On
-  RewriteBase /
-  
-  # Handle React Router
-  RewriteRule ^index\.html$ - [L]
-  RewriteCond %{REQUEST_FILENAME} !-f
-  RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteCond %{REQUEST_FILENAME} !-l
-  RewriteRule . /index.html [L]
-  
-  # Security Headers
-  Header set X-Content-Type-Options "nosniff"
-  Header set X-Frame-Options "SAMEORIGIN"
-  Header set X-XSS-Protection "1; mode=block"
-  
-  # Compression
-  <IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
-  </IfModule>
-  
-  # Cache Control
-  <FilesMatch "\.(ico|jpg|jpeg|png|gif|svg|js|css|woff|woff2|ttf|eot)$">
-    Header set Cache-Control "max-age=31536000, public"
-  </FilesMatch>
-</IfModule>
-```
+**Method 1: FTP Upload (Recommended)**
+1. Connect to your SiteGround hosting via FTP
+2. Navigate to `public_html` or your web root directory
+3. Upload the entire `/client/build/` directory contents
+4. Ensure `.htaccess` file is uploaded (it handles React Router)
 
-### Step 3: Update API URL
-Before uploading, you need to update the API URL in the build files:
+**Method 2: SiteGround File Manager**
+1. Go to SiteGround cPanel → File Manager
+2. Navigate to `public_html` directory
+3. Click "Upload" and select all files from `/client/build/`
+4. Upload `.htaccess` file to the root directory
 
-1. Open `client/build/static/js/main.*.js` (the exact filename includes a hash)
-2. Search for `http://localhost:5000/api/v1`
-3. Replace ALL occurrences with your Render backend URL:
-   ```
-   https://your-app-name.onrender.com/api/v1
-   ```
+### 2. **Verify Upload**
+After upload, check these files exist in your web root:
+- `index.html` ✅
+- `static/css/main.[hash].css` ✅
+- `static/js/main.[hash].js` ✅
+- `.htaccess` ✅
 
-**Alternative Method (Recommended):**
-Create a file `client/build/config.js` with:
+### 3. **Test Frontend**
+Open your SiteGround URL in browser:
+- Should load the Construction Tracker application
+- All routes should work (React Router handles client-side routing)
+- No console errors in browser developer tools
+
+## 🌐 Backend Configuration (Render)
+
+The backend is already configured for Render deployment:
+
+### Current Render Setup:
+- **Service Name**: `construction-tracker-webapp`
+- **Auto-deploy**: Enabled from GitHub main branch
+- **Environment**: Production with MongoDB Atlas
+- **Health Check**: `/api/v1/health`
+
+### Backend URLs:
+- **Render Dashboard**: https://dashboard.render.com
+- **Deployed Backend**: https://your-app.onrender.com
+- **API Base**: https://your-app.onrender.com/api/v1
+
+## 🔗 API Integration
+
+The frontend automatically detects the environment:
+
 ```javascript
-window.REACT_APP_API_URL = 'https://your-app-name.onrender.com/api/v1';
+// In apiSlice.js
+const apiBaseUrl =
+  process.env.REACT_APP_API_URL ||
+  (typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'http://localhost:5000/api/v1'
+    : (typeof window !== 'undefined' ? window.location.origin + '/api/v1' : ''));
 ```
 
-### Step 4: Upload to SiteGround
+**Production Behavior:**
+- SiteGround frontend → SiteGround domain
+- API calls → Same domain + `/api/v1` (points to Render backend)
 
-#### Using File Manager (SiteGround Control Panel):
-1. Log into SiteGround Site Tools
-2. Navigate to **Site > File Manager**
-3. Go to your `public_html` folder
-4. Delete any existing files (backup first if needed)
-5. Upload all files from `client/build/`:
-   - `index.html`
-   - `favicon.ico`
-   - `manifest.json`
-   - `robots.txt`
-   - `static/` folder (with all subfolders)
-   - `logo192.png` and `logo512.png` (if present)
-6. Create the `.htaccess` file with the content above
+## 🛠️ Troubleshooting
 
-#### Using FTP (FileZilla or similar):
-1. Connect to your SiteGround FTP:
-   - **Host**: Your domain or FTP server
-   - **Username**: Your FTP username
-   - **Password**: Your FTP password
-   - **Port**: 21 (or 22 for SFTP)
-2. Navigate to `public_html`
-3. Upload all files from `client/build/`
-4. Upload the `.htaccess` file
+### Common Issues:
 
-### Step 5: Verify Deployment
+**1. React Router not working (404 on refresh)**
+- Ensure `.htaccess` is in the web root
+- Check file permissions (644 for files, 755 for directories)
 
-1. **Clear Browser Cache**: Press Ctrl+F5 (Windows) or Cmd+Shift+R (Mac)
-2. **Test Navigation**: 
-   - Homepage loads
-   - Login works
-   - Dashboard displays
-   - All routes work (refresh on any page should work)
-3. **Check API Connection**:
-   - Open browser console (F12)
-   - Try to login
-   - Check for any API errors
+**2. API calls failing**
+- Verify Render backend is deployed and healthy
+- Check browser console for CORS errors
+- Ensure MongoDB connection is working
 
-## 🔧 Troubleshooting
-
-### White Screen / App Not Loading
-- Check if `.htaccess` file exists and has correct content
-- Verify all files were uploaded to `public_html`
+**3. Assets not loading**
+- Check file permissions
+- Verify all files uploaded correctly
 - Clear browser cache
 
-### API Connection Errors
-- Verify the API URL is correctly updated
-- Check if Render backend is running
-- Ensure CORS is configured on backend
+### File Permissions:
+```bash
+# Set correct permissions via SSH (if available)
+chmod 644 index.html
+chmod 644 static/css/*.css
+chmod 644 static/js/*.js
+chmod 755 static/css/
+chmod 755 static/js/
+```
 
-### 404 Errors on Refresh
-- `.htaccess` file is missing or incorrect
-- mod_rewrite is not enabled (contact SiteGround support)
+## 📊 Deployment Status
 
-### Mixed Content Errors
-- Ensure API URL uses HTTPS (not HTTP)
-- Check all external resources use HTTPS
+✅ **Frontend**: Ready for SiteGround upload
+✅ **Backend**: Configured for Render auto-deployment
+✅ **Database**: MongoDB Atlas configured
+✅ **Environment**: Production variables set
 
-## 📝 Important Notes
+## 🚀 Next Steps
 
-1. **API URL**: Must point to your Render backend
-2. **HTTPS**: Both frontend and backend should use HTTPS
-3. **Caching**: Users may need to clear cache after deployment
-4. **Build Size**: Current build is ~530KB (acceptable but could be optimized)
+1. **Upload to SiteGround** (Frontend files)
+2. **Verify GitHub commit** (Triggers Render backend deployment)
+3. **Test both frontend and backend**
+4. **Configure DNS** (if needed for custom domain)
 
-## 🚀 Quick Deployment Checklist
+## 🔧 Environment Variables (Backend)
 
-- [ ] Build completed successfully ✅
-- [ ] GitHub repository updated ✅
-- [ ] Render backend deployed and running
-- [ ] API URL updated in build files
-- [ ] All files uploaded to SiteGround public_html
-- [ ] .htaccess file created
-- [ ] Browser cache cleared
-- [ ] Test login functionality
-- [ ] Test all major features
+The following variables are configured in Render:
 
-## 📞 Support
+```bash
+NODE_ENV=production
+PORT=10000
+MONGO_URI=${MONGO_URI} # From MongoDB Atlas
+JWT_SECRET=${JWT_SECRET} # Auto-generated
+REACT_APP_API_URL=${RENDER_EXTERNAL_URL}/api/v1
+```
 
-If you encounter issues:
-1. Check browser console for errors
-2. Verify API URL is correct
-3. Ensure backend is running on Render
-4. Contact SiteGround support for server-specific issues
+## 📝 Production URLs
 
-## 🎉 Success!
+After deployment:
+- **Frontend**: https://your-siteground-domain.com
+- **Backend API**: https://your-render-app.onrender.com/api/v1
+- **Health Check**: https://your-render-app.onrender.com/api/v1/health
 
-Once deployed, your Construction Tracker app will be live at your domain!
-Remember to:
-- Monitor for any errors in the first 24 hours
-- Ask users to clear cache if they see old version
-- Keep the Render backend active (it may sleep after inactivity)
+The frontend will automatically use the correct API endpoint based on the domain.

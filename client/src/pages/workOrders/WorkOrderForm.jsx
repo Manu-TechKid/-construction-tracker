@@ -25,6 +25,7 @@ import {
 } from '@mui/material';
 import { ArrowBack as ArrowBackIcon, Save as SaveIcon } from '@mui/icons-material';
 import PhotoUpload from '../../components/common/PhotoUpload';
+import { useBuildingContext } from '../../contexts/BuildingContext';
 import { useGetBuildingsQuery, useGetBuildingQuery } from '../../features/buildings/buildingsApiSlice';
 import { useGetUsersQuery } from '../../features/users/usersApiSlice';
 import {
@@ -43,6 +44,7 @@ const WorkOrderForm = () => {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const [photos, setPhotos] = useState([]);
+  const { selectedBuilding } = useBuildingContext();
 
   // Photo functionality is working properly - integrated with PhotoUpload component
 
@@ -195,8 +197,11 @@ const WorkOrderForm = () => {
       if (formData.photos && Array.isArray(formData.photos)) {
         setPhotos(formData.photos);
       }
+    } else if (!isEdit && selectedBuilding) {
+      // Set the building from context for new work orders
+      formik.setFieldValue('building', selectedBuilding._id);
     }
-  }, [isEdit, workOrderData]);
+  }, [isEdit, workOrderData, selectedBuilding]);
 
   if (isLoadingWorkOrder || isLoadingBuildings || isLoadingUsers || isLoadingWorkTypes) {
     return (

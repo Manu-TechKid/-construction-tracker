@@ -16,7 +16,6 @@ const uploadRoutes = require('./uploadRoutes');
 const photoRoutes = require('./photoRoutes');
 const timeTrackingRoutes = require('./timeTrackingRoutes');
 const employmentRoutes = require('./employmentRoutes');
-const projectEstimateRoutes = require('./projectEstimateRoutes');
 
 // API routes
 router.use('/auth', authRoutes);
@@ -33,7 +32,6 @@ router.use('/uploads', uploadRoutes);
 router.use('/photos', photoRoutes);
 router.use('/time-tracking', timeTrackingRoutes);
 router.use('/employment', employmentRoutes);
-router.use('/project-estimates', projectEstimateRoutes);
 
 // All routes are now properly organized above
 // Frontend should use /setup/work-types, /users for workers, etc.

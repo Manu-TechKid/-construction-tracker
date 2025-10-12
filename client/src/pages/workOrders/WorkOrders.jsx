@@ -35,7 +35,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useGetWorkOrdersQuery, useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { useGetWorkTypesQuery, useGetWorkSubTypesQuery } from '../../features/setup/setupApiSlice';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, isWithinInterval, parseISO, endOfDay } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, isWithinInterval, parseISO } from 'date-fns';
 import { toast } from 'react-toastify';
 
 const getStatusChipColor = (status) => {
@@ -260,15 +260,14 @@ const WorkOrders = () => {
           
           if (workOrderDate) {
             if (filters.startDate && filters.endDate) {
-              // Make end date inclusive by using endOfDay
               dateMatch = isWithinInterval(workOrderDate, {
                 start: filters.startDate,
-                end: endOfDay(filters.endDate)
+                end: filters.endDate
               });
             } else if (filters.startDate) {
               dateMatch = workOrderDate >= filters.startDate;
             } else if (filters.endDate) {
-              dateMatch = workOrderDate <= endOfDay(filters.endDate);
+              dateMatch = workOrderDate <= filters.endDate;
             }
           } else {
             // If no date available, exclude from date-filtered results
@@ -1231,38 +1230,58 @@ const WorkOrders = () => {
                     }}>
                       📅 Start Date
                     </Typography>
-                    <Grid container spacing={1}>
-                      <Grid item xs={12} md={6}>
-                        <DatePicker
-                          label="Start Date"
-                          value={filters.startDate}
-                          onChange={(date) => handleDateFilterChange('startDate', date)}
-                          slotProps={{
-                            textField: {
-                              fullWidth: true,
-                              size: 'small',
-                              error: false,
-                              helperText: ''
+                    <DatePicker
+                      label="From Date"
+                      value={filters.startDate}
+                      onChange={(date) => handleDateFilterChange('startDate', date)}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          size: 'medium',
+                          variant: 'outlined',
+                          sx: {
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '8px'
                             }
-                          }}
-                        />
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <DatePicker
-                          label="End Date"
-                          value={filters.endDate}
-                          onChange={(date) => handleDateFilterChange('endDate', date)}
-                          slotProps={{
-                            textField: {
-                              fullWidth: true,
-                              size: 'small',
-                              error: false,
-                              helperText: ''
+                          }
+                        }
+                      }}
+                    />
+                  </Box>
+                </Grid>
+                
+                <Grid item xs={12} md={6} lg={2.4}>
+                  <Box sx={{ 
+                    p: 2, 
+                    border: '2px dashed #9c27b0', 
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(156, 39, 176, 0.05)'
+                  }}>
+                    <Typography variant="subtitle2" sx={{ 
+                      color: '#9c27b0', 
+                      fontWeight: 'bold', 
+                      mb: 1.5,
+                      textAlign: 'center'
+                    }}>
+                      📅 End Date
+                    </Typography>
+                    <DatePicker
+                      label="To Date"
+                      value={filters.endDate}
+                      onChange={(date) => handleDateFilterChange('endDate', date)}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          size: 'medium',
+                          variant: 'outlined',
+                          sx: {
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '8px'
                             }
-                          }}
-                        />
-                      </Grid>
-                    </Grid>
+                          }
+                        }
+                      }}
+                    />
                   </Box>
                 </Grid>
                 

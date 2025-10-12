@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -71,7 +70,6 @@ const ProjectsPendingApproval = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { user } = useAuth();
-  const navigate = useNavigate();
   
   // State management
   const [selectedTab, setSelectedTab] = useState(0);
@@ -470,7 +468,7 @@ const ProjectsPendingApproval = () => {
                               <IconButton 
                                 size="small" 
                                 color="primary"
-                                onClick={() => navigate(`/project-estimates/${project._id}/edit`)}
+                                onClick={() => window.open(`/project-estimates/edit/${project._id}`, '_blank')}
                               >
                                 <EditIcon />
                               </IconButton>
@@ -582,7 +580,7 @@ const ProjectsPendingApproval = () => {
                               <IconButton 
                                 size="small" 
                                 color="primary"
-                                onClick={() => navigate(`/project-estimates/${project._id}/edit`)}
+                                onClick={() => window.open(`/project-estimates/edit/${project._id}`, '_blank')}
                               >
                                 <EditIcon />
                               </IconButton>

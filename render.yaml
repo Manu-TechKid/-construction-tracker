@@ -35,9 +35,9 @@ services:
       - key: JWT_COOKIE_EXPIRES
         value: "90"  # days
 
-      # Client Configuration
+      # Client Configuration - Set to the Render service URL for API calls
       - key: REACT_APP_API_URL
-        sync: false  # Will be set to the service URL
+        value: https://construction-tracker-webapp.onrender.com/api/v1
     envVarFiles:
       - group: production
         path: .env.production
