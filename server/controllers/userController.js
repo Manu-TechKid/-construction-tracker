@@ -486,6 +486,35 @@ exports.createUser = catchAsync(async (req, res, next) => {
   });
 });
 
+// Admin password reset (without email)
+exports.adminResetPassword = catchAsync(async (req, res, next) => {
+  const { userId, newPassword } = req.body;
+
+  if (!userId || !newPassword) {
+    return next(new AppError('User ID and new password are required', 400));
+  }
+
+  if (newPassword.length < 8) {
+    return next(new AppError('Password must be at least 8 characters long', 400));
+  }
+
+  const user = await User.findById(userId);
+  if (!user) {
+    return next(new AppError('User not found', 404));
+  }
+
+  // Update password
+  user.password = newPassword;
+  user.passwordConfirm = newPassword;
+  user.passwordChangedAt = Date.now();
+  await user.save();
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Password reset successfully'
+  });
+});
+
 // Helper function to filter object
 const filterObj = (obj, ...allowedFields) => {
   const newObj = {};

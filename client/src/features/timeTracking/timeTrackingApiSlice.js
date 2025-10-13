@@ -72,6 +72,20 @@ export const timeTrackingApiSlice = apiSlice.injectEndpoints({
       providesTags: ['TimeSession']
     }),
 
+    // Get time tracking data (alias for getTimeSessions)
+    getTimeTracking: builder.query({
+      query: (params = {}) => {
+        const searchParams = new URLSearchParams();
+        Object.keys(params).forEach(key => {
+          if (params[key] !== undefined && params[key] !== '') {
+            searchParams.append(key, params[key]);
+          }
+        });
+        return `/time-tracking/sessions?${searchParams.toString()}`;
+      },
+      providesTags: ['TimeSession']
+    }),
+
     // Get pending approvals (Admin/Manager only)
     getPendingApprovals: builder.query({
       query: (params = {}) => {
@@ -129,6 +143,7 @@ export const {
   useEndBreakMutation,
   useAddProgressUpdateMutation,
   useGetTimeSessionsQuery,
+  useGetTimeTrackingQuery,
   useGetPendingApprovalsQuery,
   useApproveTimeSessionMutation,
   useGetTimeStatsQuery,

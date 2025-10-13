@@ -43,6 +43,8 @@ import { useDispatch } from 'react-redux';
 import { logout } from '../features/auth/authSlice';
 import { useAuth } from '../hooks/useAuth';
 import BuildingSelector from '../components/common/BuildingSelector';
+import MobileNavigation from '../components/layout/MobileNavigation';
+import NotificationComponent from '../components/Notifications/NotificationComponent';
 
 const drawerWidth = 240;
 
@@ -162,13 +164,23 @@ const DashboardLayout = () => {
       });
     }
 
-    // Time Tracking Management - for admins/managers
-    if (!isWorker && hasPermission(['read:schedules'])) {
+    // Time Tracking - for all users
+    if (hasPermission(['read:all', 'read:workorders'])) {
       items.push({
         text: 'Time Tracking',
         icon: <TimeIcon />,
         path: '/time-tracking',
-        permission: 'read:schedules'
+        permission: 'read:all'
+      });
+    }
+
+    // Time Tracking Management - for admins/managers
+    if (!isWorker && hasPermission(['view:costs', 'manage:users'])) {
+      items.push({
+        text: 'Time Management',
+        icon: <TimeIcon />,
+        path: '/time-tracking-management',
+        permission: 'view:costs'
       });
     }
 
@@ -182,13 +194,23 @@ const DashboardLayout = () => {
       });
     }
 
-    // Project Estimates - for creating new projects
-    if (hasPermission(['create:workorders'])) {
+    // Project Estimates - for viewing and managing estimates
+    if (!isWorker && hasPermission(['view:costs', 'manage:users'])) {
       items.push({
         text: 'Project Estimates',
         icon: <AssignmentIcon />,
-        path: '/project-estimates/new',
-        permission: 'create:workorders'
+        path: '/project-estimates',
+        permission: 'view:costs'
+      });
+    }
+
+    // Pending Project Approval - for admins/managers
+    if (!isWorker && hasPermission(['view:costs', 'manage:users'])) {
+      items.push({
+        text: 'Pending Project Approval',
+        icon: <ProjectApprovalIcon />,
+        path: '/projects-pending-approval',
+        permission: 'view:costs'
       });
     }
 
@@ -336,6 +358,7 @@ const DashboardLayout = () => {
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <NotificationComponent />
             <Chip
               label={user?.role?.toUpperCase() || 'USER'}
               color="secondary"
@@ -391,13 +414,17 @@ const DashboardLayout = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: { xs: 1.5, sm: 2, md: 3 },
           width: { md: `calc(100% - ${drawerWidth}px)` },
           mt: '64px',
+          mb: { xs: 7, sm: 0 }, // Add bottom margin on mobile for the bottom navigation
         }}
       >
         <Outlet />
       </Box>
+
+      {/* Mobile Navigation */}
+      <MobileNavigation />
 
       {/* Profile Menu */}
       <Menu

@@ -17,6 +17,28 @@ const buildingSchema = new mongoose.Schema({
         required: [true, 'City is required'],
         trim: true
     },
+    location: {
+        coordinates: {
+            latitude: {
+                type: Number,
+                default: null
+            },
+            longitude: {
+                type: Number,
+                default: null
+            }
+        },
+        geofenceRadius: {
+            type: Number,
+            default: 100, // Default radius in meters
+            min: 10,
+            max: 1000
+        },
+        lastUpdated: {
+            type: Date,
+            default: Date.now
+        }
+    },
     administrator: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',

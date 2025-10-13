@@ -130,8 +130,8 @@ const Invoices = () => {
     const statusMatch = !filterStatus || invoice.status === filterStatus;
     const buildingMatch = !filterBuilding || invoice.building?._id === filterBuilding;
     
-    // Date range filter
-    const invoiceDate = new Date(invoice.createdAt);
+    // Date range filter - use invoiceDate if available, fallback to createdAt
+    const invoiceDate = new Date(invoice.invoiceDate || invoice.createdAt);
     const dateMatch = isWithinInterval(invoiceDate, {
       start: monthFilter.startDate,
       end: monthFilter.endDate

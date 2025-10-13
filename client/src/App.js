@@ -11,6 +11,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { store } from './app/store';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { BuildingProvider } from './contexts/BuildingContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import { useSettings } from './contexts/SettingsContext';
 import { useAuth } from './hooks/useAuth';
 import { createAppTheme } from './theme/theme';
@@ -53,6 +54,7 @@ import BuildingSchedule from './pages/scheduling/BuildingSchedule';
 import WorkerDashboard from './pages/workers/WorkerDashboard';
 import EditWorker from './pages/workers/EditWorker';
 import WorkerDetails from './pages/workers/WorkerDetails';
+import WorkerManagement from './pages/workers/WorkerManagement';
 import UserManagement from './pages/admin/UserManagement';
 import WorkOrderApproval from './pages/admin/WorkOrderApproval';
 import TimeTrackingManagement from './pages/admin/TimeTrackingManagement';
@@ -60,8 +62,10 @@ import Setup from './pages/admin/Setup';
 import SiteVisit from './pages/estimates/SiteVisit';
 import ApartmentSearch from './pages/search/ApartmentSearch';
 import WorkerSchedules from './pages/workers/WorkerSchedules';
+import TimeTrackingPage from './pages/timeTracking/TimeTrackingPage';
 import ProjectsPendingApproval from './pages/admin/ProjectsPendingApproval';
 import CreateProjectEstimate from './pages/project-estimates/CreateProjectEstimate';
+import ProjectEstimates from './pages/project-estimates/ProjectEstimates';
 
 // Route Protection
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -98,7 +102,8 @@ const AppContent = () => {
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <BuildingProvider>
-          <ErrorBoundary>
+          <NotificationProvider>
+            <ErrorBoundary>
             <Routes>
             {/* Public Routes */}
             <Route path="/login" element={
@@ -257,6 +262,14 @@ const AppContent = () => {
                 path="workers/:id" 
                 element={
                   <RoleBasedRoute requiredPermissions={['read:workers']}>
+                    <WorkerManagement />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="workers/:id/details" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['read:workers']}>
                     <WorkerDetails />
                   </RoleBasedRoute>
                 } 
@@ -280,11 +293,19 @@ const AppContent = () => {
                 } 
               />
 
-              {/* Time Tracking Management */}
+              {/* Time Tracking */}
               <Route 
                 path="time-tracking" 
                 element={
-                  <RoleBasedRoute requiredPermissions={['read:schedules']}>
+                  <RoleBasedRoute requiredPermissions={['read:all']}>
+                    <TimeTrackingPage />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="time-tracking-management" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['view:costs', 'manage:users']}>
                     <TimeTrackingManagement />
                   </RoleBasedRoute>
                 } 
@@ -408,7 +429,23 @@ const AppContent = () => {
 
               {/* Project Estimates */}
               <Route
+                path="project-estimates"
+                element={
+                  <RoleBasedRoute requiredPermissions={['view:costs', 'manage:users']}>
+                    <ProjectEstimates />
+                  </RoleBasedRoute>
+                }
+              />
+              <Route
                 path="project-estimates/new"
+                element={
+                  <RoleBasedRoute requiredPermissions={['create:workorders']}>
+                    <CreateProjectEstimate />
+                  </RoleBasedRoute>
+                }
+              />
+              <Route
+                path="project-estimates/edit/:id"
                 element={
                   <RoleBasedRoute requiredPermissions={['create:workorders']}>
                     <CreateProjectEstimate />
@@ -459,6 +496,7 @@ const AppContent = () => {
             pauseOnHover
             theme={settings.theme}
           />
+          </NotificationProvider>
         </BuildingProvider>
       </LocalizationProvider>
     </ThemeProvider>

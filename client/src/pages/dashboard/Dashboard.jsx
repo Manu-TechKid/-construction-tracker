@@ -10,7 +10,9 @@ import {
   CardHeader,
   Divider,
   LinearProgress,
-  useTheme
+  useTheme,
+  Button,
+  TextField
 } from '@mui/material';
 import {
   Assignment as AssignmentIcon,
@@ -19,19 +21,78 @@ import {
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
   Error as ErrorIcon,
-  Info as InfoIcon
+  Info as InfoIcon,
+  AccessTime as TimeTrackingIcon
 } from '@mui/icons-material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { useGetUsersQuery } from '../../features/users/usersApiSlice';
 import { useGetWorkOrdersQuery } from '../../features/workOrders/workOrdersApiSlice';
+import { useGetDashboardStatsQuery } from '../../features/analytics/analyticsApiSlice';
 import StatCard from '../../components/dashboard/StatCard';
 import BuildingStatus from '../../components/dashboard/BuildingStatus';
 import WorkerAvailability from '../../components/dashboard/WorkerAvailability';
 import { formatDate, timeAgo } from '../../utils/dateUtils';
+import ResponsiveContainer from '../../components/layout/ResponsiveContainer';
+import NotificationTest from '../../components/Notifications/NotificationTest';
 
 const Dashboard = () => {
   const theme = useTheme();
   const navigate = useNavigate();
+  const [dateRange, setDateRange] = useState({
+    startDate: null,
+    endDate: null
+  });
+  
+  // Format date for API query
+  const formatDateForQuery = (date) => {
+    return date ? date.toISOString() : undefined;
+  };
+
+  // Prepare query params
+  const queryParams = {
+    startDate: formatDateForQuery(dateRange.startDate),
+    endDate: formatDateForQuery(dateRange.endDate)
+  };
+  
+  // Fetch data
+  const { data: buildingsData, isLoading: isLoadingBuildings, error: buildingsError } = useGetBuildingsQuery({});
+  const { data: usersData, isLoading: isLoadingUsers, error: usersError } = useGetUsersQuery({ role: 'worker' });
+  const { data: workOrdersData, isLoading: isLoadingWorkOrders, error: workOrdersError } = useGetWorkOrdersQuery();
+  
+  // Fetch analytics data
+  const { 
+    data: analyticsData, 
+    isLoading: isLoadingAnalytics, 
+    isError: isAnalyticsError,
+    error: analyticsError,
+    refetch: refetchAnalytics
+  } = useGetDashboardStatsQuery(queryParams);
+  
+  // Handle date filter changes
+  const handleDateChange = (field, value) => {
+    setDateRange(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Handle filter reset
+  const handleResetFilters = () => {
+    setDateRange({
+      startDate: null,
+      endDate: null
+    });
+    refetchAnalytics();
+  };
+
+  // Apply filters
+  const handleApplyFilters = () => {
+    refetchAnalytics();
+  };
+  
   const [stats, setStats] = useState({
     totalBuildings: 0,
     totalWorkers: 0,
@@ -40,12 +101,9 @@ const Dashboard = () => {
     pendingWorkOrders: 0,
     completedWorkOrders: 0,
     inProgressWorkOrders: 0,
+    totalTimeHours: 0,
+    geofenceViolations: 0,
   });
-
-  // Fetch data
-  const { data: buildingsData, isLoading: isLoadingBuildings, error: buildingsError } = useGetBuildingsQuery({});
-  const { data: usersData, isLoading: isLoadingUsers, error: usersError } = useGetUsersQuery({ role: 'worker' });
-  const { data: workOrdersData, isLoading: isLoadingWorkOrders, error: workOrdersError } = useGetWorkOrdersQuery();
 
   // Process data
   useEffect(() => {
@@ -87,7 +145,19 @@ const Dashboard = () => {
         inProgressWorkOrders: inProgressOrders.length
       }));
     }
-  }, [buildingsData, usersData, workOrdersData]);
+    
+    // Handle analytics data
+    if (analyticsData?.data) {
+      const totalTimeHours = analyticsData.data.timeTracking?.totalHours || 0;
+      const geofenceViolations = analyticsData.data.timeTracking?.geofenceViolations || 0;
+      
+      setStats(prevStats => ({
+        ...prevStats,
+        totalTimeHours,
+        geofenceViolations
+      }));
+    }
+  }, [buildingsData, usersData, workOrdersData, analyticsData]);
 
   // Get building status with actual work order counts
   const buildingStatusData = buildingsData?.data?.buildings?.map(building => {
@@ -136,17 +206,52 @@ const Dashboard = () => {
   }
 
   return (
-    <Box>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Dashboard
-      </Typography>
+    <Box sx={{ flexGrow: 1 }}>
+      <ResponsiveContainer>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Dashboard
+        </Typography>
       <Typography variant="subtitle1" color="text.secondary" gutterBottom>
         {formatDate(new Date(), 'full')}
       </Typography>
+      
+      {/* Date Filters */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <DatePicker
+              label="Start Date"
+              value={dateRange.startDate}
+              onChange={(newValue) => handleDateChange('startDate', newValue)}
+              renderInput={(params) => <TextField {...params} />}
+            />
+            <DatePicker
+              label="End Date"
+              value={dateRange.endDate}
+              onChange={(newValue) => handleDateChange('endDate', newValue)}
+              renderInput={(params) => <TextField {...params} />}
+              minDate={dateRange.startDate}
+            />
+          </LocalizationProvider>
+          <Button 
+            variant="contained" 
+            onClick={handleApplyFilters}
+            sx={{ ml: 1 }}
+          >
+            Apply Filters
+          </Button>
+          <Button 
+            variant="outlined" 
+            onClick={handleResetFilters}
+          >
+            Reset
+          </Button>
+        </Box>
+      </Paper>
 
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mt: 2, mb: 4 }}>
-        <Grid item xs={12} sm={6} md={2.4}>
+        <Grid item xs={12} sm={6} md={2}>
           <StatCard
             title="Total Buildings"
             value={stats.totalBuildings}
@@ -155,7 +260,7 @@ const Dashboard = () => {
             onClick={() => navigate('/buildings')}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
+        <Grid item xs={12} sm={6} md={2}>
           <StatCard
             title="Total Workers"
             value={stats.totalWorkers}
@@ -164,7 +269,7 @@ const Dashboard = () => {
             onClick={() => navigate('/workers')}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
+        <Grid item xs={12} sm={6} md={2}>
           <StatCard
             title="Pending Orders"
             value={stats.pendingWorkOrders}
@@ -173,7 +278,7 @@ const Dashboard = () => {
             onClick={() => navigate('/work-orders?status=pending')}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
+        <Grid item xs={12} sm={6} md={2}>
           <StatCard
             title="In Progress"
             value={stats.inProgressWorkOrders}
@@ -182,7 +287,7 @@ const Dashboard = () => {
             onClick={() => navigate('/work-orders?status=in_progress')}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
+        <Grid item xs={12} sm={6} md={2}>
           <StatCard
             title="Completed"
             value={stats.completedWorkOrders}
@@ -191,9 +296,23 @@ const Dashboard = () => {
             onClick={() => navigate('/work-orders?status=completed')}
           />
         </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <StatCard
+            title="Time Tracking"
+            value={`${stats.totalTimeHours} hrs`}
+            icon={<TimeTrackingIcon />}
+            color={theme.palette.warning.dark}
+            subtitle={`${stats.geofenceViolations} Geofence Violations`}
+            onClick={() => navigate('/time-tracking')}
+          />
+        </Grid>
       </Grid>
 
       <Grid container spacing={3}>
+        {/* Notification Test Panel */}
+        <Grid item xs={12}>
+          <NotificationTest />
+        </Grid>
 
         {/* Building Status */}
         <Grid item xs={12} md={6}>
@@ -225,6 +344,7 @@ const Dashboard = () => {
           </Card>
         </Grid>
       </Grid>
+        </ResponsiveContainer>
     </Box>
   );
 };

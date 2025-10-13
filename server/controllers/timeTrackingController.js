@@ -6,6 +6,7 @@ const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 const multer = require('multer');
 const path = require('path');
+const { validateLocation } = require('../utils/geofencing');
 
 // Configure multer for photo uploads
 const storage = multer.diskStorage({
@@ -71,6 +72,35 @@ exports.clockIn = catchAsync(async (req, res, next) => {
     return next(new AppError('Worker is already clocked in', 400));
   }
 
+  // Geofencing validation - Check if worker is at the correct location
+  let locationValidation = { valid: true, message: 'Location not validated' };
+  
+  if (buildingId) {
+    const building = await Building.findById(buildingId);
+    if (building && building.location && building.location.coordinates.latitude && building.location.coordinates.longitude) {
+      const userLocation = {
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+        accuracy: accuracy ? parseFloat(accuracy) : 0
+      };
+      
+      const targetLocation = {
+        latitude: building.location.coordinates.latitude,
+        longitude: building.location.coordinates.longitude
+      };
+      
+      locationValidation = validateLocation(
+        userLocation, 
+        targetLocation, 
+        building.location.geofenceRadius
+      );
+      
+      if (!locationValidation.valid) {
+        return next(new AppError(`Geofencing validation failed: ${locationValidation.message}`, 400));
+      }
+    }
+  }
+
   // Process uploaded photos
   const photos = [];
   if (req.files && req.files.length > 0) {
@@ -94,7 +124,10 @@ exports.clockIn = catchAsync(async (req, res, next) => {
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
         accuracy: accuracy ? parseFloat(accuracy) : null,
-        timestamp: new Date()
+        timestamp: new Date(),
+        geofenceValidated: locationValidation.valid,
+        geofenceMessage: locationValidation.message,
+        geofenceDistance: locationValidation.distance
       }
     },
     photos,
@@ -157,13 +190,44 @@ exports.clockOut = catchAsync(async (req, res, next) => {
     });
   }
 
+  // Geofencing validation - Check if worker is at the correct location
+  let locationValidation = { valid: true, message: 'Location not validated' };
+  
+  if (activeSession.building) {
+    const building = await Building.findById(activeSession.building);
+    if (building && building.location && building.location.coordinates.latitude && building.location.coordinates.longitude) {
+      const userLocation = {
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+        accuracy: accuracy ? parseFloat(accuracy) : 0
+      };
+      
+      const targetLocation = {
+        latitude: building.location.coordinates.latitude,
+        longitude: building.location.coordinates.longitude
+      };
+      
+      locationValidation = validateLocation(
+        userLocation, 
+        targetLocation, 
+        building.location.geofenceRadius
+      );
+      
+      // We log but don't prevent clock-out if outside geofence
+      console.log('Geofence validation result:', locationValidation);
+    }
+  }
+
   // Update session with clock out information
   activeSession.clockOutTime = new Date();
   activeSession.location.clockOut = {
     latitude: parseFloat(latitude),
     longitude: parseFloat(longitude),
     accuracy: accuracy ? parseFloat(accuracy) : null,
-    timestamp: new Date()
+    timestamp: new Date(),
+    geofenceValidated: locationValidation.valid,
+    geofenceMessage: locationValidation.message,
+    geofenceDistance: locationValidation.distance
   };
   activeSession.status = 'completed';
   activeSession.photos.push(...photos);

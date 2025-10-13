@@ -134,7 +134,8 @@ exports.createBuilding = catchAsync(async (req, res, next) => {
             return next(new AppError('Name, address, and service manager are required', 400));
         }
         
-        const newBuilding = await Building.create({
+        // Prepare location data if coordinates are provided
+        const buildingData = {
             name: req.body.name,
             address: req.body.address,
             city: req.body.city || '',
@@ -142,7 +143,18 @@ exports.createBuilding = catchAsync(async (req, res, next) => {
             administratorName: req.body.administratorName || '',
             serviceManager: req.body.serviceManager,
             createdBy: req.user ? req.user._id : null
-        });
+        };
+        
+        // Add geofencing data if provided
+        if (req.body.latitude && req.body.longitude) {
+            buildingData.location = {
+                coordinates: [req.body.longitude, req.body.latitude],
+                geofenceRadius: req.body.geofenceRadius || 100,
+                lastUpdated: Date.now()
+            };
+        }
+        
+        const newBuilding = await Building.create(buildingData);
         
         console.log('Building created successfully:', newBuilding);
         
@@ -159,9 +171,25 @@ exports.createBuilding = catchAsync(async (req, res, next) => {
 });
 
 exports.updateBuilding = catchAsync(async (req, res, next) => {
+    // Process geofencing data if provided
+    const updateData = { ...req.body };
+    
+    if (updateData.latitude && updateData.longitude) {
+        updateData.location = {
+            coordinates: [updateData.longitude, updateData.latitude],
+            geofenceRadius: updateData.geofenceRadius || 100,
+            lastUpdated: Date.now()
+        };
+        
+        // Remove individual fields from the update object
+        delete updateData.latitude;
+        delete updateData.longitude;
+        delete updateData.geofenceRadius;
+    }
+    
     const building = await Building.findByIdAndUpdate(
         req.params.id,
-        req.body,
+        updateData,
         {
             new: true,
             runValidators: true

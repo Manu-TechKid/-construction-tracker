@@ -91,13 +91,15 @@ const ApartmentSearch = () => {
         dateRange: filters.dateRange || undefined
       };
 
+      console.log('Search params:', searchParams);
       const response = await searchApartment(searchParams).unwrap();
+      console.log('Search response:', response);
       setSearchResults(response.data || []);
       
       if (response.data?.length === 0) {
-        toast.info(`No records found for apartment ${searchTerm}`);
+        toast.info('No records found for this apartment');
       } else {
-        toast.success(`Found ${response.data.length} records for apartment ${searchTerm}`);
+        toast.success(`Found ${response.data?.length} records`);
       }
     } catch (error) {
       console.error('Search error:', error);

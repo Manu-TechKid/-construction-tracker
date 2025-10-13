@@ -33,6 +33,9 @@ router.get('/:id/assignments', userController.getWorkerAssignments);
 // Admin routes - restrict to admin and manager
 router.use(authController.restrictTo('admin', 'manager'));
 
+// Admin password reset
+router.patch('/admin/reset-password', authController.restrictTo('admin'), userController.adminResetPassword);
+
 // General user management
 router.get('/', userController.getAllUsers);
 router.post('/', userController.createUser);

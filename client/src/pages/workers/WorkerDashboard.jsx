@@ -33,7 +33,8 @@ import {
   Description as LetterIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
-import { useGetWorkerAssignmentsQuery, useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
+import { useGetWorkerAssignmentsQuery } from '../../features/workers/workersApiSlice';
+import { useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 import { toast } from 'react-toastify';
 import { formatDate } from '../../utils/dateUtils';
 import EnhancedTimeTracker from '../../components/timeTracking/EnhancedTimeTracker';

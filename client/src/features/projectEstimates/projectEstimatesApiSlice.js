@@ -106,6 +106,19 @@ export const projectEstimatesApiSlice = apiSlice.injectEndpoints({
       ]
     }),
 
+    // Convert to invoice
+    convertToInvoice: builder.mutation({
+      query: (id) => ({
+        url: `/project-estimates/${id}/convert-to-invoice`,
+        method: 'POST',
+      }),
+      invalidatesTags: [
+        { type: 'ProjectEstimate', id: 'LIST' },
+        { type: 'Invoice', id: 'LIST' },
+        { type: 'ProjectEstimate', id: 'STATS' }
+      ]
+    }),
+
     // Get statistics
     getProjectEstimateStats: builder.query({
       query: (params = {}) => {
@@ -131,5 +144,6 @@ export const {
   useGetPendingProjectApprovalsQuery,
   useApproveProjectEstimateMutation,
   useConvertToWorkOrderMutation,
+  useConvertToInvoiceMutation,
   useGetProjectEstimateStatsQuery,
 } = projectEstimatesApiSlice;

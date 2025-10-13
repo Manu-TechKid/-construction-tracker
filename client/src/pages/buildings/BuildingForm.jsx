@@ -50,6 +50,13 @@ const validationSchema = Yup.object({
   floors: Yup.number().min(1, 'Must be at least 1').max(200, 'Must be 200 or less'),
   totalUnits: Yup.number().min(1, 'Must be at least 1'),
   amenities: Yup.array().of(Yup.string()),
+  latitude: Yup.number().nullable().transform((value, originalValue) => 
+    originalValue === '' ? null : value
+  ).min(-90, 'Must be between -90 and 90').max(90, 'Must be between -90 and 90'),
+  longitude: Yup.number().nullable().transform((value, originalValue) => 
+    originalValue === '' ? null : value
+  ).min(-180, 'Must be between -180 and 180').max(180, 'Must be between -180 and 180'),
+  geofenceRadius: Yup.number().min(10, 'Minimum radius is 10m').max(1000, 'Maximum radius is 1000m'),
 });
 
 const BuildingForm = ({ isEdit = false }) => {
@@ -81,6 +88,9 @@ const BuildingForm = ({ isEdit = false }) => {
       floors: 1,
       totalUnits: 1,
       amenities: [],
+      latitude: '',
+      longitude: '',
+      geofenceRadius: 100,
     },
     validationSchema,
     onSubmit: async (values, { setSubmitting, setFieldError }) => {
@@ -120,6 +130,9 @@ const BuildingForm = ({ isEdit = false }) => {
         floors: building.floors || 1,
         totalUnits: building.totalUnits || 1,
         amenities: building.amenities || [],
+        latitude: building.location?.coordinates?.[1] || '',
+        longitude: building.location?.coordinates?.[0] || '',
+        geofenceRadius: building.location?.geofenceRadius || 100,
       });
     }
   }, [building, isEdit]);
@@ -377,6 +390,81 @@ const BuildingForm = ({ isEdit = false }) => {
                       disabled={isLoading}
                       variant="outlined"
                     />
+                  </Paper>
+                  
+                  <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <LocationIcon color="primary" sx={{ mr: 1 }} />
+                      <Typography variant="h6">Geofencing</Typography>
+                      <Tooltip title="Set location coordinates and radius for time tracking geofencing">
+                        <IconButton size="small" sx={{ ml: 1 }}>
+                          <InfoIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                    <Divider sx={{ mb: 3 }} />
+                    
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          id="latitude"
+                          name="latitude"
+                          label="Latitude"
+                          type="number"
+                          value={formik.values.latitude}
+                          onChange={formik.handleChange}
+                          onBlur={formik.handleBlur}
+                          error={formik.touched.latitude && Boolean(formik.errors.latitude)}
+                          helperText={formik.touched.latitude && formik.errors.latitude}
+                          disabled={isLoading}
+                          inputProps={{
+                            step: 'any',
+                            min: -90,
+                            max: 90
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          id="longitude"
+                          name="longitude"
+                          label="Longitude"
+                          type="number"
+                          value={formik.values.longitude}
+                          onChange={formik.handleChange}
+                          onBlur={formik.handleBlur}
+                          error={formik.touched.longitude && Boolean(formik.errors.longitude)}
+                          helperText={formik.touched.longitude && formik.errors.longitude}
+                          disabled={isLoading}
+                          inputProps={{
+                            step: 'any',
+                            min: -180,
+                            max: 180
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <TextField
+                          fullWidth
+                          id="geofenceRadius"
+                          name="geofenceRadius"
+                          label="Geofence Radius (meters)"
+                          type="number"
+                          value={formik.values.geofenceRadius}
+                          onChange={formik.handleChange}
+                          onBlur={formik.handleBlur}
+                          error={formik.touched.geofenceRadius && Boolean(formik.errors.geofenceRadius)}
+                          helperText={formik.touched.geofenceRadius && formik.errors.geofenceRadius || "Allowed radius for time tracking (10-1000 meters)"}
+                          disabled={isLoading}
+                          inputProps={{
+                            min: 10,
+                            max: 1000
+                          }}
+                        />
+                      </Grid>
+                    </Grid>
                   </Paper>
                   
                   <Paper variant="outlined" sx={{ p: 3 }}>

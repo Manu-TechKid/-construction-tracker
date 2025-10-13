@@ -31,9 +31,7 @@ import {
   CircularProgress,
   Tabs,
   Tab,
-  Badge,
-  useTheme,
-  useMediaQuery
+  Badge
 } from '@mui/material';
 import {
   Schedule as TimeIcon,
@@ -46,11 +44,12 @@ import {
   Download as ExportIcon,
   FilterList as FilterIcon,
   Refresh as RefreshIcon,
-  PhotoCamera as PhotoIcon,
-  Notes as NotesIcon,
+  AttachMoney as MoneyIcon,
   Timeline as ProgressIcon,
-  Timeline as StatsIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  Assessment as StatsIcon,
+  PhotoCamera as PhotoIcon,
+  Notes as NotesIcon
 } from '@mui/icons-material';
 import { format, parseISO, differenceInHours, differenceInMinutes } from 'date-fns';
 import { toast } from 'react-toastify';
@@ -67,8 +66,6 @@ import { useGetUsersQuery } from '../../features/users/usersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 
 const TimeTrackingManagement = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user } = useAuth();
   
   // State

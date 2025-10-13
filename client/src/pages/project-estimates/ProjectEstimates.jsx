@@ -5,21 +5,19 @@ import {
   Typography,
   Card,
   CardContent,
-  CardActions,
   Grid,
   Button,
   Chip,
-  Avatar,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   TextField,
-  Divider,
   Alert,
   CircularProgress,
-  Paper,
   IconButton,
+  Tabs,
+  Tab,
   Table,
   TableBody,
   TableCell,
@@ -30,58 +28,64 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Tooltip
+  Tooltip,
+  Paper
 } from '@mui/material';
 import {
-  CheckCircle as ApproveIcon,
-  Cancel as RejectIcon,
-  Refresh as RefreshIcon,
-  FilterList as FilterIcon,
-  Visibility as ViewIcon,
-  Edit as EditIcon,
-  AttachMoney as MoneyIcon,
-  Assignment as AssignmentIcon,
   Add as AddIcon,
-  PhotoCamera as PhotoIcon,
-  Business as BuildingIcon,
+  Edit as EditIcon,
   Delete as DeleteIcon,
+  Visibility as ViewIcon,
+  FilterList as FilterIcon,
+  Refresh as RefreshIcon,
   Transform as ConvertIcon,
-  CalendarToday as CalendarIcon
+  Receipt as InvoiceIcon,
+  AttachMoney as MoneyIcon,
+  CalendarToday as CalendarIcon,
+  Business as BuildingIcon
 } from '@mui/icons-material';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useAuth } from '../../hooks/useAuth';
 import {
-  useGetPendingProjectApprovalsQuery,
-  useApproveProjectEstimateMutation,
+  useGetProjectEstimatesQuery,
   useDeleteProjectEstimateMutation,
-  useConvertToWorkOrderMutation
+  useConvertToInvoiceMutation,
+  useGetProjectEstimateStatsQuery
 } from '../../features/projectEstimates/projectEstimatesApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 
-const ProjectsPendingApproval = () => {
+const ProjectEstimates = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   
   // State management
+  const [selectedTab, setSelectedTab] = useState(0);
   const [selectedProject, setSelectedProject] = useState(null);
   const [detailsDialog, setDetailsDialog] = useState(false);
-  const [approvalDialog, setApprovalDialog] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState('');
   const [filters, setFilters] = useState({
+    status: '',
     building: '',
+    startDate: startOfMonth(new Date()),
+    endDate: endOfMonth(new Date()),
     priority: ''
   });
 
-  // API queries - Only for pending approvals
-  const { data: pendingData, isLoading: pendingLoading, error: pendingError, refetch: refetchPending } = useGetPendingProjectApprovalsQuery();
+  // API queries
+  const { data: projectsData, isLoading: projectsLoading, error: projectsError, refetch: refetchProjects } = useGetProjectEstimatesQuery(filters);
+  const { data: statsData, isLoading: statsLoading } = useGetProjectEstimateStatsQuery(filters);
   const { data: buildingsData } = useGetBuildingsQuery();
 
   // Mutations
-  const [approveProject, { isLoading: isApproving }] = useApproveProjectEstimateMutation();
   const [deleteProject, { isLoading: isDeleting }] = useDeleteProjectEstimateMutation();
-  const [convertToWorkOrder, { isLoading: isConverting }] = useConvertToWorkOrderMutation();
+  const [convertToInvoice, { isLoading: isConverting }] = useConvertToInvoiceMutation();
 
-  const pendingProjects = pendingData?.data?.projectEstimates || [];
+  const projects = projectsData?.data?.projectEstimates || [];
+  const stats = statsData?.data?.stats || {};
   const buildings = buildingsData?.data?.buildings || [];
 
   // Helper functions
@@ -93,6 +97,7 @@ const ProjectsPendingApproval = () => {
       case 'approved': return 'success';
       case 'rejected': return 'error';
       case 'converted': return 'primary';
+      case 'invoiced': return 'secondary';
       default: return 'default';
     }
   };
@@ -108,18 +113,14 @@ const ProjectsPendingApproval = () => {
   };
 
   const getBuildingName = (project) => {
-    // Handle both populated and non-populated building data
     if (project.building && typeof project.building === 'object') {
-      // Building is populated as an object
       return project.building.name || 'Unknown Building';
     }
     
-    // Check if buildingId exists and is populated
     if (project.buildingId && typeof project.buildingId === 'object') {
       return project.buildingId.name || 'Unknown Building';
     }
     
-    // Building is just an ID, find it in the buildings list
     const buildingId = project.building || project.buildingId;
     const building = buildings.find(b => b._id === buildingId);
     return building?.name || 'Unknown Building';
@@ -140,24 +141,6 @@ const ProjectsPendingApproval = () => {
     setFilters(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleApproval = async (projectId, approved, reason = '') => {
-    try {
-      const result = await approveProject({
-        id: projectId,
-        approved,
-        rejectionReason: reason
-      }).unwrap();
-
-      toast.success(`Project ${approved ? 'approved' : 'rejected'} successfully`);
-      setApprovalDialog(false);
-      setRejectionReason('');
-      refetchPending();
-    } catch (error) {
-      console.error('Approval error:', error);
-      toast.error(`Failed to ${approved ? 'approve' : 'reject'} project: ${error?.data?.message || error?.message || 'Unknown error'}`);
-    }
-  };
-
   const handleDelete = async (projectId) => {
     try {
       const confirmed = window.confirm('Delete this project estimate? This action cannot be undone.');
@@ -165,21 +148,26 @@ const ProjectsPendingApproval = () => {
 
       await deleteProject(projectId).unwrap();
       toast.success('Project estimate deleted successfully');
-      refetchPending();
+      refetchProjects();
     } catch (error) {
       console.error('Delete error:', error);
       toast.error(`Failed to delete project estimate: ${error?.data?.message || error?.message || 'Unknown error'}`);
     }
   };
 
-  const handleConvert = async (projectId) => {
+  const handleConvertToInvoice = async (projectId) => {
     try {
-      const confirmed = window.confirm('Convert this project estimate to a work order?');
+      const confirmed = window.confirm('Convert this project estimate to an invoice?');
       if (!confirmed) return;
 
-      await convertToWorkOrder(projectId).unwrap();
-      toast.success('Project estimate converted to work order successfully');
-      refetchPending();
+      const result = await convertToInvoice(projectId).unwrap();
+      toast.success('Project estimate converted to invoice successfully');
+      refetchProjects();
+      
+      // Navigate to the new invoice
+      if (result?.data?.invoice?._id) {
+        navigate(`/invoices/${result.data.invoice._id}`);
+      }
     } catch (error) {
       console.error('Convert error:', error);
       toast.error(`Failed to convert project estimate: ${error?.data?.message || error?.message || 'Unknown error'}`);
@@ -189,6 +177,24 @@ const ProjectsPendingApproval = () => {
   const handleViewDetails = (project) => {
     setSelectedProject(project);
     setDetailsDialog(true);
+  };
+
+  const handleEdit = (projectId) => {
+    navigate(`/project-estimates/edit/${projectId}`);
+  };
+
+  // Quick filter buttons for months
+  const setMonthFilter = (monthsAgo) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - monthsAgo);
+    const start = startOfMonth(date);
+    const end = endOfMonth(date);
+    
+    setFilters(prev => ({
+      ...prev,
+      startDate: start,
+      endDate: end
+    }));
   };
 
   // Statistics cards
@@ -204,9 +210,9 @@ const ProjectsPendingApproval = () => {
               {value}
             </Typography>
           </Box>
-          <Avatar sx={{ bgcolor: `${color}.main` }}>
+          <Box sx={{ bgcolor: `${color}.main`, color: 'white', p: 1, borderRadius: 1 }}>
             {icon}
-          </Avatar>
+          </Box>
         </Box>
       </CardContent>
     </Card>
@@ -218,52 +224,58 @@ const ProjectsPendingApproval = () => {
         {/* Header */}
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h4" component="h1">
-            Pending Project Approval
+            Project Estimates
           </Typography>
           <Box display="flex" gap={2}>
             <Button
               variant="outlined"
               startIcon={<RefreshIcon />}
-              onClick={() => {
-                refetchPending();
-              }}
+              onClick={() => refetchProjects()}
             >
               Refresh
             </Button>
             <Button
               variant="contained"
               startIcon={<AddIcon />}
-              onClick={() => window.open('/project-estimates', '_blank')}
+              onClick={() => navigate('/project-estimates/new')}
             >
-              View All Estimates
+              New Estimate
             </Button>
           </Box>
         </Box>
 
         {/* Statistics Cards */}
         <Grid container spacing={3} mb={3}>
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid item xs={12} sm={6} md={3}>
             <StatCard
-              title="Pending Approval"
-              value={pendingProjects.length}
-              icon={<AssignmentIcon />}
-              color="warning"
+              title="Total Estimates"
+              value={projects.length}
+              icon={<BuildingIcon />}
+              color="primary"
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid item xs={12} sm={6} md={3}>
             <StatCard
               title="Total Value"
-              value={`$${pendingProjects.reduce((sum, p) => sum + (p.estimatedPrice || 0), 0).toFixed(0)}`}
+              value={`$${(stats.totalEstimatedValue || 0).toLocaleString()}`}
               icon={<MoneyIcon />}
               color="success"
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid item xs={12} sm={6} md={3}>
             <StatCard
-              title="High Priority"
-              value={pendingProjects.filter(p => p.priority === 'high' || p.priority === 'urgent').length}
+              title="Approved"
+              value={projects.filter(p => p.status === 'approved').length}
               icon={<CalendarIcon />}
-              color="error"
+              color="info"
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              title="Pending"
+              value={projects.filter(p => p.status === 'pending').length}
+              icon={<CalendarIcon />}
+              color="warning"
             />
           </Grid>
         </Grid>
@@ -275,6 +287,42 @@ const ProjectsPendingApproval = () => {
               <FilterIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
               Filters
             </Typography>
+            
+            {/* Quick Month Buttons */}
+            <Box mb={2}>
+              <Typography variant="subtitle2" gutterBottom>Quick Filters:</Typography>
+              <Box display="flex" gap={1} flexWrap="wrap">
+                <Button 
+                  size="small" 
+                  variant="outlined"
+                  onClick={() => setMonthFilter(0)}
+                >
+                  This Month
+                </Button>
+                <Button 
+                  size="small" 
+                  variant="outlined"
+                  onClick={() => setMonthFilter(1)}
+                >
+                  Last Month
+                </Button>
+                <Button 
+                  size="small" 
+                  variant="outlined"
+                  onClick={() => setMonthFilter(2)}
+                >
+                  2 Months Ago
+                </Button>
+                <Button 
+                  size="small" 
+                  variant="outlined"
+                  onClick={() => setMonthFilter(3)}
+                >
+                  3 Months Ago
+                </Button>
+              </Box>
+            </Box>
+
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6} md={2}>
                 <FormControl fullWidth>
@@ -291,6 +339,7 @@ const ProjectsPendingApproval = () => {
                     <MenuItem value="approved">Approved</MenuItem>
                     <MenuItem value="rejected">Rejected</MenuItem>
                     <MenuItem value="converted">Converted</MenuItem>
+                    <MenuItem value="invoiced">Invoiced</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -327,138 +376,159 @@ const ProjectsPendingApproval = () => {
                   </Select>
                 </FormControl>
               </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                  <DatePicker
+                    label="Start Date"
+                    value={filters.startDate}
+                    onChange={(date) => handleFilterChange('startDate', date)}
+                    renderInput={(params) => <TextField {...params} fullWidth />}
+                  />
+                </LocalizationProvider>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                  <DatePicker
+                    label="End Date"
+                    value={filters.endDate}
+                    onChange={(date) => handleFilterChange('endDate', date)}
+                    renderInput={(params) => <TextField {...params} fullWidth />}
+                  />
+                </LocalizationProvider>
+              </Grid>
             </Grid>
           </CardContent>
         </Card>
 
-        {/* Pending Projects Content */}
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Projects Pending Approval
-              </Typography>
-              {pendingLoading ? (
-                <Box display="flex" justifyContent="center" p={3}>
-                  <CircularProgress />
-                </Box>
-              ) : pendingError ? (
-                <Alert severity="error">
-                  Error loading pending projects: {pendingError?.data?.message || pendingError?.message || 'Unknown error'}
-                </Alert>
-              ) : pendingProjects.length === 0 ? (
-                <Alert severity="info">
-                  No projects pending approval. Create project estimates from your building visits to get started.
-                </Alert>
-              ) : (
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Title</TableCell>
-                        <TableCell>Building</TableCell>
-                        <TableCell>Estimated Price</TableCell>
-                        <TableCell>Estimated Cost</TableCell>
-                        <TableCell>Profit</TableCell>
-                        <TableCell>Priority</TableCell>
-                        <TableCell>Visit Date</TableCell>
-                        <TableCell>Actions</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {pendingProjects.map((project) => (
-                        <TableRow key={project._id}>
-                          <TableCell>
-                            <Box>
-                              <Typography variant="subtitle2">{project.title}</Typography>
-                              {project.apartmentNumber && (
-                                <Typography variant="caption" color="textSecondary">
-                                  Apt: {project.apartmentNumber}
-                                </Typography>
-                              )}
-                            </Box>
-                          </TableCell>
-                          <TableCell>{getBuildingName(project)}</TableCell>
-                          <TableCell>${(project.estimatedPrice || 0).toFixed(2)}</TableCell>
-                          <TableCell>${(project.estimatedCost || 0).toFixed(2)}</TableCell>
-                          <TableCell>
-                            <Typography 
-                              color={calculateProfit(project.estimatedPrice, project.estimatedCost) >= 0 ? 'success.main' : 'error.main'}
-                            >
-                              ${calculateProfit(project.estimatedPrice, project.estimatedCost).toFixed(2)}
-                              <br />
-                              <Typography variant="caption">
-                                ({calculateProfitMargin(project.estimatedPrice, project.estimatedCost)}%)
+        {/* Project Estimates Table */}
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Project Estimates ({projects.length})
+            </Typography>
+            {projectsLoading ? (
+              <Box display="flex" justifyContent="center" p={3}>
+                <CircularProgress />
+              </Box>
+            ) : projectsError ? (
+              <Alert severity="error">
+                Error loading project estimates: {projectsError?.data?.message || projectsError?.message || 'Unknown error'}
+              </Alert>
+            ) : projects.length === 0 ? (
+              <Alert severity="info">
+                No project estimates found for the selected filters. Create a new estimate to get started.
+              </Alert>
+            ) : (
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Title</TableCell>
+                      <TableCell>Building</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Priority</TableCell>
+                      <TableCell>Estimated Price</TableCell>
+                      <TableCell>Estimated Cost</TableCell>
+                      <TableCell>Profit</TableCell>
+                      <TableCell>Visit Date</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {projects.map((project) => (
+                      <TableRow key={project._id}>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="subtitle2">{project.title}</Typography>
+                            {project.apartmentNumber && (
+                              <Typography variant="caption" color="textSecondary">
+                                Apt: {project.apartmentNumber}
                               </Typography>
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Chip 
-                              label={project.priority} 
-                              color={getPriorityColor(project.priority)}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            {format(parseISO(project.visitDate), 'MMM dd, yyyy')}
-                          </TableCell>
-                          <TableCell>
-                            <Tooltip title="View Details">
-                              <IconButton 
-                                size="small" 
-                                onClick={() => handleViewDetails(project)}
-                              >
-                                <ViewIcon />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Edit Project">
-                              <IconButton 
-                                size="small" 
-                                color="primary"
-                                onClick={() => window.open(`/project-estimates/edit/${project._id}`, '_blank')}
-                              >
-                                <EditIcon />
-                              </IconButton>
-                            </Tooltip>
-                            {project.photos && project.photos.length > 0 && (
-                              <Tooltip title={`${project.photos.length} Photos`}>
-                                <IconButton size="small">
-                                  <PhotoIcon color="primary" />
-                                </IconButton>
-                              </Tooltip>
                             )}
-                            <Button
-                              size="small"
-                              startIcon={<ApproveIcon />}
-                              color="success"
-                              onClick={() => handleApproval(project._id, true)}
-                              disabled={isApproving}
-                              sx={{ ml: 1 }}
+                          </Box>
+                        </TableCell>
+                        <TableCell>{getBuildingName(project)}</TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={project.status} 
+                            color={getStatusColor(project.status)}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={project.priority} 
+                            color={getPriorityColor(project.priority)}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>${(project.estimatedPrice || 0).toFixed(2)}</TableCell>
+                        <TableCell>${(project.estimatedCost || 0).toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Typography 
+                            color={calculateProfit(project.estimatedPrice, project.estimatedCost) >= 0 ? 'success.main' : 'error.main'}
+                          >
+                            ${calculateProfit(project.estimatedPrice, project.estimatedCost).toFixed(2)}
+                            <br />
+                            <Typography variant="caption">
+                              ({calculateProfitMargin(project.estimatedPrice, project.estimatedCost)}%)
+                            </Typography>
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          {project.visitDate ? format(parseISO(project.visitDate), 'MMM dd, yyyy') : 'N/A'}
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip title="View Details">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleViewDetails(project)}
                             >
-                              Approve
-                            </Button>
-                            <Button
-                              size="small"
-                              startIcon={<RejectIcon />}
-                              color="error"
-                              onClick={() => {
-                                setSelectedProject(project);
-                                setApprovalDialog(true);
-                              }}
-                              disabled={isApproving}
-                              sx={{ ml: 1 }}
+                              <ViewIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Edit Estimate">
+                            <IconButton 
+                              size="small" 
+                              color="primary"
+                              onClick={() => handleEdit(project._id)}
                             >
-                              Reject
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-            </CardContent>
-          </Card>
-        )
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                          {project.status === 'approved' && project.status !== 'invoiced' && (
+                            <Tooltip title="Convert to Invoice">
+                              <IconButton 
+                                size="small" 
+                                color="success"
+                                onClick={() => handleConvertToInvoice(project._id)}
+                                disabled={isConverting}
+                              >
+                                <InvoiceIcon />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          {project.status !== 'converted' && project.status !== 'invoiced' && (
+                            <Tooltip title="Delete">
+                              <IconButton 
+                                size="small" 
+                                color="error"
+                                onClick={() => handleDelete(project._id)}
+                                disabled={isDeleting}
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Project Details Dialog */}
         <Dialog 
@@ -493,7 +563,9 @@ const ProjectsPendingApproval = () => {
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2">Visit Date</Typography>
-                  <Typography>{format(parseISO(selectedProject.visitDate), 'MMM dd, yyyy')}</Typography>
+                  <Typography>
+                    {selectedProject.visitDate ? format(parseISO(selectedProject.visitDate), 'MMM dd, yyyy') : 'N/A'}
+                  </Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2">Target Year</Typography>
@@ -527,36 +599,9 @@ const ProjectsPendingApproval = () => {
             <Button onClick={() => setDetailsDialog(false)}>Close</Button>
           </DialogActions>
         </Dialog>
-
-        {/* Rejection Dialog */}
-        <Dialog open={approvalDialog} onClose={() => setApprovalDialog(false)}>
-          <DialogTitle>Reject Project Estimate</DialogTitle>
-          <DialogContent>
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Rejection Reason"
-              fullWidth
-              multiline
-              rows={3}
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setApprovalDialog(false)}>Cancel</Button>
-            <Button 
-              onClick={() => handleApproval(selectedProject?._id, false, rejectionReason)}
-              color="error"
-              disabled={!rejectionReason.trim() || isApproving}
-            >
-              Reject
-            </Button>
-          </DialogActions>
-        </Dialog>
       </Box>
     </Container>
   );
 };
 
-export default ProjectsPendingApproval;
+export default ProjectEstimates;
