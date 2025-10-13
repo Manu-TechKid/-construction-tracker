@@ -62,7 +62,6 @@ import Setup from './pages/admin/Setup';
 import SiteVisit from './pages/estimates/SiteVisit';
 import ApartmentSearch from './pages/search/ApartmentSearch';
 import WorkerSchedules from './pages/workers/WorkerSchedules';
-import TimeTrackingPage from './pages/timeTracking/TimeTrackingPage';
 import ProjectsPendingApproval from './pages/admin/ProjectsPendingApproval';
 import CreateProjectEstimate from './pages/project-estimates/CreateProjectEstimate';
 import ProjectEstimates from './pages/project-estimates/ProjectEstimates';
@@ -293,15 +292,7 @@ const AppContent = () => {
                 } 
               />
 
-              {/* Time Tracking */}
-              <Route 
-                path="time-tracking" 
-                element={
-                  <RoleBasedRoute requiredPermissions={['read:all']}>
-                    <TimeTrackingPage />
-                  </RoleBasedRoute>
-                } 
-              />
+              {/* Time Management */}
               <Route 
                 path="time-tracking-management" 
                 element={

@@ -103,7 +103,18 @@ const ApartmentSearch = () => {
       }
     } catch (error) {
       console.error('Search error:', error);
-      toast.error('Failed to search apartment records');
+      
+      // Better error handling with specific messages
+      if (error.status === 404) {
+        toast.info('No records found for this apartment number');
+      } else if (error.status === 400) {
+        toast.error('Please provide a valid apartment number');
+      } else if (error.status === 401) {
+        toast.error('Please log in to search apartment records');
+      } else {
+        toast.error('Unable to search apartment records. Please try again.');
+      }
+      
       setSearchResults([]);
     } finally {
       setIsSearching(false);

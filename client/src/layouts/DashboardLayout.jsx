@@ -164,17 +164,7 @@ const DashboardLayout = () => {
       });
     }
 
-    // Time Tracking - for all users
-    if (hasPermission(['read:all', 'read:workorders'])) {
-      items.push({
-        text: 'Time Tracking',
-        icon: <TimeIcon />,
-        path: '/time-tracking',
-        permission: 'read:all'
-      });
-    }
-
-    // Time Tracking Management - for admins/managers
+    // Time Management - for admins/managers
     if (!isWorker && hasPermission(['view:costs', 'manage:users'])) {
       items.push({
         text: 'Time Management',

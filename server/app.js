@@ -12,6 +12,7 @@ const scheduleRoutes = require('./routes/scheduleRoutes');
 const workerScheduleRoutes = require('./routes/workerScheduleRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 const timeTrackingRoutes = require('./routes/timeTrackingRoutes');
+const projectEstimateRoutes = require('./routes/projectEstimateRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 
 // Initialize Express app
@@ -32,6 +33,7 @@ app.use('/api/v1/schedule', scheduleRoutes);
 app.use('/api/v1/worker-schedules', workerScheduleRoutes);
 app.use('/api/v1/search', searchRoutes);
 app.use('/api/v1/time-tracking', timeTrackingRoutes);
+app.use('/api/v1/project-estimates', projectEstimateRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 
 module.exports = app;

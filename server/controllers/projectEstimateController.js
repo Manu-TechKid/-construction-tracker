@@ -399,3 +399,56 @@ exports.getPendingApprovals = catchAsync(async (req, res, next) => {
     }
   });
 });
+
+// @desc    Convert project estimate to invoice
+// @route   POST /api/v1/project-estimates/:id/convert-to-invoice
+// @access  Private (Admin/Manager only)
+exports.convertToInvoice = catchAsync(async (req, res, next) => {
+  const projectEstimate = await ProjectEstimate.findById(req.params.id);
+
+  if (!projectEstimate) {
+    return next(new AppError('Project estimate not found', 404));
+  }
+
+  if (projectEstimate.status !== 'approved') {
+    return next(new AppError('Only approved estimates can be converted to invoices', 400));
+  }
+
+  // Create invoice from project estimate
+  const Invoice = require('../models/Invoice');
+  
+  const invoiceData = {
+    projectEstimate: projectEstimate._id,
+    building: projectEstimate.building,
+    apartmentNumber: projectEstimate.apartmentNumber,
+    description: projectEstimate.description,
+    amount: projectEstimate.estimatedPrice || projectEstimate.estimatedCost,
+    total: projectEstimate.estimatedPrice || projectEstimate.estimatedCost,
+    status: 'draft',
+    invoiceDate: new Date(),
+    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+    createdBy: req.user.id,
+    items: [{
+      description: projectEstimate.title,
+      quantity: 1,
+      unitPrice: projectEstimate.estimatedPrice || projectEstimate.estimatedCost,
+      total: projectEstimate.estimatedPrice || projectEstimate.estimatedCost
+    }]
+  };
+
+  const invoice = await Invoice.create(invoiceData);
+
+  // Update project estimate status
+  projectEstimate.status = 'converted_to_invoice';
+  projectEstimate.convertedToInvoice = invoice._id;
+  await projectEstimate.save();
+
+  res.status(201).json({
+    status: 'success',
+    message: 'Project estimate converted to invoice successfully',
+    data: {
+      invoice,
+      projectEstimate
+    }
+  });
+});
