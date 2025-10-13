@@ -94,12 +94,21 @@ const ApartmentSearch = () => {
       console.log('Search params:', searchParams);
       const response = await searchApartment(searchParams).unwrap();
       console.log('Search response:', response);
-      setSearchResults(response.data || []);
       
-      if (response.data?.length === 0) {
+      // Handle new response format
+      const searchData = response.data?.searchResults || response.data || [];
+      const apartments = response.data?.apartments || [];
+      const summary = response.data?.summary || {};
+      
+      setSearchResults(searchData);
+      
+      if (searchData.length === 0) {
         toast.info('No records found for this apartment');
       } else {
-        toast.success(`Found ${response.data?.length} records`);
+        const message = apartments.length > 0 
+          ? `Found ${apartments.length} apartment(s) and ${searchData.length - apartments.length} related records`
+          : `Found ${searchData.length} records`;
+        toast.success(message);
       }
     } catch (error) {
       console.error('Search error:', error);

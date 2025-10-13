@@ -20,6 +20,33 @@ exports.searchApartment = catchAsync(async (req, res, next) => {
     return next(new AppError('Apartment number is required', 400));
   }
 
+  // First, find apartments in buildings that match the apartment number
+  let buildingQuery = {};
+  if (buildingId) {
+    buildingQuery._id = buildingId;
+  }
+
+  const buildingsWithApartments = await Building.find({
+    ...buildingQuery,
+    'apartments.number': { $regex: apartmentNumber, $options: 'i' }
+  }).select('name address apartments');
+
+  let apartmentResults = [];
+  buildingsWithApartments.forEach(building => {
+    const matchingApartments = building.apartments.filter(apt => 
+      apt.number.toLowerCase().includes(apartmentNumber.toLowerCase())
+    );
+    
+    matchingApartments.forEach(apartment => {
+      apartmentResults.push({
+        buildingId: building._id,
+        buildingName: building.name,
+        buildingAddress: building.address,
+        apartment: apartment
+      });
+    });
+  });
+
   // Build date filter
   let dateFilter = {};
   if (dateRange) {
@@ -211,13 +238,45 @@ exports.searchApartment = catchAsync(async (req, res, next) => {
       });
     });
 
+    // Add apartment information to results
+    apartmentResults.forEach(aptResult => {
+      results.push({
+        id: `apt_${aptResult.buildingId}_${aptResult.apartment._id}`,
+        type: 'apartment',
+        title: `Apartment ${aptResult.apartment.number}`,
+        description: `${aptResult.apartment.type} apartment in ${aptResult.buildingName}`,
+        serviceType: 'apartment_info',
+        status: aptResult.apartment.status,
+        date: new Date(),
+        cost: null,
+        building: {
+          _id: aptResult.buildingId,
+          name: aptResult.buildingName,
+          address: aptResult.buildingAddress
+        },
+        apartment: aptResult.apartment,
+        workers: []
+      });
+    });
+
     // Sort results by date (most recent first)
     results.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     res.status(200).json({
       status: 'success',
       results: results.length,
-      data: results
+      data: {
+        searchResults: results,
+        apartments: apartmentResults,
+        summary: {
+          totalResults: results.length,
+          apartmentsFound: apartmentResults.length,
+          workOrders: results.filter(r => r.type === 'work_order').length,
+          invoices: results.filter(r => r.type === 'invoice').length,
+          schedules: results.filter(r => r.type === 'schedule').length,
+          reminders: results.filter(r => r.type === 'reminder').length
+        }
+      }
     });
 
   } catch (error) {
