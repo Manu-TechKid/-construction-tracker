@@ -55,6 +55,7 @@ import { format, parseISO, differenceInHours, differenceInMinutes } from 'date-f
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
 import TimeSessionDetails from '../../components/timeTracking/TimeSessionDetails';
+import WeeklyHoursReport from '../../components/timeTracking/WeeklyHoursReport';
 import {
   useGetTimeSessionsQuery,
   useGetPendingApprovalsQuery,
@@ -379,11 +380,12 @@ const TimeTrackingManagement = () => {
             <Tab label="All Sessions" />
             <Tab 
               label={
-                <Badge badgeContent={pendingApprovals.length} color="error">
+                <Badge badgeContent={pendingData?.results || 0} color="error">
                   Pending Approvals
                 </Badge>
               } 
             />
+            <Tab label="Weekly Hours" />
           </Tabs>
         </Box>
 
@@ -550,6 +552,10 @@ const TimeTrackingManagement = () => {
               )}
             </CardContent>
           </Card>
+        )}
+
+        {selectedTab === 2 && (
+          <WeeklyHoursReport />
         )}
 
         {/* Session Details Dialog */}
