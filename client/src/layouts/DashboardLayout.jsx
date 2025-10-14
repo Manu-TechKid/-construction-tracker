@@ -184,6 +184,16 @@ const DashboardLayout = () => {
       });
     }
 
+    // Admin Worker Management - for admins (worker-specific management)
+    if (!isWorker && hasPermission(['manage:users'])) {
+      items.push({
+        text: 'Worker Management',
+        icon: <PeopleIcon />,
+        path: '/admin-worker-management',
+        permission: 'manage:users'
+      });
+    }
+
     // Project Estimates - for viewing and managing estimates
     if (!isWorker && hasPermission(['view:costs', 'manage:users'])) {
       items.push({

@@ -857,6 +857,53 @@ const WorkOrders = () => {
       },
     },
     {
+      field: 'billingStatus',
+      headerName: 'Billing',
+      flex: 0.8,
+      minWidth: 100,
+      renderCell: (params) => {
+        try {
+          if (!params.row) {
+            return <Typography variant="body2" color="textSecondary">No data</Typography>;
+          }
+          
+          const billingStatus = params.row.billingStatus || 'pending';
+          const getStatusColor = (status) => {
+            switch (status) {
+              case 'pending': return 'warning';
+              case 'invoiced': return 'info';
+              case 'paid': return 'success';
+              case 'cancelled': return 'error';
+              default: return 'default';
+            }
+          };
+
+          const getStatusText = (status) => {
+            switch (status) {
+              case 'pending': return 'Not Invoiced';
+              case 'invoiced': return 'Invoiced';
+              case 'paid': return 'Paid';
+              case 'cancelled': return 'Cancelled';
+              default: return 'Unknown';
+            }
+          };
+
+          return (
+            <Chip
+              label={getStatusText(billingStatus)}
+              color={getStatusColor(billingStatus)}
+              size="small"
+              variant="outlined"
+              sx={{ fontSize: '0.75rem' }}
+            />
+          );
+        } catch (error) {
+          console.warn('Error rendering billing status cell:', error);
+          return <Typography variant="body2" color="textSecondary">Error</Typography>;
+        }
+      },
+    },
+    {
       field: 'actions',
       headerName: 'Actions',
       flex: 0.6,

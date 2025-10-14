@@ -58,6 +58,7 @@ import WorkerManagement from './pages/workers/WorkerManagement';
 import UserManagement from './pages/admin/UserManagement';
 import WorkOrderApproval from './pages/admin/WorkOrderApproval';
 import TimeTrackingManagement from './pages/admin/TimeTrackingManagement';
+import AdminWorkerManagement from './pages/admin/AdminWorkerManagement';
 import Setup from './pages/admin/Setup';
 import SiteVisit from './pages/estimates/SiteVisit';
 import ApartmentSearch from './pages/search/ApartmentSearch';
@@ -298,6 +299,16 @@ const AppContent = () => {
                 element={
                   <RoleBasedRoute requiredPermissions={['view:costs', 'manage:users']}>
                     <TimeTrackingManagement />
+                  </RoleBasedRoute>
+                } 
+              />
+
+              {/* Admin Worker Management */}
+              <Route 
+                path="admin-worker-management" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['manage:users']}>
+                    <AdminWorkerManagement />
                   </RoleBasedRoute>
                 } 
               />
