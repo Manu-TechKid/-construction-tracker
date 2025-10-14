@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -60,6 +61,7 @@ import {
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 
 const ProjectsPendingApproval = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   
   // State management
@@ -233,7 +235,14 @@ const ProjectsPendingApproval = () => {
             <Button
               variant="contained"
               startIcon={<AddIcon />}
-              onClick={() => window.open('/project-estimates', '_blank')}
+              onClick={() => navigate('/project-estimates/new')}
+            >
+              Create New Estimate
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<AssignmentIcon />}
+              onClick={() => navigate('/project-estimates')}
             >
               View All Estimates
             </Button>
@@ -405,7 +414,7 @@ const ProjectsPendingApproval = () => {
                             <Tooltip title="View Details">
                               <IconButton 
                                 size="small" 
-                                onClick={() => handleViewDetails(project)}
+                                onClick={() => navigate(`/project-estimates/${project._id}`)}
                               >
                                 <ViewIcon />
                               </IconButton>
@@ -414,7 +423,7 @@ const ProjectsPendingApproval = () => {
                               <IconButton 
                                 size="small" 
                                 color="primary"
-                                onClick={() => window.open(`/project-estimates/edit/${project._id}`, '_blank')}
+                                onClick={() => navigate(`/project-estimates/edit/${project._id}`)}
                               >
                                 <EditIcon />
                               </IconButton>
@@ -449,6 +458,26 @@ const ProjectsPendingApproval = () => {
                             >
                               Reject
                             </Button>
+                            <Tooltip title="Convert to Work Order">
+                              <IconButton 
+                                size="small" 
+                                color="secondary"
+                                onClick={() => handleConvert(project._id)}
+                                disabled={isConverting}
+                              >
+                                <ConvertIcon />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Delete Project">
+                              <IconButton 
+                                size="small" 
+                                color="error"
+                                onClick={() => handleDelete(project._id)}
+                                disabled={isDeleting}
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            </Tooltip>
                           </TableCell>
                         </TableRow>
                       ))}
