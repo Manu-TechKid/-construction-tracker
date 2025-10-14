@@ -499,3 +499,115 @@ exports.deleteTimeSession = catchAsync(async (req, res, next) => {
     data: null
   });
 });
+
+// @desc    Get weekly hours for workers
+// @route   GET /api/v1/time-tracking/weekly-hours
+// @access  Private (Admin/Manager)
+exports.getWeeklyHours = catchAsync(async (req, res, next) => {
+  const { startDate, endDate, workerId } = req.query;
+  
+  // Default to current week if no dates provided
+  const now = new Date();
+  const weekStart = startDate ? new Date(startDate) : new Date(now.setDate(now.getDate() - now.getDay()));
+  const weekEnd = endDate ? new Date(endDate) : new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
+  
+  // Set time to start and end of day
+  weekStart.setHours(0, 0, 0, 0);
+  weekEnd.setHours(23, 59, 59, 999);
+
+  let matchQuery = {
+    clockIn: { $gte: weekStart, $lte: weekEnd },
+    clockOut: { $exists: true, $ne: null }
+  };
+
+  if (workerId) {
+    matchQuery.worker = workerId;
+  }
+
+  const weeklyHours = await TimeSession.aggregate([
+    { $match: matchQuery },
+    {
+      $addFields: {
+        hoursWorked: {
+          $divide: [
+            { $subtract: ['$clockOut', '$clockIn'] },
+            1000 * 60 * 60 // Convert milliseconds to hours
+          ]
+        },
+        dayOfWeek: { $dayOfWeek: '$clockIn' },
+        dateString: { $dateToString: { format: '%Y-%m-%d', date: '$clockIn' } }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          worker: '$worker',
+          date: '$dateString'
+        },
+        dailyHours: { $sum: '$hoursWorked' },
+        sessions: { $push: {
+          clockIn: '$clockIn',
+          clockOut: '$clockOut',
+          hoursWorked: '$hoursWorked',
+          workOrder: '$workOrder',
+          building: '$building'
+        }}
+      }
+    },
+    {
+      $group: {
+        _id: '$_id.worker',
+        totalWeeklyHours: { $sum: '$dailyHours' },
+        dailyBreakdown: { $push: {
+          date: '$_id.date',
+          hours: '$dailyHours',
+          sessions: '$sessions'
+        }}
+      }
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'workerInfo'
+      }
+    },
+    {
+      $unwind: '$workerInfo'
+    },
+    {
+      $project: {
+        worker: {
+          _id: '$workerInfo._id',
+          name: '$workerInfo.name',
+          email: '$workerInfo.email'
+        },
+        totalWeeklyHours: { $round: ['$totalWeeklyHours', 2] },
+        dailyBreakdown: {
+          $map: {
+            input: '$dailyBreakdown',
+            as: 'day',
+            in: {
+              date: '$$day.date',
+              hours: { $round: ['$$day.hours', 2] },
+              sessions: '$$day.sessions'
+            }
+          }
+        }
+      }
+    },
+    { $sort: { 'worker.name': 1 } }
+  ]);
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      weeklyHours,
+      period: {
+        startDate: weekStart,
+        endDate: weekEnd
+      }
+    }
+  });
+});

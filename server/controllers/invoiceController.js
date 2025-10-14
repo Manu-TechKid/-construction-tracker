@@ -41,9 +41,9 @@ exports.getInvoice = catchAsync(async (req, res, next) => {
 
 // Create invoice from work orders
 exports.createInvoice = catchAsync(async (req, res, next) => {
-    const { buildingId, workOrderIds, dueDate, notes, invoiceNumber, totalAmount } = req.body;
+    const { buildingId, workOrderIds, dueDate, invoiceDate, notes, invoiceNumber, totalAmount } = req.body;
 
-    console.log('createInvoice called with:', { buildingId, workOrderIds, dueDate, notes, invoiceNumber, totalAmount });
+    console.log('createInvoice called with:', { buildingId, workOrderIds, dueDate, invoiceDate, notes, invoiceNumber, totalAmount });
 
     // Validate required fields
     if (!buildingId) {
@@ -120,14 +120,16 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
     const tax = 0;
     const total = subtotal;
 
-    // Create invoice with manual number if provided
+    // Create invoice with proper date handling
     const invoiceData = {
         building: buildingId,
         workOrders: invoiceWorkOrders,
         subtotal,
         tax,
         total,
-        dueDate: dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+        issueDate: new Date(), // Always current date when invoice is created
+        invoiceDate: invoiceDate ? new Date(invoiceDate) : new Date(), // Date to send to client
+        dueDate: dueDate ? new Date(dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Due date
         notes,
         createdBy: req.user ? req.user._id : null
     };

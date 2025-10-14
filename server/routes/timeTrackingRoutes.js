@@ -46,4 +46,7 @@ router.get('/pending-approvals', timeTrackingController.getPendingApprovals);
 router.patch('/sessions/:sessionId/approve', timeTrackingController.approveTimeSession);
 router.delete('/sessions/:sessionId', timeTrackingController.deleteTimeSession);
 
+// Weekly hours tracking
+router.get('/weekly-hours', timeTrackingController.getWeeklyHours);
+
 module.exports = router;

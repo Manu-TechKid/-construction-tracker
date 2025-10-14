@@ -372,7 +372,7 @@ const Invoices = () => {
                 <TableCell>Invoice #</TableCell>
                 <TableCell>Building</TableCell>
                 <TableCell>Categories</TableCell>
-                <TableCell>Issue Date</TableCell>
+                <TableCell>Invoice Date</TableCell>
                 <TableCell>Due Date</TableCell>
                 <TableCell>Total</TableCell>
                 <TableCell>Status</TableCell>
@@ -474,12 +474,12 @@ const Invoices = () => {
                     <TableCell>
                       {(() => {
                         try {
-                          if (!invoice.issueDate) return 'N/A';
-                          const date = new Date(invoice.issueDate);
+                          if (!invoice.invoiceDate) return 'N/A';
+                          const date = new Date(invoice.invoiceDate);
                           if (isNaN(date.getTime())) return 'Invalid Date';
                           return date.toLocaleDateString();
                         } catch (error) {
-                          console.warn('Error formatting issue date:', error);
+                          console.warn('Error formatting invoice date:', error);
                           return 'Error';
                         }
                       })()}
