@@ -66,6 +66,7 @@ import WorkerSchedules from './pages/workers/WorkerSchedules';
 import ProjectsPendingApproval from './pages/admin/ProjectsPendingApproval';
 import CreateProjectEstimate from './pages/project-estimates/CreateProjectEstimate';
 import ProjectEstimates from './pages/project-estimates/ProjectEstimates';
+import ProjectEstimateDetails from './pages/project-estimates/ProjectEstimateDetails';
 
 // Route Protection
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -443,6 +444,14 @@ const AppContent = () => {
                 element={
                   <RoleBasedRoute requiredPermissions={['create:workorders']}>
                     <CreateProjectEstimate />
+                  </RoleBasedRoute>
+                }
+              />
+              <Route
+                path="project-estimates/:id"
+                element={
+                  <RoleBasedRoute requiredPermissions={['view:costs']}>
+                    <ProjectEstimateDetails />
                   </RoleBasedRoute>
                 }
               />

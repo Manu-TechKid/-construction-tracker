@@ -127,17 +127,49 @@ const Invoices = () => {
   };
 
   const filteredInvoices = invoices.filter(invoice => {
-    const statusMatch = !filterStatus || invoice.status === filterStatus;
-    const buildingMatch = !filterBuilding || invoice.building?._id === filterBuilding;
-    
-    // Date range filter - use invoiceDate if available, fallback to createdAt
-    const invoiceDate = new Date(invoice.invoiceDate || invoice.createdAt);
-    const dateMatch = isWithinInterval(invoiceDate, {
-      start: monthFilter.startDate,
-      end: monthFilter.endDate
-    });
-    
-    return statusMatch && buildingMatch && dateMatch;
+    try {
+      const statusMatch = !filterStatus || invoice.status === filterStatus;
+      const buildingMatch = !filterBuilding || invoice.building?._id === filterBuilding;
+      
+      // Enhanced date filtering with better debugging
+      let invoiceDate;
+      if (invoice.invoiceDate) {
+        invoiceDate = new Date(invoice.invoiceDate);
+      } else if (invoice.createdAt) {
+        invoiceDate = new Date(invoice.createdAt);
+      } else {
+        console.warn('Invoice has no date fields:', invoice);
+        return false;
+      }
+      
+      // Validate date
+      if (isNaN(invoiceDate.getTime())) {
+        console.warn('Invalid invoice date:', invoice.invoiceDate || invoice.createdAt);
+        return false;
+      }
+      
+      const dateMatch = isWithinInterval(invoiceDate, {
+        start: monthFilter.startDate,
+        end: monthFilter.endDate
+      });
+      
+      // Debug logging for January invoices
+      if (invoice.invoiceDate && invoice.invoiceDate.includes('2025-01')) {
+        console.log('January invoice found:', {
+          invoiceNumber: invoice.invoiceNumber,
+          invoiceDate: invoice.invoiceDate,
+          parsedDate: invoiceDate,
+          filterStart: monthFilter.startDate,
+          filterEnd: monthFilter.endDate,
+          dateMatch
+        });
+      }
+      
+      return statusMatch && buildingMatch && dateMatch;
+    } catch (error) {
+      console.error('Error filtering invoice:', invoice, error);
+      return false;
+    }
   });
   
   // Quick month filter functions
@@ -262,6 +294,26 @@ const Invoices = () => {
                   })}
                 >
                   November 2025
+                </Button>
+                <Button 
+                  size="small" 
+                  variant="outlined"
+                  onClick={() => setMonthFilter({
+                    startDate: startOfMonth(new Date(2025, 0, 1)), // January 2025
+                    endDate: endOfMonth(new Date(2025, 0, 31))
+                  })}
+                >
+                  January 2025
+                </Button>
+                <Button 
+                  size="small" 
+                  variant="outlined"
+                  onClick={() => setMonthFilter({
+                    startDate: startOfMonth(new Date(2025, 4, 1)), // May 2025
+                    endDate: endOfMonth(new Date(2025, 4, 31))
+                  })}
+                >
+                  May 2025
                 </Button>
               </Stack>
             </Box>

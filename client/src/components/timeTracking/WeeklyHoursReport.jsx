@@ -49,24 +49,41 @@ const WeeklyHoursReport = () => {
       const startDate = weekStart.toISOString();
       const endDate = weekEnd.toISOString();
       
+      // Use the correct API base URL
+      const apiUrl = process.env.REACT_APP_API_URL || 'https://construction-tracker-webapp.onrender.com/api/v1';
       const response = await fetch(
-        `/api/v1/time-tracking/weekly-hours?startDate=${startDate}&endDate=${endDate}`,
+        `${apiUrl}/time-tracking/weekly-hours?startDate=${startDate}&endDate=${endDate}`,
         {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
           }
         }
       );
 
       if (!response.ok) {
-        throw new Error('Failed to fetch weekly hours');
+        const errorText = await response.text();
+        console.error('Weekly hours API error:', response.status, errorText);
+        throw new Error(`Failed to fetch weekly hours: ${response.status}`);
       }
 
       const data = await response.json();
-      setWeeklyData(data.data.weeklyHours || []);
+      console.log('Weekly hours data received:', data);
+      
+      if (data.status === 'success' && data.data) {
+        setWeeklyData(data.data.weeklyHours || []);
+        if (data.data.weeklyHours && data.data.weeklyHours.length > 0) {
+          toast.success(`Found ${data.data.weeklyHours.length} workers with time data for this week`);
+        } else {
+          toast.info('No time tracking data found for this week');
+        }
+      } else {
+        setWeeklyData([]);
+        toast.info('No time tracking data available for selected week');
+      }
     } catch (error) {
       console.error('Error fetching weekly hours:', error);
-      toast.error('Failed to load weekly hours data');
+      toast.error(`Failed to load weekly hours: ${error.message}`);
       setWeeklyData([]);
     } finally {
       setLoading(false);
