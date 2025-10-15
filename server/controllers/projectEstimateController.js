@@ -415,7 +415,7 @@ exports.convertToInvoice = catchAsync(async (req, res, next) => {
   }
 
   // Create invoice from project estimate
-  const Invoice = require('../models/Invoice');
+  const Invoice = require('../models/InvoiceSimple').Invoice;
   
   const invoiceData = {
     projectEstimate: projectEstimate._id,
