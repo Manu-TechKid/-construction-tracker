@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import {
   Box,
-  Typography,
-  Button,
   Card,
   CardContent,
+  Typography,
+  Button,
   Table,
   TableBody,
   TableCell,
@@ -26,8 +26,10 @@ import {
   Select,
   Grid,
   Alert,
-  CircularProgress,
+  Fab,
+  Tooltip,
   Stack,
+  CircularProgress,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -41,6 +43,8 @@ import {
   Delete as DeleteIcon,
   Payment as PaymentIcon,
   Receipt as ReceiptIcon,
+  GetApp as DownloadIcon,
+  Email as EmailIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useGetInvoicesQuery, useMarkInvoiceAsPaidMutation, useDeleteInvoiceMutation } from '../../features/invoices/invoicesApiSlice';
@@ -93,10 +97,9 @@ const Invoices = () => {
     }
   };
 
-  const handleDeleteInvoice = async () => {
+  const handleDelete = async () => {
     if (selectedInvoice) {
       try {
-        console.log('Deleting invoice:', selectedInvoice._id);
         await deleteInvoice(selectedInvoice._id).unwrap();
         toast.success('Invoice deleted successfully');
         setDeleteDialogOpen(false);
@@ -108,6 +111,76 @@ const Invoices = () => {
         setDeleteDialogOpen(false);
         handleMenuClose();
       }
+    }
+  };
+
+  const handleDownloadPDF = async (invoice) => {
+    try {
+      // Create a professional PDF invoice
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://construction-tracker-webapp.onrender.com/api/v1'}/invoices/${invoice._id}/pdf`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `Invoice-${invoice.invoiceNumber || invoice._id}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        toast.success('PDF downloaded successfully');
+      } else {
+        // Fallback: Generate PDF using browser print
+        const printWindow = window.open(`/invoices/${invoice._id}?print=true`, '_blank');
+        if (printWindow) {
+          printWindow.onload = () => {
+            printWindow.print();
+          };
+        }
+        toast.info('Opening invoice for printing');
+      }
+      handleMenuClose();
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      toast.error('Failed to download PDF');
+      handleMenuClose();
+    }
+  };
+
+  const handleEmailInvoice = async (invoice) => {
+    try {
+      const clientEmail = prompt('Enter client email address:');
+      if (!clientEmail) return;
+
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://construction-tracker-webapp.onrender.com/api/v1'}/invoices/${invoice._id}/email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({
+          emailAddresses: [clientEmail],
+          message: `Please find attached your invoice ${invoice.invoiceNumber || invoice._id} from DSJ Construction Services.`
+        }),
+      });
+
+      if (response.ok) {
+        toast.success(`Invoice emailed to ${clientEmail}`);
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.message || 'Failed to email invoice');
+      }
+      handleMenuClose();
+    } catch (error) {
+      console.error('Error emailing invoice:', error);
+      toast.error('Failed to email invoice');
+      handleMenuClose();
     }
   };
 
@@ -590,6 +663,14 @@ const Invoices = () => {
         <MenuItem onClick={() => navigate(`/invoices/${selectedInvoice?._id}/edit`)}>
           <EditIcon sx={{ mr: 1 }} />
           Edit
+        </MenuItem>
+        <MenuItem onClick={() => handleDownloadPDF(selectedInvoice)}>
+          <DownloadIcon sx={{ mr: 1 }} />
+          Download PDF
+        </MenuItem>
+        <MenuItem onClick={() => handleEmailInvoice(selectedInvoice)}>
+          <EmailIcon sx={{ mr: 1 }} />
+          Email Invoice
         </MenuItem>
         {selectedInvoice?.status !== 'paid' && (
           <MenuItem onClick={handleMarkAsPaid} disabled={isMarkingPaid}>
