@@ -703,7 +703,7 @@ const Invoices = () => {
             Cancel
           </Button>
           <Button 
-            onClick={handleDeleteInvoice} 
+            onClick={handleDelete} 
             color="error" 
             variant="contained"
             disabled={isDeleting}
