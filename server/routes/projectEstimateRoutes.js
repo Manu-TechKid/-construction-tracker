@@ -44,6 +44,19 @@ router.use(restrictToRoles('admin', 'manager'));
 // Approval management
 router.patch('/:id/approve', projectEstimateController.approveProjectEstimate);
 
+// Client interaction routes (no auth restriction needed for client access)
+router.get('/:id/client-view', projectEstimateController.getClientView);
+router.post('/:id/client-accept', projectEstimateController.clientAccept);
+router.post('/:id/client-reject', projectEstimateController.clientReject);
+router.patch('/:id/mark-viewed', projectEstimateController.markAsViewed);
+
+// Enhanced estimate management
+router.post('/:id/send-to-client', projectEstimateController.sendToClient);
+router.post('/:id/line-items', projectEstimateController.addLineItem);
+router.put('/:id/line-items/:lineItemId', projectEstimateController.updateLineItem);
+router.delete('/:id/line-items/:lineItemId', projectEstimateController.removeLineItem);
+router.patch('/:id/calculate-totals', projectEstimateController.calculateTotals);
+
 // Convert to work order
 router.post('/:id/convert', projectEstimateController.convertToWorkOrder);
 

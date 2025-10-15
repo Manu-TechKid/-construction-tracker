@@ -1,5 +1,13 @@
 const mongoose = require('mongoose');
 
+// Counter for automatic invoice numbering
+const invoiceCounterSchema = new mongoose.Schema({
+  year: { type: Number, required: true, unique: true },
+  count: { type: Number, default: 0 }
+});
+
+const InvoiceCounter = mongoose.model('InvoiceCounter', invoiceCounterSchema);
+
 const invoiceSchema = new mongoose.Schema({
     invoiceNumber: {
         type: String,
@@ -9,48 +17,195 @@ const invoiceSchema = new mongoose.Schema({
         uppercase: true,
         match: [/^[A-Z0-9-]+$/, 'Invoice number can only contain letters, numbers and hyphens']
     },
+    
+    // Enhanced invoice structure for professional templates
+    template: {
+        type: String,
+        enum: ['standard', 'professional', 'detailed'],
+        default: 'professional'
+    },
+    
+    // Client/Company information
+    client: {
+        companyName: {
+            type: String,
+            required: true,
+            trim: true
+        },
+        contactName: {
+            type: String,
+            trim: true
+        },
+        email: {
+            type: String,
+            trim: true,
+            lowercase: true
+        },
+        phone: {
+            type: String,
+            trim: true
+        },
+        address: {
+            street: String,
+            city: String,
+            state: String,
+            zipCode: String
+        }
+    },
+    
+    // Reference to client pricing for this building
+    clientPricing: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'ClientPricing'
+    },
+    
+    // Reference to project estimate if converted
+    projectEstimate: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'ProjectEstimate'
+    },
     building: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Building',
         required: true
     },
-    workOrders: [{
+    // Enhanced line items structure
+    lineItems: [{
+        // Reference to work order (optional)
         workOrder: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'WorkOrder',
+            ref: 'WorkOrder'
+        },
+        
+        // Service details
+        serviceCategory: {
+            type: String,
+            enum: ['painting', 'cleaning', 'repairs', 'remodeling', 'other'],
             required: true
         },
-        description: String,
+        
+        serviceSubcategory: {
+            type: String,
+            required: true
+        },
+        
+        // Item details
+        description: {
+            type: String,
+            required: true,
+            trim: true
+        },
+        
         quantity: {
             type: Number,
+            required: true,
+            min: 0.01,
             default: 1
         },
+        
+        unitType: {
+            type: String,
+            enum: ['per_room', 'per_sqft', 'per_apartment', 'per_hour', 'fixed'],
+            default: 'fixed'
+        },
+        
         unitPrice: {
             type: Number,
-            required: true
+            required: true,
+            min: 0
         },
+        
+        discount: {
+            type: Number,
+            default: 0,
+            min: 0
+        },
+        
+        discountType: {
+            type: String,
+            enum: ['percentage', 'fixed'],
+            default: 'percentage'
+        },
+        
         totalPrice: {
             type: Number,
-            required: true
+            required: true,
+            min: 0
+        },
+        
+        // Tax information
+        taxable: {
+            type: Boolean,
+            default: true
+        },
+        
+        taxRate: {
+            type: Number,
+            default: 0,
+            min: 0,
+            max: 100
         }
     }],
+    // Enhanced financial calculations
     subtotal: {
         type: Number,
-        required: true
+        required: true,
+        min: 0
     },
+    
+    totalDiscount: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
+    
     tax: {
         type: Number,
-        default: 0
+        default: 0,
+        min: 0
     },
+    
+    taxRate: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 100
+    },
+    
+    shippingCharge: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
+    
     total: {
         type: Number,
-        required: true
+        required: true,
+        min: 0
     },
     status: {
         type: String,
-        enum: ['draft', 'sent', 'paid', 'overdue', 'cancelled'],
+        enum: ['draft', 'pending', 'sent', 'viewed', 'accepted', 'paid', 'overdue', 'cancelled', 'refunded'],
         default: 'draft'
     },
+    
+    // Enhanced status tracking
+    statusHistory: [{
+        status: {
+            type: String,
+            enum: ['draft', 'pending', 'sent', 'viewed', 'accepted', 'paid', 'overdue', 'cancelled', 'refunded'],
+            required: true
+        },
+        timestamp: {
+            type: Date,
+            default: Date.now
+        },
+        notes: String,
+        updatedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        }
+    }],
     issueDate: {
         type: Date,
         default: Date.now
@@ -77,7 +232,69 @@ const invoiceSchema = new mongoose.Schema({
         default: 0
     },
     paymentNotes: String,
+    
+    // Enhanced notes and terms
     notes: String,
+    
+    internalNotes: {
+        type: String,
+        trim: true
+    },
+    
+    termsAndConditions: {
+        type: String,
+        default: 'Payment is due within 30 days of invoice date. Late payments may incur additional charges.'
+    },
+    
+    // Additional invoice features
+    isRecurring: {
+        type: Boolean,
+        default: false
+    },
+    
+    recurringSchedule: {
+        frequency: {
+            type: String,
+            enum: ['weekly', 'monthly', 'quarterly', 'annually']
+        },
+        nextDueDate: Date,
+        endDate: Date
+    },
+    
+    // Client acceptance tracking
+    clientAcceptance: {
+        accepted: {
+            type: Boolean,
+            default: false
+        },
+        acceptedAt: Date,
+        acceptedBy: String, // Client name or email
+        acceptanceMethod: {
+            type: String,
+            enum: ['email', 'portal', 'phone', 'in_person']
+        },
+        clientSignature: String, // Base64 encoded signature
+        ipAddress: String
+    },
+    
+    // Email tracking
+    emailTracking: {
+        sent: {
+            type: Boolean,
+            default: false
+        },
+        sentAt: Date,
+        sentTo: [String], // Array of email addresses
+        opened: {
+            type: Boolean,
+            default: false
+        },
+        openedAt: Date,
+        openCount: {
+            type: Number,
+            default: 0
+        }
+    },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -87,36 +304,72 @@ const invoiceSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Generate invoice number if not provided
+// Generate consecutive invoice number
 invoiceSchema.pre('save', async function(next) {
-    if (!this.isNew) return next();
+    if (!this.isNew) {
+        // Add status history entry for existing invoices
+        if (this.isModified('status')) {
+            this.statusHistory.push({
+                status: this.status,
+                timestamp: new Date(),
+                updatedBy: this.updatedBy || this.createdBy
+            });
+        }
+        return next();
+    }
 
     if (!this.invoiceNumber) {
         try {
-            // Find the highest invoice number and increment
-            const lastInvoice = await this.constructor.findOne(
-                { invoiceNumber: { $regex: '^INV-' } },
-                { invoiceNumber: 1 },
-                { sort: { createdAt: -1 } }
-            ).lean();
-
-            let nextNumber = 1;
-            if (lastInvoice && lastInvoice.invoiceNumber) {
-                const matches = lastInvoice.invoiceNumber.match(/(\d+)$/);
-                if (matches && matches[1]) {
-                    nextNumber = parseInt(matches[1], 10) + 1;
+            const currentYear = new Date().getFullYear();
+            
+            // Find or create counter for current year
+            let counter = await InvoiceCounter.findOne({ year: currentYear });
+            if (!counter) {
+                // Check if there are any existing invoices to determine starting number
+                const lastInvoice = await this.constructor.findOne(
+                    {},
+                    { invoiceNumber: 1 },
+                    { sort: { createdAt: -1 } }
+                ).lean();
+                
+                let startingCount = 0;
+                if (lastInvoice && lastInvoice.invoiceNumber) {
+                    const matches = lastInvoice.invoiceNumber.match(/(\d+)$/);
+                    if (matches && matches[1]) {
+                        startingCount = parseInt(matches[1], 10);
+                    }
                 }
+                
+                counter = new InvoiceCounter({ 
+                    year: currentYear, 
+                    count: startingCount 
+                });
             }
-
-            this.invoiceNumber = `INV-${new Date().getFullYear()}-${String(nextNumber).padStart(4, '0')}`;
+            
+            // Increment counter
+            counter.count += 1;
+            await counter.save();
+            
+            // Generate consecutive invoice number
+            this.invoiceNumber = String(counter.count).padStart(6, '0');
+            
         } catch (err) {
-            // Fallback to timestamp if there's an error
-            this.invoiceNumber = `INV-${new Date().getTime()}`;
+            console.error('Error generating invoice number:', err);
+            // Fallback to timestamp-based number
+            this.invoiceNumber = `${new Date().getTime()}`;
         }
     } else {
         // Format the invoice number to ensure consistency
         this.invoiceNumber = this.invoiceNumber.trim().toUpperCase();
     }
+    
+    // Add initial status to history
+    this.statusHistory.push({
+        status: this.status,
+        timestamp: new Date(),
+        updatedBy: this.createdBy
+    });
+    
     next();
 });
 
@@ -155,4 +408,141 @@ invoiceSchema.methods.getGraceDaysFromPaymentTerms = function(paymentTerms) {
     }
 };
 
-module.exports = mongoose.model('Invoice', invoiceSchema);
+// Method to calculate totals from line items
+invoiceSchema.methods.calculateTotals = function() {
+    let subtotal = 0;
+    let totalDiscount = 0;
+    let totalTax = 0;
+    
+    this.lineItems.forEach(item => {
+        const itemSubtotal = item.quantity * item.unitPrice;
+        subtotal += itemSubtotal;
+        
+        // Calculate discount
+        let itemDiscount = 0;
+        if (item.discount > 0) {
+            if (item.discountType === 'percentage') {
+                itemDiscount = itemSubtotal * (item.discount / 100);
+            } else {
+                itemDiscount = item.discount;
+            }
+        }
+        totalDiscount += itemDiscount;
+        
+        // Calculate tax
+        if (item.taxable && item.taxRate > 0) {
+            const taxableAmount = itemSubtotal - itemDiscount;
+            totalTax += taxableAmount * (item.taxRate / 100);
+        }
+        
+        // Update item total
+        item.totalPrice = itemSubtotal - itemDiscount;
+    });
+    
+    this.subtotal = subtotal;
+    this.totalDiscount = totalDiscount;
+    this.tax = totalTax;
+    this.total = subtotal - totalDiscount + totalTax + (this.shippingCharge || 0);
+    
+    return {
+        subtotal: this.subtotal,
+        totalDiscount: this.totalDiscount,
+        tax: this.tax,
+        shippingCharge: this.shippingCharge || 0,
+        total: this.total
+    };
+};
+
+// Method to mark invoice as sent
+invoiceSchema.methods.markAsSent = function(emailAddresses = [], userId = null) {
+    this.status = 'sent';
+    this.emailTracking.sent = true;
+    this.emailTracking.sentAt = new Date();
+    this.emailTracking.sentTo = emailAddresses;
+    
+    this.statusHistory.push({
+        status: 'sent',
+        timestamp: new Date(),
+        notes: `Sent to: ${emailAddresses.join(', ')}`,
+        updatedBy: userId
+    });
+    
+    return this.save();
+};
+
+// Method to mark invoice as accepted by client
+invoiceSchema.methods.markAsAccepted = function(acceptanceData = {}) {
+    this.status = 'accepted';
+    this.clientAcceptance.accepted = true;
+    this.clientAcceptance.acceptedAt = new Date();
+    this.clientAcceptance.acceptedBy = acceptanceData.acceptedBy;
+    this.clientAcceptance.acceptanceMethod = acceptanceData.method || 'email';
+    this.clientAcceptance.clientSignature = acceptanceData.signature;
+    this.clientAcceptance.ipAddress = acceptanceData.ipAddress;
+    
+    this.statusHistory.push({
+        status: 'accepted',
+        timestamp: new Date(),
+        notes: `Accepted by: ${acceptanceData.acceptedBy}`,
+        updatedBy: null
+    });
+    
+    return this.save();
+};
+
+// Method to convert from project estimate
+invoiceSchema.statics.createFromEstimate = async function(estimate, additionalData = {}) {
+    const invoice = new this({
+        projectEstimate: estimate._id,
+        building: estimate.building,
+        client: {
+            companyName: additionalData.companyName || estimate.building?.name || 'Client',
+            contactName: additionalData.contactName,
+            email: additionalData.email,
+            phone: additionalData.phone,
+            address: additionalData.address
+        },
+        lineItems: [{
+            serviceCategory: 'other',
+            serviceSubcategory: 'project_work',
+            description: estimate.description,
+            quantity: 1,
+            unitType: 'fixed',
+            unitPrice: estimate.estimatedPrice || 0,
+            totalPrice: estimate.estimatedPrice || 0,
+            taxable: true
+        }],
+        subtotal: estimate.estimatedPrice || 0,
+        total: estimate.estimatedPrice || 0,
+        invoiceDate: new Date(),
+        notes: estimate.notes,
+        createdBy: additionalData.createdBy || estimate.createdBy,
+        ...additionalData
+    });
+    
+    // Calculate due date
+    const building = await mongoose.model('Building').findById(estimate.building);
+    if (building && building.paymentTerms) {
+        const graceDays = invoice.getGraceDaysFromPaymentTerms(building.paymentTerms);
+        const dueDate = new Date(invoice.invoiceDate);
+        dueDate.setDate(dueDate.getDate() + graceDays);
+        invoice.dueDate = dueDate;
+    }
+    
+    return invoice;
+};
+
+// Indexes for better performance
+invoiceSchema.index({ invoiceNumber: 1 }, { unique: true });
+invoiceSchema.index({ building: 1, status: 1 });
+invoiceSchema.index({ 'client.companyName': 1 });
+invoiceSchema.index({ invoiceDate: 1 });
+invoiceSchema.index({ dueDate: 1 });
+invoiceSchema.index({ status: 1, dueDate: 1 });
+invoiceSchema.index({ projectEstimate: 1 });
+invoiceSchema.index({ createdAt: -1 });
+
+module.exports = {
+    Invoice: mongoose.model('Invoice', invoiceSchema),
+    InvoiceCounter: InvoiceCounter
+};
