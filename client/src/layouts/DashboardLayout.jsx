@@ -199,7 +199,7 @@ const DashboardLayout = () => {
       items.push({
         text: 'Project Estimates',
         icon: <AssignmentIcon />,
-        path: '/project-estimates',
+        path: '/estimates',
         permission: 'view:costs'
       });
     }

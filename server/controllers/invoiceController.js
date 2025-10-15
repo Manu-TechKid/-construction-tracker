@@ -656,61 +656,174 @@ exports.calculateTotals = catchAsync(async (req, res, next) => {
     });
 });
 
+// Helper function to generate HTML for PDF
+const generateInvoiceHTML = (invoice) => {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Invoice ${invoice.invoiceNumber}</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; }
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+        .company-info { margin-bottom: 30px; }
+        .invoice-details { display: flex; justify-content: space-between; margin-bottom: 30px; }
+        .invoice-details div { flex: 1; }
+        .client-info { margin-bottom: 30px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f5f5f5; font-weight: bold; }
+        .totals { text-align: right; margin-top: 20px; }
+        .total-row { font-weight: bold; font-size: 1.1em; }
+        .footer { margin-top: 50px; text-align: center; color: #666; font-size: 0.9em; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>DSJ Construction Services</h1>
+        <p>Professional Construction Management</p>
+        <p>Phone: (555) 123-4567 | Email: info@dsjconstruction.com</p>
+      </div>
+
+      <div class="company-info">
+        <h2>Invoice #${invoice.invoiceNumber}</h2>
+        <p><strong>Invoice Date:</strong> ${new Date(invoice.invoiceDate).toLocaleDateString()}</p>
+        <p><strong>Due Date:</strong> ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}</p>
+        <p><strong>Status:</strong> ${invoice.status.toUpperCase()}</p>
+      </div>
+
+      <div class="invoice-details">
+        <div>
+          <h3>Bill To:</h3>
+          <p><strong>${invoice.client?.companyName || 'Client'}</strong></p>
+          ${invoice.client?.contactName ? `<p>${invoice.client.contactName}</p>` : ''}
+          ${invoice.client?.email ? `<p>${invoice.client.email}</p>` : ''}
+          ${invoice.client?.phone ? `<p>${invoice.client.phone}</p>` : ''}
+          ${invoice.client?.address ? `<p>${invoice.client.address}</p>` : ''}
+        </div>
+
+        <div>
+          <h3>Project Details:</h3>
+          <p><strong>Building:</strong> ${invoice.building?.name || 'N/A'}</p>
+          ${invoice.projectEstimate?.title ? `<p><strong>Project:</strong> ${invoice.projectEstimate.title}</p>` : ''}
+          ${invoice.building?.address ? `<p><strong>Address:</strong> ${invoice.building.address}</p>` : ''}
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th>Quantity</th>
+            <th>Unit Price</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${invoice.lineItems?.map(item => `
+            <tr>
+              <td>${item.description || item.serviceSubcategory}</td>
+              <td>${item.quantity || 1}</td>
+              <td>$${item.unitPrice?.toFixed(2) || '0.00'}</td>
+              <td>$${item.totalPrice?.toFixed(2) || '0.00'}</td>
+            </tr>
+          `).join('') || '<tr><td colspan="4">No items</td></tr>'}
+        </tbody>
+      </table>
+
+      <div class="totals">
+        <p><strong>Subtotal: $${invoice.subtotal?.toFixed(2) || '0.00'}</strong></p>
+        ${invoice.taxAmount ? `<p>Tax: $${invoice.taxAmount.toFixed(2)}</p>` : ''}
+        <p class="total-row">Total: $${invoice.total?.toFixed(2) || '0.00'}</p>
+      </div>
+
+      ${invoice.notes ? `
+        <div class="notes" style="margin-top: 30px; padding: 15px; background-color: #f9f9f9; border-radius: 5px;">
+          <h3>Notes:</h3>
+          <p>${invoice.notes}</p>
+        </div>
+      ` : ''}
+
+      <div class="footer">
+        <p>Thank you for your business!</p>
+        <p>Payment is due within 30 days of the invoice date.</p>
+        <p>For questions, please contact us at info@dsjconstruction.com</p>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
 // Generate PDF for invoice
 exports.generatePDF = catchAsync(async (req, res, next) => {
-    // This would typically generate a PDF and return it
-    // For now, return a placeholder response
-    res.status(200).json({
-        status: 'success',
-        message: 'PDF generation not implemented yet',
-        data: { invoiceId: req.params.id }
-    });
-});
+  const invoice = await Invoice.findById(req.params.id)
+    .populate('building', 'name address')
+    .populate('projectEstimate', 'title description');
 
-// Email invoice
-exports.emailInvoice = catchAsync(async (req, res, next) => {
-    const { emailAddresses, message } = req.body;
-    
-    if (!emailAddresses || emailAddresses.length === 0) {
-        return next(new AppError('Email addresses are required', 400));
-    }
-    
-    const invoice = await Invoice.findById(req.params.id)
-        .populate('building', 'name address')
-        .populate('projectEstimate', 'title description');
-    
-    if (!invoice) {
-        return next(new AppError('Invoice not found', 404));
-    }
-    
-    // Mark as sent
-    await invoice.markAsSent(emailAddresses, req.user._id);
-    
-    res.status(200).json({
-        status: 'success',
-        message: 'Invoice emailed successfully',
-        data: { invoice }
-    });
-});
+  if (!invoice) {
+    return next(new AppError('Invoice not found', 404));
+  }
 
-// Add line item to invoice
+  try {
+    const puppeteer = require('puppeteer');
+
+    // Generate HTML content for PDF
+    const htmlContent = generateInvoiceHTML(invoice);
+
+    // Launch browser
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+
+    const page = await browser.newPage();
+
+    // Set content and wait for it to load
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+    // Generate PDF
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '1cm',
+        right: '1cm',
+        bottom: '1cm',
+        left: '1cm'
+      }
+    });
+
+    await browser.close();
+
+    // Set headers for PDF download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="invoice-${invoice.invoiceNumber}.pdf"`);
+
+    res.send(pdfBuffer);
+
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    return next(new AppError('Failed to generate PDF', 500));
+  }
+});
 exports.addLineItem = catchAsync(async (req, res, next) => {
-    const invoice = await Invoice.findById(req.params.id);
-    if (!invoice) {
-        return next(new AppError('Invoice not found', 404));
-    }
-    
-    invoice.lineItems.push(req.body);
-    invoice.calculateTotals();
-    await invoice.save();
-    
-    const updatedInvoice = await Invoice.findById(req.params.id)
-        .populate('building', 'name address');
-    
-    res.status(200).json({
-        status: 'success',
-        data: { invoice: updatedInvoice }
-    });
+  const invoice = await Invoice.findById(req.params.id);
+  if (!invoice) {
+    return next(new AppError('Invoice not found', 404));
+  }
+  
+  invoice.lineItems.push(req.body);
+  invoice.calculateTotals();
+  await invoice.save();
+  
+  const updatedInvoice = await Invoice.findById(req.params.id)
+    .populate('building', 'name address');
+  
+  res.status(200).json({
+    status: 'success',
+    data: { invoice: updatedInvoice }
+  });
 });
 
 // Update line item
