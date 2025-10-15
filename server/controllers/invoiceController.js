@@ -1,7 +1,9 @@
-const Invoice = require('../models/Invoice');
+const { Invoice, InvoiceCounter } = require('../models/Invoice');
 const WorkOrder = require('../models/WorkOrder');
 const WorkType = require('../models/WorkType');
 const WorkSubType = require('../models/WorkSubType');
+const ProjectEstimate = require('../models/ProjectEstimate');
+const mongoose = require('mongoose');
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
 
@@ -553,6 +555,326 @@ exports.getSummaryReport = catchAsync(async (req, res, next) => {
         data: {
             summary,
             period: { startDate, endDate }
+        }
+    });
+});
+
+// Create invoice from project estimate
+exports.createFromEstimate = catchAsync(async (req, res, next) => {
+    const estimate = await ProjectEstimate.findById(req.params.estimateId);
+    
+    if (!estimate) {
+        return next(new AppError('Project estimate not found', 404));
+    }
+    
+    if (estimate.status !== 'client_accepted') {
+        return next(new AppError('Only accepted estimates can be converted to invoices', 400));
+    }
+    
+    const invoice = await Invoice.createFromEstimate(estimate, {
+        createdBy: req.user._id,
+        ...req.body
+    });
+    
+    // Update estimate status
+    estimate.status = 'converted_to_invoice';
+    estimate.invoiceId = invoice._id;
+    await estimate.save();
+    
+    const populatedInvoice = await Invoice.findById(invoice._id)
+        .populate('building', 'name address')
+        .populate('projectEstimate', 'title description');
+    
+    res.status(201).json({
+        status: 'success',
+        data: {
+            invoice: populatedInvoice
+        }
+    });
+});
+
+// Send invoice to client
+exports.sendInvoice = catchAsync(async (req, res, next) => {
+    const { emailAddresses } = req.body;
+    
+    if (!emailAddresses || emailAddresses.length === 0) {
+        return next(new AppError('Email addresses are required', 400));
+    }
+    
+    const invoice = await Invoice.findById(req.params.id)
+        .populate('building', 'name address')
+        .populate('projectEstimate', 'title description');
+    
+    if (!invoice) {
+        return next(new AppError('Invoice not found', 404));
+    }
+    
+    // Mark as sent
+    await invoice.markAsSent(emailAddresses, req.user._id);
+    
+    res.status(200).json({
+        status: 'success',
+        message: 'Invoice sent successfully',
+        data: { invoice }
+    });
+});
+
+// Accept invoice (client-side)
+exports.acceptInvoice = catchAsync(async (req, res, next) => {
+    const acceptanceData = {
+        acceptedBy: req.body.acceptedBy,
+        signature: req.body.signature,
+        ipAddress: req.ip
+    };
+    
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) {
+        return next(new AppError('Invoice not found', 404));
+    }
+    
+    await invoice.markAsAccepted(acceptanceData);
+    
+    res.status(200).json({
+        status: 'success',
+        message: 'Invoice accepted successfully',
+        data: { invoice }
+    });
+});
+
+// Calculate invoice totals
+exports.calculateTotals = catchAsync(async (req, res, next) => {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) {
+        return next(new AppError('Invoice not found', 404));
+    }
+    
+    const totals = invoice.calculateTotals();
+    
+    res.status(200).json({
+        status: 'success',
+        data: { totals }
+    });
+});
+
+// Generate PDF for invoice
+exports.generatePDF = catchAsync(async (req, res, next) => {
+    // This would typically generate a PDF and return it
+    // For now, return a placeholder response
+    res.status(200).json({
+        status: 'success',
+        message: 'PDF generation not implemented yet',
+        data: { invoiceId: req.params.id }
+    });
+});
+
+// Email invoice
+exports.emailInvoice = catchAsync(async (req, res, next) => {
+    const { emailAddresses, message } = req.body;
+    
+    if (!emailAddresses || emailAddresses.length === 0) {
+        return next(new AppError('Email addresses are required', 400));
+    }
+    
+    const invoice = await Invoice.findById(req.params.id)
+        .populate('building', 'name address')
+        .populate('projectEstimate', 'title description');
+    
+    if (!invoice) {
+        return next(new AppError('Invoice not found', 404));
+    }
+    
+    // Mark as sent
+    await invoice.markAsSent(emailAddresses, req.user._id);
+    
+    res.status(200).json({
+        status: 'success',
+        message: 'Invoice emailed successfully',
+        data: { invoice }
+    });
+});
+
+// Add line item to invoice
+exports.addLineItem = catchAsync(async (req, res, next) => {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) {
+        return next(new AppError('Invoice not found', 404));
+    }
+    
+    invoice.lineItems.push(req.body);
+    invoice.calculateTotals();
+    await invoice.save();
+    
+    const updatedInvoice = await Invoice.findById(req.params.id)
+        .populate('building', 'name address');
+    
+    res.status(200).json({
+        status: 'success',
+        data: { invoice: updatedInvoice }
+    });
+});
+
+// Update line item
+exports.updateLineItem = catchAsync(async (req, res, next) => {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) {
+        return next(new AppError('Invoice not found', 404));
+    }
+    
+    const lineItem = invoice.lineItems.id(req.params.lineItemId);
+    if (!lineItem) {
+        return next(new AppError('Line item not found', 404));
+    }
+    
+    Object.keys(req.body).forEach(key => {
+        lineItem[key] = req.body[key];
+    });
+    
+    invoice.calculateTotals();
+    await invoice.save();
+    
+    const updatedInvoice = await Invoice.findById(req.params.id)
+        .populate('building', 'name address');
+    
+    res.status(200).json({
+        status: 'success',
+        data: { invoice: updatedInvoice }
+    });
+});
+
+// Remove line item
+exports.removeLineItem = catchAsync(async (req, res, next) => {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) {
+        return next(new AppError('Invoice not found', 404));
+    }
+    
+    const lineItem = invoice.lineItems.id(req.params.lineItemId);
+    if (!lineItem) {
+        return next(new AppError('Line item not found', 404));
+    }
+    
+    lineItem.deleteOne();
+    invoice.calculateTotals();
+    await invoice.save();
+    
+    const updatedInvoice = await Invoice.findById(req.params.id)
+        .populate('building', 'name address');
+    
+    res.status(200).json({
+        status: 'success',
+        data: { invoice: updatedInvoice }
+    });
+});
+
+// Get next invoice number
+exports.getNextInvoiceNumber = catchAsync(async (req, res, next) => {
+    try {
+        const currentYear = new Date().getFullYear();
+        
+        // Find or create counter for current year
+        let counter = await InvoiceCounter.findOne({ year: currentYear });
+        if (!counter) {
+            // Check if there are any existing invoices to determine starting number
+            const lastInvoice = await Invoice.findOne(
+                {},
+                { invoiceNumber: 1 },
+                { sort: { createdAt: -1 } }
+            ).lean();
+            
+            let startingCount = 0;
+            if (lastInvoice && lastInvoice.invoiceNumber) {
+                const matches = lastInvoice.invoiceNumber.match(/(\d+)$/);
+                if (matches && matches[1]) {
+                    startingCount = parseInt(matches[1], 10);
+                }
+            }
+            
+            counter = new InvoiceCounter({ 
+                year: currentYear, 
+                count: startingCount 
+            });
+        }
+        
+        // Increment counter for next number
+        counter.count += 1;
+        const nextNumber = String(counter.count).padStart(6, '0');
+        
+        res.status(200).json({
+            status: 'success',
+            data: {
+                nextNumber,
+                counter
+            }
+        });
+    } catch (error) {
+        console.error('Error getting next invoice number:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Error getting next invoice number'
+        });
+    }
+});
+
+// Get client summary report
+exports.getClientSummaryReport = catchAsync(async (req, res, next) => {
+    const { startDate, endDate, buildingId } = req.query;
+    
+    let matchConditions = {};
+    if (startDate && endDate) {
+        matchConditions.invoiceDate = {
+            $gte: new Date(startDate),
+            $lte: new Date(endDate)
+        };
+    }
+    if (buildingId) {
+        matchConditions.building = mongoose.Types.ObjectId(buildingId);
+    }
+    
+    const clientSummary = await Invoice.aggregate([
+        { $match: matchConditions },
+        {
+            $group: {
+                _id: '$client.companyName',
+                totalInvoices: { $sum: 1 },
+                totalAmount: { $sum: '$total' },
+                paidAmount: {
+                    $sum: {
+                        $cond: [
+                            { $eq: ['$status', 'paid'] },
+                            '$total',
+                            0
+                        ]
+                    }
+                },
+                pendingAmount: {
+                    $sum: {
+                        $cond: [
+                            { $eq: ['$status', 'pending'] },
+                            '$total',
+                            0
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                clientName: '$_id',
+                totalInvoices: 1,
+                totalAmount: 1,
+                paidAmount: 1,
+                pendingAmount: 1,
+                _id: 0
+            }
+        },
+        { $sort: { totalAmount: -1 } }
+    ]);
+    
+    res.status(200).json({
+        status: 'success',
+        data: {
+            clientSummary,
+            totalClients: clientSummary.length
         }
     });
 });
