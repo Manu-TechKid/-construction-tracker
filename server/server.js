@@ -61,7 +61,10 @@ app.use(express.json({ limit: '10kb' }));
 
 // CORS
 const allowedOrigins = [
-  process.env.CORS_ORIGIN || 'http://localhost:3000'
+  process.env.CORS_ORIGIN || 'http://localhost:3000',
+  'https://admin.servicesdsj.com',
+  'http://localhost:3001',
+  'https://construction-tracker-webapp.onrender.com'
 ];
 app.use(
   cors({
