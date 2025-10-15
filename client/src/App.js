@@ -65,7 +65,6 @@ import ApartmentSearch from './pages/search/ApartmentSearch';
 import WorkerSchedules from './pages/workers/WorkerSchedules';
 import ProjectsPendingApproval from './pages/admin/ProjectsPendingApproval';
 import CreateProjectEstimate from './pages/project-estimates/CreateProjectEstimate';
-import ProjectEstimates from './pages/project-estimates/ProjectEstimates';
 import ProjectEstimateDetails from './pages/project-estimates/ProjectEstimateDetails';
 import ProjectEstimatesNew from './pages/estimates/ProjectEstimates';
 
@@ -458,38 +457,6 @@ const AppContent = () => {
               />
               <Route
                 path="estimates/:id/edit"
-                element={
-                  <RoleBasedRoute requiredPermissions={['create:workorders']}>
-                    <CreateProjectEstimate />
-                  </RoleBasedRoute>
-                }
-              />
-              <Route
-                path="project-estimates"
-                element={
-                  <RoleBasedRoute requiredPermissions={['view:costs', 'manage:users']}>
-                    <ProjectEstimates />
-                  </RoleBasedRoute>
-                }
-              />
-              <Route
-                path="project-estimates/new"
-                element={
-                  <RoleBasedRoute requiredPermissions={['create:workorders']}>
-                    <CreateProjectEstimate />
-                  </RoleBasedRoute>
-                }
-              />
-              <Route
-                path="project-estimates/:id"
-                element={
-                  <RoleBasedRoute requiredPermissions={['view:costs']}>
-                    <ProjectEstimateDetails />
-                  </RoleBasedRoute>
-                }
-              />
-              <Route
-                path="project-estimates/edit/:id"
                 element={
                   <RoleBasedRoute requiredPermissions={['create:workorders']}>
                     <CreateProjectEstimate />
