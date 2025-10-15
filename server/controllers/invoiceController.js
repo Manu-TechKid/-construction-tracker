@@ -1,4 +1,4 @@
-const { Invoice, InvoiceCounter } = require('../models/Invoice');
+const { Invoice, InvoiceCounter } = require('../models/InvoiceSimple');
 const WorkOrder = require('../models/WorkOrder');
 const WorkType = require('../models/WorkType');
 const WorkSubType = require('../models/WorkSubType');

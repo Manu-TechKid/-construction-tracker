@@ -11,7 +11,7 @@ server/.env
 client/.env
 
 # Build outputs
-# client/build/
+client/build/
 dist/
 
 # OS / IDE
