@@ -1,7 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const ClientPricing = require('../models/ClientPricing');
-const { auth, authorize } = require('../middleware/auth');
+const authController = require('../controllers/authController');
+const { restrictToRoles } = require('../middleware/roleMiddleware');
+
+const auth = authController.protect;
+const authorize = (roles) => restrictToRoles(...roles);
 
 // @route   GET /api/v1/client-pricing
 // @desc    Get all client pricing configurations
