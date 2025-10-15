@@ -452,3 +452,246 @@ exports.convertToInvoice = catchAsync(async (req, res, next) => {
     }
   });
 });
+
+// @desc    Get client view of project estimate
+// @route   GET /api/v1/project-estimates/:id/client-view
+// @access  Public (for client access)
+exports.getClientView = catchAsync(async (req, res, next) => {
+  const projectEstimate = await ProjectEstimate.findById(req.params.id)
+    .populate('building', 'name address')
+    .populate('createdBy', 'name email');
+
+  if (!projectEstimate) {
+    return next(new AppError('Project estimate not found', 404));
+  }
+
+  // Mark as viewed if not already
+  if (!projectEstimate.clientInteraction.clientViewed) {
+    projectEstimate.clientInteraction.clientViewed = true;
+    projectEstimate.clientInteraction.viewedAt = new Date();
+    projectEstimate.clientInteraction.ipAddress = req.ip;
+    await projectEstimate.save();
+  }
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      projectEstimate
+    }
+  });
+});
+
+// @desc    Client accept project estimate
+// @route   POST /api/v1/project-estimates/:id/client-accept
+// @access  Public (for client access)
+exports.clientAccept = catchAsync(async (req, res, next) => {
+  const { acceptedBy, signature } = req.body;
+  
+  const projectEstimate = await ProjectEstimate.findById(req.params.id);
+  
+  if (!projectEstimate) {
+    return next(new AppError('Project estimate not found', 404));
+  }
+  
+  if (projectEstimate.status !== 'pending') {
+    return next(new AppError('Only pending estimates can be accepted', 400));
+  }
+  
+  await projectEstimate.acceptByClient({
+    acceptedBy,
+    signature,
+    ipAddress: req.ip
+  });
+  
+  res.status(200).json({
+    status: 'success',
+    message: 'Project estimate accepted successfully',
+    data: {
+      projectEstimate
+    }
+  });
+});
+
+// @desc    Client reject project estimate
+// @route   POST /api/v1/project-estimates/:id/client-reject
+// @access  Public (for client access)
+exports.clientReject = catchAsync(async (req, res, next) => {
+  const { reason } = req.body;
+  
+  const projectEstimate = await ProjectEstimate.findById(req.params.id);
+  
+  if (!projectEstimate) {
+    return next(new AppError('Project estimate not found', 404));
+  }
+  
+  if (projectEstimate.status !== 'pending') {
+    return next(new AppError('Only pending estimates can be rejected', 400));
+  }
+  
+  await projectEstimate.rejectByClient({
+    reason,
+    ipAddress: req.ip
+  });
+  
+  res.status(200).json({
+    status: 'success',
+    message: 'Project estimate rejected',
+    data: {
+      projectEstimate
+    }
+  });
+});
+
+// @desc    Mark estimate as viewed
+// @route   PATCH /api/v1/project-estimates/:id/mark-viewed
+// @access  Public (for client access)
+exports.markAsViewed = catchAsync(async (req, res, next) => {
+  const projectEstimate = await ProjectEstimate.findById(req.params.id);
+  
+  if (!projectEstimate) {
+    return next(new AppError('Project estimate not found', 404));
+  }
+  
+  await projectEstimate.markAsViewed(req.ip);
+  
+  res.status(200).json({
+    status: 'success',
+    message: 'Estimate marked as viewed',
+    data: {
+      projectEstimate
+    }
+  });
+});
+
+// @desc    Send estimate to client
+// @route   POST /api/v1/project-estimates/:id/send-to-client
+// @access  Private (Admin/Manager only)
+exports.sendToClient = catchAsync(async (req, res, next) => {
+  const { clientEmail } = req.body;
+  
+  if (!clientEmail) {
+    return next(new AppError('Client email is required', 400));
+  }
+  
+  const projectEstimate = await ProjectEstimate.findById(req.params.id)
+    .populate('building', 'name address');
+  
+  if (!projectEstimate) {
+    return next(new AppError('Project estimate not found', 404));
+  }
+  
+  await projectEstimate.sendToClient(clientEmail, req.user.id);
+  
+  res.status(200).json({
+    status: 'success',
+    message: 'Estimate sent to client successfully',
+    data: {
+      projectEstimate
+    }
+  });
+});
+
+// @desc    Add line item to estimate
+// @route   POST /api/v1/project-estimates/:id/line-items
+// @access  Private (Admin/Manager only)
+exports.addLineItem = catchAsync(async (req, res, next) => {
+  const projectEstimate = await ProjectEstimate.findById(req.params.id);
+  
+  if (!projectEstimate) {
+    return next(new AppError('Project estimate not found', 404));
+  }
+  
+  projectEstimate.addLineItem(req.body);
+  await projectEstimate.save();
+  
+  res.status(200).json({
+    status: 'success',
+    message: 'Line item added successfully',
+    data: {
+      projectEstimate
+    }
+  });
+});
+
+// @desc    Update line item in estimate
+// @route   PUT /api/v1/project-estimates/:id/line-items/:lineItemId
+// @access  Private (Admin/Manager only)
+exports.updateLineItem = catchAsync(async (req, res, next) => {
+  const projectEstimate = await ProjectEstimate.findById(req.params.id);
+  
+  if (!projectEstimate) {
+    return next(new AppError('Project estimate not found', 404));
+  }
+  
+  const lineItem = projectEstimate.lineItems.id(req.params.lineItemId);
+  
+  if (!lineItem) {
+    return next(new AppError('Line item not found', 404));
+  }
+  
+  Object.keys(req.body).forEach(key => {
+    lineItem[key] = req.body[key];
+  });
+  
+  projectEstimate.calculateTotals();
+  await projectEstimate.save();
+  
+  res.status(200).json({
+    status: 'success',
+    message: 'Line item updated successfully',
+    data: {
+      projectEstimate
+    }
+  });
+});
+
+// @desc    Remove line item from estimate
+// @route   DELETE /api/v1/project-estimates/:id/line-items/:lineItemId
+// @access  Private (Admin/Manager only)
+exports.removeLineItem = catchAsync(async (req, res, next) => {
+  const projectEstimate = await ProjectEstimate.findById(req.params.id);
+  
+  if (!projectEstimate) {
+    return next(new AppError('Project estimate not found', 404));
+  }
+  
+  const lineItem = projectEstimate.lineItems.id(req.params.lineItemId);
+  
+  if (!lineItem) {
+    return next(new AppError('Line item not found', 404));
+  }
+  
+  lineItem.deleteOne();
+  projectEstimate.calculateTotals();
+  await projectEstimate.save();
+  
+  res.status(200).json({
+    status: 'success',
+    message: 'Line item removed successfully',
+    data: {
+      projectEstimate
+    }
+  });
+});
+
+// @desc    Calculate estimate totals
+// @route   PATCH /api/v1/project-estimates/:id/calculate-totals
+// @access  Private (Admin/Manager only)
+exports.calculateTotals = catchAsync(async (req, res, next) => {
+  const projectEstimate = await ProjectEstimate.findById(req.params.id);
+  
+  if (!projectEstimate) {
+    return next(new AppError('Project estimate not found', 404));
+  }
+  
+  const totals = projectEstimate.calculateTotals();
+  await projectEstimate.save();
+  
+  res.status(200).json({
+    status: 'success',
+    data: {
+      totals,
+      projectEstimate
+    }
+  });
+});
