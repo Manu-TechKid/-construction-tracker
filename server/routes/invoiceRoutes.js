@@ -35,7 +35,7 @@ router
 router.post('/from-estimate/:estimateId', invoiceController.createFromEstimate);
 router.patch('/:id/send', invoiceController.sendInvoice);
 router.patch('/:id/accept', invoiceController.acceptInvoice);
-router.patch('/:id/calculate-totals', invoiceController.calculateTotals);
+router.patch('/:id/calculate-totals', invoiceController['calculateTotals']);
 router.get('/:id/pdf', invoiceController.generatePDF);
 router.post('/:id/email', invoiceController.emailInvoice);
 

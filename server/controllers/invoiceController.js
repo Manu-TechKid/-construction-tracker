@@ -648,7 +648,7 @@ exports.calculateTotals = catchAsync(async (req, res, next) => {
         return next(new AppError('Invoice not found', 404));
     }
     
-    const totals = invoice.calculateTotals();
+    const totals = invoice['calculateTotals']();
     
     res.status(200).json({
         status: 'success',
@@ -814,7 +814,7 @@ exports.addLineItem = catchAsync(async (req, res, next) => {
   }
   
   invoice.lineItems.push(req.body);
-  invoice.calculateTotals();
+  invoice['calculateTotals']();
   await invoice.save();
   
   const updatedInvoice = await Invoice.findById(req.params.id)
@@ -842,7 +842,7 @@ exports.updateLineItem = catchAsync(async (req, res, next) => {
         lineItem[key] = req.body[key];
     });
     
-    invoice.calculateTotals();
+    invoice['calculateTotals']();
     await invoice.save();
     
     const updatedInvoice = await Invoice.findById(req.params.id)
@@ -867,7 +867,7 @@ exports.removeLineItem = catchAsync(async (req, res, next) => {
     }
     
     lineItem.deleteOne();
-    invoice.calculateTotals();
+    invoice['calculateTotals']();
     await invoice.save();
     
     const updatedInvoice = await Invoice.findById(req.params.id)
