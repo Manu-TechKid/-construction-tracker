@@ -45,6 +45,7 @@ import {
   Receipt as ReceiptIcon,
   GetApp as DownloadIcon,
   Email as EmailIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useGetInvoicesQuery, useMarkInvoiceAsPaidMutation, useDeleteInvoiceMutation } from '../../features/invoices/invoicesApiSlice';
@@ -55,6 +56,7 @@ const Invoices = () => {
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterBuilding, setFilterBuilding] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -65,7 +67,13 @@ const Invoices = () => {
     endDate: endOfMonth(new Date())
   });
 
-  const { data: invoicesData, isLoading, error } = useGetInvoicesQuery();
+  const { data: invoicesData, isLoading, error } = useGetInvoicesQuery({
+    invoiceDateStart: monthFilter.startDate.toISOString(),
+    invoiceDateEnd: monthFilter.endDate.toISOString(),
+    status: filterStatus || undefined,
+    buildingId: filterBuilding || undefined,
+    search: searchQuery || undefined,
+  });
   const { data: buildingsData } = useGetBuildingsQuery();
   const [markAsPaid, { isLoading: isMarkingPaid }] = useMarkInvoiceAsPaidMutation();
   const [deleteInvoice, { isLoading: isDeleting }] = useDeleteInvoiceMutation();
@@ -155,8 +163,33 @@ const Invoices = () => {
 
   const handleEmailInvoice = async (invoice) => {
     try {
-      const clientEmail = prompt('Enter client email address:');
-      if (!clientEmail) return;
+      // Get building details to access manager emails
+      const building = invoice.building;
+      const managerEmails = [];
+
+      // Collect all available manager emails
+      if (building?.serviceManagerEmail) {
+        managerEmails.push(building.serviceManagerEmail);
+      }
+      if (building?.generalManagerEmail) {
+        managerEmails.push(building.generalManagerEmail);
+      }
+      if (building?.maintenanceManagerEmail) {
+        managerEmails.push(building.maintenanceManagerEmail);
+      }
+
+      if (managerEmails.length === 0) {
+        toast.error('No manager email addresses found for this building');
+        return;
+      }
+
+      // Show confirmation dialog with manager emails
+      const emailList = managerEmails.join(', ');
+      const confirmed = window.confirm(
+        `This will send the invoice to the following building managers:\n\n${emailList}\n\nDo you want to proceed?`
+      );
+
+      if (!confirmed) return;
 
       const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://construction-tracker-webapp.onrender.com/api/v1'}/invoices/${invoice._id}/email`, {
         method: 'POST',
@@ -165,13 +198,13 @@ const Invoices = () => {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({
-          emailAddresses: [clientEmail],
+          emailAddresses: managerEmails,
           message: `Please find attached your invoice ${invoice.invoiceNumber || invoice._id} from DSJ Construction Services.`
         }),
       });
 
       if (response.ok) {
-        toast.success(`Invoice emailed to ${clientEmail}`);
+        toast.success(`Invoice emailed to ${managerEmails.length} manager(s)`);
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || 'Failed to email invoice');
@@ -199,51 +232,7 @@ const Invoices = () => {
     }
   };
 
-  const filteredInvoices = invoices.filter(invoice => {
-    try {
-      const statusMatch = !filterStatus || invoice.status === filterStatus;
-      const buildingMatch = !filterBuilding || invoice.building?._id === filterBuilding;
-      
-      // Enhanced date filtering with better debugging
-      let invoiceDate;
-      if (invoice.invoiceDate) {
-        invoiceDate = new Date(invoice.invoiceDate);
-      } else if (invoice.createdAt) {
-        invoiceDate = new Date(invoice.createdAt);
-      } else {
-        console.warn('Invoice has no date fields:', invoice);
-        return false;
-      }
-      
-      // Validate date
-      if (isNaN(invoiceDate.getTime())) {
-        console.warn('Invalid invoice date:', invoice.invoiceDate || invoice.createdAt);
-        return false;
-      }
-      
-      const dateMatch = isWithinInterval(invoiceDate, {
-        start: monthFilter.startDate,
-        end: monthFilter.endDate
-      });
-      
-      // Debug logging for January invoices
-      if (invoice.invoiceDate && invoice.invoiceDate.includes('2025-01')) {
-        console.log('January invoice found:', {
-          invoiceNumber: invoice.invoiceNumber,
-          invoiceDate: invoice.invoiceDate,
-          parsedDate: invoiceDate,
-          filterStart: monthFilter.startDate,
-          filterEnd: monthFilter.endDate,
-          dateMatch
-        });
-      }
-      
-      return statusMatch && buildingMatch && dateMatch;
-    } catch (error) {
-      console.error('Error filtering invoice:', invoice, error);
-      return false;
-    }
-  });
+  const filteredInvoices = invoices;
   
   // Quick month filter functions
   const setQuickMonthFilter = (monthsBack = 0) => {
@@ -392,6 +381,21 @@ const Invoices = () => {
             </Box>
             
             <Grid container spacing={2} alignItems="center">
+              {/* Search Field */}
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  label="Search Invoice Number"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Enter invoice number..."
+                  InputProps={{
+                    startAdornment: <SearchIcon sx={{ mr: 1, color: 'action.active' }} />,
+                  }}
+                  size="small"
+                />
+              </Grid>
+
               {/* Date Range */}
               <Grid item xs={12} md={3}>
                 <DatePicker

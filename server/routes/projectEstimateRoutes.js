@@ -63,4 +63,7 @@ router.post('/:id/convert', projectEstimateController.convertToWorkOrder);
 // Convert to invoice
 router.post('/:id/convert-to-invoice', projectEstimateController.convertToInvoice);
 
+// Generate PDF
+router.get('/:id/pdf', projectEstimateController.generatePDF);
+
 module.exports = router;

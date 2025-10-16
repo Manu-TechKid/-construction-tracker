@@ -674,24 +674,295 @@ exports.removeLineItem = catchAsync(async (req, res, next) => {
   });
 });
 
-// @desc    Calculate estimate totals
-// @route   PATCH /api/v1/project-estimates/:id/calculate-totals
-// @access  Private (Admin/Manager only)
-exports.calculateTotals = catchAsync(async (req, res, next) => {
-  const projectEstimate = await ProjectEstimate.findById(req.params.id);
-  
+// @desc    Generate PDF for project estimate
+// @route   GET /api/v1/project-estimates/:id/pdf
+// @access  Private
+exports.generatePDF = catchAsync(async (req, res, next) => {
+  const projectEstimate = await ProjectEstimate.findById(req.params.id)
+    .populate('building', 'name address city state zipCode')
+    .populate('createdBy', 'name email');
+
   if (!projectEstimate) {
     return next(new AppError('Project estimate not found', 404));
   }
-  
-  const totals = projectEstimate.calculateTotals();
-  await projectEstimate.save();
-  
-  res.status(200).json({
-    status: 'success',
-    data: {
-      totals,
-      projectEstimate
-    }
-  });
+
+  try {
+    // Import puppeteer dynamically to avoid issues if not installed
+    const puppeteer = await import('puppeteer');
+
+    // Launch browser
+    const browser = await puppeteer.default.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+
+    const page = await browser.newPage();
+
+    // Create HTML content for the PDF
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Project Estimate - ${projectEstimate.title}</title>
+          <meta charset="utf-8">
+          <style>
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              margin: 0;
+              padding: 20px;
+              background-color: #f9f9f9;
+            }
+            .header {
+              background-color: #2c3e50;
+              color: white;
+              padding: 30px;
+              text-align: center;
+              border-radius: 8px;
+              margin-bottom: 30px;
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 28px;
+              font-weight: bold;
+            }
+            .header h2 {
+              margin: 10px 0 0 0;
+              font-size: 20px;
+              font-weight: normal;
+            }
+            .company-info {
+              text-align: center;
+              margin-bottom: 40px;
+              color: #666;
+            }
+            .estimate-details {
+              background-color: white;
+              padding: 30px;
+              border-radius: 8px;
+              box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+              margin-bottom: 30px;
+            }
+            .section {
+              margin-bottom: 25px;
+            }
+            .section h3 {
+              color: #2c3e50;
+              border-bottom: 2px solid #3498db;
+              padding-bottom: 5px;
+              margin-bottom: 15px;
+            }
+            .info-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 20px;
+              margin-bottom: 20px;
+            }
+            .info-item {
+              margin-bottom: 10px;
+            }
+            .info-label {
+              font-weight: bold;
+              color: #555;
+              display: block;
+            }
+            .info-value {
+              margin-top: 3px;
+            }
+            .financial-summary {
+              background-color: #f8f9fa;
+              padding: 20px;
+              border-radius: 6px;
+              border-left: 4px solid #28a745;
+              margin: 20px 0;
+            }
+            .financial-row {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 10px;
+            }
+            .financial-row:last-child {
+              margin-bottom: 0;
+            }
+            .total-row {
+              font-weight: bold;
+              font-size: 18px;
+              color: #28a745;
+              border-top: 2px solid #28a745;
+              padding-top: 10px;
+              margin-top: 15px;
+            }
+            .description {
+              background-color: #fff3cd;
+              padding: 15px;
+              border-radius: 6px;
+              border-left: 4px solid #ffc107;
+              margin: 20px 0;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 40px;
+              padding-top: 20px;
+              border-top: 1px solid #ddd;
+              color: #666;
+              font-size: 12px;
+            }
+            .status-badge {
+              display: inline-block;
+              padding: 4px 12px;
+              border-radius: 20px;
+              font-size: 12px;
+              font-weight: bold;
+              text-transform: uppercase;
+            }
+            .status-draft { background-color: #e9ecef; color: #495057; }
+            .status-submitted { background-color: #d4edda; color: #155724; }
+            .status-approved { background-color: #d1ecf1; color: #0c5460; }
+            .status-rejected { background-color: #f8d7da; color: #721c24; }
+            .status-client_accepted { background-color: #d4edda; color: #155724; }
+            .status-client_rejected { background-color: #f8d7da; color: #721c24; }
+            .status-converted_to_invoice { background-color: #e2e3e5; color: #383d41; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>DSJ Construction Services</h1>
+            <h2>Project Estimate</h2>
+          </div>
+
+          <div class="company-info">
+            <p><strong>DSJ Construction Services</strong></p>
+            <p>Professional Construction & Renovation Services</p>
+            <p>Phone: (555) 123-4567 | Email: info@dsjconstruction.com</p>
+          </div>
+
+          <div class="estimate-details">
+            <div class="section">
+              <h3>Project Information</h3>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="info-label">Estimate Number:</span>
+                  <div class="info-value">${projectEstimate._id}</div>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Status:</span>
+                  <div class="info-value">
+                    <span class="status-badge status-${projectEstimate.status}">${projectEstimate.status.replace('_', ' ').toUpperCase()}</span>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Project Title:</span>
+                  <div class="info-value">${projectEstimate.title}</div>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Building:</span>
+                  <div class="info-value">${projectEstimate.building?.name || 'N/A'}</div>
+                </div>
+                ${projectEstimate.apartmentNumber ? `
+                  <div class="info-item">
+                    <span class="info-label">Apartment:</span>
+                    <div class="info-value">${projectEstimate.apartmentNumber}</div>
+                  </div>
+                ` : ''}
+                <div class="info-item">
+                  <span class="info-label">Created By:</span>
+                  <div class="info-value">${projectEstimate.createdBy?.name || 'N/A'}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section">
+              <h3>Project Description</h3>
+              <div class="description">
+                ${projectEstimate.description || 'No description provided'}
+              </div>
+            </div>
+
+            <div class="section">
+              <h3>Financial Summary</h3>
+              <div class="financial-summary">
+                <div class="financial-row">
+                  <span>Estimated Cost:</span>
+                  <span>$${projectEstimate.estimatedCost?.toLocaleString() || '0.00'}</span>
+                </div>
+                <div class="financial-row">
+                  <span>Estimated Price:</span>
+                  <span>$${projectEstimate.estimatedPrice?.toLocaleString() || '0.00'}</span>
+                </div>
+                <div class="financial-row total-row">
+                  <span>Total Amount:</span>
+                  <span>$${projectEstimate.estimatedPrice?.toLocaleString() || '0.00'}</span>
+                </div>
+              </div>
+            </div>
+
+            ${projectEstimate.notes ? `
+              <div class="section">
+                <h3>Additional Notes</h3>
+                <div class="description">
+                  ${projectEstimate.notes}
+                </div>
+              </div>
+            ` : ''}
+
+            <div class="section">
+              <h3>Project Timeline</h3>
+              <div class="info-grid">
+                ${projectEstimate.estimatedDuration ? `
+                  <div class="info-item">
+                    <span class="info-label">Estimated Duration:</span>
+                    <div class="info-value">${projectEstimate.estimatedDuration} days</div>
+                  </div>
+                ` : ''}
+                ${projectEstimate.proposedStartDate ? `
+                  <div class="info-item">
+                    <span class="info-label">Proposed Start Date:</span>
+                    <div class="info-value">${new Date(projectEstimate.proposedStartDate).toLocaleDateString()}</div>
+                  </div>
+                ` : ''}
+                ${projectEstimate.targetYear ? `
+                  <div class="info-item">
+                    <span class="info-label">Target Year:</span>
+                    <div class="info-value">${projectEstimate.targetYear}</div>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+
+          <div class="footer">
+            <p>This estimate is valid for 30 days from the date of issue.</p>
+            <p>For questions or concerns, please contact DSJ Construction Services.</p>
+            <p>Generated on: ${new Date().toLocaleDateString()}</p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    await page.setContent(htmlContent);
+
+    // Generate PDF
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '20px',
+        right: '20px',
+        bottom: '20px',
+        left: '20px'
+      }
+    });
+
+    await browser.close();
+
+    // Set response headers and send PDF
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="estimate-${projectEstimate._id}.pdf"`);
+    res.send(pdfBuffer);
+
+  } catch (error) {
+    console.error('PDF generation error:', error);
+    return next(new AppError('Failed to generate PDF', 500));
+  }
 });

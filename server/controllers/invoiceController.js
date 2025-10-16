@@ -9,18 +9,71 @@ const catchAsync = require('../utils/catchAsync');
 
 // Get all invoices
 exports.getAllInvoices = catchAsync(async (req, res, next) => {
-    const invoices = await Invoice.find()
-        .populate('building', 'name address')
-        .populate('workOrders.workOrder', 'title description apartmentNumber status')
-        .sort('-createdAt');
+  const {
+    startDate,
+    endDate,
+    status,
+    buildingId,
+    invoiceDateStart,
+    invoiceDateEnd,
+    dueDateStart,
+    dueDateEnd,
+    search
+  } = req.query;
 
-    res.status(200).json({
-        status: 'success',
-        results: invoices.length,
-        data: {
-            invoices
-        }
-    });
+  // Build filter object
+  const filter = {};
+
+  // Search filter - search in invoice number
+  if (search) {
+    filter.invoiceNumber = { $regex: search, $options: 'i' };
+  }
+
+  // Status filter
+  if (status) {
+    filter.status = status;
+  }
+
+  // Building filter
+  if (buildingId) {
+    filter.building = buildingId;
+  }
+
+  // Date filters - support both invoiceDate and general date ranges
+  if (startDate || endDate) {
+    filter.createdAt = {};
+    if (startDate) filter.createdAt.$gte = new Date(startDate);
+    if (endDate) filter.createdAt.$lte = new Date(endDate);
+  }
+
+  // Invoice date filter (when invoice was issued/sent to client)
+  if (invoiceDateStart || invoiceDateEnd) {
+    filter.invoiceDate = {};
+    if (invoiceDateStart) filter.invoiceDate.$gte = new Date(invoiceDateStart);
+    if (invoiceDateEnd) filter.invoiceDate.$lte = new Date(invoiceDateEnd);
+  }
+
+  // Due date filter
+  if (dueDateStart || dueDateEnd) {
+    filter.dueDate = {};
+    if (dueDateStart) filter.dueDate.$gte = new Date(dueDateStart);
+    if (dueDateEnd) filter.dueDate.$lte = new Date(dueDateEnd);
+  }
+
+  console.log('Invoice filter applied:', filter);
+
+  const invoices = await Invoice.find(filter)
+    .populate('building', 'name address')
+    .populate('workOrders.workOrder', 'title description apartmentNumber status')
+    .sort('-createdAt');
+
+  res.status(200).json({
+    status: 'success',
+    results: invoices.length,
+    data: {
+      invoices
+    }
+  });
 });
 
 // Get single invoice
@@ -658,6 +711,22 @@ exports.calculateTotals = catchAsync(async (req, res, next) => {
 
 // Helper function to generate HTML for PDF
 const generateInvoiceHTML = (invoice) => {
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount || 0);
+  };
+
+  const formatDate = (date) => {
+    if (!date) return '';
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   return `
     <!DOCTYPE html>
     <html>
@@ -665,90 +734,277 @@ const generateInvoiceHTML = (invoice) => {
       <meta charset="utf-8">
       <title>Invoice ${invoice.invoiceNumber}</title>
       <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; }
-        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
-        .company-info { margin-bottom: 30px; }
-        .invoice-details { display: flex; justify-content: space-between; margin-bottom: 30px; }
-        .invoice-details div { flex: 1; }
-        .client-info { margin-bottom: 30px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f5f5f5; font-weight: bold; }
-        .totals { text-align: right; margin-top: 20px; }
-        .total-row { font-weight: bold; font-size: 1.1em; }
-        .footer { margin-top: 50px; text-align: center; color: #666; font-size: 0.9em; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          font-size: 14px;
+          line-height: 1.5;
+          color: #333;
+          background-color: #fff;
+        }
+        .invoice-container {
+          max-width: 800px;
+          margin: 0 auto;
+          padding: 40px 20px;
+        }
+        .header {
+          text-align: center;
+          margin-bottom: 40px;
+          border-bottom: 3px solid #2c3e50;
+          padding-bottom: 20px;
+        }
+        .company-name {
+          font-size: 32px;
+          font-weight: bold;
+          color: #2c3e50;
+          margin-bottom: 5px;
+        }
+        .company-tagline {
+          font-size: 16px;
+          color: #7f8c8d;
+          margin-bottom: 10px;
+        }
+        .company-contact {
+          font-size: 13px;
+          color: #95a5a6;
+        }
+        .invoice-title {
+          font-size: 28px;
+          color: #2c3e50;
+          margin: 20px 0 10px 0;
+        }
+        .invoice-info {
+          display: flex;
+          justify-content: space-between;
+          margin: 30px 0;
+          padding: 20px;
+          background-color: #f8f9fa;
+          border-radius: 8px;
+        }
+        .invoice-details, .client-details {
+          flex: 1;
+        }
+        .section-title {
+          font-size: 16px;
+          font-weight: bold;
+          color: #2c3e50;
+          margin-bottom: 10px;
+          border-bottom: 2px solid #3498db;
+          padding-bottom: 3px;
+        }
+        .info-row {
+          margin-bottom: 8px;
+        }
+        .info-label {
+          font-weight: bold;
+          color: #555;
+          display: inline-block;
+          width: 120px;
+        }
+        .info-value {
+          display: inline-block;
+        }
+        .work-orders-section {
+          margin: 30px 0;
+        }
+        .table-container {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 20px 0;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .table-header {
+          background-color: #2c3e50;
+          color: white;
+          font-weight: bold;
+        }
+        .table-header th {
+          padding: 15px;
+          text-align: left;
+          border-right: 1px solid #34495e;
+        }
+        .table-header th:last-child {
+          border-right: none;
+        }
+        .table-body td {
+          padding: 15px;
+          border-bottom: 1px solid #ecf0f1;
+          border-right: 1px solid #ecf0f1;
+        }
+        .table-body td:last-child {
+          border-right: none;
+        }
+        .table-body tr:nth-child(even) {
+          background-color: #f8f9fa;
+        }
+        .totals-section {
+          background-color: #f8f9fa;
+          padding: 25px;
+          border-radius: 8px;
+          margin-top: 30px;
+        }
+        .totals-row {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 10px;
+        }
+        .totals-row:last-child {
+          margin-bottom: 0;
+          border-top: 2px solid #2c3e50;
+          padding-top: 15px;
+          font-size: 18px;
+          font-weight: bold;
+          color: #2c3e50;
+        }
+        .payment-terms {
+          background-color: #fff3cd;
+          border: 1px solid #ffeaa7;
+          padding: 15px;
+          border-radius: 5px;
+          margin: 20px 0;
+        }
+        .notes-section {
+          background-color: #d1ecf1;
+          border: 1px solid #bee5eb;
+          padding: 15px;
+          border-radius: 5px;
+          margin: 20px 0;
+        }
+        .footer {
+          text-align: center;
+          margin-top: 50px;
+          padding-top: 20px;
+          border-top: 1px solid #bdc3c7;
+          color: #7f8c8d;
+          font-size: 12px;
+        }
+        .status-badge {
+          display: inline-block;
+          padding: 4px 12px;
+          border-radius: 20px;
+          font-size: 11px;
+          font-weight: bold;
+          text-transform: uppercase;
+        }
+        .status-paid { background-color: #d4edda; color: #155724; }
+        .status-pending { background-color: #fff3cd; color: #856404; }
+        .status-overdue { background-color: #f8d7da; color: #721c24; }
+        .status-draft { background-color: #e2e3e5; color: #383d41; }
       </style>
     </head>
     <body>
-      <div class="header">
-        <h1>DSJ Construction Services</h1>
-        <p>Professional Construction Management</p>
-        <p>Phone: (555) 123-4567 | Email: info@dsjconstruction.com</p>
-      </div>
-
-      <div class="company-info">
-        <h2>Invoice #${invoice.invoiceNumber}</h2>
-        <p><strong>Invoice Date:</strong> ${new Date(invoice.invoiceDate).toLocaleDateString()}</p>
-        <p><strong>Due Date:</strong> ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}</p>
-        <p><strong>Status:</strong> ${invoice.status.toUpperCase()}</p>
-      </div>
-
-      <div class="invoice-details">
-        <div>
-          <h3>Bill To:</h3>
-          <p><strong>${invoice.client?.companyName || 'Client'}</strong></p>
-          ${invoice.client?.contactName ? `<p>${invoice.client.contactName}</p>` : ''}
-          ${invoice.client?.email ? `<p>${invoice.client.email}</p>` : ''}
-          ${invoice.client?.phone ? `<p>${invoice.client.phone}</p>` : ''}
-          ${invoice.client?.address ? `<p>${invoice.client.address}</p>` : ''}
+      <div class="invoice-container">
+        <div class="header">
+          <div class="company-name">DSJ Construction Services</div>
+          <div class="company-tagline">Professional Construction Management</div>
+          <div class="company-contact">
+            Phone: (555) 123-4567 | Email: info@dsjconstruction.com | Website: www.dsjconstruction.com
+          </div>
         </div>
 
-        <div>
-          <h3>Project Details:</h3>
-          <p><strong>Building:</strong> ${invoice.building?.name || 'N/A'}</p>
-          ${invoice.projectEstimate?.title ? `<p><strong>Project:</strong> ${invoice.projectEstimate.title}</p>` : ''}
-          ${invoice.building?.address ? `<p><strong>Address:</strong> ${invoice.building.address}</p>` : ''}
+        <div class="invoice-title">INVOICE</div>
+
+        <div class="invoice-info">
+          <div class="invoice-details">
+            <div class="section-title">Invoice Details</div>
+            <div class="info-row">
+              <span class="info-label">Invoice Number:</span>
+              <span class="info-value">${invoice.invoiceNumber || 'N/A'}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Invoice Date:</span>
+              <span class="info-value">${formatDate(invoice.invoiceDate)}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Due Date:</span>
+              <span class="info-value">${formatDate(invoice.dueDate)}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Status:</span>
+              <span class="info-value">
+                <span class="status-badge status-${invoice.status}">${invoice.status.toUpperCase()}</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="client-details">
+            <div class="section-title">Bill To</div>
+            <div class="info-row">
+              <span class="info-label">Building:</span>
+              <span class="info-value">${invoice.building?.name || 'N/A'}</span>
+            </div>
+            ${invoice.building?.address ? `
+              <div class="info-row">
+                <span class="info-label">Address:</span>
+                <span class="info-value">${invoice.building.address}</span>
+              </div>
+            ` : ''}
+            ${invoice.building?.city ? `
+              <div class="info-row">
+                <span class="info-label">City:</span>
+                <span class="info-value">${invoice.building.city}</span>
+              </div>
+            ` : ''}
+          </div>
         </div>
-      </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Description</th>
-            <th>Quantity</th>
-            <th>Unit Price</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${invoice.lineItems?.map(item => `
-            <tr>
-              <td>${item.description || item.serviceSubcategory}</td>
-              <td>${item.quantity || 1}</td>
-              <td>$${item.unitPrice?.toFixed(2) || '0.00'}</td>
-              <td>$${item.totalPrice?.toFixed(2) || '0.00'}</td>
-            </tr>
-          `).join('') || '<tr><td colspan="4">No items</td></tr>'}
-        </tbody>
-      </table>
-
-      <div class="totals">
-        <p><strong>Subtotal: $${invoice.subtotal?.toFixed(2) || '0.00'}</strong></p>
-        ${invoice.taxAmount ? `<p>Tax: $${invoice.taxAmount.toFixed(2)}</p>` : ''}
-        <p class="total-row">Total: $${invoice.total?.toFixed(2) || '0.00'}</p>
-      </div>
-
-      ${invoice.notes ? `
-        <div class="notes" style="margin-top: 30px; padding: 15px; background-color: #f9f9f9; border-radius: 5px;">
-          <h3>Notes:</h3>
-          <p>${invoice.notes}</p>
+        <div class="work-orders-section">
+          <div class="section-title">Services Performed</div>
+          <table class="table-container">
+            <thead class="table-header">
+              <tr>
+                <th>Description</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody class="table-body">
+              ${invoice.workOrders?.map(wo => `
+                <tr>
+                  <td>${wo.description || 'Work Order Service'}</td>
+                  <td>${wo.quantity || 1}</td>
+                  <td>${formatCurrency(wo.unitPrice)}</td>
+                  <td>${formatCurrency(wo.totalPrice)}</td>
+                </tr>
+              `).join('') || '<tr><td colspan="4">No services listed</td></tr>'}
+            </tbody>
+          </table>
         </div>
-      ` : ''}
 
-      <div class="footer">
-        <p>Thank you for your business!</p>
-        <p>Payment is due within 30 days of the invoice date.</p>
-        <p>For questions, please contact us at info@dsjconstruction.com</p>
+        <div class="totals-section">
+          <div class="totals-row">
+            <span>Subtotal:</span>
+            <span>${formatCurrency(invoice.subtotal)}</span>
+          </div>
+          ${invoice.tax ? `
+            <div class="totals-row">
+              <span>Tax:</span>
+              <span>${formatCurrency(invoice.tax)}</span>
+            </div>
+          ` : ''}
+          <div class="totals-row">
+            <span>TOTAL AMOUNT DUE:</span>
+            <span>${formatCurrency(invoice.total)}</span>
+          </div>
+        </div>
+
+        <div class="payment-terms">
+          <strong>Payment Terms:</strong> Payment is due within 30 days of the invoice date. Thank you for your business!
+        </div>
+
+        ${invoice.notes ? `
+          <div class="notes-section">
+            <strong>Notes:</strong><br>
+            ${invoice.notes}
+          </div>
+        ` : ''}
+
+        <div class="footer">
+          <p>This invoice was generated electronically and is valid without signature.</p>
+          <p>For questions about this invoice, please contact DSJ Construction Services.</p>
+          <p>Generated on ${formatDate(new Date())}</p>
+        </div>
       </div>
     </body>
     </html>

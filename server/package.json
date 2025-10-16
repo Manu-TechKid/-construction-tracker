@@ -12,7 +12,7 @@
         "test": "cross-env NODE_ENV=test jest --detectOpenHandles --forceExit",
         "test:watch": "cross-env NODE_ENV=test jest --watch --detectOpenHandles --forceExit",
         "test:coverage": "cross-env NODE_ENV=test jest --coverage --detectOpenHandles --forceExit",
-        "migrate:setup": "node scripts/runSetupMigration.js",
+        "migrate:fix-invoice-dates": "node scripts/fixInvoiceDates.js",
         "build": "echo \"Server build complete\"",
         "build:client": "cd ../client && npm install --legacy-peer-deps && npm run build"
     },

@@ -54,6 +54,32 @@ const buildingSchema = new mongoose.Schema({
         required: [true, 'Service manager name is required'],
         trim: true
     },
+    serviceManagerEmail: {
+        type: String,
+        trim: true,
+        lowercase: true,
+        match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
+    },
+    generalManager: {
+        type: String,
+        trim: true
+    },
+    generalManagerEmail: {
+        type: String,
+        trim: true,
+        lowercase: true,
+        match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
+    },
+    maintenanceManager: {
+        type: String,
+        trim: true
+    },
+    maintenanceManagerEmail: {
+        type: String,
+        trim: true,
+        lowercase: true,
+        match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
+    },
     apartments: [{
         number: {
             type: String,
