@@ -842,3 +842,232 @@ exports.emailInvoice = catchAsync(async (req, res, next) => {
     return next(new AppError('Failed to send invoice email', 500));
   }
 });
+
+// Add line item to invoice
+exports.addLineItem = catchAsync(async (req, res, next) => {
+  const invoice = await Invoice.findById(req.params.id);
+  if (!invoice) {
+    return next(new AppError('Invoice not found', 404));
+  }
+  
+  invoice.lineItems.push(req.body);
+  invoice['calculateTotals']();
+  await invoice.save();
+  
+  const updatedInvoice = await Invoice.findById(req.params.id)
+    .populate('building', 'name address');
+  
+  res.status(200).json({
+    status: 'success',
+    data: { invoice: updatedInvoice }
+  });
+});
+
+// Update line item
+exports.updateLineItem = catchAsync(async (req, res, next) => {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) {
+        return next(new AppError('Invoice not found', 404));
+    }
+    
+    const lineItem = invoice.lineItems.id(req.params.lineItemId);
+    if (!lineItem) {
+        return next(new AppError('Line item not found', 404));
+    }
+    
+    Object.keys(req.body).forEach(key => {
+        lineItem[key] = req.body[key];
+    });
+    
+    invoice['calculateTotals']();
+    await invoice.save();
+    
+    const updatedInvoice = await Invoice.findById(req.params.id)
+        .populate('building', 'name address');
+    
+    res.status(200).json({
+        status: 'success',
+        data: { invoice: updatedInvoice }
+    });
+});
+
+// Remove line item
+exports.removeLineItem = catchAsync(async (req, res, next) => {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) {
+        return next(new AppError('Invoice not found', 404));
+    }
+    
+    const lineItem = invoice.lineItems.id(req.params.lineItemId);
+    if (!lineItem) {
+        return next(new AppError('Line item not found', 404));
+    }
+    
+    lineItem.deleteOne();
+    invoice['calculateTotals']();
+    await invoice.save();
+    
+    const updatedInvoice = await Invoice.findById(req.params.id)
+        .populate('building', 'name address');
+    
+    res.status(200).json({
+        status: 'success',
+        data: { invoice: updatedInvoice }
+    });
+});
+
+// Get next invoice number
+exports.getNextInvoiceNumber = catchAsync(async (req, res, next) => {
+    try {
+        const currentYear = new Date().getFullYear();
+        
+        // Find or create counter for current year
+        let counter = await InvoiceCounter.findOne({ year: currentYear });
+        if (!counter) {
+            // Check if there are any existing invoices to determine starting number
+            const lastInvoice = await Invoice.findOne(
+                {},
+                { invoiceNumber: 1 },
+                { sort: { createdAt: -1 } }
+            ).lean();
+            
+            let startingCount = 0;
+            if (lastInvoice && lastInvoice.invoiceNumber) {
+                const matches = lastInvoice.invoiceNumber.match(/(\d+)$/);
+                if (matches && matches[1]) {
+                    startingCount = parseInt(matches[1], 10);
+                }
+            }
+            
+            counter = new InvoiceCounter({ 
+                year: currentYear, 
+                count: startingCount 
+            });
+        }
+        
+        // Increment counter for next number
+        counter.count += 1;
+        const nextNumber = String(counter.count).padStart(6, '0');
+        
+        res.status(200).json({
+            status: 'success',
+            data: {
+                nextNumber,
+                counter
+            }
+        });
+    } catch (error) {
+        console.error('Error getting next invoice number:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Error getting next invoice number'
+        });
+    }
+});
+
+// Get client summary report
+exports.getClientSummaryReport = catchAsync(async (req, res, next) => {
+    const { startDate, endDate, buildingId } = req.query;
+    
+    let matchConditions = {};
+    if (startDate && endDate) {
+        matchConditions.invoiceDate = {
+            $gte: new Date(startDate),
+            $lte: new Date(endDate)
+        };
+    }
+    if (buildingId) {
+        matchConditions.building = mongoose.Types.ObjectId(buildingId);
+    }
+    
+    const clientSummary = await Invoice.aggregate([
+        { $match: matchConditions },
+        {
+            $group: {
+                _id: '$client.companyName',
+                totalInvoices: { $sum: 1 },
+                totalAmount: { $sum: '$total' },
+                paidAmount: {
+                    $sum: {
+                        $cond: [
+                            { $eq: ['$status', 'paid'] },
+                            '$total',
+                            0
+                        ]
+                    }
+                },
+                pendingAmount: {
+                    $sum: {
+                        $cond: [
+                            { $eq: ['$status', 'pending'] },
+                            '$total',
+                            0
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                clientName: '$_id',
+                totalInvoices: 1,
+                totalAmount: 1,
+                paidAmount: 1,
+                pendingAmount: 1,
+                _id: 0
+            }
+        },
+        { $sort: { totalAmount: -1 } }
+    ]);
+    
+    res.status(200).json({
+        status: 'success',
+        data: {
+            clientSummary,
+            totalClients: clientSummary.length
+        }
+    });
+});
+
+// Get aging report
+exports.getAgingReport = catchAsync(async (req, res, next) => {
+    const invoices = await Invoice.find({ status: 'pending' })
+        .populate('building', 'name')
+        .sort('dueDate');
+
+    const agingReport = {
+        current: [],
+        pastDue: [],
+        dueIn30Days: [],
+        dueIn60Days: []
+    };
+
+    const now = new Date();
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const sixtyDaysFromNow = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+
+    invoices.forEach(invoice => {
+        if (invoice.dueDate < now) {
+            agingReport.pastDue.push(invoice);
+        } else if (invoice.dueDate <= thirtyDaysFromNow) {
+            agingReport.dueIn30Days.push(invoice);
+        } else if (invoice.dueDate <= sixtyDaysFromNow) {
+            agingReport.dueIn60Days.push(invoice);
+        } else {
+            agingReport.current.push(invoice);
+        }
+    });
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            agingReport,
+            totals: {
+                current: agingReport.current.reduce((sum, inv) => sum + inv.total, 0),
+                pastDue: agingReport.pastDue.reduce((sum, inv) => sum + inv.total, 0),
+                dueIn30Days: agingReport.dueIn30Days.reduce((sum, inv) => sum + inv.total, 0),
+                dueIn60Days: agingReport.dueIn60Days.reduce((sum, inv) => sum + inv.total, 0)
+            }
+        }
+    });
+});
