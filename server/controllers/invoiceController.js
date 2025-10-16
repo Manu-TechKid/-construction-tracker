@@ -755,6 +755,59 @@ const generateInvoiceHTML = (invoice) => {
   `;
 };
 
+// Generate PDF for invoice
+exports.generatePDF = catchAsync(async (req, res, next) => {
+  const invoice = await Invoice.findById(req.params.id)
+    .populate('building', 'name address')
+    .populate('projectEstimate', 'title description');
+
+  if (!invoice) {
+    return next(new AppError('Invoice not found', 404));
+  }
+
+  try {
+    const puppeteer = require('puppeteer');
+
+    // Generate HTML content for PDF
+    const htmlContent = generateInvoiceHTML(invoice);
+
+    // Launch browser
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+
+    const page = await browser.newPage();
+
+    // Set content and wait for it to load
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+    // Generate PDF
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '1cm',
+        right: '1cm',
+        bottom: '1cm',
+        left: '1cm'
+      }
+    });
+
+    await browser.close();
+
+    // Set headers for PDF download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="invoice-${invoice.invoiceNumber}.pdf"`);
+
+    res.send(pdfBuffer);
+
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    return next(new AppError('Failed to generate PDF', 500));
+  }
+});
+
 // Email invoice
 exports.emailInvoice = catchAsync(async (req, res, next) => {
   const { emailAddresses, message } = req.body;
