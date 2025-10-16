@@ -55,7 +55,6 @@ router.post('/:id/send-to-client', projectEstimateController.sendToClient);
 router.post('/:id/line-items', projectEstimateController.addLineItem);
 router.put('/:id/line-items/:lineItemId', projectEstimateController.updateLineItem);
 router.delete('/:id/line-items/:lineItemId', projectEstimateController.removeLineItem);
-router.patch('/:id/calculate-totals', projectEstimateController.calculateTotals);
 
 // Convert to work order
 router.post('/:id/convert', projectEstimateController.convertToWorkOrder);
