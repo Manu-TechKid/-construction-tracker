@@ -1,5 +1,5 @@
 const WorkOrder = require('../models/WorkOrder');
-const Invoice = require('../models/InvoiceSimple').Invoice;
+const { Invoice } = require('../models/Invoice');
 const Schedule = require('../models/Schedule');
 const Reminder = require('../models/Reminder');
 const Building = require('../models/Building');

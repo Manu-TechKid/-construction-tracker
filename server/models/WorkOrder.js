@@ -88,6 +88,11 @@ const workOrderSchema = new mongoose.Schema({
     enum: ['pending', 'invoiced', 'paid', 'cancelled'],
     default: 'pending'
   },
+  invoice: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Invoice',
+    default: null
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

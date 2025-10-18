@@ -1,4 +1,4 @@
-const { Invoice, InvoiceCounter } = require('../models/InvoiceSimple');
+const { Invoice } = require('../models/Invoice');
 const WorkOrder = require('../models/WorkOrder');
 const WorkType = require('../models/WorkType');
 const WorkSubType = require('../models/WorkSubType');
@@ -116,6 +116,10 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
             { billingStatus: { $exists: false } },
             { billingStatus: 'pending' },
             { billingStatus: null }
+        ],
+        $or: [
+            { invoice: { $exists: false } },
+            { invoice: null }
         ]
     }).populate('building', 'name address');
 
@@ -156,8 +160,8 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
             workOrder: wo._id,
             description: `${wo.title || 'Work Order'} (Apt: ${wo.apartmentNumber || 'N/A'})`,
             quantity: 1,
-            unitPrice: totalPrice,
-            totalPrice: totalPrice,
+            unitPrice: Number(totalPrice.toFixed(2)),
+            totalPrice: Number(totalPrice.toFixed(2)),
             // Add debug info
             costBreakdown: {
                 services: wo.services?.length || 0,
@@ -179,6 +183,18 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
     const invoiceData = {
         building: buildingId,
         workOrders: invoiceWorkOrders,
+        lineItems: invoiceWorkOrders.map(item => ({
+            workOrder: item.workOrder,
+            serviceCategory: 'other',
+            serviceSubcategory: 'work_order',
+            description: item.description,
+            quantity: item.quantity,
+            unitType: 'fixed',
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice,
+            taxable: true,
+            taxRate: 0
+        })),
         subtotal,
         tax,
         total,
@@ -211,7 +227,7 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
         // Update work orders billing status
         await WorkOrder.updateMany(
             { _id: { $in: workOrderIds } },
-            { billingStatus: 'invoiced' }
+            { billingStatus: 'invoiced', invoice: invoice._id }
         );
 
         const populatedInvoice = await Invoice.findById(invoice._id)
@@ -281,10 +297,10 @@ exports.markAsPaid = catchAsync(async (req, res, next) => {
     }
 
     // Update work orders billing status to paid
-    const workOrderIds = invoice.workOrders.map(wo => wo.workOrder);
+    const workOrderIds = invoice.workOrders.map(wo => wo.workOrder).filter(Boolean);
     await WorkOrder.updateMany(
         { _id: { $in: workOrderIds } },
-        { billingStatus: 'paid' }
+        { billingStatus: 'paid', invoice: invoice._id }
     );
 
     res.status(200).json({
@@ -371,10 +387,20 @@ exports.getUnbilledWorkOrders = catchAsync(async (req, res, next) => {
     // Find work orders that haven't been invoiced yet
     const workOrders = await WorkOrder.find({
         building: buildingId,
-        $or: [
-            { billingStatus: { $exists: false } },
-            { billingStatus: 'pending' },
-            { billingStatus: null }
+        $and: [
+            {
+                $or: [
+                    { billingStatus: { $exists: false } },
+                    { billingStatus: 'pending' },
+                    { billingStatus: null }
+                ]
+            },
+            {
+                $or: [
+                    { invoice: { $exists: false } },
+                    { invoice: null }
+                ]
+            }
         ]
     }).populate('building', 'name address')
       .sort('-createdAt');
@@ -414,10 +440,20 @@ exports.getFilteredWorkOrders = catchAsync(async (req, res, next) => {
 
     // 2. Billing status filter (required - only unbilled work orders)
     conditions.push({
-        $or: [
-            { billingStatus: { $exists: false } },
-            { billingStatus: 'pending' },
-            { billingStatus: null }
+        $and: [
+            {
+                $or: [
+                    { billingStatus: { $exists: false } },
+                    { billingStatus: 'pending' },
+                    { billingStatus: null }
+                ]
+            },
+            {
+                $or: [
+                    { invoice: { $exists: false } },
+                    { invoice: null }
+                ]
+            }
         ]
     });
 
@@ -553,10 +589,10 @@ exports.deleteInvoice = catchAsync(async (req, res, next) => {
     }
 
     // Reset work orders billing status if invoice is deleted
-    const workOrderIds = invoice.workOrders.map(wo => wo.workOrder);
+    const workOrderIds = invoice.workOrders.map(wo => wo.workOrder).filter(Boolean);
     await WorkOrder.updateMany(
         { _id: { $in: workOrderIds } },
-        { billingStatus: 'pending' }
+        { billingStatus: 'pending', invoice: null }
     );
 
     await Invoice.findByIdAndDelete(req.params.id);
@@ -711,6 +747,9 @@ exports.calculateTotals = catchAsync(async (req, res, next) => {
 
 // Helper function to generate HTML for PDF
 const generateInvoiceHTML = (invoice) => {
+  const hasWorkOrders = Array.isArray(invoice.workOrders) && invoice.workOrders.length > 0;
+  const lineItems = hasWorkOrders ? invoice.workOrders : invoice.lineItems || [];
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -960,14 +999,14 @@ const generateInvoiceHTML = (invoice) => {
               </tr>
             </thead>
             <tbody class="table-body">
-              ${invoice.workOrders?.map(wo => `
+              ${lineItems.length > 0 ? lineItems.map(wo => `
                 <tr>
-                  <td>${wo.description || 'Work Order Service'}</td>
+                  <td>${wo.description || wo.serviceSubcategory || 'Work Order Service'}</td>
                   <td>${wo.quantity || 1}</td>
                   <td>${formatCurrency(wo.unitPrice)}</td>
                   <td>${formatCurrency(wo.totalPrice)}</td>
                 </tr>
-              `).join('') || '<tr><td colspan="4">No services listed</td></tr>'}
+              `).join('') : '<tr><td colspan="4">No services listed</td></tr>'}
             </tbody>
           </table>
         </div>
@@ -1021,11 +1060,24 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
     return next(new AppError('Invoice not found', 404));
   }
 
+  const invoiceObject = invoice.toObject({ virtuals: true });
+  const hasWorkOrders = Array.isArray(invoiceObject.workOrders) && invoiceObject.workOrders.length > 0;
+  const lineItems = hasWorkOrders
+    ? (invoiceObject.workOrders || [])
+    : (invoiceObject.lineItems || []);
+
+  if (!Array.isArray(lineItems) || lineItems.length === 0) {
+    return next(new AppError('Invoice has no billable items. Please add line items before downloading the PDF.', 400));
+  }
+
+  // Ensure lineItems is available for the PDF template even when workOrders are stored
+  invoiceObject.lineItems = lineItems;
+
   try {
     const puppeteer = require('puppeteer');
 
     // Generate HTML content for PDF
-    const htmlContent = generateInvoiceHTML(invoice);
+    const htmlContent = generateInvoiceHTML(invoiceObject);
 
     // Launch browser
     const browser = await puppeteer.launch({

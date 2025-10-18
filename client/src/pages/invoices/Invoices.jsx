@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Card,
@@ -67,13 +67,29 @@ const Invoices = () => {
     endDate: endOfMonth(new Date())
   });
 
-  const { data: invoicesData, isLoading, error } = useGetInvoicesQuery({
-    invoiceDateStart: monthFilter.startDate.toISOString(),
-    invoiceDateEnd: monthFilter.endDate.toISOString(),
-    status: filterStatus || undefined,
-    buildingId: filterBuilding || undefined,
-    search: searchQuery || undefined,
-  });
+  const invoiceQueryParams = useMemo(() => {
+    const params = {
+      status: filterStatus || undefined,
+      buildingId: filterBuilding || undefined,
+    };
+
+    const trimmedSearch = searchQuery.trim();
+
+    if (trimmedSearch) {
+      params.search = trimmedSearch;
+    } else {
+      if (monthFilter.startDate) {
+        params.invoiceDateStart = monthFilter.startDate.toISOString();
+      }
+      if (monthFilter.endDate) {
+        params.invoiceDateEnd = monthFilter.endDate.toISOString();
+      }
+    }
+
+    return params;
+  }, [filterStatus, filterBuilding, monthFilter.startDate, monthFilter.endDate, searchQuery]);
+
+  const { data: invoicesData, isLoading, error } = useGetInvoicesQuery(invoiceQueryParams);
   const { data: buildingsData } = useGetBuildingsQuery();
   const [markAsPaid, { isLoading: isMarkingPaid }] = useMarkInvoiceAsPaidMutation();
   const [deleteInvoice, { isLoading: isDeleting }] = useDeleteInvoiceMutation();

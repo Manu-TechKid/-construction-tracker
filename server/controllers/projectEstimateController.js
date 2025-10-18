@@ -414,29 +414,32 @@ exports.convertToInvoice = catchAsync(async (req, res, next) => {
     return next(new AppError('Only approved estimates can be converted to invoices', 400));
   }
 
-  // Create invoice from project estimate
-  const Invoice = require('../models/InvoiceSimple').Invoice;
-  
-  const invoiceData = {
+  const { Invoice } = require('../models/Invoice');
+
+  const invoice = await Invoice.create({
     projectEstimate: projectEstimate._id,
     building: projectEstimate.building,
-    apartmentNumber: projectEstimate.apartmentNumber,
-    description: projectEstimate.description,
-    amount: projectEstimate.estimatedPrice || projectEstimate.estimatedCost,
-    total: projectEstimate.estimatedPrice || projectEstimate.estimatedCost,
-    status: 'draft',
     invoiceDate: new Date(),
-    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-    createdBy: req.user.id,
-    items: [{
-      description: projectEstimate.title,
+    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    notes: projectEstimate.notes,
+    createdBy: req.user._id,
+    lineItems: [{
+      serviceCategory: 'other',
+      serviceSubcategory: 'estimate_conversion',
+      description: projectEstimate.title || projectEstimate.description || 'Converted Project Estimate',
       quantity: 1,
-      unitPrice: projectEstimate.estimatedPrice || projectEstimate.estimatedCost,
-      total: projectEstimate.estimatedPrice || projectEstimate.estimatedCost
-    }]
-  };
-
-  const invoice = await Invoice.create(invoiceData);
+      unitType: 'fixed',
+      unitPrice: projectEstimate.estimatedPrice || projectEstimate.estimatedCost || 0,
+      totalPrice: projectEstimate.estimatedPrice || projectEstimate.estimatedCost || 0,
+      taxable: true,
+      taxRate: 0
+    }],
+    subtotal: projectEstimate.estimatedPrice || projectEstimate.estimatedCost || 0,
+    totalDiscount: 0,
+    tax: 0,
+    total: projectEstimate.estimatedPrice || projectEstimate.estimatedCost || 0,
+    status: 'draft'
+  });
 
   // Update project estimate status
   projectEstimate.status = 'converted_to_invoice';

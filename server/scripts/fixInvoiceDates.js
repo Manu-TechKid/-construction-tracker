@@ -2,7 +2,7 @@
 // Run this script to update invoices that were saved with system dates instead of intended invoice dates
 
 const mongoose = require('mongoose');
-const { Invoice } = require('../models/InvoiceSimple');
+const { Invoice } = require('../models/Invoice');
 require('dotenv').config();
 
 const fixInvoiceDates = async () => {

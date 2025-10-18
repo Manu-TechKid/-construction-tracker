@@ -146,6 +146,56 @@ const invoiceSchema = new mongoose.Schema({
             max: 100
         }
     }],
+
+    // Work order summaries stored with the invoice (matches controller expectations)
+    workOrders: [{
+        workOrder: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'WorkOrder'
+        },
+        description: {
+            type: String,
+            required: true,
+            trim: true
+        },
+        quantity: {
+            type: Number,
+            default: 1,
+            min: 0.01
+        },
+        unitPrice: {
+            type: Number,
+            default: 0,
+            min: 0
+        },
+        totalPrice: {
+            type: Number,
+            default: 0,
+            min: 0
+        },
+        costBreakdown: {
+            services: {
+                type: Number,
+                default: 0
+            },
+            price: {
+                type: Number,
+                default: 0
+            },
+            actualCost: {
+                type: Number,
+                default: 0
+            },
+            estimatedCost: {
+                type: Number,
+                default: 0
+            },
+            calculatedFrom: {
+                type: String,
+                default: 'estimatedCost'
+            }
+        }
+    }],
     // Enhanced financial calculations
     subtotal: {
         type: Number,
@@ -413,31 +463,45 @@ invoiceSchema.methods.calculateTotals = function() {
     let totalDiscount = 0;
     let totalTax = 0;
     
-    this.lineItems.forEach(item => {
-        const itemSubtotal = item.quantity * item.unitPrice;
-        subtotal += itemSubtotal;
-        
-        // Calculate discount
-        let itemDiscount = 0;
-        if (item.discount > 0) {
-            if (item.discountType === 'percentage') {
-                itemDiscount = itemSubtotal * (item.discount / 100);
-            } else {
-                itemDiscount = item.discount;
+    const hasWorkOrders = Array.isArray(this.workOrders) && this.workOrders.length > 0;
+    const items = hasWorkOrders
+        ? this.workOrders
+        : Array.isArray(this.lineItems) ? this.lineItems : [];
+
+    items.forEach(item => {
+        const quantity = item.quantity || 1;
+        const unitPrice = item.unitPrice || 0;
+        const existingTotal = typeof item.totalPrice === 'number' ? item.totalPrice : null;
+
+        if (hasWorkOrders) {
+            const calculatedTotal = existingTotal !== null ? existingTotal : quantity * unitPrice;
+            subtotal += calculatedTotal;
+            item.totalPrice = calculatedTotal;
+        } else {
+            const itemSubtotal = quantity * unitPrice;
+            subtotal += itemSubtotal;
+
+            // Calculate discount
+            let itemDiscount = 0;
+            if (item.discount > 0) {
+                if (item.discountType === 'percentage') {
+                    itemDiscount = itemSubtotal * (item.discount / 100);
+                } else {
+                    itemDiscount = item.discount;
+                }
             }
+            totalDiscount += itemDiscount;
+
+            // Calculate tax
+            if (item.taxable && item.taxRate > 0) {
+                const taxableAmount = itemSubtotal - itemDiscount;
+                totalTax += taxableAmount * (item.taxRate / 100);
+            }
+
+            item.totalPrice = itemSubtotal - itemDiscount;
         }
-        totalDiscount += itemDiscount;
-        
-        // Calculate tax
-        if (item.taxable && item.taxRate > 0) {
-            const taxableAmount = itemSubtotal - itemDiscount;
-            totalTax += taxableAmount * (item.taxRate / 100);
-        }
-        
-        // Update item total
-        item.totalPrice = itemSubtotal - itemDiscount;
     });
-    
+
     this.subtotal = subtotal;
     this.totalDiscount = totalDiscount;
     this.tax = totalTax;
