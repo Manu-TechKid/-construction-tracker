@@ -29,7 +29,7 @@ const invoiceSchema = new mongoose.Schema({
     client: {
         companyName: {
             type: String,
-            required: true,
+            required: false, // Made optional to allow legacy invoices
             trim: true
         },
         contactName: {
@@ -262,11 +262,15 @@ const invoiceSchema = new mongoose.Schema({
     },
     invoiceDate: {
         type: Date,
-        required: true
+        required: false, // Made optional to allow legacy invoices
+        default: Date.now
     },
     dueDate: {
         type: Date,
-        required: true
+        required: false, // Made optional to allow legacy invoices
+        default: function() {
+            return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+        }
     },
     paidDate: Date,
     paymentMethod: {

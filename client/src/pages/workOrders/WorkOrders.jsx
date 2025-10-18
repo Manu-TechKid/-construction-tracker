@@ -888,13 +888,21 @@ const WorkOrders = () => {
             }
           };
 
+          const invoiceId = params.row.invoice;
+          const isClickable = (billingStatus === 'invoiced' || billingStatus === 'paid') && invoiceId;
+
           return (
             <Chip
               label={getStatusText(billingStatus)}
               color={getStatusColor(billingStatus)}
               size="small"
               variant="outlined"
-              sx={{ fontSize: '0.75rem' }}
+              onClick={isClickable ? () => window.open(`/invoices/${invoiceId}`, '_blank') : undefined}
+              sx={{ 
+                fontSize: '0.75rem',
+                cursor: isClickable ? 'pointer' : 'default',
+                '&:hover': isClickable ? { opacity: 0.8 } : {}
+              }}
             />
           );
         } catch (error) {
