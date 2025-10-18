@@ -66,17 +66,23 @@ const allowedOrigins = [
   'http://localhost:3001',
   'https://construction-tracker-webapp.onrender.com'
 ];
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin like Postman or server-to-server
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      return callback(null, true); // relax for now; tighten later if needed
-    },
-    credentials: true
-  })
-);
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin like Postman or server-to-server
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(null, true); // relax for now; tighten later if needed
+  },
+  credentials: process.env.CORS_CREDENTIALS === 'true' || true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Content-Disposition'],
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
 
