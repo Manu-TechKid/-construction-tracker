@@ -143,23 +143,50 @@ const Invoices = () => {
       const token = localStorage.getItem('token');
       const apiUrl = process.env.REACT_APP_API_URL || 'https://construction-tracker-webapp.onrender.com/api/v1';
       
-      // Direct download link - opens in new tab and triggers download
-      const downloadUrl = `${apiUrl}/invoices/${invoice._id}/pdf?token=${encodeURIComponent(token)}`;
+      if (!token) {
+        toast.error('Authentication token not found. Please log in again.');
+        handleMenuClose();
+        return;
+      }
       
-      // Create temporary link and trigger download
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.target = '_blank';
-      link.download = `Invoice-${invoice.invoiceNumber || invoice._id}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // First try to fetch with proper headers to check if PDF generation works
+      const response = await fetch(`${apiUrl}/invoices/${invoice._id}/pdf`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        // If successful, create blob and download
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Invoice-${invoice.invoiceNumber || invoice._id}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        toast.success('Invoice PDF downloaded successfully');
+      } else {
+        // Handle different error cases
+        const errorData = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          toast.error('Authentication failed. Please log in again.');
+        } else if (response.status === 400) {
+          toast.error(errorData.message || 'Invoice has no billable items. Please add line items first.');
+        } else {
+          toast.error(errorData.message || 'Failed to generate PDF. Please try again.');
+        }
+      }
       
-      toast.success('Downloading invoice PDF...');
       handleMenuClose();
     } catch (error) {
       console.error('Error downloading PDF:', error);
-      toast.error('Failed to download PDF');
+      toast.error('Network error. Please check your connection and try again.');
       handleMenuClose();
     }
   };
@@ -182,7 +209,31 @@ const Invoices = () => {
       }
 
       if (managerEmails.length === 0) {
-        toast.warning('No manager email addresses found for this building. Please add manager emails in the building settings.');
+        // Offer alternative: open email client with invoice details
+        const confirmed = window.confirm(
+          'No manager email addresses found for this building.\n\n' +
+          'Would you like to open your email client to send the invoice manually?\n\n' +
+          'Click OK to open email client, or Cancel to add manager emails in building settings first.'
+        );
+        
+        if (confirmed) {
+          const subject = `Invoice ${invoice.invoiceNumber || invoice._id} - DSJ Construction Services`;
+          const body = `Dear Building Manager,\n\n` +
+            `Please find attached invoice ${invoice.invoiceNumber || invoice._id} for services provided at ${building?.name || 'your building'}.\n\n` +
+            `Invoice Details:\n` +
+            `- Invoice Number: ${invoice.invoiceNumber || invoice._id}\n` +
+            `- Date: ${new Date(invoice.invoiceDate || invoice.createdAt).toLocaleDateString()}\n` +
+            `- Total Amount: $${invoice.total?.toFixed(2) || '0.00'}\n\n` +
+            `You can download the invoice PDF from: ${window.location.origin}/invoices/${invoice._id}\n\n` +
+            `Best regards,\nDSJ Construction Services`;
+          
+          const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+          window.location.href = mailtoLink;
+          toast.info('Email client opened. Please add the recipient email address.');
+        } else {
+          toast.info('Please add manager emails in the building settings to enable automatic email sending.');
+        }
+        
         handleMenuClose();
         return;
       }

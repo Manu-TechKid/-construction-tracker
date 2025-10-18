@@ -897,7 +897,7 @@ const WorkOrders = () => {
               color={getStatusColor(billingStatus)}
               size="small"
               variant="outlined"
-              onClick={isClickable ? () => window.open(`/invoices/${invoiceId}`, '_blank') : undefined}
+              onClick={isClickable ? () => navigate(`/invoices/${invoiceId}`) : undefined}
               sx={{ 
                 fontSize: '0.75rem',
                 cursor: isClickable ? 'pointer' : 'default',
