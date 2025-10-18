@@ -140,35 +140,22 @@ const Invoices = () => {
 
   const handleDownloadPDF = async (invoice) => {
     try {
-      // Create a professional PDF invoice
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://construction-tracker-webapp.onrender.com/api/v1'}/invoices/${invoice._id}/pdf`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = `Invoice-${invoice.invoiceNumber || invoice._id}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        toast.success('PDF downloaded successfully');
-      } else {
-        // Fallback: Generate PDF using browser print
-        const printWindow = window.open(`/invoices/${invoice._id}?print=true`, '_blank');
-        if (printWindow) {
-          printWindow.onload = () => {
-            printWindow.print();
-          };
-        }
-        toast.info('Opening invoice for printing');
-      }
+      const token = localStorage.getItem('token');
+      const apiUrl = process.env.REACT_APP_API_URL || 'https://construction-tracker-webapp.onrender.com/api/v1';
+      
+      // Direct download link - opens in new tab and triggers download
+      const downloadUrl = `${apiUrl}/invoices/${invoice._id}/pdf?token=${encodeURIComponent(token)}`;
+      
+      // Create temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.target = '_blank';
+      link.download = `Invoice-${invoice.invoiceNumber || invoice._id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('Downloading invoice PDF...');
       handleMenuClose();
     } catch (error) {
       console.error('Error downloading PDF:', error);
@@ -195,7 +182,8 @@ const Invoices = () => {
       }
 
       if (managerEmails.length === 0) {
-        toast.error('No manager email addresses found for this building');
+        toast.warning('No manager email addresses found for this building. Please add manager emails in the building settings.');
+        handleMenuClose();
         return;
       }
 

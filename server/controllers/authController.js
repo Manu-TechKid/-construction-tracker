@@ -149,6 +149,10 @@ exports.protect = catchAsync(async (req, res, next) => {
   } else if (req.cookies.jwt) {
     token = req.cookies.jwt;
     console.log('Token from cookies:', token ? 'Found' : 'Not found');
+  } else if (req.query.token) {
+    // Support token in query params for PDF downloads
+    token = req.query.token;
+    console.log('Token from query params:', token ? 'Found' : 'Not found');
   }
 
   console.log('Final token:', token ? 'Present' : 'Missing');
