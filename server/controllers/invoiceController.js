@@ -63,7 +63,7 @@ exports.getAllInvoices = catchAsync(async (req, res, next) => {
   console.log('Invoice filter applied:', filter);
 
   const invoices = await Invoice.find(filter)
-    .populate('building', 'name address')
+    .populate('building', 'name address serviceManagerEmail generalManagerEmail maintenanceManagerEmail')
     .populate('workOrders.workOrder', 'title description apartmentNumber status')
     .sort('-createdAt');
 
@@ -79,7 +79,7 @@ exports.getAllInvoices = catchAsync(async (req, res, next) => {
 // Get single invoice
 exports.getInvoice = catchAsync(async (req, res, next) => {
     const invoice = await Invoice.findById(req.params.id)
-        .populate('building', 'name address')
+        .populate('building', 'name address serviceManagerEmail generalManagerEmail maintenanceManagerEmail')
         .populate('workOrders.workOrder', 'title description apartmentNumber status');
 
     if (!invoice) {
@@ -1053,7 +1053,7 @@ const generateInvoiceHTML = (invoice) => {
 // Generate PDF for invoice
 exports.generatePDF = catchAsync(async (req, res, next) => {
   const invoice = await Invoice.findById(req.params.id)
-    .populate('building', 'name address')
+    .populate('building', 'name address serviceManagerEmail generalManagerEmail maintenanceManagerEmail')
     .populate('projectEstimate', 'title description');
 
   if (!invoice) {
@@ -1074,23 +1074,45 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
   invoiceObject.lineItems = lineItems;
 
   try {
+    console.log(`Generating PDF for invoice ${invoice.invoiceNumber} (${invoice._id})`);
+    console.log(`Invoice has ${lineItems.length} line items`);
+    
     const puppeteer = require('puppeteer');
 
     // Generate HTML content for PDF
     const htmlContent = generateInvoiceHTML(invoiceObject);
+    console.log('HTML content generated successfully');
 
-    // Launch browser
+    // Launch browser with production-friendly settings
     const browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-gpu'
+      ],
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
     });
+    console.log('Browser launched successfully');
 
     const page = await browser.newPage();
+    
+    // Set page settings for better rendering
+    await page.setViewport({ width: 1200, height: 800 });
+    
+    // Set content with timeout
+    await page.setContent(htmlContent, { 
+      waitUntil: 'domcontentloaded',
+      timeout: 30000 
+    });
+    console.log('Page content set successfully');
 
-    // Set content and wait for it to load
-    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-
-    // Generate PDF
+    // Generate PDF with timeout
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
@@ -1099,20 +1121,34 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
         right: '1cm',
         bottom: '1cm',
         left: '1cm'
-      }
+      },
+      timeout: 30000
     });
+    console.log('PDF generated successfully');
 
     await browser.close();
 
     // Set headers for PDF download
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="invoice-${invoice.invoiceNumber}.pdf"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
 
     res.send(pdfBuffer);
 
   } catch (error) {
     console.error('Error generating PDF:', error);
-    return next(new AppError('Failed to generate PDF', 500));
+    console.error('Error stack:', error.stack);
+    console.error('Invoice ID:', invoice._id);
+    console.error('Invoice Number:', invoice.invoiceNumber);
+    
+    // Provide more specific error messages
+    if (error.message.includes('Navigation timeout')) {
+      return next(new AppError('PDF generation timed out. Please try again.', 500));
+    } else if (error.message.includes('Protocol error')) {
+      return next(new AppError('Browser error during PDF generation. Please try again.', 500));
+    } else {
+      return next(new AppError(`Failed to generate PDF: ${error.message}`, 500));
+    }
   }
 });
 
@@ -1125,7 +1161,7 @@ exports.emailInvoice = catchAsync(async (req, res, next) => {
   }
 
   const invoice = await Invoice.findById(req.params.id)
-    .populate('building', 'name address')
+    .populate('building', 'name address serviceManagerEmail generalManagerEmail maintenanceManagerEmail')
     .populate('projectEstimate', 'title description');
 
   if (!invoice) {
