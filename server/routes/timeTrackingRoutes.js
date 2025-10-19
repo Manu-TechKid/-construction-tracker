@@ -49,4 +49,9 @@ router.delete('/sessions/:sessionId', timeTrackingController.deleteTimeSession);
 // Weekly hours tracking
 router.get('/weekly-hours', timeTrackingController.getWeeklyHours);
 
+// Admin hour correction and payment management
+router.patch('/sessions/:sessionId/correct-hours', timeTrackingController.correctHours);
+router.post('/hourly-rates', timeTrackingController.setHourlyRates);
+router.get('/payment-report', timeTrackingController.getPaymentReport);
+
 module.exports = router;

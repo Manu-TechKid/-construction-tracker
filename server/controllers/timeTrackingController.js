@@ -611,3 +611,225 @@ exports.getWeeklyHours = catchAsync(async (req, res, next) => {
     }
   });
 });
+
+// Admin: Correct worker hours
+exports.correctHours = catchAsync(async (req, res, next) => {
+  const { sessionId } = req.params;
+  const { correctedHours, correctionReason, hourlyRate } = req.body;
+
+  // Validate admin permissions
+  if (!['admin', 'manager'].includes(req.user.role)) {
+    return next(new AppError('Only admins and managers can correct hours', 403));
+  }
+
+  // Validate input
+  if (!correctedHours || correctedHours < 0 || correctedHours > 24) {
+    return next(new AppError('Corrected hours must be between 0 and 24', 400));
+  }
+
+  if (!correctionReason || correctionReason.trim().length < 5) {
+    return next(new AppError('Correction reason must be at least 5 characters', 400));
+  }
+
+  const session = await TimeSession.findById(sessionId);
+  if (!session) {
+    return next(new AppError('Time session not found', 404));
+  }
+
+  // Store original hours if not already stored
+  if (!session.originalHours) {
+    session.originalHours = session.totalHours;
+  }
+
+  // Apply corrections
+  session.correctedHours = parseFloat(correctedHours);
+  session.correctionReason = correctionReason.trim();
+  session.correctedBy = req.user.id;
+  session.correctedAt = new Date();
+  
+  // Update hourly rate if provided
+  if (hourlyRate && hourlyRate > 0) {
+    session.hourlyRate = parseFloat(hourlyRate);
+  }
+
+  await session.save();
+
+  // Populate for response
+  await session.populate([
+    { path: 'worker', select: 'name email' },
+    { path: 'correctedBy', select: 'name email' },
+    { path: 'building', select: 'name' }
+  ]);
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Hours corrected successfully',
+    data: {
+      session
+    }
+  });
+});
+
+// Admin: Set hourly rates for multiple workers
+exports.setHourlyRates = catchAsync(async (req, res, next) => {
+  const { workerRates } = req.body; // Array of { workerId, hourlyRate }
+
+  // Validate admin permissions
+  if (!['admin', 'manager'].includes(req.user.role)) {
+    return next(new AppError('Only admins and managers can set hourly rates', 403));
+  }
+
+  if (!Array.isArray(workerRates) || workerRates.length === 0) {
+    return next(new AppError('Worker rates array is required', 400));
+  }
+
+  const results = [];
+  
+  for (const { workerId, hourlyRate } of workerRates) {
+    if (!workerId || !hourlyRate || hourlyRate < 0) {
+      results.push({ workerId, status: 'error', message: 'Invalid worker ID or hourly rate' });
+      continue;
+    }
+
+    try {
+      // Update worker's profile with default hourly rate
+      const worker = await User.findById(workerId);
+      if (!worker || worker.role !== 'worker') {
+        results.push({ workerId, status: 'error', message: 'Worker not found' });
+        continue;
+      }
+
+      // Update worker profile
+      if (!worker.workerProfile) {
+        worker.workerProfile = {};
+      }
+      worker.workerProfile.hourlyRate = parseFloat(hourlyRate);
+      await worker.save();
+
+      // Update all pending/active sessions for this worker
+      await TimeSession.updateMany(
+        { 
+          worker: workerId, 
+          status: { $in: ['active', 'completed'] },
+          hourlyRate: { $in: [0, null, undefined] }
+        },
+        { 
+          hourlyRate: parseFloat(hourlyRate),
+          $set: { calculatedPay: { $multiply: ['$totalHours', parseFloat(hourlyRate)] } }
+        }
+      );
+
+      results.push({ workerId, status: 'success', hourlyRate: parseFloat(hourlyRate) });
+    } catch (error) {
+      results.push({ workerId, status: 'error', message: error.message });
+    }
+  }
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Hourly rates updated',
+    data: { results }
+  });
+});
+
+// Get payment report for workers
+exports.getPaymentReport = catchAsync(async (req, res, next) => {
+  const { startDate, endDate, workerId } = req.query;
+
+  // Validate admin permissions
+  if (!['admin', 'manager'].includes(req.user.role)) {
+    return next(new AppError('Only admins and managers can view payment reports', 403));
+  }
+
+  // Build query
+  const query = {
+    status: 'completed',
+    isApproved: true,
+    clockOutTime: { $exists: true }
+  };
+
+  if (startDate) {
+    query.clockInTime = { $gte: new Date(startDate) };
+  }
+  if (endDate) {
+    query.clockOutTime = { ...query.clockOutTime, $lte: new Date(endDate) };
+  }
+  if (workerId) {
+    query.worker = workerId;
+  }
+
+  const paymentData = await TimeSession.aggregate([
+    { $match: query },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'worker',
+        foreignField: '_id',
+        as: 'workerInfo'
+      }
+    },
+    {
+      $lookup: {
+        from: 'buildings',
+        localField: 'building',
+        foreignField: '_id',
+        as: 'buildingInfo'
+      }
+    },
+    {
+      $unwind: '$workerInfo'
+    },
+    {
+      $addFields: {
+        effectiveHours: { $ifNull: ['$correctedHours', '$totalHours'] },
+        buildingName: { $arrayElemAt: ['$buildingInfo.name', 0] }
+      }
+    },
+    {
+      $group: {
+        _id: '$worker',
+        workerName: { $first: '$workerInfo.name' },
+        workerEmail: { $first: '$workerInfo.email' },
+        totalHours: { $sum: '$effectiveHours' },
+        totalPay: { $sum: '$calculatedPay' },
+        sessionsCount: { $sum: 1 },
+        avgHourlyRate: { $avg: '$hourlyRate' },
+        sessions: {
+          $push: {
+            sessionId: '$_id',
+            date: '$clockInTime',
+            building: '$buildingName',
+            apartment: '$apartmentNumber',
+            workType: '$workType',
+            hours: '$effectiveHours',
+            hourlyRate: '$hourlyRate',
+            pay: '$calculatedPay',
+            wasCorrected: { $ne: ['$correctedHours', null] },
+            correctionReason: '$correctionReason'
+          }
+        }
+      }
+    },
+    { $sort: { workerName: 1 } }
+  ]);
+
+  const totalPayroll = paymentData.reduce((sum, worker) => sum + (worker.totalPay || 0), 0);
+  const totalHours = paymentData.reduce((sum, worker) => sum + (worker.totalHours || 0), 0);
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      paymentData,
+      summary: {
+        totalWorkers: paymentData.length,
+        totalHours: Math.round(totalHours * 100) / 100,
+        totalPayroll: Math.round(totalPayroll * 100) / 100,
+        avgHourlyRate: totalHours > 0 ? Math.round((totalPayroll / totalHours) * 100) / 100 : 0
+      },
+      period: {
+        startDate: startDate || 'All time',
+        endDate: endDate || 'All time'
+      }
+    }
+  });
+});

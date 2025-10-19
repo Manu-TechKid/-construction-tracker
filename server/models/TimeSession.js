@@ -99,6 +99,45 @@ const timeSessionSchema = new mongoose.Schema({
   },
   rejectionReason: {
     type: String
+  },
+  
+  // Admin hour corrections
+  originalHours: {
+    type: Number // Store original calculated hours
+  },
+  correctedHours: {
+    type: Number // Admin-corrected hours
+  },
+  correctionReason: {
+    type: String // Why hours were corrected
+  },
+  correctedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  correctedAt: {
+    type: Date
+  },
+  
+  // Payment calculation
+  hourlyRate: {
+    type: Number,
+    default: 0 // Rate per hour for this session
+  },
+  calculatedPay: {
+    type: Number,
+    default: 0 // Total payment for this session
+  },
+  
+  // Work details for reporting
+  apartmentNumber: {
+    type: String // Which apartment worked on
+  },
+  workType: {
+    type: String // Type of work performed
+  },
+  workDescription: {
+    type: String // Description of work done
   }
 }, {
   timestamps: true
@@ -108,9 +147,32 @@ const timeSessionSchema = new mongoose.Schema({
 timeSessionSchema.pre('save', function(next) {
   if (this.clockOutTime && this.clockInTime) {
     const diffMs = this.clockOutTime - this.clockInTime;
-    this.totalHours = Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100; // Round to 2 decimal places
+    const calculatedHours = Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100; // Round to 2 decimal places
+    
+    // Store original hours if not already stored
+    if (!this.originalHours) {
+      this.originalHours = calculatedHours;
+    }
+    
+    // Use corrected hours if available, otherwise use calculated hours
+    this.totalHours = this.correctedHours || calculatedHours;
+    
+    // Calculate payment if hourly rate is set
+    if (this.hourlyRate > 0) {
+      this.calculatedPay = Math.round(this.totalHours * this.hourlyRate * 100) / 100;
+    }
   }
   next();
+});
+
+// Virtual field to get effective hours (corrected or original)
+timeSessionSchema.virtual('effectiveHours').get(function() {
+  return this.correctedHours || this.totalHours;
+});
+
+// Virtual field to check if hours were corrected
+timeSessionSchema.virtual('wasCorrected').get(function() {
+  return this.correctedHours !== null && this.correctedHours !== undefined;
 });
 
 // Index for efficient queries

@@ -83,6 +83,12 @@ const TimeTrackingManagement = () => {
   const [detailsDialog, setDetailsDialog] = useState(false);
   const [approvalDialog, setApprovalDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [correctionDialog, setCorrectionDialog] = useState(false);
+  const [correctedHours, setCorrectedHours] = useState('');
+  const [correctionReason, setCorrectionReason] = useState('');
+  const [hourlyRateDialog, setHourlyRateDialog] = useState(false);
+  const [workerRates, setWorkerRates] = useState([]);
+  const [paymentReportDialog, setPaymentReportDialog] = useState(false);
   
   // API calls
   const { data: sessionsData, isLoading: sessionsLoading, refetch: refetchSessions } = useGetTimeSessionsQuery(filters);
@@ -179,6 +185,86 @@ const TimeTrackingManagement = () => {
     }
   };
 
+  const handleCorrectHours = (session) => {
+    setSelectedSession(session);
+    setCorrectedHours(session.correctedHours || session.totalHours || '');
+    setCorrectionReason(session.correctionReason || '');
+    setCorrectionDialog(true);
+  };
+
+  const handleConfirmCorrection = async () => {
+    try {
+      const apiUrl = process.env.REACT_APP_API_URL || 'https://construction-tracker-webapp.onrender.com/api/v1';
+      const response = await fetch(`${apiUrl}/time-tracking/sessions/${selectedSession._id}/correct-hours`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          correctedHours: parseFloat(correctedHours),
+          correctionReason: correctionReason.trim(),
+          hourlyRate: selectedSession.hourlyRate || 0
+        })
+      });
+
+      if (response.ok) {
+        toast.success('Hours corrected successfully');
+        setCorrectionDialog(false);
+        setCorrectedHours('');
+        setCorrectionReason('');
+        refetchSessions();
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.message || 'Failed to correct hours');
+      }
+    } catch (error) {
+      toast.error('Failed to correct hours');
+    }
+  };
+
+  const handleSetHourlyRates = () => {
+    // Initialize worker rates from current workers
+    const initialRates = workers.map(worker => ({
+      workerId: worker._id,
+      workerName: worker.name || worker.email,
+      hourlyRate: worker.workerProfile?.hourlyRate || 0
+    }));
+    setWorkerRates(initialRates);
+    setHourlyRateDialog(true);
+  };
+
+  const handleSaveHourlyRates = async () => {
+    try {
+      const apiUrl = process.env.REACT_APP_API_URL || 'https://construction-tracker-webapp.onrender.com/api/v1';
+      const response = await fetch(`${apiUrl}/time-tracking/hourly-rates`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          workerRates: workerRates.map(({ workerId, hourlyRate }) => ({ workerId, hourlyRate }))
+        })
+      });
+
+      if (response.ok) {
+        toast.success('Hourly rates updated successfully');
+        setHourlyRateDialog(false);
+        refetchSessions();
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.message || 'Failed to update hourly rates');
+      }
+    } catch (error) {
+      toast.error('Failed to update hourly rates');
+    }
+  };
+
+  const handleViewPaymentReport = () => {
+    setPaymentReportDialog(true);
+  };
+
   const exportToCSV = () => {
     const csvData = sessions.map(session => ({
       Worker: getWorkerName(session.worker),
@@ -233,7 +319,7 @@ const TimeTrackingManagement = () => {
           <Typography variant="h4" component="h1">
             Time Tracking Management
           </Typography>
-          <Box display="flex" gap={2}>
+          <Box display="flex" gap={2} flexWrap="wrap">
             <Button
               variant="outlined"
               startIcon={<RefreshIcon />}
@@ -243,6 +329,22 @@ const TimeTrackingManagement = () => {
               }}
             >
               Refresh
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<MoneyIcon />}
+              onClick={handleSetHourlyRates}
+              color="primary"
+            >
+              Set Hourly Rates
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<AssessmentIcon />}
+              onClick={handleViewPaymentReport}
+              color="secondary"
+            >
+              Payment Report
             </Button>
             <Button
               variant="contained"
@@ -441,39 +543,57 @@ const TimeTrackingManagement = () => {
                           </TableCell>
                           <TableCell>{session.breakTime || 0} min</TableCell>
                           <TableCell>
-                            <Tooltip title="View Details">
-                              <IconButton 
-                                size="small" 
-                                onClick={() => handleViewDetails(session)}
-                              >
-                                <ViewIcon />
-                              </IconButton>
-                            </Tooltip>
-                            {session.photos && session.photos.length > 0 && (
-                              <Tooltip title="Has Photos">
-                                <IconButton size="small">
-                                  <PhotoIcon color="primary" />
+                            <Box display="flex" alignItems="center" gap={0.5}>
+                              <Tooltip title="View Details">
+                                <IconButton 
+                                  size="small" 
+                                  onClick={() => handleViewDetails(session)}
+                                >
+                                  <ViewIcon />
                                 </IconButton>
                               </Tooltip>
-                            )}
-                            {session.notes && (
-                              <Tooltip title="Has Notes">
-                                <IconButton size="small">
-                                  <NotesIcon color="primary" />
+                              <Tooltip title="Correct Hours">
+                                <IconButton 
+                                  size="small" 
+                                  color="warning"
+                                  onClick={() => handleCorrectHours(session)}
+                                  disabled={session.status === 'active'}
+                                >
+                                  <TimeIcon />
                                 </IconButton>
                               </Tooltip>
-                            )}
-                            <Tooltip title="Delete">
-                              <IconButton 
-                                size="small" 
-                                color="error"
-                                onClick={() => handleDelete(session._id)}
-                                disabled={isDeleting}
-                                sx={{ ml: 1 }}
-                              >
-                                <DeleteIcon />
-                              </IconButton>
-                            </Tooltip>
+                              {session.photos && session.photos.length > 0 && (
+                                <Tooltip title="Has Photos">
+                                  <IconButton size="small">
+                                    <PhotoIcon color="primary" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                              {session.notes && (
+                                <Tooltip title="Has Notes">
+                                  <IconButton size="small">
+                                    <NotesIcon color="primary" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                              {session.correctedHours && (
+                                <Tooltip title={`Hours corrected: ${session.correctionReason}`}>
+                                  <IconButton size="small">
+                                    <MoneyIcon color="warning" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                              <Tooltip title="Delete">
+                                <IconButton 
+                                  size="small" 
+                                  color="error"
+                                  onClick={() => handleDelete(session._id)}
+                                  disabled={isDeleting}
+                                >
+                                  <DeleteIcon />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -657,6 +777,106 @@ const TimeTrackingManagement = () => {
               disabled={!rejectionReason.trim() || isApproving}
             >
               Reject
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Hour Correction Dialog */}
+        <Dialog open={correctionDialog} onClose={() => setCorrectionDialog(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>
+            Correct Hours for {selectedSession && getWorkerName(selectedSession.worker)}
+          </DialogTitle>
+          <DialogContent>
+            <Box sx={{ pt: 2 }}>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    Original Hours: {selectedSession?.totalHours || 0}h
+                    {selectedSession?.correctedHours && (
+                      <><br />Previously Corrected: {selectedSession.correctedHours}h</>
+                    )}
+                  </Alert>
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    autoFocus
+                    label="Corrected Hours"
+                    type="number"
+                    fullWidth
+                    value={correctedHours}
+                    onChange={(e) => setCorrectedHours(e.target.value)}
+                    inputProps={{ min: 0, max: 24, step: 0.25 }}
+                    helperText="Enter the correct number of hours (0-24)"
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    label="Correction Reason"
+                    fullWidth
+                    multiline
+                    rows={3}
+                    value={correctionReason}
+                    onChange={(e) => setCorrectionReason(e.target.value)}
+                    placeholder="Explain why the hours are being corrected..."
+                    helperText="Required: Minimum 5 characters"
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setCorrectionDialog(false)}>Cancel</Button>
+            <Button 
+              onClick={handleConfirmCorrection}
+              variant="contained"
+              color="warning"
+              disabled={!correctedHours || !correctionReason.trim() || correctionReason.trim().length < 5}
+            >
+              Correct Hours
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Hourly Rates Dialog */}
+        <Dialog open={hourlyRateDialog} onClose={() => setHourlyRateDialog(false)} maxWidth="md" fullWidth>
+          <DialogTitle>Set Hourly Rates for Workers</DialogTitle>
+          <DialogContent>
+            <Box sx={{ pt: 2 }}>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Set the hourly rate for each worker. This will be used to calculate payments for future time sessions.
+              </Alert>
+              <Grid container spacing={2}>
+                {workerRates.map((worker, index) => (
+                  <Grid item xs={12} sm={6} key={worker.workerId}>
+                    <TextField
+                      label={worker.workerName}
+                      type="number"
+                      fullWidth
+                      value={worker.hourlyRate}
+                      onChange={(e) => {
+                        const newRates = [...workerRates];
+                        newRates[index].hourlyRate = parseFloat(e.target.value) || 0;
+                        setWorkerRates(newRates);
+                      }}
+                      inputProps={{ min: 0, step: 0.25 }}
+                      InputProps={{
+                        startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>
+                      }}
+                      helperText="Per hour rate"
+                    />
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setHourlyRateDialog(false)}>Cancel</Button>
+            <Button 
+              onClick={handleSaveHourlyRates}
+              variant="contained"
+              color="primary"
+            >
+              Save Rates
             </Button>
           </DialogActions>
         </Dialog>

@@ -161,23 +161,23 @@ const WorkerDashboard = () => {
           variant={isMobile ? 'fullWidth' : 'standard'}
         >
           <Tab 
-            label="My Tasks" 
-            icon={<DashboardIcon />}
+            icon={<DashboardIcon />} 
+            label="Dashboard" 
             iconPosition="start"
           />
           <Tab 
+            icon={<TimeIcon />} 
             label="Time Tracking" 
-            icon={<TimeIcon />}
             iconPosition="start"
           />
           <Tab 
-            label="Weekly Hours" 
-            icon={<HoursIcon />}
+            icon={<HoursIcon />} 
+            label="My Hours" 
             iconPosition="start"
           />
           <Tab 
-            label="Employment Letter" 
-            icon={<LetterIcon />}
+            icon={<LetterIcon />} 
+            label="Reference Letter" 
             iconPosition="start"
           />
         </Tabs>
