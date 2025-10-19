@@ -39,6 +39,7 @@ import { toast } from 'react-toastify';
 import { formatDate } from '../../utils/dateUtils';
 import EnhancedTimeTracker from '../../components/timeTracking/EnhancedTimeTracker';
 import WeeklyHoursSummary from '../../components/workers/WeeklyHoursSummary';
+import WorkerHoursSummary from '../../components/workers/WorkerHoursSummary';
 import EmploymentReferenceLetter from '../../components/workers/EmploymentReferenceLetter';
 const WorkerDashboard = () => {
   const { user } = useAuth();
@@ -291,7 +292,7 @@ const WorkerDashboard = () => {
       )}
 
       {selectedTab === 2 && (
-        <WeeklyHoursSummary />
+        <WorkerHoursSummary />
       )}
 
       {selectedTab === 3 && (

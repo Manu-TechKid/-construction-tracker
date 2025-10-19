@@ -49,13 +49,15 @@ import {
   Delete as DeleteIcon,
   Assessment as StatsIcon,
   PhotoCamera as PhotoIcon,
-  Notes as NotesIcon
+  Notes as NotesIcon,
+  Assessment as AssessmentIcon
 } from '@mui/icons-material';
 import { format, parseISO, differenceInHours, differenceInMinutes } from 'date-fns';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
 import TimeSessionDetails from '../../components/timeTracking/TimeSessionDetails';
 import WeeklyHoursReport from '../../components/timeTracking/WeeklyHoursReport';
+import PaymentReport from '../../components/timeTracking/PaymentReport';
 import {
   useGetTimeSessionsQuery,
   useGetPendingApprovalsQuery,
@@ -488,6 +490,7 @@ const TimeTrackingManagement = () => {
               } 
             />
             <Tab label="Weekly Hours" />
+            <Tab label="Payment Report" />
           </Tabs>
         </Box>
 
@@ -509,11 +512,14 @@ const TimeTrackingManagement = () => {
                       <TableRow>
                         <TableCell>Worker</TableCell>
                         <TableCell>Building</TableCell>
+                        <TableCell>Apartment</TableCell>
+                        <TableCell>Work Type</TableCell>
                         <TableCell>Clock In</TableCell>
                         <TableCell>Clock Out</TableCell>
                         <TableCell>Duration</TableCell>
+                        <TableCell>Hourly Rate</TableCell>
+                        <TableCell>Payment</TableCell>
                         <TableCell>Status</TableCell>
-                        <TableCell>Break Time</TableCell>
                         <TableCell>Actions</TableCell>
                       </TableRow>
                     </TableHead>
@@ -522,6 +528,12 @@ const TimeTrackingManagement = () => {
                         <TableRow key={session._id}>
                           <TableCell>{getWorkerName(session.worker)}</TableCell>
                           <TableCell>{getBuildingName(session.building)}</TableCell>
+                          <TableCell>
+                            {session.apartmentNumber || 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {session.workType || 'General'}
+                          </TableCell>
                           <TableCell>
                             {format(parseISO(session.clockInTime), 'MMM dd, HH:mm')}
                           </TableCell>
@@ -532,7 +544,25 @@ const TimeTrackingManagement = () => {
                             }
                           </TableCell>
                           <TableCell>
-                            {formatDuration(session.clockInTime, session.clockOutTime)}
+                            <Box>
+                              {formatDuration(session.clockInTime, session.clockOutTime)}
+                              {session.correctedHours && (
+                                <Chip 
+                                  label="Corrected" 
+                                  size="small" 
+                                  color="warning" 
+                                  sx={{ ml: 1 }}
+                                />
+                              )}
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            ${session.hourlyRate || 0}/hr
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight="bold" color="success.main">
+                              ${session.calculatedPay?.toFixed(2) || '0.00'}
+                            </Typography>
                           </TableCell>
                           <TableCell>
                             <Chip 
@@ -541,7 +571,6 @@ const TimeTrackingManagement = () => {
                               size="small"
                             />
                           </TableCell>
-                          <TableCell>{session.breakTime || 0} min</TableCell>
                           <TableCell>
                             <Box display="flex" alignItems="center" gap={0.5}>
                               <Tooltip title="View Details">
@@ -676,6 +705,10 @@ const TimeTrackingManagement = () => {
 
         {selectedTab === 2 && (
           <WeeklyHoursReport />
+        )}
+
+        {selectedTab === 3 && (
+          <PaymentReport />
         )}
 
         {/* Session Details Dialog */}
