@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const WorkOrder = require('../models/WorkOrder');
 const AppError = require('../utils/appError');
@@ -320,23 +321,40 @@ exports.getWorkerAssignments = catchAsync(async (req, res, next) => {
     console.log('getWorkerAssignments called:', {
         requestedWorkerId: workerId,
         currentUserId: req.user?.id,
+        currentUser_id: req.user?._id,
         currentUserRole: req.user?.role,
         timestamp: new Date().toISOString()
     });
     
     // Allow workers to access their own assignments, or allow managers/admins to access any worker's assignments
-    if (req.user.role === 'worker' && req.user.id !== workerId) {
+    const currentUserId = req.user._id?.toString() || req.user.id?.toString();
+    if (req.user.role === 'worker' && currentUserId !== workerId) {
         return next(new AppError('You can only access your own assignments', 403));
     }
     
     // Find work orders assigned to this worker
-    const workOrders = await WorkOrder.find({
-        'assignedTo.worker': workerId
-    })
-    .populate('building', 'name address city')
-    .populate('assignedTo.worker', 'name email')
-    .populate('createdBy', 'name email')
-    .sort('-scheduledDate');
+    let workOrders = [];
+    try {
+        // Convert workerId to ObjectId for proper matching
+        const workerObjectId = mongoose.Types.ObjectId.isValid(workerId) 
+            ? new mongoose.Types.ObjectId(workerId) 
+            : workerId;
+            
+        workOrders = await WorkOrder.find({
+            'assignedTo.worker': workerObjectId
+        })
+        .populate('building', 'name address city')
+        .populate('assignedTo.worker', 'name email')
+        .populate('createdBy', 'name email')
+        .sort('-scheduledDate');
+        
+        console.log(`Found ${workOrders.length} work orders for worker ${workerId}`);
+    } catch (error) {
+        console.error('Error fetching work orders:', error);
+        console.error('Error details:', error.message);
+        // Return empty array if there's an error, don't fail the entire request
+        workOrders = [];
+    }
     
     // Calculate statistics
     const today = new Date();
