@@ -1,6 +1,7 @@
 const express = require('express');
 const authController = require('../controllers/authController');
 const userController = require('../controllers/userController');
+const { hidePricesFromWorkers } = require('../middleware/roleMiddleware');
 
 const router = express.Router();
 
@@ -14,17 +15,20 @@ router.patch('/resetPassword/:token', authController.resetPassword);
 // Protect all routes after this middleware
 router.use(authController.protect);
 
+// Hide prices from workers on all routes
+router.use(hidePricesFromWorkers);
+
 // User profile routes
 router.patch('/updateMyPassword', authController.updatePassword);
 router.get('/me', userController.getMe, userController.getUser);
 router.patch('/updateMe', userController.updateMe);
 router.delete('/deleteMe', userController.deleteMe);
 
-// Worker-specific routes
-router.get('/workers', userController.getAllWorkers);
-router.get('/workers/available', userController.getAvailableWorkers);
+// Worker-specific routes - restricted to non-workers
+router.get('/workers', authController.restrictTo('admin', 'manager', 'supervisor'), userController.getAllWorkers);
+router.get('/workers/available', authController.restrictTo('admin', 'manager', 'supervisor'), userController.getAvailableWorkers);
 router.post('/workers', authController.restrictTo('admin', 'manager'), userController.createWorker);
-router.get('/workers/:id', userController.getUser);
+router.get('/workers/:id', authController.restrictTo('admin', 'manager', 'supervisor'), userController.getUser);
 router.patch('/:id/approval', authController.restrictTo('admin', 'manager'), userController.updateWorkerApproval);
 router.patch('/:id/skills', authController.restrictTo('admin', 'manager', 'supervisor'), userController.updateWorkerSkills);
 router.patch('/:id/status', authController.restrictTo('admin', 'manager'), userController.updateWorkerStatus);

@@ -21,8 +21,10 @@ import {
   People as WorkerIcon,
   Menu as MenuIcon,
   AccessTime as TimeTrackingIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Work as WorkIcon
 } from '@mui/icons-material';
+import { useAuth } from '../../hooks/useAuth';
 
 const MobileNavigation = () => {
   const theme = useTheme();
@@ -30,6 +32,7 @@ const MobileNavigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { hasPermission, isWorker, canAccessMainDashboard, canAccessWorkerDashboard } = useAuth();
   
   // Only render on mobile devices
   if (!isMobile) return null;
@@ -41,21 +44,89 @@ const MobileNavigation = () => {
   
   const getCurrentValue = () => {
     const path = location.pathname;
-    if (path === '/') return 'dashboard';
+    if (path === '/' || path === '/dashboard') return 'dashboard';
+    if (path === '/worker-dashboard') return 'workerDashboard';
     if (path.includes('/buildings')) return 'buildings';
     if (path.includes('/work-orders')) return 'workOrders';
     if (path.includes('/workers')) return 'workers';
     if (path.includes('/time-tracking')) return 'timeTracking';
-    return 'dashboard';
+    return isWorker ? 'workerDashboard' : 'dashboard';
   };
   
-  const navigationItems = [
-    { label: 'Dashboard', value: 'dashboard', icon: <DashboardIcon />, path: '/' },
-    { label: 'Buildings', value: 'buildings', icon: <BuildingIcon />, path: '/buildings' },
-    { label: 'Work Orders', value: 'workOrders', icon: <WorkOrderIcon />, path: '/work-orders' },
-    { label: 'Workers', value: 'workers', icon: <WorkerIcon />, path: '/workers' },
-    { label: 'Time Tracking', value: 'timeTracking', icon: <TimeTrackingIcon />, path: '/time-tracking' }
-  ];
+  // Define navigation items based on user permissions
+  const getNavigationItems = () => {
+    const items = [];
+
+    // Worker Dashboard - only for workers
+    if (isWorker && canAccessWorkerDashboard()) {
+      items.push({
+        label: 'My Tasks',
+        value: 'workerDashboard',
+        icon: <WorkIcon />,
+        path: '/worker-dashboard',
+        permission: 'view:dashboard:worker'
+      });
+    }
+
+    // Main Dashboard - for non-workers
+    if (canAccessMainDashboard()) {
+      items.push({
+        label: 'Dashboard',
+        value: 'dashboard',
+        icon: <DashboardIcon />,
+        path: '/dashboard',
+        permission: 'read:all'
+      });
+    }
+
+    // Buildings - only if user has permission
+    if (hasPermission(['read:buildings'])) {
+      items.push({
+        label: 'Buildings',
+        value: 'buildings',
+        icon: <BuildingIcon />,
+        path: '/buildings',
+        permission: 'read:buildings'
+      });
+    }
+
+    // Work Orders - only for non-workers with permission
+    if (!isWorker && hasPermission(['read:workorders'])) {
+      items.push({
+        label: 'Work Orders',
+        value: 'workOrders',
+        icon: <WorkOrderIcon />,
+        path: '/work-orders',
+        permission: 'read:workorders'
+      });
+    }
+
+    // Workers - not for workers themselves
+    if (!isWorker && hasPermission(['read:workers'])) {
+      items.push({
+        label: 'Workers',
+        value: 'workers',
+        icon: <WorkerIcon />,
+        path: '/workers',
+        permission: 'read:workers'
+      });
+    }
+
+    // Time Tracking - only for admins/managers
+    if (!isWorker && hasPermission(['view:costs', 'manage:users'])) {
+      items.push({
+        label: 'Time Tracking',
+        value: 'timeTracking',
+        icon: <TimeTrackingIcon />,
+        path: '/time-tracking-management',
+        permission: 'view:costs'
+      });
+    }
+
+    return items;
+  };
+
+  const navigationItems = getNavigationItems();
   
   return (
     <>
@@ -80,7 +151,8 @@ const MobileNavigation = () => {
           }}
           showLabels
         >
-          {navigationItems.slice(0, 4).map(item => (
+          {/* Show up to 4 navigation items, then menu for the rest */}
+          {navigationItems.slice(0, Math.min(4, navigationItems.length)).map(item => (
             <BottomNavigationAction 
               key={item.value}
               label={item.label} 
@@ -88,11 +160,14 @@ const MobileNavigation = () => {
               icon={item.icon} 
             />
           ))}
-          <BottomNavigationAction 
-            label="Menu" 
-            value="menu" 
-            icon={<MenuIcon />} 
-          />
+          {/* Only show menu button if there are more than 4 items */}
+          {navigationItems.length > 4 && (
+            <BottomNavigationAction 
+              label="Menu" 
+              value="menu" 
+              icon={<MenuIcon />} 
+            />
+          )}
         </BottomNavigation>
       </Paper>
       

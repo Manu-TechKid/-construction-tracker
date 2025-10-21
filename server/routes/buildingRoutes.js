@@ -2,11 +2,15 @@ const express = require('express');
 const buildingController = require('../controllers/buildingController');
 const authController = require('../controllers/authController');
 const { uploadSingle, uploadMultiple } = require('../utils/multer');
+const { hidePricesFromWorkers } = require('../middleware/roleMiddleware');
 
 const router = express.Router();
 
 // Protect all routes after this middleware
 router.use(authController.protect);
+
+// Hide prices from workers on all routes
+router.use(hidePricesFromWorkers);
 
 // Routes for buildings
 router
