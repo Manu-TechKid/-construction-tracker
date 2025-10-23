@@ -41,7 +41,18 @@ exports.uploadTimePhotos = upload.array('photos', 5);
 exports.clockIn = catchAsync(async (req, res, next) => {
   const { workerId, buildingId, workOrderId, latitude, longitude, accuracy, notes, apartmentNumber, workType } = req.body;
 
-  console.log('Clock-in request:', { workerId, latitude, longitude, accuracy, notes });
+  console.log('Clock-in request:', { 
+    workerId, 
+    buildingId, 
+    workOrderId, 
+    latitude, 
+    longitude, 
+    accuracy, 
+    notes, 
+    apartmentNumber, 
+    workType,
+    user: req.user?.id 
+  });
 
   // Use authenticated user's ID if workerId not provided
   const actualWorkerId = workerId || req.user.id;
@@ -99,30 +110,46 @@ exports.clockIn = catchAsync(async (req, res, next) => {
   // Get worker's hourly rate from the already fetched worker
   const hourlyRate = worker?.workerProfile?.hourlyRate || 0;
 
-  // Create new time session
-  const timeSession = await TimeSession.create({
+  // Create new time session with safe location data
+  console.log('Creating time session with data:', {
     worker: actualWorkerId,
     workOrder: workOrderId || null,
     building: buildingId || null,
-    clockInTime: new Date(),
     hourlyRate: hourlyRate,
     apartmentNumber: apartmentNumber || null,
-    workType: workType || 'General',
-    location: {
-      clockIn: {
-        latitude: parseFloat(defaultLat),
-        longitude: parseFloat(defaultLng),
-        accuracy: accuracy ? parseFloat(accuracy) : null,
-        timestamp: new Date(),
-        geofenceValidated: locationValidation.valid,
-        geofenceMessage: locationValidation.message,
-        geofenceDistance: locationValidation.distance
-      }
-    },
-    photos,
-    notes: notes || '',
-    status: 'active'
+    workType: workType || 'General'
   });
+
+  let timeSession;
+  try {
+    timeSession = await TimeSession.create({
+      worker: actualWorkerId,
+      workOrder: workOrderId || null,
+      building: buildingId || null,
+      clockInTime: new Date(),
+      hourlyRate: hourlyRate,
+      apartmentNumber: apartmentNumber || null,
+      workType: workType || 'General',
+      location: {
+        clockIn: {
+          latitude: defaultLat ? parseFloat(defaultLat) : 0,
+          longitude: defaultLng ? parseFloat(defaultLng) : 0,
+          accuracy: accuracy ? parseFloat(accuracy) : null,
+          timestamp: new Date(),
+          geofenceValidated: locationValidation.valid || false,
+          geofenceMessage: locationValidation.message || 'Location not validated',
+          geofenceDistance: locationValidation.distance || 0
+        }
+      },
+      photos: photos || [],
+      notes: notes || '',
+      status: 'active'
+    });
+    console.log('Time session created successfully:', timeSession._id);
+  } catch (createError) {
+    console.error('Error creating time session:', createError);
+    return next(new AppError(`Failed to create time session: ${createError.message}`, 500));
+  }
 
   // Populate worker details with error handling
   try {

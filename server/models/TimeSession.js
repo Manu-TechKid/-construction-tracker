@@ -39,18 +39,24 @@ const timeSessionSchema = new mongoose.Schema({
   },
   location: {
     clockIn: {
-      latitude: { type: Number, required: true },
-      longitude: { type: Number, required: true },
+      latitude: { type: Number, required: false }, // Made optional to prevent errors
+      longitude: { type: Number, required: false }, // Made optional to prevent errors
       accuracy: { type: Number },
       address: { type: String },
-      timestamp: { type: Date, default: Date.now }
+      timestamp: { type: Date, default: Date.now },
+      geofenceValidated: { type: Boolean, default: false },
+      geofenceMessage: { type: String },
+      geofenceDistance: { type: Number }
     },
     clockOut: {
       latitude: { type: Number },
       longitude: { type: Number },
       accuracy: { type: Number },
       address: { type: String },
-      timestamp: { type: Date }
+      timestamp: { type: Date },
+      geofenceValidated: { type: Boolean, default: false },
+      geofenceMessage: { type: String },
+      geofenceDistance: { type: Number }
     }
   },
   photos: [{
