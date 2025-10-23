@@ -21,6 +21,16 @@ async function migrateDraftToOpen() {
 
     for (const invoice of draftInvoices) {
       try {
+        // Normalize legacy status history entries (convert draft -> open)
+        if (Array.isArray(invoice.statusHistory) && invoice.statusHistory.length) {
+          invoice.statusHistory = invoice.statusHistory.map(entry => {
+            if (entry && entry.status === 'draft') {
+              return { ...entry, status: 'open' };
+            }
+            return entry;
+          });
+        }
+
         // Update status to "open"
         invoice.status = 'open';
         

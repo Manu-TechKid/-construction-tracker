@@ -47,7 +47,7 @@ import {
 } from '../../features/invoices/invoicesApiSlice';
 
 const validationSchema = Yup.object({
-  status: Yup.string().oneOf(['draft', 'sent', 'paid', 'overdue', 'cancelled']),
+  status: Yup.string().oneOf(['open', 'sent', 'paid', 'overdue', 'cancelled']),
   dueDate: Yup.date().required('Due date is required'),
   notes: Yup.string(),
 });
@@ -61,7 +61,7 @@ const EditInvoice = () => {
 
   const formik = useFormik({
     initialValues: {
-      status: 'draft',
+      status: 'open',
       dueDate: new Date(),
       notes: '',
     },
@@ -366,7 +366,7 @@ const EditInvoice = () => {
                       onBlur={formik.handleBlur}
                       label="Status"
                     >
-                      <MenuItem value="draft">Draft</MenuItem>
+                      <MenuItem value="open">Open</MenuItem>
                       <MenuItem value="sent">Sent</MenuItem>
                       <MenuItem value="paid">Paid</MenuItem>
                       <MenuItem value="overdue">Overdue</MenuItem>

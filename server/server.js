@@ -64,7 +64,9 @@ const allowedOrigins = [
   process.env.CORS_ORIGIN || 'http://localhost:3000',
   'https://admin.servicesdsj.com',
   'http://localhost:3001',
-  'https://construction-tracker-webapp.onrender.com'
+  'https://construction-tracker-webapp.onrender.com',
+  'https://servicesdsj.com',
+  'http://admin.servicesdsj.com'
 ];
 
 const corsOptions = {
@@ -109,6 +111,7 @@ app.use(
 // Create uploads directories if they don't exist
 const uploadsDir = path.join(__dirname, 'public/uploads/photos');
 const timeTrackingUploadsDir = path.join(__dirname, 'public/uploads/time-tracking');
+const workLogsUploadsDir = path.join(__dirname, 'public/uploads/work-logs');
 
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -116,6 +119,10 @@ if (!fs.existsSync(uploadsDir)) {
 
 if (!fs.existsSync(timeTrackingUploadsDir)) {
   fs.mkdirSync(timeTrackingUploadsDir, { recursive: true });
+}
+
+if (!fs.existsSync(workLogsUploadsDir)) {
+  fs.mkdirSync(workLogsUploadsDir, { recursive: true });
 }
 
 // Serving static files

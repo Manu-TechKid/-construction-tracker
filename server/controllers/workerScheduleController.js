@@ -112,23 +112,27 @@ exports.createWorkerSchedule = catchAsync(async (req, res, next) => {
     console.warn('Schedule being created for past time:', startDateTime);
   }
 
-  // Check for scheduling conflicts
+  // Check for scheduling conflicts - only check for actual time overlaps
   const conflictingSchedule = await WorkerSchedule.findOne({
     workerId,
     date: {
       $gte: new Date(new Date(date).setHours(0, 0, 0, 0)),
       $lt: new Date(new Date(date).setHours(23, 59, 59, 999))
     },
-    $or: [
-      {
-        startTime: { $lt: new Date(endTime) },
-        endTime: { $gt: new Date(startTime) }
-      }
+    $and: [
+      { startTime: { $lt: new Date(endTime) } },
+      { endTime: { $gt: new Date(startTime) } }
     ]
   });
 
   if (conflictingSchedule) {
-    return next(new AppError('Worker already has a conflicting schedule at this time', 400));
+    console.log('Found conflicting schedule:', conflictingSchedule);
+    // Allow override for admins/managers with a warning
+    if (['admin', 'manager'].includes(req.user.role)) {
+      console.log('Admin/Manager override: allowing conflicting schedule');
+    } else {
+      return next(new AppError(`Worker already has a conflicting schedule from ${conflictingSchedule.startTime} to ${conflictingSchedule.endTime}`, 400));
+    }
   }
 
   console.log('Creating schedule with data:', {

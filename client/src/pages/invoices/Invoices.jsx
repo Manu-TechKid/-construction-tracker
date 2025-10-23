@@ -280,7 +280,7 @@ const Invoices = () => {
         return 'info';
       case 'overdue':
         return 'error';
-      case 'draft':
+      case 'open':
         return 'default';
       default:
         return 'default';
@@ -489,7 +489,7 @@ const Invoices = () => {
                     label="Status"
                   >
                     <MenuItem value="">All Statuses</MenuItem>
-                    <MenuItem value="draft">Draft</MenuItem>
+                    <MenuItem value="open">Open</MenuItem>
                     <MenuItem value="sent">Sent</MenuItem>
                     <MenuItem value="paid">Paid</MenuItem>
                     <MenuItem value="overdue">Overdue</MenuItem>

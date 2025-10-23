@@ -928,7 +928,7 @@ const generateInvoiceHTML = (invoice) => {
         .status-paid { background-color: #d4edda; color: #155724; }
         .status-pending { background-color: #fff3cd; color: #856404; }
         .status-overdue { background-color: #f8d7da; color: #721c24; }
-        .status-draft { background-color: #e2e3e5; color: #383d41; }
+        .status-open { background-color: #e2e3e5; color: #383d41; }
       </style>
     </head>
     <body>

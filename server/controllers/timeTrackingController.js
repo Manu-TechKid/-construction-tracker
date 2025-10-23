@@ -1,4 +1,5 @@
 const TimeSession = require('../models/TimeSession');
+const WorkLog = require('../models/WorkLog');
 const User = require('../models/User');
 const WorkOrder = require('../models/WorkOrder');
 const Building = require('../models/Building');
@@ -45,11 +46,15 @@ exports.clockIn = catchAsync(async (req, res, next) => {
   // Use authenticated user's ID if workerId not provided
   const actualWorkerId = workerId || req.user.id;
 
-  // Validate required fields
-  if (!actualWorkerId || !latitude || !longitude) {
-    console.log('Missing required fields:', { actualWorkerId, latitude, longitude });
-    return next(new AppError('Worker ID, latitude, and longitude are required', 400));
+  // Validate required fields - make location optional for now
+  if (!actualWorkerId) {
+    console.log('Missing required fields:', { actualWorkerId });
+    return next(new AppError('Worker ID is required', 400));
   }
+
+  // Set default location if not provided
+  const defaultLat = latitude || 0;
+  const defaultLng = longitude || 0;
 
   // Check if worker exists and has worker role (or is the authenticated user)
   const worker = await User.findById(actualWorkerId);
@@ -75,12 +80,12 @@ exports.clockIn = catchAsync(async (req, res, next) => {
   // Geofencing validation - Check if worker is at the correct location
   let locationValidation = { valid: true, message: 'Location not validated' };
   
-  if (buildingId) {
+  if (buildingId && defaultLat && defaultLng) {
     const building = await Building.findById(buildingId);
     if (building && building.location && building.location.coordinates.latitude && building.location.coordinates.longitude) {
       const userLocation = {
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude),
+        latitude: parseFloat(defaultLat),
+        longitude: parseFloat(defaultLng),
         accuracy: accuracy ? parseFloat(accuracy) : 0
       };
       
@@ -121,8 +126,8 @@ exports.clockIn = catchAsync(async (req, res, next) => {
     clockInTime: new Date(),
     location: {
       clockIn: {
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude),
+        latitude: parseFloat(defaultLat),
+        longitude: parseFloat(defaultLng),
         accuracy: accuracy ? parseFloat(accuracy) : null,
         timestamp: new Date(),
         geofenceValidated: locationValidation.valid,

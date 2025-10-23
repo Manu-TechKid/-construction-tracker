@@ -80,6 +80,16 @@ async function correctInvoiceDates() {
           continue;
         }
 
+        // Normalize legacy status history entries (convert draft -> open)
+        if (Array.isArray(invoice.statusHistory) && invoice.statusHistory.length) {
+          invoice.statusHistory = invoice.statusHistory.map(entry => {
+            if (entry && entry.status === 'draft') {
+              return { ...entry, status: 'open' };
+            }
+            return entry;
+          });
+        }
+
         // Store original dates for logging
         const originalInvoiceDate = invoice.invoiceDate;
         const originalDueDate = invoice.dueDate;
@@ -90,7 +100,7 @@ async function correctInvoiceDates() {
 
         // Add to status history for audit trail
         invoice.statusHistory.push({
-          status: invoice.status,
+          status: invoice.status === 'draft' ? 'open' : invoice.status,
           timestamp: new Date(),
           notes: `Date correction: Invoice date changed from ${originalInvoiceDate?.toISOString()?.split('T')[0]} to ${correction.invoiceDate}, Due date changed from ${originalDueDate?.toISOString()?.split('T')[0]} to ${correction.dueDate}`,
           updatedBy: null // System update
