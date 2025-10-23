@@ -688,7 +688,7 @@ const Invoices = () => {
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={invoice.status?.charAt(0).toUpperCase() + invoice.status?.slice(1) || 'Draft'}
+                        label={invoice.status?.charAt(0).toUpperCase() + invoice.status?.slice(1) || 'Open'}
                         color={getStatusColor(invoice.status)}
                         size="small"
                       />

@@ -235,15 +235,15 @@ const invoiceSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['draft', 'pending', 'sent', 'viewed', 'accepted', 'paid', 'overdue', 'cancelled', 'refunded'],
-        default: 'draft'
+        enum: ['open', 'pending', 'sent', 'viewed', 'accepted', 'paid', 'overdue', 'cancelled', 'refunded'],
+        default: 'open'
     },
     
     // Enhanced status tracking
     statusHistory: [{
         status: {
             type: String,
-            enum: ['draft', 'pending', 'sent', 'viewed', 'accepted', 'paid', 'overdue', 'cancelled', 'refunded'],
+            enum: ['open', 'pending', 'sent', 'viewed', 'accepted', 'paid', 'overdue', 'cancelled', 'refunded'],
             required: true
         },
         timestamp: {

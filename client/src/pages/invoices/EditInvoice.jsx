@@ -102,7 +102,7 @@ const EditInvoice = () => {
         }
 
         formik.setValues({
-          status: invoice.status || 'draft',
+          status: invoice.status || 'open',
           dueDate: dueDateValue,
           notes: invoice.notes || '',
         });
@@ -110,7 +110,7 @@ const EditInvoice = () => {
         console.warn('Error setting form values:', error);
         // Set default values if there's an error
         formik.setValues({
-          status: invoice.status || 'draft',
+          status: invoice.status || 'open',
           dueDate: new Date(),
           notes: invoice.notes || '',
         });
@@ -209,7 +209,7 @@ const EditInvoice = () => {
               <Grid item xs={12} md={3}>
                 <Box sx={{ textAlign: 'center' }}>
                   <Chip
-                    label={invoice.status?.toUpperCase() || 'DRAFT'}
+                    label={invoice.status?.toUpperCase() || 'OPEN'}
                     color={getStatusColor(invoice.status)}
                     size="large"
                   />

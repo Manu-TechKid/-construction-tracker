@@ -165,7 +165,7 @@ const ProfessionalInvoiceTemplate = forwardRef(({ invoice, companyInfo }, ref) =
               {/* Invoice Details */}
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" color="text.secondary">
-                  <strong>Invoice #:</strong> {invoice.invoiceNumber || 'DRAFT'}
+                  <strong>Invoice #:</strong> {invoice.invoiceNumber || 'OPEN'}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   <strong>Date of Invoice:</strong> {format(new Date(invoice.invoiceDate || invoice.createdAt), 'MMM dd, yyyy')}
@@ -177,7 +177,7 @@ const ProfessionalInvoiceTemplate = forwardRef(({ invoice, companyInfo }, ref) =
               
               <Box sx={{ display: 'flex', gap: 1, justifyContent: { xs: 'flex-start', md: 'flex-end' }, flexWrap: 'wrap' }}>
                 <Chip 
-                  label={invoice.status?.toUpperCase() || 'DRAFT'} 
+                  label={invoice.status?.toUpperCase() || 'OPEN'} 
                   color={getStatusColor(invoice.status)}
                   size="small"
                 />

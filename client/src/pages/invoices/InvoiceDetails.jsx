@@ -164,10 +164,10 @@ const InvoiceDetails = () => {
           <Chip 
             label={(() => {
               try {
-                return invoice.status?.charAt(0).toUpperCase() + invoice.status?.slice(1) || 'Draft';
+                return invoice.status?.charAt(0).toUpperCase() + invoice.status?.slice(1) || 'Open';
               } catch (error) {
                 console.warn('Error rendering status:', error);
-                return 'Draft';
+                return 'Open';
               }
             })()}
             color={getStatusColor(invoice.status)}
@@ -276,10 +276,10 @@ const InvoiceDetails = () => {
                   <Chip 
                     label={(() => {
                       try {
-                        return invoice.status?.charAt(0).toUpperCase() + invoice.status?.slice(1) || 'Draft';
+                        return invoice.status?.charAt(0).toUpperCase() + invoice.status?.slice(1) || 'Open';
                       } catch (error) {
                         console.warn('Error rendering status:', error);
-                        return 'Draft';
+                        return 'Open';
                       }
                     })()}
                     color={getStatusColor(invoice.status)}
