@@ -33,6 +33,7 @@ import {
   Settings as SettingsIcon,
   Logout as LogoutIcon,
   Work as WorkIcon,
+  Assignment as WorkLogIcon,
   CheckCircle as ApprovalIcon,
   Search as SearchIcon,
   AccessTime as TimeIcon,
@@ -171,6 +172,16 @@ const DashboardLayout = () => {
         icon: <TimeIcon />,
         path: '/time-tracking-management',
         permission: 'view:costs'
+      });
+    }
+
+    // Work Logs Management - for admins/managers
+    if (!isWorker && hasPermission(['manage:users'])) {
+      items.push({
+        text: 'Work Logs',
+        icon: <WorkLogIcon />,
+        path: '/admin-work-logs',
+        permission: 'manage:users'
       });
     }
 

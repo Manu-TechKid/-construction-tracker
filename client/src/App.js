@@ -59,6 +59,7 @@ import UserManagement from './pages/admin/UserManagement';
 import WorkOrderApproval from './pages/admin/WorkOrderApproval';
 import TimeTrackingManagement from './pages/admin/TimeTrackingManagement';
 import AdminWorkerManagement from './pages/admin/AdminWorkerManagement';
+import AdminWorkLogs from './pages/admin/AdminWorkLogs';
 import Setup from './pages/admin/Setup';
 import SiteVisit from './pages/estimates/SiteVisit';
 import ApartmentSearch from './pages/search/ApartmentSearch';
@@ -310,6 +311,16 @@ const AppContent = () => {
                 element={
                   <RoleBasedRoute requiredPermissions={['manage:users']}>
                     <AdminWorkerManagement />
+                  </RoleBasedRoute>
+                } 
+              />
+
+              {/* Admin Work Logs Management */}
+              <Route 
+                path="admin-work-logs" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['manage:users']}>
+                    <AdminWorkLogs />
                   </RoleBasedRoute>
                 } 
               />

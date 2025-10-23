@@ -46,7 +46,7 @@ const getStatusColor = (status) => {
   }
 };
 
-const WorkLogList = ({ workLogs = [], onRefresh }) => {
+const WorkLogList = ({ workLogs = [], onRefresh, showAdminActions = false, onFeedback }) => {
   const { user, hasPermission } = useAuth();
   const [deleteWorkLog] = useDeleteWorkLogMutation();
   const [addAdminFeedback] = useAddAdminFeedbackMutation();
@@ -89,10 +89,15 @@ const WorkLogList = ({ workLogs = [], onRefresh }) => {
   };
 
   const handleFeedback = () => {
-    setFeedback(selectedLog?.adminFeedback || '');
-    setFeedbackStatus(selectedLog?.status || 'reviewed');
-    setFeedbackDialogOpen(true);
-    handleMenuClose();
+    if (onFeedback && showAdminActions) {
+      onFeedback(selectedLog);
+      handleMenuClose();
+    } else {
+      setFeedback(selectedLog?.adminFeedback || '');
+      setFeedbackStatus(selectedLog?.status || 'reviewed');
+      setFeedbackDialogOpen(true);
+      handleMenuClose();
+    }
   };
 
   const submitFeedback = async () => {
@@ -261,7 +266,7 @@ const WorkLogList = ({ workLogs = [], onRefresh }) => {
           </MenuItem>
         )}
         
-        {hasPermission('manage:workLogs') && (
+        {(hasPermission('manage:workLogs') || showAdminActions) && (
           <MenuItem onClick={handleFeedback}>
             <FeedbackIcon sx={{ mr: 1 }} />
             Add Feedback

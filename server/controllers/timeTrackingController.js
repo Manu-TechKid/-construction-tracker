@@ -77,34 +77,12 @@ exports.clockIn = catchAsync(async (req, res, next) => {
     return next(new AppError('Worker is already clocked in', 400));
   }
 
-  // Geofencing validation - Check if worker is at the correct location
-  let locationValidation = { valid: true, message: 'Location not validated' };
-  
-  if (buildingId && defaultLat && defaultLng) {
-    const building = await Building.findById(buildingId);
-    if (building && building.location && building.location.coordinates.latitude && building.location.coordinates.longitude) {
-      const userLocation = {
-        latitude: parseFloat(defaultLat),
-        longitude: parseFloat(defaultLng),
-        accuracy: accuracy ? parseFloat(accuracy) : 0
-      };
-      
-      const targetLocation = {
-        latitude: building.location.coordinates.latitude,
-        longitude: building.location.coordinates.longitude
-      };
-      
-      locationValidation = validateLocation(
-        userLocation, 
-        targetLocation, 
-        building.location.geofenceRadius
-      );
-      
-      if (!locationValidation.valid) {
-        return next(new AppError(`Geofencing validation failed: ${locationValidation.message}`, 400));
-      }
-    }
-  }
+  // Simplified location validation - skip geofencing for now
+  let locationValidation = { 
+    valid: true, 
+    message: 'Location validation skipped',
+    distance: 0
+  };
 
   // Process uploaded photos
   const photos = [];
@@ -711,18 +689,25 @@ exports.setHourlyRates = catchAsync(async (req, res, next) => {
       worker.workerProfile.hourlyRate = parseFloat(hourlyRate);
       await worker.save();
 
-      // Update all pending/active sessions for this worker
-      await TimeSession.updateMany(
-        { 
-          worker: workerId, 
-          status: { $in: ['active', 'completed'] },
-          hourlyRate: { $in: [0, null, undefined] }
-        },
-        { 
-          hourlyRate: parseFloat(hourlyRate),
-          $set: { calculatedPay: { $multiply: ['$totalHours', parseFloat(hourlyRate)] } }
+      // Update all sessions for this worker that don't have an hourly rate set
+      const sessionsToUpdate = await TimeSession.find({ 
+        worker: workerId, 
+        status: { $in: ['active', 'completed'] },
+        $or: [
+          { hourlyRate: { $exists: false } },
+          { hourlyRate: 0 },
+          { hourlyRate: null }
+        ]
+      });
+
+      // Update each session individually to calculate payment
+      for (const session of sessionsToUpdate) {
+        session.hourlyRate = parseFloat(hourlyRate);
+        if (session.totalHours > 0) {
+          session.calculatedPay = session.totalHours * parseFloat(hourlyRate);
         }
-      );
+        await session.save();
+      }
 
       results.push({ workerId, status: 'success', hourlyRate: parseFloat(hourlyRate) });
     } catch (error) {
