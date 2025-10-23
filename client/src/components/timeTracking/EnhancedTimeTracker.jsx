@@ -80,6 +80,8 @@ const EnhancedTimeTracker = ({ workOrderId }) => {
   const [location, setLocation] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [notes, setNotes] = useState('');
+  const [apartmentNumber, setApartmentNumber] = useState('');
+  const [workType, setWorkType] = useState('General');
   const [progressDialog, setProgressDialog] = useState(false);
   const [progressValue, setProgressValue] = useState(0);
   const [progressNotes, setProgressNotes] = useState('');
@@ -271,6 +273,8 @@ const EnhancedTimeTracker = ({ workOrderId }) => {
       formData.append('longitude', loc.longitude);
       formData.append('accuracy', loc.accuracy);
       formData.append('notes', notes);
+      formData.append('apartmentNumber', apartmentNumber || '');
+      formData.append('workType', workType || 'General');
       
       if (workOrderId) formData.append('workOrderId', workOrderId);
       
@@ -643,6 +647,33 @@ const EnhancedTimeTracker = ({ workOrderId }) => {
             Add Photo
           </Button>
           
+          {/* Apartment Number Field */}
+          <TextField
+            fullWidth
+            label="Apartment Number (Optional)"
+            value={apartmentNumber}
+            onChange={(e) => setApartmentNumber(e.target.value)}
+            placeholder="e.g., 101, 2A, etc."
+            sx={{ mb: 2 }}
+          />
+
+          {/* Work Type Field */}
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>Work Type</InputLabel>
+            <Select
+              value={workType}
+              onChange={(e) => setWorkType(e.target.value)}
+              label="Work Type"
+            >
+              <MenuItem value="General">General</MenuItem>
+              <MenuItem value="Maintenance">Maintenance</MenuItem>
+              <MenuItem value="Repair">Repair</MenuItem>
+              <MenuItem value="Cleaning">Cleaning</MenuItem>
+              <MenuItem value="Installation">Installation</MenuItem>
+              <MenuItem value="Inspection">Inspection</MenuItem>
+            </Select>
+          </FormControl>
+
           {/* Notes Field */}
           <TextField
             id="notes-field"

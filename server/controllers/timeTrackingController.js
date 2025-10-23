@@ -39,7 +39,7 @@ exports.uploadTimePhotos = upload.array('photos', 5);
 
 // Clock in worker
 exports.clockIn = catchAsync(async (req, res, next) => {
-  const { workerId, workOrderId, buildingId, latitude, longitude, accuracy, notes } = req.body;
+  const { workerId, buildingId, workOrderId, latitude, longitude, accuracy, notes, apartmentNumber, workType } = req.body;
 
   console.log('Clock-in request:', { workerId, latitude, longitude, accuracy, notes });
 
@@ -96,12 +96,19 @@ exports.clockIn = catchAsync(async (req, res, next) => {
     });
   }
 
+  // Get worker's hourly rate
+  const worker = await User.findById(actualWorkerId);
+  const hourlyRate = worker?.workerProfile?.hourlyRate || 0;
+
   // Create new time session
   const timeSession = await TimeSession.create({
     worker: actualWorkerId,
     workOrder: workOrderId || null,
     building: buildingId || null,
     clockInTime: new Date(),
+    hourlyRate: hourlyRate,
+    apartmentNumber: apartmentNumber || null,
+    workType: workType || 'General',
     location: {
       clockIn: {
         latitude: parseFloat(defaultLat),
@@ -118,13 +125,18 @@ exports.clockIn = catchAsync(async (req, res, next) => {
     status: 'active'
   });
 
-  // Populate worker details
-  await timeSession.populate('worker', 'name email');
-  if (workOrderId) {
-    await timeSession.populate('workOrder', 'title description');
-  }
-  if (buildingId) {
-    await timeSession.populate('building', 'name address');
+  // Populate worker details with error handling
+  try {
+    await timeSession.populate('worker', 'name email');
+    if (workOrderId) {
+      await timeSession.populate('workOrder', 'title description');
+    }
+    if (buildingId) {
+      await timeSession.populate('building', 'name address');
+    }
+  } catch (populateError) {
+    console.log('Population error (non-critical):', populateError.message);
+    // Continue without population if it fails
   }
 
   res.status(201).json({
@@ -387,10 +399,31 @@ exports.getTimeSessions = catchAsync(async (req, res, next) => {
   }
 
   const sessions = await TimeSession.find(filter)
-    .populate('worker', 'name email')
+    .populate('worker', 'name email workerProfile')
     .populate('workOrder', 'title description')
     .populate('building', 'name address')
     .sort('-clockInTime');
+
+  // Ensure sessions have hourly rates and calculated pay
+  for (const session of sessions) {
+    let needsUpdate = false;
+    
+    // Set hourly rate from worker profile if not set
+    if ((!session.hourlyRate || session.hourlyRate === 0) && session.worker?.workerProfile?.hourlyRate) {
+      session.hourlyRate = session.worker.workerProfile.hourlyRate;
+      needsUpdate = true;
+    }
+    
+    // Recalculate pay if needed
+    if (session.totalHours > 0 && session.hourlyRate > 0 && (!session.calculatedPay || session.calculatedPay === 0)) {
+      session.calculatedPay = Math.round(session.totalHours * session.hourlyRate * 100) / 100;
+      needsUpdate = true;
+    }
+    
+    if (needsUpdate) {
+      await session.save();
+    }
+  }
 
   res.status(200).json({
     status: 'success',
