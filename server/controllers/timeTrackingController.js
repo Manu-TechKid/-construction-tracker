@@ -96,8 +96,7 @@ exports.clockIn = catchAsync(async (req, res, next) => {
     });
   }
 
-  // Get worker's hourly rate
-  const worker = await User.findById(actualWorkerId);
+  // Get worker's hourly rate from the already fetched worker
   const hourlyRate = worker?.workerProfile?.hourlyRate || 0;
 
   // Create new time session
