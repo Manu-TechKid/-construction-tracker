@@ -268,7 +268,13 @@ const EnhancedTimeTracker = ({ workOrderId }) => {
       
       const formData = new FormData();
       formData.append('workerId', user.id);
-      formData.append('buildingId', selectedBuilding._id);
+      
+      // Ensure building ID is a proper string
+      const buildingId = selectedBuilding?._id || selectedBuilding?.id;
+      if (buildingId && typeof buildingId === 'string') {
+        formData.append('buildingId', buildingId);
+      }
+      
       formData.append('latitude', loc.latitude);
       formData.append('longitude', loc.longitude);
       formData.append('accuracy', loc.accuracy);

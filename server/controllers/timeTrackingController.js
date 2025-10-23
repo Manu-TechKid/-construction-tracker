@@ -44,6 +44,7 @@ exports.clockIn = catchAsync(async (req, res, next) => {
   console.log('Clock-in request:', { 
     workerId, 
     buildingId, 
+    buildingIdType: typeof buildingId,
     workOrderId, 
     latitude, 
     longitude, 
@@ -56,6 +57,17 @@ exports.clockIn = catchAsync(async (req, res, next) => {
 
   // Use authenticated user's ID if workerId not provided
   const actualWorkerId = workerId || req.user.id;
+
+  // Validate and clean buildingId
+  let cleanBuildingId = null;
+  if (buildingId) {
+    if (typeof buildingId === 'string' && buildingId !== '[object Object]' && buildingId !== 'undefined' && buildingId !== 'null') {
+      cleanBuildingId = buildingId;
+    } else if (typeof buildingId === 'object' && buildingId._id) {
+      cleanBuildingId = buildingId._id;
+    }
+    console.log('Building ID cleaned:', { original: buildingId, cleaned: cleanBuildingId });
+  }
 
   // Validate required fields - make location optional for now
   if (!actualWorkerId) {
@@ -114,7 +126,7 @@ exports.clockIn = catchAsync(async (req, res, next) => {
   console.log('Creating time session with data:', {
     worker: actualWorkerId,
     workOrder: workOrderId || null,
-    building: buildingId || null,
+    building: cleanBuildingId || null,
     hourlyRate: hourlyRate,
     apartmentNumber: apartmentNumber || null,
     workType: workType || 'General'
@@ -125,7 +137,7 @@ exports.clockIn = catchAsync(async (req, res, next) => {
     timeSession = await TimeSession.create({
       worker: actualWorkerId,
       workOrder: workOrderId || null,
-      building: buildingId || null,
+      building: cleanBuildingId || null,
       clockInTime: new Date(),
       hourlyRate: hourlyRate,
       apartmentNumber: apartmentNumber || null,
@@ -157,7 +169,7 @@ exports.clockIn = catchAsync(async (req, res, next) => {
     if (workOrderId) {
       await timeSession.populate('workOrder', 'title description');
     }
-    if (buildingId) {
+    if (cleanBuildingId) {
       await timeSession.populate('building', 'name address');
     }
   } catch (populateError) {
