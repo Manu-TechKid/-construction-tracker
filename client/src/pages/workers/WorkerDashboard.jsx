@@ -30,7 +30,8 @@ import {
   AccessTime as TimeIcon,
   Dashboard as DashboardIcon,
   Assessment as HoursIcon,
-  Description as LetterIcon
+  Description as LetterIcon,
+  Work as WorkLogIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { useGetWorkerAssignmentsQuery } from '../../features/workers/workersApiSlice';
@@ -41,6 +42,10 @@ import EnhancedTimeTracker from '../../components/timeTracking/EnhancedTimeTrack
 import WeeklyHoursSummary from '../../components/workers/WeeklyHoursSummary';
 import WorkerHoursSummary from '../../components/workers/WorkerHoursSummary';
 import EmploymentReferenceLetter from '../../components/workers/EmploymentReferenceLetter';
+import WorkLogList from '../../components/workLogs/WorkLogList';
+import WorkLogForm from '../../components/workLogs/WorkLogForm';
+import { useGetWorkerWorkLogsQuery } from '../../features/workLogs/workLogsApiSlice';
+import { useGetTimeSessionsQuery } from '../../features/timeTracking/timeTrackingApiSlice';
 const WorkerDashboard = () => {
   const { user } = useAuth();
   const theme = useTheme();
@@ -48,6 +53,7 @@ const WorkerDashboard = () => {
   const [completeDialog, setCompleteDialog] = useState({ open: false, workOrder: null });
   const [completionNotes, setCompletionNotes] = useState('');
   const [selectedTab, setSelectedTab] = useState(0);
+  const [workLogDialog, setWorkLogDialog] = useState({ open: false, timeSession: null });
   const { data: assignmentsData, isLoading, refetch, error } = useGetWorkerAssignmentsQuery(user?.id, {
     skip: !user?.id,
     pollingInterval: 30000, // Poll every 30 seconds for real-time updates
@@ -56,6 +62,17 @@ const WorkerDashboard = () => {
   });
   
   const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
+  
+  // Work logs data
+  const { data: workLogsData, refetch: refetchWorkLogs } = useGetWorkerWorkLogsQuery(user?.id, {
+    skip: !user?.id,
+  });
+  
+  const { data: timeSessionsData } = useGetTimeSessionsQuery({
+    workerId: user?.id
+  }, {
+    skip: !user?.id,
+  });
   
   // Extract data with fallbacks
   const workOrders = assignmentsData?.data?.workOrders || [];
@@ -80,6 +97,16 @@ const WorkerDashboard = () => {
     const updatedDate = new Date(wo.updatedAt);
     return updatedDate >= today && updatedDate < tomorrow;
   });
+  
+  // Work logs and time sessions data
+  const workLogs = workLogsData?.data?.workLogs || [];
+  const timeSessions = timeSessionsData?.data?.sessions || [];
+  
+  // Find completed time sessions without work logs
+  const completedSessionsWithoutLogs = timeSessions.filter(session => 
+    session.status === 'completed' && 
+    !workLogs.some(log => log.timeSession?._id === session._id)
+  );
   
   
 
@@ -174,6 +201,11 @@ const WorkerDashboard = () => {
           <Tab 
             icon={<HoursIcon />} 
             label="My Hours" 
+            iconPosition="start"
+          />
+          <Tab 
+            icon={<WorkLogIcon />} 
+            label="Work Logs" 
             iconPosition="start"
           />
           <Tab 
@@ -296,6 +328,40 @@ const WorkerDashboard = () => {
       )}
 
       {selectedTab === 3 && (
+        <Box>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Typography variant="h6">
+              My Work Logs
+            </Typography>
+            {completedSessionsWithoutLogs.length > 0 && (
+              <Button
+                variant="contained"
+                startIcon={<WorkLogIcon />}
+                onClick={() => setWorkLogDialog({ 
+                  open: true, 
+                  timeSession: completedSessionsWithoutLogs[0] 
+                })}
+              >
+                Create Work Log
+              </Button>
+            )}
+          </Box>
+
+          {completedSessionsWithoutLogs.length > 0 && (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              You have {completedSessionsWithoutLogs.length} completed time session(s) that need work logs. 
+              Please document what work was accomplished.
+            </Alert>
+          )}
+
+          <WorkLogList 
+            workLogs={workLogs} 
+            onRefresh={refetchWorkLogs}
+          />
+        </Box>
+      )}
+
+      {selectedTab === 4 && (
         <EmploymentReferenceLetter />
       )}
 
@@ -340,6 +406,15 @@ const WorkerDashboard = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Work Log Dialog */}
+      {workLogDialog.open && workLogDialog.timeSession && (
+        <WorkLogForm
+          open={workLogDialog.open}
+          onClose={() => setWorkLogDialog({ open: false, timeSession: null })}
+          timeSession={workLogDialog.timeSession}
+        />
+      )}
     </Container>
   );
 };
