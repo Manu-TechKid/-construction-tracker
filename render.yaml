@@ -6,9 +6,10 @@ services:
     region: oregon  # or your preferred region
     nodeVersion: 18.18.0
     buildCommand: |
-      echo "Installing dependencies..."
-      npm install
-      cd client && npm install --legacy-peer-deps && npm run build
+      echo "Installing server dependencies..."
+      npm ci --only=production
+      echo "Installing client dependencies..."
+      cd client && npm ci --legacy-peer-deps && npm run build
       cd ..
     startCommand: npm run start:prod
     healthCheckPath: /api/v1/health
