@@ -129,17 +129,9 @@ const TimeTrackingManagement = () => {
     return worker?.name || worker?.email || 'Unknown Worker';
   };
 
-  const getBuildingName = (building) => {
-    // Handle both populated building object and building ID
-    if (typeof building === 'object' && building !== null) {
-      return building.name || 'No Building';
-    }
-    // If it's just an ID, find it in the buildings array
-    if (typeof building === 'string') {
-      const foundBuilding = buildings.find(b => b._id === building);
-      return foundBuilding?.name || 'No Building';
-    }
-    return 'No Building';
+  const getBuildingName = (buildingId) => {
+    const building = buildings.find(b => b._id === buildingId);
+    return building?.name || 'No Building';
   };
 
   const getStatusColor = (status) => {
@@ -272,7 +264,8 @@ const TimeTrackingManagement = () => {
   };
 
   const handleViewPaymentReport = () => {
-    setPaymentReportDialog(true);
+    setSelectedTab(3); // Navigate to Payment Report tab
+    toast.info('Switched to Payment Report tab');
   };
 
   const exportToCSV = () => {
@@ -388,7 +381,7 @@ const TimeTrackingManagement = () => {
           <Grid item xs={12} sm={6} md={3}>
             <StatCard
               title="Pending Approvals"
-              value={stats.pendingApprovals || 0}
+              value={pendingApprovals.length}
               icon={<TaskIcon />}
               color="warning"
             />
@@ -396,7 +389,7 @@ const TimeTrackingManagement = () => {
           <Grid item xs={12} sm={6} md={3}>
             <StatCard
               title="Workers Clocked In"
-              value={stats.workersClockIn || 0}
+              value={stats.workersActive || 0}
               icon={<PersonIcon />}
               color="info"
             />
@@ -617,19 +610,6 @@ const TimeTrackingManagement = () => {
                                 <Tooltip title={`Hours corrected: ${session.correctionReason}`}>
                                   <IconButton size="small">
                                     <MoneyIcon color="warning" />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-                              {session.calculatedPay > 0 && (
-                                <Tooltip title={`Payment: $${session.calculatedPay?.toFixed(2)} (Rate: $${session.hourlyRate}/hr)`}>
-                                  <IconButton 
-                                    size="small" 
-                                    color="success"
-                                    onClick={() => {
-                                      toast.info(`Payment Details:\nHours: ${session.correctedHours || session.totalHours}h\nRate: $${session.hourlyRate}/hr\nTotal: $${session.calculatedPay?.toFixed(2)}`);
-                                    }}
-                                  >
-                                    <MoneyIcon />
                                   </IconButton>
                                 </Tooltip>
                               )}

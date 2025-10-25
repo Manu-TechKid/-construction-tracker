@@ -440,8 +440,8 @@ exports.getTimeSessions = catchAsync(async (req, res, next) => {
     .populate('worker', 'name email workerProfile')
     .populate('workOrder', 'title description apartmentNumber')
     .populate('building', 'name address')
-    .populate('correctedBy', 'name email')
     .populate('approvedBy', 'name email')
+    .populate('correctedBy', 'name email')
     .sort('-clockInTime');
 
   // Ensure sessions have hourly rates and calculated pay
@@ -475,9 +475,11 @@ exports.getTimeSessions = catchAsync(async (req, res, next) => {
 // Get pending approvals
 exports.getPendingApprovals = catchAsync(async (req, res, next) => {
   const sessions = await TimeSession.find({ isApproved: false, status: 'completed' })
-    .populate('worker', 'name email')
-    .populate('workOrder', 'title description')
+    .populate('worker', 'name email workerProfile')
+    .populate('workOrder', 'title description apartmentNumber')
     .populate('building', 'name address')
+    .populate('approvedBy', 'name email')
+    .populate('correctedBy', 'name email')
     .sort('-clockOutTime');
 
   res.status(200).json({
@@ -517,81 +519,55 @@ exports.approveTimeSession = catchAsync(async (req, res, next) => {
 exports.getTimeStats = catchAsync(async (req, res, next) => {
   const { workerId, buildingId, startDate, endDate } = req.query;
 
-  // Get today's date range
+  // Get all sessions for general stats
+  const allSessionsFilter = {};
+  if (workerId) allSessionsFilter.worker = workerId;
+  if (buildingId) allSessionsFilter.building = buildingId;
+  if (startDate || endDate) {
+    allSessionsFilter.clockInTime = {};
+    if (startDate) allSessionsFilter.clockInTime.$gte = new Date(startDate);
+    if (endDate) allSessionsFilter.clockInTime.$lte = new Date(endDate);
+  }
+
+  // Get active sessions
+  const activeSessions = await TimeSession.countDocuments({
+    ...allSessionsFilter,
+    status: 'active'
+  });
+
+  // Get today's sessions
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  // Active sessions (currently clocked in)
-  const activeSessions = await TimeSession.countDocuments({
-    status: 'active',
-    clockOutTime: { $exists: false }
+  const todaySessions = await TimeSession.find({
+    ...allSessionsFilter,
+    clockInTime: { $gte: today, $lt: tomorrow }
   });
 
-  // Total hours today
-  const todayFilter = {
-    clockInTime: { $gte: today, $lt: tomorrow },
-    clockOutTime: { $exists: true }
-  };
-  const todaySessions = await TimeSession.find(todayFilter);
-  const totalHoursToday = todaySessions.reduce((sum, s) => sum + (s.correctedHours || s.totalHours || 0), 0);
+  const totalHoursToday = todaySessions.reduce((sum, session) => {
+    return sum + (session.correctedHours || session.totalHours || 0);
+  }, 0);
 
-  // Pending approvals
+  // Get pending approvals
   const pendingApprovals = await TimeSession.countDocuments({
+    ...allSessionsFilter,
     status: 'completed',
-    isApproved: false,
-    clockOutTime: { $exists: true }
+    isApproved: false
   });
 
-  // Workers currently clocked in
-  const workersClockIn = await TimeSession.aggregate([
-    {
-      $match: {
-        status: 'active',
-        clockOutTime: { $exists: false }
-      }
-    },
-    {
-      $group: {
-        _id: '$worker'
-      }
-    },
-    {
-      $count: 'uniqueWorkers'
-    }
-  ]);
-
-  const workersClockInCount = workersClockIn.length > 0 ? workersClockIn[0].uniqueWorkers : 0;
-
-  // Additional stats for filtered data
-  let filteredStats = {};
-  if (workerId || buildingId || startDate || endDate) {
-    const filter = {};
-    if (workerId) filter.worker = workerId;
-    if (buildingId) filter.building = buildingId;
-    if (startDate || endDate) {
-      filter.clockInTime = {};
-      if (startDate) filter.clockInTime.$gte = new Date(startDate);
-      if (endDate) filter.clockInTime.$lte = new Date(endDate);
-    }
-
-    const filteredSessions = await TimeSession.find(filter);
-    filteredStats = {
-      totalSessions: filteredSessions.length,
-      totalHours: filteredSessions.reduce((sum, s) => sum + (s.correctedHours || s.totalHours || 0), 0),
-      totalBreakTime: filteredSessions.reduce((sum, s) => sum + (s.breakTime || 0), 0),
-      averageHours: filteredSessions.length > 0 ? 
-        filteredSessions.reduce((sum, s) => sum + (s.correctedHours || s.totalHours || 0), 0) / filteredSessions.length : 0
-    };
-  }
+  // Get unique workers clocked in today
+  const workersActive = await TimeSession.distinct('worker', {
+    ...allSessionsFilter,
+    status: 'active'
+  });
 
   const stats = {
     activeSessions,
     totalHoursToday: Math.round(totalHoursToday * 100) / 100,
     pendingApprovals,
-    workersClockIn: workersClockInCount,
-    ...filteredStats
+    workersActive: workersActive.length
   };
 
   res.status(200).json({

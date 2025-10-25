@@ -792,13 +792,10 @@ const generateInvoiceHTML = (invoice) => {
           border-bottom: 3px solid #2c3e50;
           padding-bottom: 20px;
         }
-        .logo-container {
-          margin-bottom: 20px;
-        }
         .company-logo {
-          max-width: 150px;
+          width: 120px;
           height: auto;
-          margin-bottom: 10px;
+          margin-bottom: 15px;
         }
         .company-name {
           font-size: 32px;
@@ -942,9 +939,7 @@ const generateInvoiceHTML = (invoice) => {
     <body>
       <div class="invoice-container">
         <div class="header">
-          <div class="logo-container">
-            <img src="https://res.cloudinary.com/dqy2ts9h6/image/upload/v1729859162/DSJ_logo_transparent_background_aqmzlp.png" alt="DSJ Construction Services" class="company-logo" />
-          </div>
+          <img src="https://res.cloudinary.com/dtaqusjav/image/upload/v1729888694/DSJ_logo_kqvkqk.png" alt="DSJ Construction Services" class="company-logo">
           <div class="company-name">DSJ Construction Services</div>
           <div class="company-tagline">Professional Construction Management</div>
           <div class="company-contact">

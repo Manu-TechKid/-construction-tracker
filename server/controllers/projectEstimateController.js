@@ -725,14 +725,6 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
               border-radius: 8px;
               margin-bottom: 30px;
             }
-            .logo-container {
-              margin-bottom: 20px;
-            }
-            .company-logo {
-              max-width: 120px;
-              height: auto;
-              margin-bottom: 15px;
-            }
             .header h1 {
               margin: 0;
               font-size: 28px;
@@ -742,6 +734,11 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
               margin: 10px 0 0 0;
               font-size: 20px;
               font-weight: normal;
+            }
+            .company-logo {
+              width: 100px;
+              height: auto;
+              margin-bottom: 15px;
             }
             .company-info {
               text-align: center;
@@ -838,9 +835,7 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
         </head>
         <body>
           <div class="header">
-            <div class="logo-container">
-              <img src="https://res.cloudinary.com/dqy2ts9h6/image/upload/v1729859162/DSJ_logo_transparent_background_aqmzlp.png" alt="DSJ Construction Services" class="company-logo" />
-            </div>
+            <img src="https://res.cloudinary.com/dtaqusjav/image/upload/v1729888694/DSJ_logo_kqvkqk.png" alt="DSJ Construction Services" class="company-logo">
             <h1>DSJ Construction Services</h1>
             <h2>Project Estimate</h2>
           </div>

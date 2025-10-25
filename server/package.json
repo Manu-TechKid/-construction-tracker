@@ -14,16 +14,15 @@
         "test:coverage": "cross-env NODE_ENV=test jest --coverage --detectOpenHandles --forceExit",
         "migrate:fix-invoice-dates": "node scripts/fixInvoiceDates.js",
         "migrate:repair-invoices": "node scripts/repairInvoices.js",
-        "build": "echo \"Building client...\" && cd ../client && npm ci --legacy-peer-deps && npm run build && echo \"Build complete\"",
-        "build:client": "cd ../client && npm ci --legacy-peer-deps && npm run build",
-        "render-build": "npm ci && npm run build",
-        "postinstall": "npm run build:client"
+        "build": "echo \"Server build complete\"",
+        "build:client": "cd ../client && npm install --legacy-peer-deps && npm run build"
     },
     "dependencies": {
         "bcryptjs": "^2.4.3",
         "cloudinary": "^1.41.3",
         "colors": "^1.4.0",
         "compression": "^1.7.4",
+        "construction-tracker": "file:..",
         "cookie-parser": "^1.4.6",
         "cors": "^2.8.5",
         "express": "^4.18.2",

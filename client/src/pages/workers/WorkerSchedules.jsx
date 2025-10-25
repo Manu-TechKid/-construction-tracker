@@ -884,21 +884,54 @@ const WorkerSchedules = () => {
                     value={formik.values.startTime}
                     onChange={(newValue) => {
                       formik.setFieldValue('startTime', newValue);
-                      if (formik.values.endTime && newValue && formik.values.endTime <= newValue) {
-                        formik.setFieldValue('endTime', null);
+                      // Auto-adjust end time if it's before the new start time
+                      if (formik.values.endTime && newValue && new Date(formik.values.endTime) <= new Date(newValue)) {
+                        const newEndTime = new Date(newValue);
+                        newEndTime.setHours(newEndTime.getHours() + 1); // Add 1 hour minimum
+                        formik.setFieldValue('endTime', newEndTime);
                       }
                     }}
-                    views={['hours', 'minutes']}
-                    openTo="hours"
                     ampm={true}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        fullWidth
-                        error={formik.touched.startTime && Boolean(formik.errors.startTime)}
-                        helperText={formik.touched.startTime && formik.errors.startTime}
-                      />
-                    )}
+                    views={['hours', 'minutes']}
+                    format="hh:mm a"
+                    openTo="hours"
+                    viewRenderers={{
+                      hours: null,
+                      minutes: null,
+                    }}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        error: formik.touched.startTime && Boolean(formik.errors.startTime),
+                        helperText: formik.touched.startTime && formik.errors.startTime
+                      },
+                      actionBar: {
+                        actions: ['accept', 'cancel']
+                      },
+                      layout: {
+                        sx: {
+                          '.MuiClock-root': {
+                            display: 'block !important',
+                            visibility: 'visible !important'
+                          },
+                          '.MuiPickersLayout-contentWrapper': {
+                            display: 'flex',
+                            flexDirection: 'column'
+                          },
+                          '.MuiTimeClock-root': {
+                            display: 'block !important'
+                          },
+                          '.MuiClock-clock': {
+                            display: 'block !important'
+                          }
+                        }
+                      },
+                      digitalClockSectionItem: {
+                        sx: {
+                          display: 'none'
+                        }
+                      }
+                    }}
                   />
                 </Grid>
 
@@ -907,17 +940,47 @@ const WorkerSchedules = () => {
                     label="End Time"
                     value={formik.values.endTime}
                     onChange={(newValue) => formik.setFieldValue('endTime', newValue)}
-                    views={['hours', 'minutes']}
-                    openTo="hours"
                     ampm={true}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        fullWidth
-                        error={formik.touched.endTime && Boolean(formik.errors.endTime)}
-                        helperText={formik.touched.endTime && formik.errors.endTime}
-                      />
-                    )}
+                    views={['hours', 'minutes']}
+                    format="hh:mm a"
+                    openTo="hours"
+                    viewRenderers={{
+                      hours: null,
+                      minutes: null,
+                    }}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        error: formik.touched.endTime && Boolean(formik.errors.endTime),
+                        helperText: formik.touched.endTime && formik.errors.endTime
+                      },
+                      actionBar: {
+                        actions: ['accept', 'cancel']
+                      },
+                      layout: {
+                        sx: {
+                          '.MuiClock-root': {
+                            display: 'block !important',
+                            visibility: 'visible !important'
+                          },
+                          '.MuiPickersLayout-contentWrapper': {
+                            display: 'flex',
+                            flexDirection: 'column'
+                          },
+                          '.MuiTimeClock-root': {
+                            display: 'block !important'
+                          },
+                          '.MuiClock-clock': {
+                            display: 'block !important'
+                          }
+                        }
+                      },
+                      digitalClockSectionItem: {
+                        sx: {
+                          display: 'none'
+                        }
+                      }
+                    }}
                   />
                 </Grid>
 

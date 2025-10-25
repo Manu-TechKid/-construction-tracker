@@ -6,12 +6,12 @@
   "scripts": {
     "start": "node server/server.js",
     "start:prod": "NODE_ENV=production node server/server.js",
-    "build": "echo 'Installing server dependencies...' && npm --prefix server ci --only=production && echo 'Installing client dependencies...' && npm --prefix client ci --legacy-peer-deps && echo 'Building client...' && npm --prefix client run build && echo 'Build complete!'",
-    "build:prod": "NODE_ENV=production npm run build",
+    "build": "npm install && npm --prefix client install --legacy-peer-deps && npm --prefix client run build && npm --prefix server install",
+    "build:prod": "NODE_ENV=production npm install && cd client && npm install --legacy-peer-deps && npm run build && cd ../server && npm install",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "server": "cd server && npm run dev",
     "client": "cd client && npm start",
-    "heroku-postbuild": "npm --prefix client ci --legacy-peer-deps && npm --prefix client run build",
+    "heroku-postbuild": "npm --prefix client install --legacy-peer-deps && npm --prefix client run build",
     "test": "cd server && npm test",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\""
