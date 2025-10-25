@@ -7,7 +7,7 @@ services:
     nodeVersion: 18.18.0
     buildCommand: |
       echo "Installing dependencies..."
-      npm install
+      npm install --production=false --no-optional
       cd client && npm install --legacy-peer-deps && npm run build
       cd ..
     startCommand: npm run start:prod

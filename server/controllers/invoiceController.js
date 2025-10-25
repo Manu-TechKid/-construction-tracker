@@ -1083,7 +1083,13 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
     console.log(`Generating PDF for invoice ${invoice.invoiceNumber} (${invoice._id})`);
     console.log(`Invoice has ${lineItems.length} line items`);
     
-    const puppeteer = require('puppeteer');
+    let puppeteer;
+    try {
+      puppeteer = require('puppeteer');
+    } catch (error) {
+      console.log('Puppeteer not available, trying puppeteer-core...');
+      puppeteer = require('puppeteer-core');
+    }
 
     // Generate HTML content for PDF
     const htmlContent = generateInvoiceHTML(invoiceObject);
@@ -1147,11 +1153,18 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
     console.error('Invoice ID:', invoice._id);
     console.error('Invoice Number:', invoice.invoiceNumber);
     
-    // Provide more specific error messages
+    // Provide more specific error messages and fallbacks
     if (error.message.includes('Navigation timeout')) {
       return next(new AppError('PDF generation timed out. Please try again.', 500));
     } else if (error.message.includes('Protocol error')) {
       return next(new AppError('Browser error during PDF generation. Please try again.', 500));
+    } else if (error.message.includes('puppeteer') || error.message.includes('chrome') || error.message.includes('Cannot find module')) {
+      console.log('Puppeteer not available, returning HTML content...');
+      const htmlContent = generateInvoiceHTML(invoiceObject);
+      
+      res.setHeader('Content-Type', 'text/html');
+      res.setHeader('Content-Disposition', `inline; filename="invoice-${invoice.invoiceNumber}.html"`);
+      return res.send(htmlContent);
     } else {
       return next(new AppError(`Failed to generate PDF: ${error.message}`, 500));
     }
