@@ -1083,64 +1083,40 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
     console.log(`Generating PDF for invoice ${invoice.invoiceNumber} (${invoice._id})`);
     console.log(`Invoice has ${lineItems.length} line items`);
     
-    let puppeteer;
-    try {
-      puppeteer = require('puppeteer');
-    } catch (error) {
-      console.log('Puppeteer not available, trying puppeteer-core...');
-      puppeteer = require('puppeteer-core');
-    }
-
+    const pdf = require('html-pdf');
+    
     // Generate HTML content for PDF
     const htmlContent = generateInvoiceHTML(invoiceObject);
     console.log('HTML content generated successfully');
 
-    // Launch browser with production-friendly settings
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--single-process',
-        '--disable-gpu'
-      ],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
-    });
-    console.log('Browser launched successfully');
-
-    const page = await browser.newPage();
-    
-    // Set page settings for better rendering
-    await page.setViewport({ width: 1200, height: 800 });
-    
-    // Set content with timeout
-    await page.setContent(htmlContent, { 
-      waitUntil: 'domcontentloaded',
-      timeout: 30000 
-    });
-    console.log('Page content set successfully');
-
-    // Generate PDF with timeout
-    const pdfBuffer = await page.pdf({
+    // PDF generation options
+    const options = {
       format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '1cm',
-        right: '1cm',
-        bottom: '1cm',
-        left: '1cm'
+      orientation: 'portrait',
+      border: {
+        top: '0.5in',
+        right: '0.5in',
+        bottom: '0.5in',
+        left: '0.5in'
       },
-      timeout: 30000
+      type: 'pdf',
+      timeout: 30000,
+      renderDelay: 1000
+    };
+
+    // Generate PDF using html-pdf
+    const pdfBuffer = await new Promise((resolve, reject) => {
+      pdf.create(htmlContent, options).toBuffer((err, buffer) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(buffer);
+        }
+      });
     });
-    console.log('PDF generated successfully');
 
-    await browser.close();
+    console.log(`PDF generated successfully. Size: ${pdfBuffer.length} bytes`);
 
-    // Set headers for PDF download
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="invoice-${invoice.invoiceNumber}.pdf"`);
     res.setHeader('Content-Length', pdfBuffer.length);
@@ -1158,8 +1134,8 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
       return next(new AppError('PDF generation timed out. Please try again.', 500));
     } else if (error.message.includes('Protocol error')) {
       return next(new AppError('Browser error during PDF generation. Please try again.', 500));
-    } else if (error.message.includes('puppeteer') || error.message.includes('chrome') || error.message.includes('Cannot find module')) {
-      console.log('Puppeteer not available, returning HTML content...');
+    } else if (error.message.includes('html-pdf') || error.message.includes('wkhtmltopdf') || error.message.includes('Cannot find module')) {
+      console.log('PDF generation not available, returning HTML content...');
       const htmlContent = generateInvoiceHTML(invoiceObject);
       
       res.setHeader('Content-Type', 'text/html');

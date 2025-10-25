@@ -944,10 +944,7 @@ const WorkerSchedules = () => {
                     views={['hours', 'minutes']}
                     format="hh:mm a"
                     openTo="hours"
-                    viewRenderers={{
-                      hours: null,
-                      minutes: null,
-                    }}
+                    desktopModeMediaQuery="@media (pointer: fine)"
                     slotProps={{
                       textField: {
                         fullWidth: true,

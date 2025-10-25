@@ -690,16 +690,7 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
   }
 
   try {
-    // Import puppeteer dynamically to avoid issues if not installed
-    const puppeteer = await import('puppeteer');
-
-    // Launch browser
-    const browser = await puppeteer.default.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-
-    const page = await browser.newPage();
+    const pdf = require('html-pdf');
 
     // Create HTML content for the PDF
     const htmlContent = `
@@ -949,21 +940,31 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
       </html>
     `;
 
-    await page.setContent(htmlContent);
-
-    // Generate PDF
-    const pdfBuffer = await page.pdf({
+    // PDF generation options
+    const options = {
       format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '20px',
-        right: '20px',
-        bottom: '20px',
-        left: '20px'
-      }
-    });
+      orientation: 'portrait',
+      border: {
+        top: '0.5in',
+        right: '0.5in',
+        bottom: '0.5in',
+        left: '0.5in'
+      },
+      type: 'pdf',
+      timeout: 30000,
+      renderDelay: 1000
+    };
 
-    await browser.close();
+    // Generate PDF using html-pdf
+    const pdfBuffer = await new Promise((resolve, reject) => {
+      pdf.create(htmlContent, options).toBuffer((err, buffer) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(buffer);
+        }
+      });
+    });
 
     // Set response headers and send PDF
     res.setHeader('Content-Type', 'application/pdf');

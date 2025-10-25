@@ -129,9 +129,16 @@ const TimeTrackingManagement = () => {
     return worker?.name || worker?.email || 'Unknown Worker';
   };
 
-  const getBuildingName = (buildingId) => {
-    const building = buildings.find(b => b._id === buildingId);
-    return building?.name || 'No Building';
+  const getBuildingName = (building) => {
+    // Handle both populated building object and building ID
+    if (typeof building === 'object' && building?.name) {
+      return building.name;
+    }
+    if (typeof building === 'string') {
+      const buildingObj = buildings.find(b => b._id === building);
+      return buildingObj?.name || 'No Building';
+    }
+    return 'No Building';
   };
 
   const getStatusColor = (status) => {
