@@ -884,7 +884,6 @@ const WorkerSchedules = () => {
                     value={formik.values.startTime}
                     onChange={(newValue) => {
                       formik.setFieldValue('startTime', newValue);
-                      // Clear end time if it's before new start time
                       if (formik.values.endTime && newValue && formik.values.endTime <= newValue) {
                         formik.setFieldValue('endTime', null);
                       }
@@ -892,16 +891,14 @@ const WorkerSchedules = () => {
                     views={['hours', 'minutes']}
                     openTo="hours"
                     ampm={true}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        error: formik.touched.startTime && Boolean(formik.errors.startTime),
-                        helperText: formik.touched.startTime && formik.errors.startTime
-                      },
-                      popper: {
-                        placement: 'bottom-start'
-                      }
-                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        fullWidth
+                        error={formik.touched.startTime && Boolean(formik.errors.startTime)}
+                        helperText={formik.touched.startTime && formik.errors.startTime}
+                      />
+                    )}
                   />
                 </Grid>
 
@@ -910,31 +907,17 @@ const WorkerSchedules = () => {
                     label="End Time"
                     value={formik.values.endTime}
                     onChange={(newValue) => formik.setFieldValue('endTime', newValue)}
-                    ampm={true}
                     views={['hours', 'minutes']}
-                    format="hh:mm a"
                     openTo="hours"
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        error: formik.touched.endTime && Boolean(formik.errors.endTime),
-                        helperText: formik.touched.endTime && formik.errors.endTime
-                      },
-                      actionBar: {
-                        actions: ['accept', 'cancel']
-                      },
-                      layout: {
-                        sx: {
-                          '.MuiClock-root': {
-                            display: 'flex !important'
-                          },
-                          '.MuiPickersLayout-contentWrapper': {
-                            display: 'flex',
-                            flexDirection: 'column'
-                          }
-                        }
-                      }
-                    }}
+                    ampm={true}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        fullWidth
+                        error={formik.touched.endTime && Boolean(formik.errors.endTime)}
+                        helperText={formik.touched.endTime && formik.errors.endTime}
+                      />
+                    )}
                   />
                 </Grid>
 
