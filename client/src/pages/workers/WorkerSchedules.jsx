@@ -884,36 +884,22 @@ const WorkerSchedules = () => {
                     value={formik.values.startTime}
                     onChange={(newValue) => {
                       formik.setFieldValue('startTime', newValue);
-                      // Auto-adjust end time if it's before the new start time
-                      if (formik.values.endTime && newValue && new Date(formik.values.endTime) <= new Date(newValue)) {
-                        const newEndTime = new Date(newValue);
-                        newEndTime.setHours(newEndTime.getHours() + 1); // Add 1 hour minimum
-                        formik.setFieldValue('endTime', newEndTime);
+                      // Clear end time if it's before new start time
+                      if (formik.values.endTime && newValue && formik.values.endTime <= newValue) {
+                        formik.setFieldValue('endTime', null);
                       }
                     }}
-                    ampm={true}
                     views={['hours', 'minutes']}
-                    format="hh:mm a"
                     openTo="hours"
+                    ampm={true}
                     slotProps={{
                       textField: {
                         fullWidth: true,
                         error: formik.touched.startTime && Boolean(formik.errors.startTime),
                         helperText: formik.touched.startTime && formik.errors.startTime
                       },
-                      actionBar: {
-                        actions: ['accept', 'cancel']
-                      },
-                      layout: {
-                        sx: {
-                          '.MuiClock-root': {
-                            display: 'flex !important'
-                          },
-                          '.MuiPickersLayout-contentWrapper': {
-                            display: 'flex',
-                            flexDirection: 'column'
-                          }
-                        }
+                      popper: {
+                        placement: 'bottom-start'
                       }
                     }}
                   />

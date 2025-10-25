@@ -438,8 +438,10 @@ exports.getTimeSessions = catchAsync(async (req, res, next) => {
 
   const sessions = await TimeSession.find(filter)
     .populate('worker', 'name email workerProfile')
-    .populate('workOrder', 'title description')
+    .populate('workOrder', 'title description apartmentNumber')
     .populate('building', 'name address')
+    .populate('correctedBy', 'name email')
+    .populate('approvedBy', 'name email')
     .sort('-clockInTime');
 
   // Ensure sessions have hourly rates and calculated pay
@@ -515,22 +517,81 @@ exports.approveTimeSession = catchAsync(async (req, res, next) => {
 exports.getTimeStats = catchAsync(async (req, res, next) => {
   const { workerId, buildingId, startDate, endDate } = req.query;
 
-  const filter = { status: 'completed' };
-  if (workerId) filter.worker = workerId;
-  if (buildingId) filter.building = buildingId;
-  if (startDate || endDate) {
-    filter.clockInTime = {};
-    if (startDate) filter.clockInTime.$gte = new Date(startDate);
-    if (endDate) filter.clockInTime.$lte = new Date(endDate);
+  // Get today's date range
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  // Active sessions (currently clocked in)
+  const activeSessions = await TimeSession.countDocuments({
+    status: 'active',
+    clockOutTime: { $exists: false }
+  });
+
+  // Total hours today
+  const todayFilter = {
+    clockInTime: { $gte: today, $lt: tomorrow },
+    clockOutTime: { $exists: true }
+  };
+  const todaySessions = await TimeSession.find(todayFilter);
+  const totalHoursToday = todaySessions.reduce((sum, s) => sum + (s.correctedHours || s.totalHours || 0), 0);
+
+  // Pending approvals
+  const pendingApprovals = await TimeSession.countDocuments({
+    status: 'completed',
+    isApproved: false,
+    clockOutTime: { $exists: true }
+  });
+
+  // Workers currently clocked in
+  const workersClockIn = await TimeSession.aggregate([
+    {
+      $match: {
+        status: 'active',
+        clockOutTime: { $exists: false }
+      }
+    },
+    {
+      $group: {
+        _id: '$worker'
+      }
+    },
+    {
+      $count: 'uniqueWorkers'
+    }
+  ]);
+
+  const workersClockInCount = workersClockIn.length > 0 ? workersClockIn[0].uniqueWorkers : 0;
+
+  // Additional stats for filtered data
+  let filteredStats = {};
+  if (workerId || buildingId || startDate || endDate) {
+    const filter = {};
+    if (workerId) filter.worker = workerId;
+    if (buildingId) filter.building = buildingId;
+    if (startDate || endDate) {
+      filter.clockInTime = {};
+      if (startDate) filter.clockInTime.$gte = new Date(startDate);
+      if (endDate) filter.clockInTime.$lte = new Date(endDate);
+    }
+
+    const filteredSessions = await TimeSession.find(filter);
+    filteredStats = {
+      totalSessions: filteredSessions.length,
+      totalHours: filteredSessions.reduce((sum, s) => sum + (s.correctedHours || s.totalHours || 0), 0),
+      totalBreakTime: filteredSessions.reduce((sum, s) => sum + (s.breakTime || 0), 0),
+      averageHours: filteredSessions.length > 0 ? 
+        filteredSessions.reduce((sum, s) => sum + (s.correctedHours || s.totalHours || 0), 0) / filteredSessions.length : 0
+    };
   }
 
-  const sessions = await TimeSession.find(filter);
-  
   const stats = {
-    totalSessions: sessions.length,
-    totalHours: sessions.reduce((sum, s) => sum + (s.totalHours || 0), 0),
-    totalBreakTime: sessions.reduce((sum, s) => sum + (s.breakTime || 0), 0),
-    averageHours: sessions.length > 0 ? sessions.reduce((sum, s) => sum + (s.totalHours || 0), 0) / sessions.length : 0
+    activeSessions,
+    totalHoursToday: Math.round(totalHoursToday * 100) / 100,
+    pendingApprovals,
+    workersClockIn: workersClockInCount,
+    ...filteredStats
   };
 
   res.status(200).json({

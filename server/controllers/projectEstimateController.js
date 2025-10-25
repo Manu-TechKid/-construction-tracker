@@ -725,6 +725,14 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
               border-radius: 8px;
               margin-bottom: 30px;
             }
+            .logo-container {
+              margin-bottom: 20px;
+            }
+            .company-logo {
+              max-width: 120px;
+              height: auto;
+              margin-bottom: 15px;
+            }
             .header h1 {
               margin: 0;
               font-size: 28px;
@@ -830,6 +838,9 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
         </head>
         <body>
           <div class="header">
+            <div class="logo-container">
+              <img src="https://res.cloudinary.com/dqy2ts9h6/image/upload/v1729859162/DSJ_logo_transparent_background_aqmzlp.png" alt="DSJ Construction Services" class="company-logo" />
+            </div>
             <h1>DSJ Construction Services</h1>
             <h2>Project Estimate</h2>
           </div>
