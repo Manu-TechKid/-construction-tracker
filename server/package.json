@@ -14,9 +14,10 @@
         "test:coverage": "cross-env NODE_ENV=test jest --coverage --detectOpenHandles --forceExit",
         "migrate:fix-invoice-dates": "node scripts/fixInvoiceDates.js",
         "migrate:repair-invoices": "node scripts/repairInvoices.js",
-        "build": "echo \"Server build complete\"",
+        "build": "echo \"Building client...\" && cd ../client && npm ci --legacy-peer-deps && npm run build && echo \"Build complete\"",
         "build:client": "cd ../client && npm ci --legacy-peer-deps && npm run build",
-        "render-build": "npm ci && npm run build"
+        "render-build": "npm ci && npm run build",
+        "postinstall": "npm run build:client"
     },
     "dependencies": {
         "bcryptjs": "^2.4.3",
