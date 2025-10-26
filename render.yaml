@@ -38,6 +38,12 @@ services:
       # Client Configuration - Set to the Render service URL for API calls
       - key: REACT_APP_API_URL
         value: https://construction-tracker-webapp.onrender.com/api/v1
+      
+      # CORS Configuration
+      - key: CORS_ORIGIN
+        value: https://admin.servicesdsj.com
+      - key: CORS_CREDENTIALS
+        value: "true"
     envVarFiles:
       - group: production
         path: .env.production
