@@ -796,6 +796,8 @@ const generateInvoiceHTML = (invoice) => {
           width: 120px;
           height: auto;
           margin-bottom: 15px;
+          display: block;
+          max-width: 100%;
         }
         .company-name {
           font-size: 32px;
@@ -1100,8 +1102,14 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
         left: '0.5in'
       },
       type: 'pdf',
-      timeout: 30000,
-      renderDelay: 1000
+      timeout: 60000,
+      renderDelay: 3000,
+      phantomArgs: ['--load-images=yes', '--local-to-remote-url-access=yes', '--web-security=no'],
+      childProcessOptions: {
+        env: {
+          OPENSSL_CONF: '/dev/null',
+        },
+      }
     };
 
     // Generate PDF using html-pdf

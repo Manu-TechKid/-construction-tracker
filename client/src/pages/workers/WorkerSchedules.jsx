@@ -895,10 +895,6 @@ const WorkerSchedules = () => {
                     views={['hours', 'minutes']}
                     format="hh:mm a"
                     openTo="hours"
-                    viewRenderers={{
-                      hours: null,
-                      minutes: null,
-                    }}
                     slotProps={{
                       textField: {
                         fullWidth: true,
@@ -910,23 +906,24 @@ const WorkerSchedules = () => {
                       },
                       layout: {
                         sx: {
+                          '.MuiTimeClock-root': {
+                            display: 'flex !important'
+                          },
                           '.MuiClock-root': {
-                            display: 'block !important',
-                            visibility: 'visible !important'
+                            display: 'flex !important'
                           },
                           '.MuiPickersLayout-contentWrapper': {
                             display: 'flex',
                             flexDirection: 'column'
-                          },
-                          '.MuiTimeClock-root': {
-                            display: 'block !important'
-                          },
-                          '.MuiClock-clock': {
-                            display: 'block !important'
                           }
                         }
                       },
-                      digitalClockSectionItem: {
+                      digitalClock: {
+                        sx: {
+                          display: 'none'
+                        }
+                      },
+                      multiSectionDigitalClock: {
                         sx: {
                           display: 'none'
                         }
@@ -956,23 +953,24 @@ const WorkerSchedules = () => {
                       },
                       layout: {
                         sx: {
+                          '.MuiTimeClock-root': {
+                            display: 'flex !important'
+                          },
                           '.MuiClock-root': {
-                            display: 'block !important',
-                            visibility: 'visible !important'
+                            display: 'flex !important'
                           },
                           '.MuiPickersLayout-contentWrapper': {
                             display: 'flex',
                             flexDirection: 'column'
-                          },
-                          '.MuiTimeClock-root': {
-                            display: 'block !important'
-                          },
-                          '.MuiClock-clock': {
-                            display: 'block !important'
                           }
                         }
                       },
-                      digitalClockSectionItem: {
+                      digitalClock: {
+                        sx: {
+                          display: 'none'
+                        }
+                      },
+                      multiSectionDigitalClock: {
                         sx: {
                           display: 'none'
                         }
