@@ -19,7 +19,7 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 const app = express();
 
 // Middleware
-app.use(cors());
+// CORS is handled in server.js
 app.use(express.json());
 
 // Routes
