@@ -790,29 +790,54 @@ const generateInvoiceHTML = (invoice) => {
           text-align: center;
           margin-bottom: 40px;
           border-bottom: 3px solid #2c3e50;
-          padding-bottom: 20px;
+          padding-bottom: 30px;
+          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+          padding: 30px;
+          border-radius: 10px;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .logo-container {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 20px;
+          background: white;
+          padding: 15px;
+          border-radius: 8px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .company-logo {
-          width: 120px;
-          height: auto;
-          margin-bottom: 15px;
-          display: block;
-          max-width: 100%;
+          width: 80px;
+          height: 80px;
+          margin-right: 15px;
+          border-radius: 8px;
+          object-fit: contain;
+        }
+        .company-text {
+          text-align: left;
         }
         .company-name {
-          font-size: 32px;
+          font-size: 36px;
           font-weight: bold;
           color: #2c3e50;
-          margin-bottom: 5px;
+          margin: 0;
+          text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+          background: linear-gradient(135deg, #3498db, #2c3e50);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
         }
         .company-tagline {
           font-size: 16px;
           color: #7f8c8d;
-          margin-bottom: 10px;
+          margin: 5px 0 15px 0;
+          font-style: italic;
         }
         .company-contact {
-          font-size: 13px;
+          font-size: 14px;
           color: #95a5a6;
+          margin: 0;
+          font-weight: 500;
         }
         .invoice-title {
           font-size: 28px;
@@ -941,9 +966,13 @@ const generateInvoiceHTML = (invoice) => {
     <body>
       <div class="invoice-container">
         <div class="header">
-          <img src="https://res.cloudinary.com/dtaqusjav/image/upload/v1729888694/DSJ_logo_kqvkqk.png" alt="DSJ Construction Services" class="company-logo">
-          <div class="company-name">DSJ Construction Services</div>
-          <div class="company-tagline">Professional Construction Management</div>
+          <div class="logo-container">
+            <img src="https://res.cloudinary.com/dtaqusjav/image/upload/v1729888694/DSJ_logo_kqvkqk.png" alt="DSJ Construction Services" class="company-logo">
+            <div class="company-text">
+              <div class="company-name">DSJ</div>
+              <div class="company-tagline">Construction Services</div>
+            </div>
+          </div>
           <div class="company-contact">
             Phone: (555) 123-4567 | Email: info@dsjconstruction.com | Website: www.dsjconstruction.com
           </div>
