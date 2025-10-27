@@ -52,18 +52,19 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { 
-  format, 
-  startOfWeek, 
-  endOfWeek, 
-  eachDayOfInterval, 
-  isSameDay, 
-  addWeeks, 
+import {
+  format,
+  addWeeks,
   subWeeks,
-  startOfDay,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
   isToday,
+  isSameDay,
+  parseISO,
   isBefore,
-  isAfter
+  isAfter,
+  startOfDay
 } from 'date-fns';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -85,7 +86,7 @@ const validationSchema = Yup.object({
   building: Yup.string().required('Please select a building'),
   date: Yup.date()
     .required('Date is required')
-    .min(new Date().setHours(0,0,0,0), 'Cannot schedule for past dates'),
+    .min(startOfDay(new Date()), 'Cannot schedule for past dates'),
   startTime: Yup.date().required('Start time is required'),
   endTime: Yup.date()
     .required('End time is required')
