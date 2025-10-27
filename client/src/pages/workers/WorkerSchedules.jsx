@@ -417,7 +417,7 @@ const WorkerSchedules = () => {
     return 'default';
   };
 
-  const handleOpenDialog = (schedule = null) => {
+  const handleOpenDialog = useCallback((schedule = null) => {
     setEditingSchedule(schedule);
     if (schedule) {
       // Handle populated worker and building data
@@ -457,13 +457,13 @@ const WorkerSchedules = () => {
       });
     }
     setOpenDialog(true);
-  }, [formik, workers, buildings]);
+  }, [workers, buildings]);
 
   const handleCloseDialog = useCallback(() => {
     setOpenDialog(false);
     setEditingSchedule(null);
     formik.resetForm();
-  }, [formik]);
+  }, []);
 
   const handleDeleteSchedule = useCallback(async (scheduleId, workerName, taskDescription) => {
     const confirmMessage = `Are you sure you want to delete this schedule?\n\nWorker: ${workerName}\nTask: ${taskDescription}\n\nThis action cannot be undone.`;
@@ -489,7 +489,7 @@ const WorkerSchedules = () => {
         toast.error(`❌ ${errorMessage}`);
       }
     }
-  };
+  }, [deleteSchedule]);
 
   const handlePreviousWeek = () => {
     setCurrentWeek(subWeeks(currentWeek, 1));
