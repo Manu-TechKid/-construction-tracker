@@ -806,12 +806,27 @@ const generateInvoiceHTML = (invoice) => {
           border-radius: 8px;
           box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .company-logo {
+        .logo-placeholder {
           width: 80px;
           height: 80px;
           margin-right: 15px;
+          background: linear-gradient(135deg, #3498db, #2c3e50);
           border-radius: 8px;
-          object-fit: contain;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          position: relative;
+        }
+        .building-icon {
+          font-size: 24px;
+          margin-bottom: 2px;
+        }
+        .dsj-text {
+          font-size: 18px;
+          font-weight: bold;
+          letter-spacing: 1px;
         }
         .company-text {
           text-align: left;
@@ -967,14 +982,17 @@ const generateInvoiceHTML = (invoice) => {
       <div class="invoice-container">
         <div class="header">
           <div class="logo-container">
-            <img src="https://res.cloudinary.com/dtaqusjav/image/upload/v1729888694/DSJ_logo_kqvkqk.png" alt="DSJ Construction Services" class="company-logo">
+            <div class="logo-placeholder">
+              <div class="building-icon">🏢</div>
+              <div class="dsj-text">DSJ</div>
+            </div>
             <div class="company-text">
-              <div class="company-name">DSJ</div>
-              <div class="company-tagline">Construction Services</div>
+              <div class="company-name">DSJ Construction & Services LLC</div>
+              <div class="company-tagline">Professional Construction & Renovation Services</div>
             </div>
           </div>
           <div class="company-contact">
-            Phone: (555) 123-4567 | Email: info@dsjconstruction.com | Website: www.dsjconstruction.com
+            Phone: (555) 123-4567 | Email: info@dsjconstruction.com
           </div>
         </div>
 
@@ -1120,7 +1138,7 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
     const htmlContent = generateInvoiceHTML(invoiceObject);
     console.log('HTML content generated successfully');
 
-    // PDF generation options
+    // PDF generation options with enhanced image loading
     const options = {
       format: 'A4',
       orientation: 'portrait',
@@ -1131,9 +1149,15 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
         left: '0.5in'
       },
       type: 'pdf',
-      timeout: 60000,
-      renderDelay: 3000,
-      phantomArgs: ['--load-images=yes', '--local-to-remote-url-access=yes', '--web-security=no'],
+      timeout: 30000, // Reduced timeout for faster generation
+      renderDelay: 1000, // Reduced delay for faster generation
+      phantomArgs: [
+        '--load-images=yes', 
+        '--local-to-remote-url-access=yes', 
+        '--web-security=no',
+        '--ignore-ssl-errors=yes',
+        '--ssl-protocol=any'
+      ],
       childProcessOptions: {
         env: {
           OPENSSL_CONF: '/dev/null',
