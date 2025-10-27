@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -81,19 +81,34 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 
 const validationSchema = Yup.object({
-  workerId: Yup.string().required('Worker is required'),
-  buildingId: Yup.string().required('Building is required'),
-  date: Yup.date().required('Date is required'),
+  worker: Yup.string().required('Please select a worker'),
+  building: Yup.string().required('Please select a building'),
+  date: Yup.date()
+    .required('Date is required')
+    .min(new Date().setHours(0,0,0,0), 'Cannot schedule for past dates'),
   startTime: Yup.date().required('Start time is required'),
   endTime: Yup.date()
     .required('End time is required')
     .test('is-after-start', 'End time must be after start time', function(value) {
       const { startTime } = this.parent;
       if (!startTime || !value) return true;
-      return new Date(value) > new Date(startTime);
+      const start = new Date(startTime);
+      const end = new Date(value);
+      return end > start;
+    })
+    .test('minimum-duration', 'Minimum duration is 30 minutes', function(value) {
+      const { startTime } = this.parent;
+      if (!startTime || !value) return true;
+      const start = new Date(startTime);
+      const end = new Date(value);
+      const diffMinutes = (end - start) / (1000 * 60);
+      return diffMinutes >= 30;
     }),
-  task: Yup.string().required('Task description is required'),
-  notes: Yup.string(),
+  taskDescription: Yup.string()
+    .required('Task description is required')
+    .min(10, 'Task description must be at least 10 characters')
+    .max(500, 'Task description cannot exceed 500 characters'),
+  notes: Yup.string().max(1000, 'Notes cannot exceed 1000 characters'),
 });
 
 const WorkerSchedules = () => {
@@ -136,18 +151,39 @@ const WorkerSchedules = () => {
       notes: '',
     },
     validationSchema,
-    onSubmit: async (values, { resetForm }) => {
+    onSubmit: async (values) => {
       try {
         console.log('Form values before processing:', values);
         
+        // Validate time overlap with existing schedules
+        const existingSchedules = schedules.filter(s => 
+          s._id !== editingSchedule?._id && 
+          s.worker._id === values.worker &&
+          format(new Date(s.date), 'yyyy-MM-dd') === format(values.date, 'yyyy-MM-dd')
+        );
+
+        const hasOverlap = existingSchedules.some(schedule => {
+          const existingStart = new Date(schedule.startTime);
+          const existingEnd = new Date(schedule.endTime);
+          const newStart = new Date(values.startTime);
+          const newEnd = new Date(values.endTime);
+          
+          return (newStart < existingEnd && newEnd > existingStart);
+        });
+
+        if (hasOverlap) {
+          toast.error('Schedule conflicts with existing schedule for this worker');
+          return;
+        }
+
         const scheduleData = {
-          workerId: values.workerId,
-          buildingId: values.buildingId,
-          date: values.date.toISOString(),
-          startTime: values.startTime.toISOString(),
-          endTime: values.endTime.toISOString(),
-          task: values.task,
-          notes: values.notes || '',
+          worker: values.worker,
+          building: values.building,
+          date: values.date,
+          startTime: values.startTime,
+          endTime: values.endTime,
+          taskDescription: values.taskDescription,
+          notes: values.notes,
         };
 
         console.log('Schedule data being sent:', scheduleData);
@@ -155,20 +191,37 @@ const WorkerSchedules = () => {
         if (editingSchedule) {
           const result = await updateSchedule({ id: editingSchedule._id, ...scheduleData }).unwrap();
           console.log('Update result:', result);
-          toast.success('Schedule updated successfully');
+          toast.success('✅ Schedule updated successfully!');
         } else {
           const result = await createSchedule(scheduleData).unwrap();
           console.log('Create result:', result);
-          toast.success('Schedule created successfully');
+          toast.success('✅ Schedule created successfully!');
         }
 
         handleCloseDialog();
-        resetForm();
+        formik.resetForm();
       } catch (error) {
         console.error('Failed to save schedule - Full error:', error);
         console.error('Error data:', error?.data);
         console.error('Error message:', error?.data?.message);
-        toast.error(error?.data?.message || error?.message || 'Failed to save schedule');
+        
+        // Enhanced error messages
+        let errorMessage = 'Failed to save schedule';
+        if (error?.data?.message) {
+          errorMessage = error.data.message;
+        } else if (error?.message) {
+          errorMessage = error.message;
+        } else if (error?.status === 400) {
+          errorMessage = 'Invalid schedule data. Please check all fields.';
+        } else if (error?.status === 401) {
+          errorMessage = 'You are not authorized to perform this action.';
+        } else if (error?.status === 404) {
+          errorMessage = 'Worker or building not found.';
+        } else if (error?.status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+        
+        toast.error(`❌ ${errorMessage}`);
       }
     },
   });
@@ -404,22 +457,36 @@ const WorkerSchedules = () => {
       });
     }
     setOpenDialog(true);
-  };
+  }, [formik, workers, buildings]);
 
-  const handleCloseDialog = () => {
+  const handleCloseDialog = useCallback(() => {
     setOpenDialog(false);
     setEditingSchedule(null);
     formik.resetForm();
-  };
+  }, [formik]);
 
-  const handleDeleteSchedule = async (scheduleId) => {
-    if (window.confirm('Are you sure you want to delete this schedule?')) {
+  const handleDeleteSchedule = useCallback(async (scheduleId, workerName, taskDescription) => {
+    const confirmMessage = `Are you sure you want to delete this schedule?\n\nWorker: ${workerName}\nTask: ${taskDescription}\n\nThis action cannot be undone.`;
+    
+    if (window.confirm(confirmMessage)) {
       try {
         await deleteSchedule(scheduleId).unwrap();
-        toast.success('Schedule deleted successfully');
+        toast.success('✅ Schedule deleted successfully!');
       } catch (error) {
         console.error('Failed to delete schedule:', error);
-        toast.error('Failed to delete schedule');
+        
+        let errorMessage = 'Failed to delete schedule';
+        if (error?.data?.message) {
+          errorMessage = error.data.message;
+        } else if (error?.status === 401) {
+          errorMessage = 'You are not authorized to delete this schedule.';
+        } else if (error?.status === 404) {
+          errorMessage = 'Schedule not found.';
+        } else if (error?.status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+        
+        toast.error(`❌ ${errorMessage}`);
       }
     }
   };

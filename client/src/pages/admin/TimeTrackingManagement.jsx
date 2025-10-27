@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -82,12 +82,14 @@ const TimeTrackingManagement = () => {
     endDate: ''
   });
   const [selectedSession, setSelectedSession] = useState(null);
-  const [detailsDialog, setDetailsDialog] = useState(false);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);
   const [approvalDialog, setApprovalDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [correctionDialog, setCorrectionDialog] = useState(false);
   const [correctedHours, setCorrectedHours] = useState('');
   const [correctionReason, setCorrectionReason] = useState('');
+  const [detailsDialog, setDetailsDialog] = useState(false);
   const [hourlyRateDialog, setHourlyRateDialog] = useState(false);
   const [workerRates, setWorkerRates] = useState([]);
   const [paymentReportDialog, setPaymentReportDialog] = useState(false);
@@ -109,9 +111,30 @@ const TimeTrackingManagement = () => {
   const workers = usersData?.data?.users || [];
   const buildings = buildingsData?.data?.buildings || [];
 
+  // Auto-refresh effect for real-time updates
+  useEffect(() => {
+    if (!autoRefresh) return;
+
+    const interval = setInterval(() => {
+      refetchSessions();
+      refetchPending();
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [autoRefresh, refetchSessions, refetchPending]);
+
   // Helper functions
-  const formatDuration = (startTime, endTime) => {
+  const formatDuration = (startTime, endTime, correctedHours = null) => {
     if (!startTime || !endTime) return 'In Progress';
+    
+    // If corrected hours exist, use them instead of calculated duration
+    if (correctedHours !== null && correctedHours !== undefined) {
+      const hours = Math.floor(correctedHours);
+      const minutes = Math.round((correctedHours - hours) * 60);
+      return `${hours}h ${minutes}m (Corrected)`;
+    }
+    
+    // Otherwise calculate from clock in/out times
     const start = new Date(startTime);
     const end = new Date(endTime);
     const hours = differenceInHours(end, start);
@@ -281,7 +304,7 @@ const TimeTrackingManagement = () => {
       Building: getBuildingName(session.building),
       'Clock In': format(parseISO(session.clockInTime), 'yyyy-MM-dd HH:mm'),
       'Clock Out': session.clockOutTime ? format(parseISO(session.clockOutTime), 'yyyy-MM-dd HH:mm') : 'In Progress',
-      Duration: formatDuration(session.clockInTime, session.clockOutTime),
+      Duration: formatDuration(session.clockInTime, session.clockOutTime, session.correctedHours),
       Status: session.status,
       'Break Time': `${session.breakTime || 0} min`,
       Notes: session.notes || ''
@@ -553,7 +576,7 @@ const TimeTrackingManagement = () => {
                           </TableCell>
                           <TableCell>
                             <Box>
-                              {formatDuration(session.clockInTime, session.clockOutTime)}
+                              {formatDuration(session.clockInTime, session.clockOutTime, session.correctedHours)}
                               {session.correctedHours && (
                                 <Chip 
                                   label="Corrected" 
@@ -675,7 +698,7 @@ const TimeTrackingManagement = () => {
                             {format(parseISO(session.clockInTime), 'MMM dd, yyyy')}
                           </TableCell>
                           <TableCell>
-                            {formatDuration(session.clockInTime, session.clockOutTime)}
+                            {formatDuration(session.clockInTime, session.clockOutTime, session.correctedHours)}
                           </TableCell>
                           <TableCell>
                             <Button
@@ -756,7 +779,7 @@ const TimeTrackingManagement = () => {
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2">Total Duration</Typography>
                   <Typography>
-                    {formatDuration(selectedSession.clockInTime, selectedSession.clockOutTime)}
+                    {formatDuration(selectedSession.clockInTime, selectedSession.clockOutTime, selectedSession.correctedHours)}
                   </Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
