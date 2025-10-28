@@ -178,16 +178,18 @@ const WorkerSchedules = () => {
         }
 
         const scheduleData = {
-          worker: values.workerId,
-          building: values.buildingId,
+          workerId: values.workerId,
+          buildingId: values.buildingId,
           date: values.date,
           startTime: values.startTime,
           endTime: values.endTime,
-          taskDescription: values.task,
+          task: values.task,
           notes: values.notes,
         };
 
         console.log('Schedule data being sent:', scheduleData);
+        console.log('Worker ID type:', typeof values.workerId, 'Value:', values.workerId);
+        console.log('Building ID type:', typeof values.buildingId, 'Value:', values.buildingId);
 
         if (editingSchedule) {
           const result = await updateSchedule({ id: editingSchedule._id, ...scheduleData }).unwrap();

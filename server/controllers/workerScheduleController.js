@@ -78,7 +78,9 @@ exports.createWorkerSchedule = catchAsync(async (req, res, next) => {
   const { workerId, buildingId, date, startTime, endTime, task, notes } = req.body;
 
   // Validate worker exists
+  console.log('Looking for worker with ID:', workerId, 'Type:', typeof workerId);
   const worker = await User.findById(workerId);
+  console.log('Worker found:', worker ? `${worker.firstName} ${worker.lastName}` : 'null');
   if (!worker) {
     return next(new AppError('Worker not found', 404));
   }
