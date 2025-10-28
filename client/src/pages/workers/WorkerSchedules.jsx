@@ -154,83 +154,48 @@ const WorkerSchedules = () => {
     validationSchema,
     onSubmit: async (values) => {
       try {
-        const startDateTime = combineDateAndTime(values.date, values.startTime);
-        const endDateTime = combineDateAndTime(values.date, values.endTime);
+        console.log('Form values before processing:', values);
+        
+        // Validate time overlap with existing schedules
+        const existingSchedules = schedules.filter(s => 
+          s._id !== editingSchedule?._id && 
+          s.workerId === values.workerId &&
+          format(new Date(s.date), 'yyyy-MM-dd') === format(values.date, 'yyyy-MM-dd')
+        );
 
-        if (!startDateTime || !endDateTime) {
-          toast.error('Please provide valid start and end times');
-          return;
-        }
-
-        if (endDateTime <= startDateTime) {
-          toast.error('End time must be after start time');
-          return;
-        }
-
-        const workerId = resolveWorkerId(values.workerId);
-        if (!workerId) {
-          toast.error('A worker is required for this schedule');
-          return;
-        }
-
-        // Validate overlap with existing schedules for the same worker
-        const existingSchedules = schedules.filter((schedule) => {
-          if (editingSchedule && schedule._id === editingSchedule._id) {
-            return false;
-          }
-
-          const scheduleWorkerIds = getScheduleWorkerIds(schedule);
-          if (!scheduleWorkerIds.includes(workerId)) {
-            return false;
-          }
-
-          const scheduleStartRaw = getScheduleStartValue(schedule);
-          if (!scheduleStartRaw) {
-            return false;
-          }
-
-          const scheduleStartDate = new Date(scheduleStartRaw);
-          if (Number.isNaN(scheduleStartDate.getTime())) {
-            return false;
-          }
-
-          return format(scheduleStartDate, 'yyyy-MM-dd') === format(startDateTime, 'yyyy-MM-dd');
-        });
-
-        const hasOverlap = existingSchedules.some((schedule) => {
-          const existingStart = new Date(getScheduleStartValue(schedule));
-          const existingEnd = new Date(getScheduleEndValue(schedule));
-
-          if (Number.isNaN(existingStart.getTime()) || Number.isNaN(existingEnd.getTime())) {
-            return false;
-          }
-
-          return startDateTime < existingEnd && endDateTime > existingStart;
+        const hasOverlap = existingSchedules.some(schedule => {
+          const existingStart = new Date(schedule.startTime);
+          const existingEnd = new Date(schedule.endTime);
+          const newStart = new Date(values.startTime);
+          const newEnd = new Date(values.endTime);
+          
+          return (newStart < existingEnd && newEnd > existingStart);
         });
 
         if (hasOverlap) {
-          toast.error('Schedule conflicts with an existing shift for this worker');
+          toast.error('Schedule conflicts with existing schedule for this worker');
           return;
         }
 
-        const durationHours = Number(((endDateTime - startDateTime) / (1000 * 60 * 60)).toFixed(2));
-
         const scheduleData = {
-          title: values.task.trim(),
-          description: values.notes?.trim() || '',
-          building: resolveBuildingId(values.buildingId),
-          assignedWorkers: [workerId],
-          startDate: startDateTime.toISOString(),
-          endDate: endDateTime.toISOString(),
-          status: editingSchedule?.status || 'planned',
-          estimatedHours: durationHours > 0 ? durationHours : undefined,
+          worker: values.workerId,
+          building: values.buildingId,
+          date: values.date,
+          startTime: values.startTime,
+          endTime: values.endTime,
+          taskDescription: values.task,
+          notes: values.notes,
         };
 
+        console.log('Schedule data being sent:', scheduleData);
+
         if (editingSchedule) {
-          await updateSchedule({ id: editingSchedule._id, ...scheduleData }).unwrap();
+          const result = await updateSchedule({ id: editingSchedule._id, ...scheduleData }).unwrap();
+          console.log('Update result:', result);
           toast.success('✅ Schedule updated successfully!');
         } else {
-          await createSchedule(scheduleData).unwrap();
+          const result = await createSchedule(scheduleData).unwrap();
+          console.log('Create result:', result);
           toast.success('✅ Schedule created successfully!');
         }
 
@@ -361,94 +326,6 @@ const WorkerSchedules = () => {
     }
   }, [schedulesData]);
 
-  const resolveWorkerId = (workerData) => {
-    if (!workerData) return null;
-    if (typeof workerData === 'object') {
-      return workerData._id || workerData.id || workerData.value || null;
-    }
-    return workerData;
-  };
-
-  const resolveBuildingId = (buildingData) => {
-    if (!buildingData) return null;
-    if (typeof buildingData === 'object') {
-      return buildingData._id || buildingData.id || buildingData.value || null;
-    }
-    return buildingData;
-  };
-
-  const getPrimaryWorker = (schedule) => {
-    if (!schedule) return null;
-    if (Array.isArray(schedule.assignedWorkers) && schedule.assignedWorkers.length > 0) {
-      return schedule.assignedWorkers[0];
-    }
-    return schedule.worker || schedule.workerId || null;
-  };
-
-  const getScheduleWorkerIds = (schedule) => {
-    if (!schedule) return [];
-    const ids = [];
-
-    if (Array.isArray(schedule.assignedWorkers)) {
-      schedule.assignedWorkers.forEach((worker) => {
-        const id = resolveWorkerId(worker);
-        if (id) {
-          ids.push(id);
-        }
-      });
-    }
-
-    const fallbackWorker = resolveWorkerId(schedule.worker) || resolveWorkerId(schedule.workerId);
-    if (fallbackWorker && !ids.includes(fallbackWorker)) {
-      ids.push(fallbackWorker);
-    }
-
-    return ids;
-  };
-
-  const getScheduleStartValue = (schedule) => {
-    if (!schedule) return null;
-    return schedule.startDate || schedule.startTime || schedule.date || null;
-  };
-
-  const getScheduleEndValue = (schedule) => {
-    if (!schedule) return null;
-    return schedule.endDate || schedule.endTime || schedule.date || null;
-  };
-
-  const getScheduleTitle = (schedule) => {
-    if (!schedule) return 'Scheduled Task';
-    return schedule.title || schedule.task || 'Scheduled Task';
-  };
-
-  const getScheduleNotes = (schedule) => {
-    if (!schedule) return '';
-    return schedule.description || schedule.notes || '';
-  };
-
-  const combineDateAndTime = useCallback((dateValue, timeValue) => {
-    if (!dateValue || !timeValue) {
-      return null;
-    }
-
-    const datePart = new Date(dateValue);
-    const timePart = new Date(timeValue);
-
-    if (Number.isNaN(datePart.getTime()) || Number.isNaN(timePart.getTime())) {
-      return null;
-    }
-
-    return new Date(
-      datePart.getFullYear(),
-      datePart.getMonth(),
-      datePart.getDate(),
-      timePart.getHours(),
-      timePart.getMinutes(),
-      0,
-      0
-    );
-  }, []);
-
   const weekDays = useMemo(() => {
     return eachDayOfInterval({
       start: startOfWeek(currentWeek),
@@ -460,6 +337,32 @@ const WorkerSchedules = () => {
     if (!selectedWorker) return workers;
     return workers.filter(worker => worker._id === selectedWorker);
   }, [workers, selectedWorker]);
+
+  // Calculate weekly hours for each worker
+  const calculateWeeklyHours = useCallback((workerId) => {
+    if (!Array.isArray(schedules)) return 0;
+    
+    const weekStart = startOfWeek(currentWeek);
+    const weekEnd = endOfWeek(currentWeek);
+    
+    const workerSchedules = schedules.filter(schedule => {
+      const scheduleDate = new Date(schedule.date);
+      const workerMatch = typeof schedule.workerId === 'object' 
+        ? schedule.workerId?._id === workerId 
+        : schedule.workerId === workerId;
+      
+      return workerMatch && 
+             scheduleDate >= weekStart && 
+             scheduleDate <= weekEnd;
+    });
+
+    return workerSchedules.reduce((total, schedule) => {
+      const start = new Date(schedule.startTime);
+      const end = new Date(schedule.endTime);
+      const hours = (end - start) / (1000 * 60 * 60); // Convert to hours
+      return total + hours;
+    }, 0);
+  }, [schedules, currentWeek]);
 
   const getSchedulesForDay = (date, workerId) => {
     if (!Array.isArray(schedules)) {
@@ -780,22 +683,27 @@ const WorkerSchedules = () => {
                     <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
                       <PersonIcon />
                     </Avatar>
-                    <Typography variant="h6">
-                      {(() => {
-                        if (worker.name) {
-                          return worker.name;
-                        } else if (worker.firstName && worker.lastName) {
-                          return `${worker.firstName} ${worker.lastName}`;
-                        } else if (worker.email) {
-                          return worker.email;
-                        }
-                        return 'Unknown Worker';
-                      })()}
-                    </Typography>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="h6">
+                        {(() => {
+                          if (worker.name) {
+                            return worker.name;
+                          } else if (worker.firstName && worker.lastName) {
+                            return `${worker.firstName} ${worker.lastName}`;
+                          } else if (worker.email) {
+                            return worker.email;
+                          }
+                          return 'Unknown Worker';
+                        })()}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Weekly Hours: {calculateWeeklyHours(worker._id).toFixed(1)}h
+                      </Typography>
+                    </Box>
                     <Chip 
                       label={worker.role || 'Worker'} 
                       size="small" 
-                      sx={{ ml: 2 }}
+                      sx={{ ml: 2 }} 
                     />
                   </Box>
                   
