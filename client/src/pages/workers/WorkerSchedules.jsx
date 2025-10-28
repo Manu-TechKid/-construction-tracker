@@ -82,8 +82,8 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 
 const validationSchema = Yup.object({
-  worker: Yup.string().required('Please select a worker'),
-  building: Yup.string().required('Please select a building'),
+  workerId: Yup.string().required('Please select a worker'),
+  buildingId: Yup.string().required('Please select a building'),
   date: Yup.date()
     .required('Date is required')
     .min(startOfDay(new Date()), 'Cannot schedule for past dates'),
@@ -105,7 +105,7 @@ const validationSchema = Yup.object({
       const diffMinutes = (end - start) / (1000 * 60);
       return diffMinutes >= 30;
     }),
-  taskDescription: Yup.string()
+  task: Yup.string()
     .required('Task description is required')
     .min(10, 'Task description must be at least 10 characters')
     .max(500, 'Task description cannot exceed 500 characters'),
@@ -154,48 +154,83 @@ const WorkerSchedules = () => {
     validationSchema,
     onSubmit: async (values) => {
       try {
-        console.log('Form values before processing:', values);
-        
-        // Validate time overlap with existing schedules
-        const existingSchedules = schedules.filter(s => 
-          s._id !== editingSchedule?._id && 
-          s.worker._id === values.worker &&
-          format(new Date(s.date), 'yyyy-MM-dd') === format(values.date, 'yyyy-MM-dd')
-        );
+        const startDateTime = combineDateAndTime(values.date, values.startTime);
+        const endDateTime = combineDateAndTime(values.date, values.endTime);
 
-        const hasOverlap = existingSchedules.some(schedule => {
-          const existingStart = new Date(schedule.startTime);
-          const existingEnd = new Date(schedule.endTime);
-          const newStart = new Date(values.startTime);
-          const newEnd = new Date(values.endTime);
-          
-          return (newStart < existingEnd && newEnd > existingStart);
-        });
-
-        if (hasOverlap) {
-          toast.error('Schedule conflicts with existing schedule for this worker');
+        if (!startDateTime || !endDateTime) {
+          toast.error('Please provide valid start and end times');
           return;
         }
 
+        if (endDateTime <= startDateTime) {
+          toast.error('End time must be after start time');
+          return;
+        }
+
+        const workerId = resolveWorkerId(values.workerId);
+        if (!workerId) {
+          toast.error('A worker is required for this schedule');
+          return;
+        }
+
+        // Validate overlap with existing schedules for the same worker
+        const existingSchedules = schedules.filter((schedule) => {
+          if (editingSchedule && schedule._id === editingSchedule._id) {
+            return false;
+          }
+
+          const scheduleWorkerIds = getScheduleWorkerIds(schedule);
+          if (!scheduleWorkerIds.includes(workerId)) {
+            return false;
+          }
+
+          const scheduleStartRaw = getScheduleStartValue(schedule);
+          if (!scheduleStartRaw) {
+            return false;
+          }
+
+          const scheduleStartDate = new Date(scheduleStartRaw);
+          if (Number.isNaN(scheduleStartDate.getTime())) {
+            return false;
+          }
+
+          return format(scheduleStartDate, 'yyyy-MM-dd') === format(startDateTime, 'yyyy-MM-dd');
+        });
+
+        const hasOverlap = existingSchedules.some((schedule) => {
+          const existingStart = new Date(getScheduleStartValue(schedule));
+          const existingEnd = new Date(getScheduleEndValue(schedule));
+
+          if (Number.isNaN(existingStart.getTime()) || Number.isNaN(existingEnd.getTime())) {
+            return false;
+          }
+
+          return startDateTime < existingEnd && endDateTime > existingStart;
+        });
+
+        if (hasOverlap) {
+          toast.error('Schedule conflicts with an existing shift for this worker');
+          return;
+        }
+
+        const durationHours = Number(((endDateTime - startDateTime) / (1000 * 60 * 60)).toFixed(2));
+
         const scheduleData = {
-          worker: values.worker,
-          building: values.building,
-          date: values.date,
-          startTime: values.startTime,
-          endTime: values.endTime,
-          taskDescription: values.taskDescription,
-          notes: values.notes,
+          title: values.task.trim(),
+          description: values.notes?.trim() || '',
+          building: resolveBuildingId(values.buildingId),
+          assignedWorkers: [workerId],
+          startDate: startDateTime.toISOString(),
+          endDate: endDateTime.toISOString(),
+          status: editingSchedule?.status || 'planned',
+          estimatedHours: durationHours > 0 ? durationHours : undefined,
         };
 
-        console.log('Schedule data being sent:', scheduleData);
-
         if (editingSchedule) {
-          const result = await updateSchedule({ id: editingSchedule._id, ...scheduleData }).unwrap();
-          console.log('Update result:', result);
+          await updateSchedule({ id: editingSchedule._id, ...scheduleData }).unwrap();
           toast.success('✅ Schedule updated successfully!');
         } else {
-          const result = await createSchedule(scheduleData).unwrap();
-          console.log('Create result:', result);
+          await createSchedule(scheduleData).unwrap();
           toast.success('✅ Schedule created successfully!');
         }
 
@@ -325,6 +360,94 @@ const WorkerSchedules = () => {
       return [];
     }
   }, [schedulesData]);
+
+  const resolveWorkerId = (workerData) => {
+    if (!workerData) return null;
+    if (typeof workerData === 'object') {
+      return workerData._id || workerData.id || workerData.value || null;
+    }
+    return workerData;
+  };
+
+  const resolveBuildingId = (buildingData) => {
+    if (!buildingData) return null;
+    if (typeof buildingData === 'object') {
+      return buildingData._id || buildingData.id || buildingData.value || null;
+    }
+    return buildingData;
+  };
+
+  const getPrimaryWorker = (schedule) => {
+    if (!schedule) return null;
+    if (Array.isArray(schedule.assignedWorkers) && schedule.assignedWorkers.length > 0) {
+      return schedule.assignedWorkers[0];
+    }
+    return schedule.worker || schedule.workerId || null;
+  };
+
+  const getScheduleWorkerIds = (schedule) => {
+    if (!schedule) return [];
+    const ids = [];
+
+    if (Array.isArray(schedule.assignedWorkers)) {
+      schedule.assignedWorkers.forEach((worker) => {
+        const id = resolveWorkerId(worker);
+        if (id) {
+          ids.push(id);
+        }
+      });
+    }
+
+    const fallbackWorker = resolveWorkerId(schedule.worker) || resolveWorkerId(schedule.workerId);
+    if (fallbackWorker && !ids.includes(fallbackWorker)) {
+      ids.push(fallbackWorker);
+    }
+
+    return ids;
+  };
+
+  const getScheduleStartValue = (schedule) => {
+    if (!schedule) return null;
+    return schedule.startDate || schedule.startTime || schedule.date || null;
+  };
+
+  const getScheduleEndValue = (schedule) => {
+    if (!schedule) return null;
+    return schedule.endDate || schedule.endTime || schedule.date || null;
+  };
+
+  const getScheduleTitle = (schedule) => {
+    if (!schedule) return 'Scheduled Task';
+    return schedule.title || schedule.task || 'Scheduled Task';
+  };
+
+  const getScheduleNotes = (schedule) => {
+    if (!schedule) return '';
+    return schedule.description || schedule.notes || '';
+  };
+
+  const combineDateAndTime = useCallback((dateValue, timeValue) => {
+    if (!dateValue || !timeValue) {
+      return null;
+    }
+
+    const datePart = new Date(dateValue);
+    const timePart = new Date(timeValue);
+
+    if (Number.isNaN(datePart.getTime()) || Number.isNaN(timePart.getTime())) {
+      return null;
+    }
+
+    return new Date(
+      datePart.getFullYear(),
+      datePart.getMonth(),
+      datePart.getDate(),
+      timePart.getHours(),
+      timePart.getMinutes(),
+      0,
+      0
+    );
+  }, []);
 
   const weekDays = useMemo(() => {
     return eachDayOfInterval({
