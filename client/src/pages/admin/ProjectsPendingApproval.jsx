@@ -235,14 +235,14 @@ const ProjectsPendingApproval = () => {
             <Button
               variant="contained"
               startIcon={<AddIcon />}
-              onClick={() => navigate('/project-estimates/new')}
+              onClick={() => navigate('/estimates/new')}
             >
               Create New Estimate
             </Button>
             <Button
               variant="outlined"
               startIcon={<AssignmentIcon />}
-              onClick={() => navigate('/project-estimates')}
+              onClick={() => navigate('/estimates')}
             >
               View All Estimates
             </Button>
@@ -414,7 +414,7 @@ const ProjectsPendingApproval = () => {
                             <Tooltip title="View Details">
                               <IconButton 
                                 size="small" 
-                                onClick={() => navigate(`/project-estimates/${project._id}`)}
+                                onClick={() => navigate(`/estimates/${project._id}`)}
                               >
                                 <ViewIcon />
                               </IconButton>
@@ -423,7 +423,7 @@ const ProjectsPendingApproval = () => {
                               <IconButton 
                                 size="small" 
                                 color="primary"
-                                onClick={() => navigate(`/project-estimates/edit/${project._id}`)}
+                                onClick={() => navigate(`/estimates/${project._id}/edit`)}
                               >
                                 <EditIcon />
                               </IconButton>

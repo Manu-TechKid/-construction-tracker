@@ -868,33 +868,18 @@ const WorkOrders = () => {
           }
           
           const billingStatus = params.row.billingStatus || 'pending';
-          const getStatusColor = (status) => {
-            switch (status) {
-              case 'pending': return 'warning';
-              case 'invoiced': return 'info';
-              case 'paid': return 'success';
-              case 'cancelled': return 'error';
-              default: return 'default';
-            }
-          };
-
-          const getStatusText = (status) => {
-            switch (status) {
-              case 'pending': return 'Not Invoiced';
-              case 'invoiced': return 'Invoiced';
-              case 'paid': return 'Paid';
-              case 'cancelled': return 'Cancelled';
-              default: return 'Unknown';
-            }
-          };
-
           const invoiceId = params.row.invoice;
-          const isClickable = (billingStatus === 'invoiced' || billingStatus === 'paid') && invoiceId;
+          
+          // Simplified billing status: only show Invoiced or Not Invoiced
+          const isInvoiced = billingStatus === 'invoiced' || billingStatus === 'paid' || invoiceId;
+          const statusText = isInvoiced ? 'Invoiced' : 'Not Invoiced';
+          const statusColor = isInvoiced ? 'success' : 'warning';
+          const isClickable = isInvoiced && invoiceId;
 
           return (
             <Chip
-              label={getStatusText(billingStatus)}
-              color={getStatusColor(billingStatus)}
+              label={statusText}
+              color={statusColor}
               size="small"
               variant="outlined"
               onClick={isClickable ? () => navigate(`/invoices/${invoiceId}`) : undefined}
