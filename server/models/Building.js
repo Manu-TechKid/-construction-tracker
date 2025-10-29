@@ -60,25 +60,62 @@ const buildingSchema = new mongoose.Schema({
         lowercase: true,
         match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
     },
-    generalManager: {
+    // General Manager / Community Manager Contact
+    generalManagerName: {
         type: String,
+        required: [true, 'General Manager name is required'],
         trim: true
     },
     generalManagerEmail: {
         type: String,
+        required: [true, 'General Manager email is required'],
         trim: true,
         lowercase: true,
         match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
     },
-    maintenanceManager: {
+    generalManagerPhone: {
         type: String,
+        required: [true, 'General Manager phone is required'],
+        trim: true
+    },
+    
+    // Maintenance Manager Contact
+    maintenanceManagerName: {
+        type: String,
+        required: [true, 'Maintenance Manager name is required'],
         trim: true
     },
     maintenanceManagerEmail: {
         type: String,
+        required: [true, 'Maintenance Manager email is required'],
         trim: true,
         lowercase: true,
         match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
+    },
+    maintenanceManagerPhone: {
+        type: String,
+        required: [true, 'Maintenance Manager phone is required'],
+        trim: true
+    },
+    
+    // Third Contact (Optional)
+    thirdContactName: {
+        type: String,
+        trim: true
+    },
+    thirdContactRole: {
+        type: String,
+        trim: true
+    },
+    thirdContactEmail: {
+        type: String,
+        trim: true,
+        lowercase: true,
+        match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
+    },
+    thirdContactPhone: {
+        type: String,
+        trim: true
     },
     apartments: [{
         number: {

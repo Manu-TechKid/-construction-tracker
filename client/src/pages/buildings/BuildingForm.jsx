@@ -160,6 +160,18 @@ const BuildingForm = ({ isEdit = false }) => {
         latitude: building.location?.coordinates?.[1] || '',
         longitude: building.location?.coordinates?.[0] || '',
         geofenceRadius: building.location?.geofenceRadius || 100,
+        
+        // Contact fields
+        generalManagerName: building.generalManagerName || '',
+        generalManagerEmail: building.generalManagerEmail || '',
+        generalManagerPhone: building.generalManagerPhone || '',
+        maintenanceManagerName: building.maintenanceManagerName || '',
+        maintenanceManagerEmail: building.maintenanceManagerEmail || '',
+        maintenanceManagerPhone: building.maintenanceManagerPhone || '',
+        thirdContactName: building.thirdContactName || '',
+        thirdContactRole: building.thirdContactRole || '',
+        thirdContactEmail: building.thirdContactEmail || '',
+        thirdContactPhone: building.thirdContactPhone || '',
       });
     }
   }, [building, isEdit]);
