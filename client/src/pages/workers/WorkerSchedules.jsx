@@ -64,7 +64,8 @@ import {
   parseISO,
   isBefore,
   isAfter,
-  startOfDay
+  startOfDay,
+  differenceInCalendarDays
 } from 'date-fns';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -86,7 +87,13 @@ const validationSchema = Yup.object({
   buildingId: Yup.string().required('Please select a building'),
   date: Yup.date()
     .required('Date is required')
-    .min(startOfDay(new Date()), 'Cannot schedule for past dates'),
+    .test('not-too-far-past', 'Cannot schedule more than 14 days in the past', function(value) {
+      if (!value) return true;
+      const scheduleDay = startOfDay(new Date(value));
+      const today = startOfDay(new Date());
+      if (scheduleDay >= today) return true;
+      return differenceInCalendarDays(today, scheduleDay) <= 14;
+    }),
   startTime: Yup.date().required('Start time is required'),
   endTime: Yup.date()
     .required('End time is required')
