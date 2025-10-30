@@ -18,6 +18,20 @@ const validationSchema = Yup.object().shape({
   address: Yup.string().required('Address is required'),
   city: Yup.string().required('City is required'),
   serviceManager: Yup.string().required('Service manager name is required'),
+  
+  // Contact fields for automated email sending
+  generalManagerName: Yup.string().required('General Manager name is required'),
+  generalManagerEmail: Yup.string().email('Invalid email').required('General Manager email is required'),
+  generalManagerPhone: Yup.string().required('General Manager phone is required'),
+  
+  maintenanceManagerName: Yup.string().required('Maintenance Manager name is required'),
+  maintenanceManagerEmail: Yup.string().email('Invalid email').required('Maintenance Manager email is required'),
+  maintenanceManagerPhone: Yup.string().required('Maintenance Manager phone is required'),
+  
+  thirdContactName: Yup.string(),
+  thirdContactRole: Yup.string(),
+  thirdContactEmail: Yup.string().email('Invalid email'),
+  thirdContactPhone: Yup.string(),
 });
 
 const BuildingForm = ({
@@ -32,6 +46,19 @@ const BuildingForm = ({
     address: '',
     city: '',
     serviceManager: '',
+    
+    // Contact fields
+    generalManagerName: '',
+    generalManagerEmail: '',
+    generalManagerPhone: '',
+    maintenanceManagerName: '',
+    maintenanceManagerEmail: '',
+    maintenanceManagerPhone: '',
+    thirdContactName: '',
+    thirdContactRole: '',
+    thirdContactEmail: '',
+    thirdContactPhone: '',
+    
     ...initialValuesProp
   };
 
@@ -125,6 +152,190 @@ const BuildingForm = ({
                       helperText={formik.touched.serviceManager && formik.errors.serviceManager}
                       variant="outlined"
                       margin="normal"
+                    />
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+            
+            {/* Contact Information Card */}
+            <Card sx={{ mt: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Contact Information
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+                
+                {/* General Manager */}
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
+                  General Manager / Community Manager
+                </Typography>
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      fullWidth
+                      id="generalManagerName"
+                      name="generalManagerName"
+                      label="Full Name *"
+                      value={formik.values.generalManagerName}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      error={formik.touched.generalManagerName && Boolean(formik.errors.generalManagerName)}
+                      helperText={formik.touched.generalManagerName && formik.errors.generalManagerName}
+                      variant="outlined"
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      fullWidth
+                      id="generalManagerEmail"
+                      name="generalManagerEmail"
+                      label="Email *"
+                      type="email"
+                      value={formik.values.generalManagerEmail}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      error={formik.touched.generalManagerEmail && Boolean(formik.errors.generalManagerEmail)}
+                      helperText={formik.touched.generalManagerEmail && formik.errors.generalManagerEmail}
+                      variant="outlined"
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      fullWidth
+                      id="generalManagerPhone"
+                      name="generalManagerPhone"
+                      label="Phone *"
+                      value={formik.values.generalManagerPhone}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      error={formik.touched.generalManagerPhone && Boolean(formik.errors.generalManagerPhone)}
+                      helperText={formik.touched.generalManagerPhone && formik.errors.generalManagerPhone}
+                      variant="outlined"
+                      size="small"
+                    />
+                  </Grid>
+                </Grid>
+
+                {/* Maintenance Manager */}
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
+                  Maintenance Manager
+                </Typography>
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      fullWidth
+                      id="maintenanceManagerName"
+                      name="maintenanceManagerName"
+                      label="Full Name *"
+                      value={formik.values.maintenanceManagerName}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      error={formik.touched.maintenanceManagerName && Boolean(formik.errors.maintenanceManagerName)}
+                      helperText={formik.touched.maintenanceManagerName && formik.errors.maintenanceManagerName}
+                      variant="outlined"
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      fullWidth
+                      id="maintenanceManagerEmail"
+                      name="maintenanceManagerEmail"
+                      label="Email *"
+                      type="email"
+                      value={formik.values.maintenanceManagerEmail}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      error={formik.touched.maintenanceManagerEmail && Boolean(formik.errors.maintenanceManagerEmail)}
+                      helperText={formik.touched.maintenanceManagerEmail && formik.errors.maintenanceManagerEmail}
+                      variant="outlined"
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      fullWidth
+                      id="maintenanceManagerPhone"
+                      name="maintenanceManagerPhone"
+                      label="Phone *"
+                      value={formik.values.maintenanceManagerPhone}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      error={formik.touched.maintenanceManagerPhone && Boolean(formik.errors.maintenanceManagerPhone)}
+                      helperText={formik.touched.maintenanceManagerPhone && formik.errors.maintenanceManagerPhone}
+                      variant="outlined"
+                      size="small"
+                    />
+                  </Grid>
+                </Grid>
+
+                {/* Third Contact (Optional) */}
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
+                  Additional Contact (Optional)
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={3}>
+                    <TextField
+                      fullWidth
+                      id="thirdContactName"
+                      name="thirdContactName"
+                      label="Full Name"
+                      value={formik.values.thirdContactName}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      error={formik.touched.thirdContactName && Boolean(formik.errors.thirdContactName)}
+                      helperText={formik.touched.thirdContactName && formik.errors.thirdContactName}
+                      variant="outlined"
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <TextField
+                      fullWidth
+                      id="thirdContactRole"
+                      name="thirdContactRole"
+                      label="Role/Title"
+                      value={formik.values.thirdContactRole}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      error={formik.touched.thirdContactRole && Boolean(formik.errors.thirdContactRole)}
+                      helperText={formik.touched.thirdContactRole && formik.errors.thirdContactRole}
+                      variant="outlined"
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <TextField
+                      fullWidth
+                      id="thirdContactEmail"
+                      name="thirdContactEmail"
+                      label="Email"
+                      type="email"
+                      value={formik.values.thirdContactEmail}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      error={formik.touched.thirdContactEmail && Boolean(formik.errors.thirdContactEmail)}
+                      helperText={formik.touched.thirdContactEmail && formik.errors.thirdContactEmail}
+                      variant="outlined"
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <TextField
+                      fullWidth
+                      id="thirdContactPhone"
+                      name="thirdContactPhone"
+                      label="Phone"
+                      value={formik.values.thirdContactPhone}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      error={formik.touched.thirdContactPhone && Boolean(formik.errors.thirdContactPhone)}
+                      helperText={formik.touched.thirdContactPhone && formik.errors.thirdContactPhone}
+                      variant="outlined"
+                      size="small"
                     />
                   </Grid>
                 </Grid>
