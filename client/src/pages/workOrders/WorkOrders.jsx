@@ -267,11 +267,11 @@ const WorkOrders = () => {
         
         // Handle apartment filter
         const apartmentMatch = filters.apartment 
-          ? wo.apartment === filters.apartment || 
-            wo.apartment === `Apt ${filters.apartment}` ||
-            wo.apartment?._id === filters.apartment ||
-            wo.apartment?.number === filters.apartment ||
-            (typeof wo.apartment === 'string' && wo.apartment.includes(filters.apartment))
+          ? wo.apartmentNumber === filters.apartment || 
+            wo.apartmentNumber === `Apt ${filters.apartment}` ||
+            wo.apartmentNumber === `${filters.apartment}` ||
+            (typeof wo.apartmentNumber === 'string' && wo.apartmentNumber.includes(filters.apartment)) ||
+            (wo.block && filters.apartment.includes(wo.block) && wo.apartmentNumber && filters.apartment.includes(wo.apartmentNumber))
           : true;
           
         // Handle status filter
