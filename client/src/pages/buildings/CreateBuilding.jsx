@@ -21,9 +21,16 @@ const CreateBuilding = () => {
       };
       
       console.log('=== BUILDING CREATION DEBUG ===');
-      console.log('Form Data:', formData);
-      console.log('Submit Data (with administrator):', submitData);
-      console.log('User:', user);
+      console.log('Form Data:', JSON.stringify(formData, null, 2));
+      console.log('Submit Data (with administrator):', JSON.stringify(submitData, null, 2));
+      console.log('User:', JSON.stringify(user, null, 2));
+      console.log('Contact fields check:');
+      console.log('- generalManagerName:', formData.generalManagerName);
+      console.log('- generalManagerEmail:', formData.generalManagerEmail);
+      console.log('- generalManagerPhone:', formData.generalManagerPhone);
+      console.log('- maintenanceManagerName:', formData.maintenanceManagerName);
+      console.log('- maintenanceManagerEmail:', formData.maintenanceManagerEmail);
+      console.log('- maintenanceManagerPhone:', formData.maintenanceManagerPhone);
       
       const result = await createBuilding(submitData).unwrap();
       toast.success('Building created successfully');
