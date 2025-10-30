@@ -66,6 +66,7 @@ const WorkOrders = () => {
   // Initialize state first
   const [filters, setFilters] = useState({ 
     building: '', 
+    apartment: '',
     status: '',
     startDate: null,
     endDate: null,
@@ -145,8 +146,13 @@ const WorkOrders = () => {
   }, [filters]);
   
   const clearAllFilters = useCallback(() => {
-    setFilters({ building: '', status: '', startDate: null, endDate: null, workType: '', workSubType: '' });
+    setFilters({ building: '', apartment: '', status: '', startDate: null, endDate: null, workType: '', workSubType: '' });
   }, []);
+  
+  const handleBuildingChange = useCallback((e) => {
+    const building = e.target.value;
+    setFilters({ ...filters, building, apartment: '' }); // Clear apartment when building changes
+  }, [filters]);
   
   const handleWorkTypeChange = useCallback((e) => {
     const workType = e.target.value;
@@ -215,6 +221,17 @@ const WorkOrders = () => {
   ];
 
   const workOrders = workOrdersData?.data?.workOrders || [];
+  
+  // Get apartments for selected building
+  const selectedBuildingData = useMemo(() => {
+    if (!filters.building || !buildingsData?.data?.buildings) return null;
+    return buildingsData.data.buildings.find(b => b._id === filters.building);
+  }, [filters.building, buildingsData]);
+  
+  const availableApartments = useMemo(() => {
+    if (!selectedBuildingData?.apartments) return [];
+    return selectedBuildingData.apartments || [];
+  }, [selectedBuildingData]);
 
   const filteredWorkOrders = useMemo(() => {
     return workOrders
@@ -246,6 +263,13 @@ const WorkOrders = () => {
           ? wo.building?._id === filters.building || 
             (typeof wo.building === 'string' && wo.building === filters.building) ||
             (wo.building && wo.building._id === filters.building)
+          : true;
+        
+        // Handle apartment filter
+        const apartmentMatch = filters.apartment 
+          ? wo.apartment === filters.apartment || 
+            wo.apartment?._id === filters.apartment ||
+            wo.apartment?.number === filters.apartment
           : true;
           
         // Handle status filter
@@ -293,7 +317,7 @@ const WorkOrders = () => {
             wo.workSubType === filters.workSubType
           : true;
           
-        return buildingMatch && statusMatch && dateMatch && workTypeMatch && workSubTypeMatch;
+        return buildingMatch && apartmentMatch && statusMatch && dateMatch && workTypeMatch && workSubTypeMatch;
       })
       .map(wo => ({
         ...wo,
@@ -1347,7 +1371,7 @@ const WorkOrders = () => {
                       label="Select Building"
                       name="building"
                       value={filters.building}
-                      onChange={handleFilterChange}
+                      onChange={handleBuildingChange}
                       variant="outlined"
                       size="medium"
                       disabled={isLoadingBuildings || Boolean(buildingsError)}
@@ -1397,6 +1421,57 @@ const WorkOrders = () => {
                           );
                         }
                       })()}
+                    </TextField>
+                  </Box>
+                </Grid>
+                
+                {/* Apartment Filter */}
+                <Grid item xs={12} md={6} lg={2.4}>
+                  <Box sx={{ 
+                    p: 2, 
+                    border: '2px dashed #9c27b0', 
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(156, 39, 176, 0.05)'
+                  }}>
+                    <Typography variant="subtitle2" sx={{ 
+                      color: '#9c27b0', 
+                      fontWeight: 'bold', 
+                      mb: 1.5,
+                      textAlign: 'center'
+                    }}>
+                      🏠 Apartment
+                    </Typography>
+                    <TextField
+                      select
+                      fullWidth
+                      label="Select Apartment"
+                      name="apartment"
+                      value={filters.apartment}
+                      onChange={handleFilterChange}
+                      variant="outlined"
+                      size="medium"
+                      disabled={!filters.building || availableApartments.length === 0}
+                      helperText={
+                        !filters.building 
+                          ? 'Select building first' 
+                          : availableApartments.length === 0
+                          ? 'No apartments available'
+                          : ''
+                      }
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '8px'
+                        }
+                      }}
+                    >
+                      <MenuItem value="">
+                        <em>All Apartments</em>
+                      </MenuItem>
+                      {availableApartments.map(apartment => (
+                        <MenuItem key={apartment._id || apartment.number} value={apartment.number}>
+                          {apartment.block ? `Block ${apartment.block} - ` : ''}Apt {apartment.number}
+                        </MenuItem>
+                      ))}
                     </TextField>
                   </Box>
                 </Grid>
