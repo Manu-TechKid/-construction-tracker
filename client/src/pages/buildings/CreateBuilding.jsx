@@ -5,14 +5,22 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useCreateBuildingMutation } from '../../features/buildings/buildingsApiSlice';
 import BuildingForm from '../../components/buildings/BuildingForm';
 import { toast } from 'react-toastify';
+import { useAuth } from '../../hooks/useAuth';
 
 const CreateBuilding = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [createBuilding, { isLoading }] = useCreateBuildingMutation();
 
   const handleSubmit = async (formData) => {
     try {
-      const result = await createBuilding(formData).unwrap();
+      // Add administrator (current user) to the form data
+      const submitData = {
+        ...formData,
+        administrator: user?._id || user?.id
+      };
+      
+      const result = await createBuilding(submitData).unwrap();
       toast.success('Building created successfully');
       navigate('/buildings');
     } catch (error) {
