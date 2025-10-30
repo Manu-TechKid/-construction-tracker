@@ -31,7 +31,8 @@ import { format } from 'date-fns';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
-import { useCreateProjectEstimateMutation } from '../../features/projectEstimates/projectEstimatesApiSlice';
+import { useCreateProjectEstimateMutation } from '../../features/estimates/projectEstimatesApiSlice';
+import LineItemEditor from '../../components/estimates/LineItemEditor';
 
 const CreateProjectEstimate = () => {
   const navigate = useNavigate();
@@ -50,7 +51,8 @@ const CreateProjectEstimate = () => {
     targetYear: new Date().getFullYear(),
     priority: 'medium',
     notes: '',
-    clientNotes: ''
+    clientNotes: '',
+    lineItems: []
   });
 
   const [errors, setErrors] = useState({});
@@ -73,10 +75,22 @@ const CreateProjectEstimate = () => {
     if (!formData.title.trim()) newErrors.title = 'Title is required';
     if (!formData.description.trim()) newErrors.description = 'Description is required';
     if (!formData.building) newErrors.building = 'Building is required';
-    if (!formData.estimatedCost || formData.estimatedCost <= 0) newErrors.estimatedCost = 'Valid estimated cost is required';
-    if (!formData.estimatedPrice || formData.estimatedPrice <= 0) newErrors.estimatedPrice = 'Valid estimated price is required';
-    if (parseFloat(formData.estimatedPrice) < parseFloat(formData.estimatedCost)) {
-      newErrors.estimatedPrice = 'Price must be greater than or equal to cost';
+    
+    // Validate based on whether using line items or simple pricing
+    if (formData.lineItems.length === 0) {
+      // Simple pricing mode - require estimated price
+      if (!formData.estimatedPrice || formData.estimatedPrice <= 0) {
+        newErrors.estimatedPrice = 'Valid estimated price is required when not using line items';
+      }
+      // Estimated cost is now optional
+      if (formData.estimatedCost && formData.estimatedPrice && parseFloat(formData.estimatedPrice) < parseFloat(formData.estimatedCost)) {
+        newErrors.estimatedPrice = 'Price must be greater than or equal to cost';
+      }
+    } else {
+      // Line items mode - validate line items
+      if (formData.lineItems.some(item => !item.productService || !item.description)) {
+        newErrors.lineItems = 'All line items must have product/service and description';
+      }
     }
 
     setErrors(newErrors);
@@ -94,11 +108,12 @@ const CreateProjectEstimate = () => {
     try {
       const submitData = {
         ...formData,
-        estimatedCost: parseFloat(formData.estimatedCost),
-        estimatedPrice: parseFloat(formData.estimatedPrice),
+        estimatedCost: formData.estimatedCost ? parseFloat(formData.estimatedCost) : 0,
+        estimatedPrice: formData.estimatedPrice ? parseFloat(formData.estimatedPrice) : 0,
         estimatedDuration: parseInt(formData.estimatedDuration),
         targetYear: parseInt(formData.targetYear),
-        status: 'draft'
+        status: 'draft',
+        lineItems: formData.lineItems
       };
 
       await createProjectEstimate(submitData).unwrap();
@@ -223,6 +238,23 @@ const CreateProjectEstimate = () => {
               </Card>
             </Grid>
 
+            {/* Line Items Section */}
+            <Grid item xs={12}>
+              <Card>
+                <CardContent>
+                  <LineItemEditor
+                    lineItems={formData.lineItems}
+                    onChange={(newLineItems) => handleInputChange('lineItems', newLineItems)}
+                  />
+                  {errors.lineItems && (
+                    <Alert severity="error" sx={{ mt: 2 }}>
+                      {errors.lineItems}
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+
             {/* Financial Information */}
             <Grid item xs={12} md={6}>
               <Card>
@@ -240,9 +272,9 @@ const CreateProjectEstimate = () => {
                         value={formData.estimatedCost}
                         onChange={(e) => handleInputChange('estimatedCost', e.target.value)}
                         error={!!errors.estimatedCost}
-                        helperText={errors.estimatedCost}
+                        helperText={errors.estimatedCost || 'Optional - Leave blank if cost is unknown'}
                         InputProps={{ inputProps: { min: 0, step: 0.01 } }}
-                        required
+                        disabled={formData.lineItems.length > 0}
                       />
                     </Grid>
                     <Grid item xs={12}>
@@ -253,9 +285,9 @@ const CreateProjectEstimate = () => {
                         value={formData.estimatedPrice}
                         onChange={(e) => handleInputChange('estimatedPrice', e.target.value)}
                         error={!!errors.estimatedPrice}
-                        helperText={errors.estimatedPrice}
+                        helperText={errors.estimatedPrice || (formData.lineItems.length > 0 ? 'Calculated from line items' : 'Required when not using line items')}
                         InputProps={{ inputProps: { min: 0, step: 0.01 } }}
-                        required
+                        disabled={formData.lineItems.length > 0}
                       />
                     </Grid>
                     <Grid item xs={12}>

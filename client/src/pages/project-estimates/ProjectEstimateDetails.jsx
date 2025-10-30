@@ -38,14 +38,16 @@ import {
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
+import LineItemEditor from '../../components/estimates/LineItemEditor';
 import { useAuth } from '../../hooks/useAuth';
 import {
   useGetProjectEstimateQuery,
   useApproveProjectEstimateMutation,
   useDeleteProjectEstimateMutation,
   useConvertToWorkOrderMutation,
-  useConvertToInvoiceMutation
-} from '../../features/projectEstimates/projectEstimatesApiSlice';
+  useConvertToInvoiceMutation,
+  useSendToClientMutation
+} from '../../features/estimates/projectEstimatesApiSlice';
 import EstimatePDFDownload from '../../components/estimates/EstimatePDFDownload';
 import EstimateInvoiceView from '../../components/estimates/EstimateInvoiceView';
 
@@ -60,6 +62,8 @@ const ProjectEstimateDetails = () => {
   const [rejectionDialog, setRejectionDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [deleteDialog, setDeleteDialog] = useState(false);
+  const [sendToClientDialog, setSendToClientDialog] = useState(false);
+  const [clientEmail, setClientEmail] = useState('');
   const [selectedTab, setSelectedTab] = useState(0);
 
   // API queries and mutations
@@ -68,6 +72,7 @@ const ProjectEstimateDetails = () => {
   const [deleteEstimate, { isLoading: isDeleting }] = useDeleteProjectEstimateMutation();
   const [convertToWorkOrder, { isLoading: isConverting }] = useConvertToWorkOrderMutation();
   const [convertToInvoice, { isLoading: isConvertingToInvoice }] = useConvertToInvoiceMutation();
+  const [sendToClient, { isLoading: isSending }] = useSendToClientMutation();
 
   const estimate = estimateData?.data?.projectEstimate;
 
@@ -138,6 +143,23 @@ const ProjectEstimateDetails = () => {
     }
   };
 
+  const handleSendToClient = async () => {
+    if (!clientEmail.trim()) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+    
+    try {
+      await sendToClient({ id, clientEmail }).unwrap();
+      toast.success('Estimate sent to client successfully');
+      setSendToClientDialog(false);
+      setClientEmail('');
+      refetch();
+    } catch (error) {
+      toast.error('Failed to send estimate: ' + (error?.data?.message || 'Unknown error'));
+    }
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'approved': return 'success';
@@ -203,12 +225,15 @@ const ProjectEstimateDetails = () => {
               color={getStatusColor(estimate.status)}
               size="small"
             />
-            <Chip 
-              label={`${estimate.priority?.toUpperCase() || 'MEDIUM'} PRIORITY`} 
-              color={getPriorityColor(estimate.priority)}
-              size="small"
-              variant="outlined"
-            />
+            {/* Priority is internal only - not shown to clients */}
+            {(user?.role === 'admin' || user?.role === 'manager') && (
+              <Chip 
+                label={`${estimate.priority?.toUpperCase() || 'MEDIUM'} PRIORITY`} 
+                color={getPriorityColor(estimate.priority)}
+                size="small"
+                variant="outlined"
+              />
+            )}
             
             <IconButton onClick={handleMenuClick}>
               <MoreVertIcon />
@@ -301,6 +326,19 @@ const ProjectEstimateDetails = () => {
                 )}
               </CardContent>
             </Card>
+            
+            {/* Line Items Section */}
+            {estimate.lineItems && estimate.lineItems.length > 0 && (
+              <Card sx={{ mt: 3 }}>
+                <CardContent>
+                  <LineItemEditor
+                    lineItems={estimate.lineItems}
+                    onChange={() => {}}
+                    readOnly={true}
+                  />
+                </CardContent>
+              </Card>
+            )}
           </Grid>
 
           {/* Sidebar */}
@@ -430,6 +468,13 @@ const ProjectEstimateDetails = () => {
           </MenuItem>
         )}
         
+        {canApprove && (
+          <MenuItem onClick={() => setSendToClientDialog(true)}>
+            <PreviewIcon sx={{ mr: 1 }} />
+            Send to Client
+          </MenuItem>
+        )}
+        
         <MenuItem onClick={() => setDeleteDialog(true)} sx={{ color: 'error.main' }}>
           <DeleteIcon sx={{ mr: 1 }} />
           Delete
@@ -513,6 +558,42 @@ const ProjectEstimateDetails = () => {
             startIcon={isDeleting ? <CircularProgress size={16} /> : null}
           >
             {isDeleting ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Send to Client Dialog */}
+      <Dialog open={sendToClientDialog} onClose={() => setSendToClientDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Send Estimate to Client</DialogTitle>
+        <DialogContent>
+          <Typography gutterBottom>
+            Enter the client's email address to send this estimate:
+          </Typography>
+          <TextField
+            fullWidth
+            type="email"
+            label="Client Email"
+            value={clientEmail}
+            onChange={(e) => setClientEmail(e.target.value)}
+            placeholder="client@example.com"
+            sx={{ mt: 2 }}
+            autoFocus
+          />
+          <Alert severity="info" sx={{ mt: 2 }}>
+            The client will receive a professional PDF estimate via email. Priority and internal notes will be hidden.
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSendToClientDialog(false)} disabled={isSending}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSendToClient} 
+            variant="contained"
+            disabled={isSending || !clientEmail.trim()}
+            startIcon={isSending ? <CircularProgress size={16} /> : null}
+          >
+            {isSending ? 'Sending...' : 'Send Estimate'}
           </Button>
         </DialogActions>
       </Dialog>

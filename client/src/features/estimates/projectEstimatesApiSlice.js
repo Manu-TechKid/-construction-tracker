@@ -59,6 +59,13 @@ export const projectEstimatesApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: (result, error, { id }) => [{ type: 'ProjectEstimate', id }],
     }),
+    convertToWorkOrder: builder.mutation({
+      query: (id) => ({
+        url: `/project-estimates/${id}/convert`,
+        method: 'POST',
+      }),
+      invalidatesTags: (result, error, id) => [{ type: 'ProjectEstimate', id }, 'WorkOrder'],
+    }),
     convertToInvoice: builder.mutation({
       query: (id) => ({
         url: `/project-estimates/${id}/convert-to-invoice`,
@@ -134,6 +141,7 @@ export const {
   useDeleteProjectEstimateMutation,
   useApproveProjectEstimateMutation,
   useSendToClientMutation,
+  useConvertToWorkOrderMutation,
   useConvertToInvoiceMutation,
   useAddLineItemMutation,
   useUpdateLineItemMutation,

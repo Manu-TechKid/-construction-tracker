@@ -242,68 +242,187 @@ const EstimateInvoiceView = forwardRef(({ estimate, companyInfo }, ref) => {
           <Table>
             <TableHead>
               <TableRow sx={{ bgcolor: 'grey.100' }}>
-                <TableCell><strong>Description</strong></TableCell>
-                <TableCell align="right"><strong>Amount</strong></TableCell>
+                {estimate.lineItems && estimate.lineItems.length > 0 ? (
+                  <>
+                    <TableCell><strong>Service Date</strong></TableCell>
+                    <TableCell><strong>Product/Service</strong></TableCell>
+                    <TableCell><strong>Description</strong></TableCell>
+                    <TableCell align="right"><strong>Qty</strong></TableCell>
+                    <TableCell align="right"><strong>Rate</strong></TableCell>
+                    <TableCell align="right"><strong>Amount</strong></TableCell>
+                    <TableCell align="right"><strong>Tax</strong></TableCell>
+                    <TableCell align="right"><strong>Total</strong></TableCell>
+                  </>
+                ) : (
+                  <>
+                    <TableCell><strong>Description</strong></TableCell>
+                    <TableCell align="right"><strong>Amount</strong></TableCell>
+                  </>
+                )}
               </TableRow>
             </TableHead>
             <TableBody>
-              <TableRow>
-                <TableCell>
-                  <Typography variant="body1" fontWeight="medium">
-                    {estimate.title}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Professional service including materials and labor
-                  </Typography>
-                </TableCell>
-                <TableCell align="right">
-                  <Typography variant="h6" fontWeight="bold">
-                    {formatCurrency(estimate.estimatedPrice)}
-                  </Typography>
-                </TableCell>
-              </TableRow>
-              
-              {/* Subtotal */}
-              <TableRow>
-                <TableCell sx={{ borderBottom: 'none', pt: 2 }}>
-                  <Typography variant="body1" fontWeight="medium">
-                    Subtotal
-                  </Typography>
-                </TableCell>
-                <TableCell align="right" sx={{ borderBottom: 'none', pt: 2 }}>
-                  <Typography variant="body1">
-                    {formatCurrency(estimate.estimatedPrice)}
-                  </Typography>
-                </TableCell>
-              </TableRow>
-              
-              {/* Tax (if applicable) */}
-              <TableRow>
-                <TableCell sx={{ borderBottom: 'none' }}>
-                  <Typography variant="body2" color="text.secondary">
-                    Tax (if applicable)
-                  </Typography>
-                </TableCell>
-                <TableCell align="right" sx={{ borderBottom: 'none' }}>
-                  <Typography variant="body2" color="text.secondary">
-                    Included
-                  </Typography>
-                </TableCell>
-              </TableRow>
-              
-              {/* Total */}
-              <TableRow>
-                <TableCell sx={{ borderTop: '2px solid', borderColor: 'primary.main', pt: 2 }}>
-                  <Typography variant="h6" fontWeight="bold" color="primary">
-                    TOTAL ESTIMATE
-                  </Typography>
-                </TableCell>
-                <TableCell align="right" sx={{ borderTop: '2px solid', borderColor: 'primary.main', pt: 2 }}>
-                  <Typography variant="h5" fontWeight="bold" color="primary">
-                    {formatCurrency(estimate.estimatedPrice)}
-                  </Typography>
-                </TableCell>
-              </TableRow>
+              {estimate.lineItems && estimate.lineItems.length > 0 ? (
+                <>
+                  {estimate.lineItems.map((item, index) => {
+                    const itemAmount = parseFloat(item.amount) || 0;
+                    const tax = parseFloat(item.tax) || 0;
+                    const taxAmount = item.taxType === 'percentage' ? (itemAmount * tax / 100) : tax;
+                    const itemTotal = itemAmount + taxAmount;
+                    
+                    return (
+                      <TableRow key={index}>
+                        <TableCell>
+                          {format(new Date(item.serviceDate), 'MMM dd, yyyy')}
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight="medium">
+                            {item.productService}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" color="text.secondary">
+                            {item.description}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">{item.qty}</TableCell>
+                        <TableCell align="right">{formatCurrency(item.rate)}</TableCell>
+                        <TableCell align="right">{formatCurrency(itemAmount)}</TableCell>
+                        <TableCell align="right">
+                          {tax > 0 ? (
+                            <Typography variant="body2">
+                              {tax}{item.taxType === 'percentage' ? '%' : '$'}
+                              <br />
+                              <Typography variant="caption" color="text.secondary">
+                                ({formatCurrency(taxAmount)})
+                              </Typography>
+                            </Typography>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" fontWeight="bold">
+                            {formatCurrency(itemTotal)}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  
+                  {/* Subtotal */}
+                  <TableRow>
+                    <TableCell colSpan={5} />
+                    <TableCell align="right">
+                      <Typography variant="body1" fontWeight="medium">
+                        Subtotal
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right" colSpan={2}>
+                      <Typography variant="body1">
+                        {formatCurrency(estimate.lineItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0))}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                  
+                  {/* Tax */}
+                  <TableRow>
+                    <TableCell colSpan={5} />
+                    <TableCell align="right">
+                      <Typography variant="body1" fontWeight="medium">
+                        Total Tax
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right" colSpan={2}>
+                      <Typography variant="body1">
+                        {formatCurrency(estimate.lineItems.reduce((sum, item) => {
+                          const amount = parseFloat(item.amount) || 0;
+                          const tax = parseFloat(item.tax) || 0;
+                          return sum + (item.taxType === 'percentage' ? (amount * tax / 100) : tax);
+                        }, 0))}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                  
+                  {/* Total */}
+                  <TableRow>
+                    <TableCell colSpan={5} />
+                    <TableCell align="right" sx={{ borderTop: '2px solid', borderColor: 'primary.main', pt: 2 }}>
+                      <Typography variant="h6" fontWeight="bold" color="primary">
+                        TOTAL ESTIMATE
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right" colSpan={2} sx={{ borderTop: '2px solid', borderColor: 'primary.main', pt: 2 }}>
+                      <Typography variant="h5" fontWeight="bold" color="primary">
+                        {formatCurrency(estimate.lineItems.reduce((sum, item) => {
+                          const amount = parseFloat(item.amount) || 0;
+                          const tax = parseFloat(item.tax) || 0;
+                          const taxAmount = item.taxType === 'percentage' ? (amount * tax / 100) : tax;
+                          return sum + amount + taxAmount;
+                        }, 0))}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                </>
+              ) : (
+                <>
+                  <TableRow>
+                    <TableCell>
+                      <Typography variant="body1" fontWeight="medium">
+                        {estimate.title}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Professional service including materials and labor
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="h6" fontWeight="bold">
+                        {formatCurrency(estimate.estimatedPrice)}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                  
+                  {/* Subtotal */}
+                  <TableRow>
+                    <TableCell sx={{ borderBottom: 'none', pt: 2 }}>
+                      <Typography variant="body1" fontWeight="medium">
+                        Subtotal
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right" sx={{ borderBottom: 'none', pt: 2 }}>
+                      <Typography variant="body1">
+                        {formatCurrency(estimate.estimatedPrice)}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                  
+                  {/* Tax (if applicable) */}
+                  <TableRow>
+                    <TableCell sx={{ borderBottom: 'none' }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Tax (if applicable)
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right" sx={{ borderBottom: 'none' }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Included
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                  
+                  {/* Total */}
+                  <TableRow>
+                    <TableCell sx={{ borderTop: '2px solid', borderColor: 'primary.main', pt: 2 }}>
+                      <Typography variant="h6" fontWeight="bold" color="primary">
+                        TOTAL ESTIMATE
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right" sx={{ borderTop: '2px solid', borderColor: 'primary.main', pt: 2 }}>
+                      <Typography variant="h5" fontWeight="bold" color="primary">
+                        {formatCurrency(estimate.estimatedPrice)}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                </>
+              )}
             </TableBody>
           </Table>
         </TableContainer>
