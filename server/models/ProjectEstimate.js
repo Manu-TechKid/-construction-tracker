@@ -24,7 +24,8 @@ const projectEstimateSchema = new mongoose.Schema({
   estimatedCost: {
     type: Number,
     min: [0, 'Estimated cost cannot be negative'],
-    default: 0
+    default: 0,
+    required: false // Make optional as requested
   },
   estimatedPrice: {
     type: Number,
@@ -104,15 +105,15 @@ const projectEstimateSchema = new mongoose.Schema({
   
   // Enhanced line items for detailed estimates
   lineItems: [{
-    serviceCategory: {
-      type: String,
-      enum: ['painting', 'cleaning', 'repairs', 'remodeling', 'other'],
-      required: true
+    serviceDate: {
+      type: Date,
+      default: Date.now
     },
     
-    serviceSubcategory: {
+    productService: {
       type: String,
-      required: true
+      required: true,
+      trim: true
     },
     
     description: {
@@ -121,32 +122,45 @@ const projectEstimateSchema = new mongoose.Schema({
       trim: true
     },
     
-    quantity: {
+    qty: {
       type: Number,
       required: true,
       min: 0.01,
       default: 1
     },
     
-    unitType: {
+    rate: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    
+    amount: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    
+    class: {
       type: String,
-      enum: ['per_room', 'per_sqft', 'per_apartment', 'per_hour', 'fixed'],
-      default: 'fixed'
+      trim: true,
+      comment: 'Hidden from client view - for internal classification'
     },
     
-    unitPrice: {
+    tax: {
       type: Number,
-      required: true,
-      min: 0
+      min: 0,
+      default: 0,
+      comment: 'Tax amount or percentage'
     },
     
-    totalPrice: {
-      type: Number,
-      required: true,
-      min: 0
+    taxType: {
+      type: String,
+      enum: ['percentage', 'fixed'],
+      default: 'percentage'
     },
     
-    // Cost breakdown
+    // Keep for backward compatibility and internal cost tracking
     estimatedCost: {
       type: Number,
       min: 0,
@@ -237,10 +251,27 @@ projectEstimateSchema.virtual('estimatedProfitMargin').get(function() {
   return ((this.estimatedProfit / this.estimatedPrice) * 100).toFixed(1);
 });
 
-// Virtual for line items total
+// Virtual for line items total (including tax)
 projectEstimateSchema.virtual('lineItemsTotal').get(function() {
   if (!this.lineItems || this.lineItems.length === 0) return this.estimatedPrice || 0;
-  return this.lineItems.reduce((total, item) => total + (item.totalPrice || 0), 0);
+  
+  let subtotal = 0;
+  let totalTax = 0;
+  
+  this.lineItems.forEach(item => {
+    const itemAmount = item.amount || 0;
+    subtotal += itemAmount;
+    
+    if (item.tax > 0) {
+      if (item.taxType === 'percentage') {
+        totalTax += (itemAmount * item.tax) / 100;
+      } else {
+        totalTax += item.tax;
+      }
+    }
+  });
+  
+  return subtotal + totalTax;
 });
 
 // Virtual for line items cost
@@ -349,14 +380,20 @@ projectEstimateSchema.methods.convertToInvoice = async function(additionalData =
 
 // Method to add line item
 projectEstimateSchema.methods.addLineItem = function(itemData) {
+  const qty = itemData.qty || 1;
+  const rate = itemData.rate || 0;
+  const amount = itemData.amount || (qty * rate);
+  
   this.lineItems.push({
-    serviceCategory: itemData.serviceCategory,
-    serviceSubcategory: itemData.serviceSubcategory,
+    serviceDate: itemData.serviceDate || new Date(),
+    productService: itemData.productService,
     description: itemData.description,
-    quantity: itemData.quantity || 1,
-    unitType: itemData.unitType || 'fixed',
-    unitPrice: itemData.unitPrice,
-    totalPrice: (itemData.quantity || 1) * itemData.unitPrice,
+    qty: qty,
+    rate: rate,
+    amount: amount,
+    class: itemData.class,
+    tax: itemData.tax || 0,
+    taxType: itemData.taxType || 'percentage',
     estimatedCost: itemData.estimatedCost || 0,
     notes: itemData.notes
   });
@@ -364,10 +401,26 @@ projectEstimateSchema.methods.addLineItem = function(itemData) {
   return this;
 };
 
-// Method to calculate line item totals
+// Method to calculate line item totals with tax
 projectEstimateSchema.methods.calculateTotals = function() {
   if (this.lineItems && this.lineItems.length > 0) {
-    this.estimatedPrice = this.lineItems.reduce((total, item) => total + (item.totalPrice || 0), 0);
+    let subtotal = 0;
+    let totalTax = 0;
+    
+    this.lineItems.forEach(item => {
+      const itemAmount = item.amount || 0;
+      subtotal += itemAmount;
+      
+      if (item.tax > 0) {
+        if (item.taxType === 'percentage') {
+          totalTax += (itemAmount * item.tax) / 100;
+        } else {
+          totalTax += item.tax;
+        }
+      }
+    });
+    
+    this.estimatedPrice = subtotal + totalTax;
     this.estimatedCost = this.lineItems.reduce((total, item) => total + (item.estimatedCost || 0), 0);
   }
   
