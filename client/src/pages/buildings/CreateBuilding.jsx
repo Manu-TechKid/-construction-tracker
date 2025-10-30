@@ -20,11 +20,17 @@ const CreateBuilding = () => {
         administrator: user?._id || user?.id
       };
       
+      console.log('=== BUILDING CREATION DEBUG ===');
+      console.log('Form Data:', formData);
+      console.log('Submit Data (with administrator):', submitData);
+      console.log('User:', user);
+      
       const result = await createBuilding(submitData).unwrap();
       toast.success('Building created successfully');
       navigate('/buildings');
     } catch (error) {
       console.error('Failed to create building:', error);
+      console.error('Error details:', error?.data);
       const errorMessage = error?.data?.message || error?.message || 'Failed to create building';
       toast.error(errorMessage);
     }
