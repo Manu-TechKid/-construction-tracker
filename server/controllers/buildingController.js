@@ -142,6 +142,22 @@ exports.createBuilding = catchAsync(async (req, res, next) => {
             administrator: req.body.administrator || req.user._id,
             administratorName: req.body.administratorName || '',
             serviceManager: req.body.serviceManager,
+            serviceManagerEmail: req.body.serviceManagerEmail,
+            paymentTerms: req.body.paymentTerms,
+            description: req.body.description,
+            
+            // Contact fields
+            generalManagerName: req.body.generalManagerName,
+            generalManagerEmail: req.body.generalManagerEmail,
+            generalManagerPhone: req.body.generalManagerPhone,
+            maintenanceManagerName: req.body.maintenanceManagerName,
+            maintenanceManagerEmail: req.body.maintenanceManagerEmail,
+            maintenanceManagerPhone: req.body.maintenanceManagerPhone,
+            thirdContactName: req.body.thirdContactName,
+            thirdContactRole: req.body.thirdContactRole,
+            thirdContactEmail: req.body.thirdContactEmail,
+            thirdContactPhone: req.body.thirdContactPhone,
+            
             createdBy: req.user ? req.user._id : null
         };
         
