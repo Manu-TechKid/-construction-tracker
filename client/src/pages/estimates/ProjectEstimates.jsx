@@ -39,7 +39,7 @@ import {
   Visibility as ViewIcon,
   GetApp as DownloadIcon
 } from '@mui/icons-material';
-import { useGetProjectEstimatesQuery, useDeleteProjectEstimateMutation } from '../../features/estimates/projectEstimatesApiSlice';
+import { useGetProjectEstimatesQuery, useDeleteProjectEstimateMutation, useSendToClientMutation, useConvertToInvoiceMutation } from '../../features/estimates/projectEstimatesApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
@@ -52,6 +52,8 @@ const ProjectEstimates = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedEstimate, setSelectedEstimate] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [sendToClientDialog, setSendToClientDialog] = useState(false);
+  const [clientEmail, setClientEmail] = useState('');
 
   const { data: estimatesData, isLoading, error, refetch } = useGetProjectEstimatesQuery({
     building: filterBuilding,
@@ -60,6 +62,8 @@ const ProjectEstimates = () => {
 
   const { data: buildingsData } = useGetBuildingsQuery();
   const [deleteEstimate] = useDeleteProjectEstimateMutation();
+  const [sendToClient, { isLoading: isSending }] = useSendToClientMutation();
+  const [convertToInvoice, { isLoading: isConverting }] = useConvertToInvoiceMutation();
 
   const estimates = estimatesData?.data?.projectEstimates || [];
   const buildings = buildingsData?.data?.buildings || [];
@@ -95,6 +99,35 @@ const ProjectEstimates = () => {
   const handleEdit = () => {
     navigate(`/estimates/${selectedEstimate?._id}/edit`);
     handleMenuClose();
+  };
+
+  const handleSendToClient = async () => {
+    if (!clientEmail.trim()) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+    
+    try {
+      await sendToClient({ id: selectedEstimate._id, clientEmail }).unwrap();
+      toast.success('Estimate sent to client successfully');
+      setSendToClientDialog(false);
+      setClientEmail('');
+      handleMenuClose();
+      refetch();
+    } catch (error) {
+      toast.error('Failed to send estimate: ' + (error?.data?.message || 'Unknown error'));
+    }
+  };
+
+  const handleConvertToInvoice = async () => {
+    try {
+      const result = await convertToInvoice(selectedEstimate._id).unwrap();
+      toast.success('Successfully converted to invoice');
+      handleMenuClose();
+      navigate(`/invoices/${result.data.invoice._id}`);
+    } catch (error) {
+      toast.error('Failed to convert to invoice: ' + (error?.data?.message || 'Unknown error'));
+    }
   };
 
   const handleDownloadPDF = async () => {
@@ -393,7 +426,7 @@ const ProjectEstimates = () => {
           Edit
         </MenuItem>
         <MenuItem onClick={() => {
-          toast.info('Send to client feature coming soon');
+          setSendToClientDialog(true);
           handleMenuClose();
         }}>
           <SendIcon sx={{ mr: 1 }} />
@@ -403,11 +436,8 @@ const ProjectEstimates = () => {
           <DownloadIcon sx={{ mr: 1 }} />
           Download PDF
         </MenuItem>
-        {selectedEstimate?.status === 'client_accepted' && (
-          <MenuItem onClick={() => {
-            toast.info('Convert to invoice feature coming soon');
-            handleMenuClose();
-          }}>
+        {(selectedEstimate?.status === 'approved' || selectedEstimate?.status === 'client_accepted') && (
+          <MenuItem onClick={handleConvertToInvoice}>
             <ReceiptIcon sx={{ mr: 1 }} />
             Convert to Invoice
           </MenuItem>
@@ -423,6 +453,41 @@ const ProjectEstimates = () => {
           Delete
         </MenuItem>
       </Menu>
+
+      {/* Send to Client Dialog */}
+      <Dialog open={sendToClientDialog} onClose={() => setSendToClientDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Send Estimate to Client</DialogTitle>
+        <DialogContent>
+          <Typography gutterBottom>
+            Enter the client's email address to send this estimate:
+          </Typography>
+          <TextField
+            fullWidth
+            type="email"
+            label="Client Email"
+            value={clientEmail}
+            onChange={(e) => setClientEmail(e.target.value)}
+            placeholder="client@example.com"
+            sx={{ mt: 2 }}
+            autoFocus
+          />
+          <Alert severity="info" sx={{ mt: 2 }}>
+            The client will receive a professional PDF estimate via email. Priority and internal notes will be hidden.
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSendToClientDialog(false)} disabled={isSending}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSendToClient} 
+            variant="contained"
+            disabled={isSending || !clientEmail.trim()}
+          >
+            {isSending ? 'Sending...' : 'Send Estimate'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>

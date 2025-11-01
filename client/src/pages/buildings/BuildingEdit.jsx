@@ -12,7 +12,8 @@ const BuildingEdit = () => {
   const { data: buildingData, isLoading, isError, error } = useGetBuildingQuery(id);
   const [updateBuilding, { isLoading: isUpdating }] = useUpdateBuildingMutation();
 
-  const building = buildingData?.data || {};
+  // Handle both response formats: { data: building } or { data: { data: building } }
+  const building = buildingData?.data?.data || buildingData?.data || {};
 
   const handleSubmit = async (formData) => {
     try {
