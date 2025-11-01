@@ -25,15 +25,15 @@ import { format } from 'date-fns';
 
 const ProfessionalInvoiceTemplate = forwardRef(({ invoice, companyInfo }, ref) => {
   const defaultCompanyInfo = {
-    name: 'LKC HOME SERVICES LLC',
-    address: '350 K ST NW',
-    city: 'Alexandria',
-    state: 'VA',
-    zipCode: '22304',
-    phone: '(571) 409-2313',
-    email: 'lkchomeservices21@gmail.com',
-    website: 'https://lkchomeserviceslkchomeservices.com',
-    logo: '/api/placeholder/120/80'
+    name: 'DSJ Construction & Services LLC',
+    address: '651 Pullman Pl',
+    city: 'Gaithersburg',
+    state: 'MD',
+    zipCode: '20877',
+    phone: '(301) 123-4567',
+    email: 'info@servicesdsj.com',
+    website: 'www.servicesdsj.com',
+    logo: 'https://res.cloudinary.com/dwqxiigpd/image/upload/v1756186310/dsj-logo_mb3npa.jpg'
   };
 
   const company = { ...defaultCompanyInfo, ...companyInfo };
@@ -77,58 +77,71 @@ const ProfessionalInvoiceTemplate = forwardRef(({ invoice, companyInfo }, ref) =
       ref={ref}
       sx={{ 
         p: 4, 
-        maxWidth: '800px', 
+        maxWidth: '900px', 
         margin: '0 auto',
-        backgroundColor: 'white',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+        backgroundColor: '#ffffff',
+        boxShadow: 'none',
+        border: '1px solid #e0e0e0',
+        fontFamily: 'Arial, sans-serif',
         '@media print': {
           boxShadow: 'none',
+          border: 'none',
           p: 2
         }
       }}
     >
-      {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Grid container spacing={3} alignItems="center">
+      {/* Header with Logo */}
+      <Box sx={{ mb: 3, pb: 2, borderBottom: '2px solid #4A90E2' }}>
+        <Grid container spacing={2} alignItems="flex-start">
           <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-              <Avatar
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
+              <Box
+                component="img"
                 src={company.logo}
+                alt="DSJ Logo"
                 sx={{ 
                   width: 80, 
-                  height: 80, 
-                  bgcolor: 'primary.main',
-                  fontSize: '2rem',
-                  fontWeight: 'bold'
+                  height: 'auto',
+                  objectFit: 'contain'
                 }}
-              >
-                {company.name.charAt(0)}
-              </Avatar>
+              />
               <Box>
-                <Typography variant="h4" fontWeight="bold" color="primary">
+                <Typography variant="h5" fontWeight="bold" sx={{ color: '#4A90E2', mb: 0.5 }}>
                   {company.name}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Professional Construction Services
+                <Typography variant="body2" sx={{ fontSize: '0.875rem', lineHeight: 1.6 }}>
+                  Professional Construction & Renovation Services
                 </Typography>
               </Box>
             </Box>
-            <Box>
-              <Typography variant="body2"><strong>From:</strong></Typography>
-              <Typography variant="body2">{company.name}</Typography>
-              <Typography variant="body2">{company.address}</Typography>
-              <Typography variant="body2">{company.city}, {company.state} {company.zipCode}</Typography>
-              <Typography variant="body2">📞 {company.phone}</Typography>
-              <Typography variant="body2">✉️ {company.email}</Typography>
-              {company.website && (
-                <Typography variant="body2">🌐 {company.website}</Typography>
-              )}
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body2" sx={{ fontSize: '0.875rem', lineHeight: 1.6 }}>
+                {company.address}
+              </Typography>
+              <Typography variant="body2" sx={{ fontSize: '0.875rem', lineHeight: 1.6 }}>
+                {company.city}, {company.state} {company.zipCode} USA
+              </Typography>
+              <Typography variant="body2" sx={{ fontSize: '0.875rem', lineHeight: 1.6 }}>
+                Phone: {company.phone}
+              </Typography>
+              <Typography variant="body2" sx={{ fontSize: '0.875rem', lineHeight: 1.6 }}>
+                Email: {company.email}
+              </Typography>
             </Box>
           </Grid>
           
           <Grid item xs={12} md={6}>
-            <Box sx={{ textAlign: { xs: 'left', md: 'right' } }}>
-              <Typography variant="h2" fontWeight="bold" color="primary" gutterBottom>
+            <Box sx={{ textAlign: 'right' }}>
+              <Typography 
+                variant="h3" 
+                fontWeight="bold" 
+                sx={{ 
+                  color: '#4A90E2',
+                  fontSize: '2.5rem',
+                  letterSpacing: '0.05em',
+                  mb: 2
+                }}
+              >
                 INVOICE
               </Typography>
               
@@ -162,80 +175,120 @@ const ProfessionalInvoiceTemplate = forwardRef(({ invoice, companyInfo }, ref) =
                 )}
               </Box>
               
-              {/* Invoice Details */}
+              {/* Invoice Details Boxes */}
               <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Invoice #:</strong> {invoice.invoiceNumber || 'OPEN'}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Date of Invoice:</strong> {format(new Date(invoice.invoiceDate || invoice.createdAt), 'MMM dd, yyyy')}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Due Date:</strong> {format(new Date(invoice.dueDate), 'MMM dd, yyyy')}
-                </Typography>
-              </Box>
-              
-              <Box sx={{ display: 'flex', gap: 1, justifyContent: { xs: 'flex-start', md: 'flex-end' }, flexWrap: 'wrap' }}>
-                <Chip 
-                  label={invoice.status?.toUpperCase() || 'OPEN'} 
-                  color={getStatusColor(invoice.status)}
-                  size="small"
-                />
+                <Box sx={{ 
+                  bgcolor: '#E8F4FD', 
+                  p: 2, 
+                  borderRadius: 1,
+                  mb: 1,
+                  border: '1px solid #4A90E2'
+                }}>
+                  <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}>
+                    Invoice Number
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold" sx={{ color: '#4A90E2' }}>
+                    {invoice.invoiceNumber || '5469'}
+                  </Typography>
+                </Box>
+                <Box sx={{ 
+                  bgcolor: '#E8F4FD', 
+                  p: 2, 
+                  borderRadius: 1,
+                  mb: 1,
+                  border: '1px solid #4A90E2'
+                }}>
+                  <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}>
+                    Invoice Date
+                  </Typography>
+                  <Typography variant="body1" fontWeight="bold">
+                    {format(new Date(invoice.invoiceDate || invoice.createdAt), 'MMMM dd, yyyy')}
+                  </Typography>
+                </Box>
+                <Box sx={{ 
+                  bgcolor: '#E8F4FD', 
+                  p: 2, 
+                  borderRadius: 1,
+                  border: '1px solid #4A90E2'
+                }}>
+                  <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}>
+                    Due Date
+                  </Typography>
+                  <Typography variant="body1" fontWeight="bold">
+                    {format(new Date(invoice.dueDate), 'MMMM dd, yyyy')}
+                  </Typography>
+                </Box>
+                <Box sx={{ mt: 1 }}>
+                  <Chip 
+                    label={invoice.status?.toUpperCase() || 'PAID'} 
+                    color={getStatusColor(invoice.status)}
+                    size="small"
+                    sx={{ fontWeight: 'bold' }}
+                  />
+                </Box>
               </Box>
             </Box>
           </Grid>
         </Grid>
       </Box>
 
-      <Divider sx={{ mb: 3 }} />
+      {/* Bill To Section */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} md={6}>
+          <Box sx={{ bgcolor: '#E8F4FD', p: 2, borderRadius: 1 }}>
+            <Typography variant="subtitle2" fontWeight="bold" sx={{ color: '#4A90E2', mb: 1 }}>
+              BILL TO:
+            </Typography>
+            <Typography variant="body2" fontWeight="bold">
+              {invoice.client?.companyName || invoice.building?.name || 'Client Name'}
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+              {invoice.client?.address?.street || invoice.building?.address || 'Address'}
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+              {invoice.client?.address?.city || invoice.building?.city || 'City'}, {invoice.client?.address?.state || 'State'} {invoice.client?.address?.zipCode || ''}
+            </Typography>
+          </Box>
+        </Grid>
+      </Grid>
 
-      {/* Line Items Table */}
+      {/* Services Performed Table */}
       <Box sx={{ mb: 4 }}>
-        <TableContainer component={Paper} variant="outlined">
+        <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ color: '#333' }}>
+          Services Performed
+        </Typography>
+        <TableContainer component={Paper} sx={{ border: '1px solid #e0e0e0', boxShadow: 'none' }}>
           <Table>
             <TableHead>
-              <TableRow sx={{ bgcolor: 'grey.100' }}>
-                <TableCell><strong>Sr.No</strong></TableCell>
-                <TableCell><strong>Product Name</strong></TableCell>
-                <TableCell align="center"><strong>Rate/Unit</strong></TableCell>
-                <TableCell align="center"><strong>Discount</strong></TableCell>
-                <TableCell align="center"><strong>Qty.</strong></TableCell>
-                <TableCell align="center"><strong>Tax</strong></TableCell>
-                <TableCell align="right"><strong>Amount</strong></TableCell>
+              <TableRow sx={{ bgcolor: '#37474F' }}>
+                <TableCell sx={{ color: 'white', fontWeight: 'bold', fontSize: '0.875rem' }}>Description</TableCell>
+                <TableCell align="center" sx={{ color: 'white', fontWeight: 'bold', fontSize: '0.875rem' }}>Quantity</TableCell>
+                <TableCell align="center" sx={{ color: 'white', fontWeight: 'bold', fontSize: '0.875rem' }}>Unit Price</TableCell>
+                <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold', fontSize: '0.875rem' }}>Total</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {invoice.lineItems && invoice.lineItems.length > 0 ? (
                 invoice.lineItems.map((item, index) => (
                   <TableRow key={index}>
-                    <TableCell>{index + 1}</TableCell>
                     <TableCell>
-                      <Typography variant="body1" fontWeight="medium">
+                      <Typography variant="body2" fontWeight="medium">
                         {item.description}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {item.serviceCategory && item.serviceSubcategory && 
-                          `${item.serviceCategory} - ${item.serviceSubcategory}`}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="center">
-                      {formatCurrency(item.unitPrice)}
-                    </TableCell>
-                    <TableCell align="center">
-                      {item.discount > 0 ? (
-                        item.discountType === 'percentage' ? 
-                          `${item.discount}%` : 
-                          formatCurrency(item.discount)
-                      ) : '0.0%'}
+                      {item.serviceCategory && item.serviceSubcategory && (
+                        <Typography variant="caption" color="text.secondary">
+                          {item.serviceCategory} - {item.serviceSubcategory}
+                        </Typography>
+                      )}
                     </TableCell>
                     <TableCell align="center">
                       {item.quantity}
                     </TableCell>
                     <TableCell align="center">
-                      {item.taxable && item.taxRate > 0 ? `${item.taxRate}%` : '0.0%'}
+                      {formatCurrency(item.unitPrice)}
                     </TableCell>
                     <TableCell align="right">
-                      <Typography variant="body1" fontWeight="bold">
+                      <Typography variant="body2" fontWeight="bold">
                         {formatCurrency(item.totalPrice)}
                       </Typography>
                     </TableCell>
@@ -243,23 +296,20 @@ const ProfessionalInvoiceTemplate = forwardRef(({ invoice, companyInfo }, ref) =
                 ))
               ) : (
                 <TableRow>
-                  <TableCell>1</TableCell>
                   <TableCell>
-                    <Typography variant="body1" fontWeight="medium">
-                      Professional Service
+                    <Typography variant="body2" fontWeight="medium">
+                      Apt 336 - Grab bar install (Apt. 336)
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Construction and maintenance services
+                    <Typography variant="caption" color="text.secondary">
+                      Professional construction services
                     </Typography>
                   </TableCell>
+                  <TableCell align="center">1</TableCell>
                   <TableCell align="center">
                     {formatCurrency(invoice.subtotal || invoice.total)}
                   </TableCell>
-                  <TableCell align="center">0.0%</TableCell>
-                  <TableCell align="center">1</TableCell>
-                  <TableCell align="center">0.0%</TableCell>
                   <TableCell align="right">
-                    <Typography variant="body1" fontWeight="bold">
+                    <Typography variant="body2" fontWeight="bold">
                       {formatCurrency(invoice.subtotal || invoice.total)}
                     </Typography>
                   </TableCell>
@@ -268,34 +318,38 @@ const ProfessionalInvoiceTemplate = forwardRef(({ invoice, companyInfo }, ref) =
               
               {/* Subtotal Row */}
               <TableRow>
-                <TableCell colSpan={4} sx={{ borderBottom: 'none', pt: 2 }}>
-                  <Typography variant="body1" fontWeight="bold">
-                    Sub-total Amount
+                <TableCell colSpan={3} sx={{ borderTop: '2px solid #e0e0e0', pt: 2, textAlign: 'right' }}>
+                  <Typography variant="body2" sx={{ color: '#666' }}>
+                    SUBTOTAL:
                   </Typography>
                 </TableCell>
-                <TableCell align="center" sx={{ borderBottom: 'none', pt: 2 }}>
-                  <Typography variant="body1" fontWeight="bold">
+                <TableCell align="right" sx={{ borderTop: '2px solid #e0e0e0', pt: 2 }}>
+                  <Typography variant="body2" fontWeight="bold">
                     {formatCurrency(calculateSubtotal())}
                   </Typography>
                 </TableCell>
-                <TableCell align="center" sx={{ borderBottom: 'none', pt: 2 }}>
-                  <Typography variant="body1" fontWeight="bold">
-                    {calculateTotalDiscount() > 0 ? formatCurrency(calculateTotalDiscount()) : '$ 0.00'}
+              </TableRow>
+              <TableRow>
+                <TableCell colSpan={3} sx={{ borderBottom: 'none', textAlign: 'right' }}>
+                  <Typography variant="body2" sx={{ color: '#666' }}>
+                    TAX:
                   </Typography>
                 </TableCell>
-                <TableCell align="center" sx={{ borderBottom: 'none', pt: 2 }}>
-                  <Typography variant="body1" fontWeight="bold">
-                    {invoice.lineItems?.length || 1}
+                <TableCell align="right" sx={{ borderBottom: 'none' }}>
+                  <Typography variant="body2" fontWeight="bold">
+                    {formatCurrency(calculateTax())}
                   </Typography>
                 </TableCell>
-                <TableCell align="center" sx={{ borderBottom: 'none', pt: 2 }}>
-                  <Typography variant="body1" fontWeight="bold">
-                    0.0%
+              </TableRow>
+              <TableRow>
+                <TableCell colSpan={3} sx={{ borderBottom: 'none', textAlign: 'right' }}>
+                  <Typography variant="h6" fontWeight="bold" sx={{ color: '#4A90E2' }}>
+                    TOTAL:
                   </Typography>
                 </TableCell>
-                <TableCell align="right" sx={{ borderBottom: 'none', pt: 2 }}>
-                  <Typography variant="body1" fontWeight="bold">
-                    {formatCurrency(calculateSubtotal())}
+                <TableCell align="right" sx={{ borderBottom: 'none' }}>
+                  <Typography variant="h6" fontWeight="bold" sx={{ color: '#4A90E2' }}>
+                    {formatCurrency(calculateTotal())}
                   </Typography>
                 </TableCell>
               </TableRow>
