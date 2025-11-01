@@ -66,6 +66,7 @@ import ApartmentSearch from './pages/search/ApartmentSearch';
 import WorkerSchedules from './pages/workers/WorkerSchedules';
 import ProjectsPendingApproval from './pages/admin/ProjectsPendingApproval';
 import CreateProjectEstimate from './pages/project-estimates/CreateProjectEstimate';
+import EditProjectEstimate from './pages/project-estimates/EditProjectEstimate';
 import ProjectEstimateDetails from './pages/project-estimates/ProjectEstimateDetails';
 import ProjectEstimatesNew from './pages/estimates/ProjectEstimates';
 
@@ -470,7 +471,7 @@ const AppContent = () => {
                 path="estimates/:id/edit"
                 element={
                   <RoleBasedRoute requiredPermissions={['create:workorders']}>
-                    <CreateProjectEstimate />
+                    <EditProjectEstimate />
                   </RoleBasedRoute>
                 }
               />

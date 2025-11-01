@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -15,28 +15,29 @@ import {
   MenuItem,
   Alert,
   CircularProgress,
-  Divider,
-  Chip,
-  Avatar
+  Divider
 } from '@mui/material';
 import {
   Save as SaveIcon,
   ArrowBack as BackIcon,
   Business as BuildingIcon,
   AttachMoney as MoneyIcon,
-  CalendarToday as CalendarIcon,
-  PhotoCamera as PhotoIcon
+  CalendarToday as CalendarIcon
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
-import { useCreateProjectEstimateMutation } from '../../features/estimates/projectEstimatesApiSlice';
+import { useGetProjectEstimateQuery, useUpdateProjectEstimateMutation } from '../../features/estimates/projectEstimatesApiSlice';
 import LineItemEditor from '../../components/estimates/LineItemEditor';
 
-const CreateProjectEstimate = () => {
+const EditProjectEstimate = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  const { data: estimateData, isLoading: isLoadingEstimate } = useGetProjectEstimateQuery(id);
+  const estimate = estimateData?.data?.projectEstimate;
 
   const [formData, setFormData] = useState({
     title: '',
@@ -55,15 +56,35 @@ const CreateProjectEstimate = () => {
     lineItems: []
   });
 
+  useEffect(() => {
+    if (estimate) {
+      setFormData({
+        title: estimate.title || '',
+        description: estimate.description || '',
+        building: estimate.building?._id || '',
+        apartmentNumber: estimate.apartmentNumber || '',
+        estimatedCost: estimate.estimatedCost || '',
+        estimatedPrice: estimate.estimatedPrice || '',
+        estimatedDuration: estimate.estimatedDuration || 1,
+        visitDate: estimate.visitDate ? format(new Date(estimate.visitDate), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+        proposedStartDate: estimate.proposedStartDate ? format(new Date(estimate.proposedStartDate), 'yyyy-MM-dd') : '',
+        targetYear: estimate.targetYear || new Date().getFullYear(),
+        priority: estimate.priority || 'medium',
+        notes: estimate.notes || '',
+        clientNotes: estimate.clientNotes || '',
+        lineItems: estimate.lineItems || []
+      });
+    }
+  }, [estimate]);
+
   const [errors, setErrors] = useState({});
   const { data: buildingsData, isLoading: buildingsLoading } = useGetBuildingsQuery();
-  const [createProjectEstimate, { isLoading: isCreating }] = useCreateProjectEstimateMutation();
+  const [updateProjectEstimate, { isLoading: isUpdating }] = useUpdateProjectEstimateMutation();
 
   const buildings = buildingsData?.data?.buildings || [];
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -76,18 +97,14 @@ const CreateProjectEstimate = () => {
     if (!formData.description.trim()) newErrors.description = 'Description is required';
     if (!formData.building) newErrors.building = 'Building is required';
     
-    // Validate based on whether using line items or simple pricing
     if (formData.lineItems.length === 0) {
-      // Simple pricing mode - require estimated price
       if (!formData.estimatedPrice || formData.estimatedPrice <= 0) {
         newErrors.estimatedPrice = 'Valid estimated price is required when not using line items';
       }
-      // Estimated cost is now optional
       if (formData.estimatedCost && formData.estimatedPrice && parseFloat(formData.estimatedPrice) < parseFloat(formData.estimatedCost)) {
         newErrors.estimatedPrice = 'Price must be greater than or equal to cost';
       }
     } else {
-      // Line items mode - validate line items
       if (formData.lineItems.some(item => !item.productService || !item.description)) {
         newErrors.lineItems = 'All line items must have product/service and description';
       }
@@ -112,17 +129,16 @@ const CreateProjectEstimate = () => {
         estimatedPrice: formData.estimatedPrice ? parseFloat(formData.estimatedPrice) : 0,
         estimatedDuration: parseInt(formData.estimatedDuration),
         targetYear: parseInt(formData.targetYear),
-        status: 'draft',
         lineItems: formData.lineItems
       };
 
-      await createProjectEstimate(submitData).unwrap();
+      await updateProjectEstimate({ id, ...submitData }).unwrap();
 
-      toast.success('Project estimate created successfully!');
+      toast.success('Project estimate updated successfully!');
       navigate('/estimates');
     } catch (error) {
-      console.error('Failed to create project estimate:', error);
-      toast.error(error?.data?.message || 'Failed to create project estimate');
+      console.error('Failed to update project estimate:', error);
+      toast.error(error?.data?.message || 'Failed to update project estimate');
     }
   };
 
@@ -139,6 +155,24 @@ const CreateProjectEstimate = () => {
     return ((profit / price) * 100).toFixed(1);
   };
 
+  if (isLoadingEstimate) {
+    return (
+      <Container maxWidth="lg">
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+  }
+
+  if (!estimate) {
+    return (
+      <Container maxWidth="lg">
+        <Alert severity="error">Project estimate not found</Alert>
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="lg">
       <Box sx={{ py: 3 }}>
@@ -152,7 +186,7 @@ const CreateProjectEstimate = () => {
             Back
           </Button>
           <Typography variant="h4" component="h1">
-            Create Project Estimate
+            Edit Project Estimate
           </Typography>
         </Box>
 
@@ -420,7 +454,7 @@ const CreateProjectEstimate = () => {
                 <Button
                   variant="outlined"
                   onClick={() => navigate('/estimates')}
-                  disabled={isCreating}
+                  disabled={isUpdating}
                 >
                   Cancel
                 </Button>
@@ -428,10 +462,10 @@ const CreateProjectEstimate = () => {
                   type="submit"
                   variant="contained"
                   startIcon={<SaveIcon />}
-                  disabled={isCreating}
+                  disabled={isUpdating}
                   size="large"
                 >
-                  {isCreating ? <CircularProgress size={20} /> : 'Create Project Estimate'}
+                  {isUpdating ? <CircularProgress size={20} /> : 'Update Project Estimate'}
                 </Button>
               </Box>
             </Grid>
@@ -442,4 +476,4 @@ const CreateProjectEstimate = () => {
   );
 };
 
-export default CreateProjectEstimate;
+export default EditProjectEstimate;

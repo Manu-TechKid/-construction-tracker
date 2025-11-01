@@ -17,6 +17,13 @@ export const projectEstimatesApiSlice = apiSlice.injectEndpoints({
         return ['ProjectEstimate'];
       },
     }),
+    getPendingProjectApprovals: builder.query({
+      query: () => ({
+        url: '/project-estimates',
+        params: { status: 'draft' },
+      }),
+      providesTags: ['ProjectEstimate'],
+    }),
     getProjectEstimate: builder.query({
       query: (id) => `/project-estimates/${id}`,
       providesTags: (result, error, id) => [{ type: 'ProjectEstimate', id }],
@@ -135,6 +142,7 @@ export const projectEstimatesApiSlice = apiSlice.injectEndpoints({
 
 export const {
   useGetProjectEstimatesQuery,
+  useGetPendingProjectApprovalsQuery,
   useGetProjectEstimateQuery,
   useCreateProjectEstimateMutation,
   useUpdateProjectEstimateMutation,

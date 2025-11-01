@@ -57,7 +57,7 @@ import {
   useApproveProjectEstimateMutation,
   useDeleteProjectEstimateMutation,
   useConvertToWorkOrderMutation
-} from '../../features/projectEstimates/projectEstimatesApiSlice';
+} from '../../features/estimates/projectEstimatesApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 
 const ProjectsPendingApproval = () => {
@@ -487,7 +487,6 @@ const ProjectsPendingApproval = () => {
               )}
             </CardContent>
           </Card>
-        )
 
         {/* Project Details Dialog */}
         <Dialog 
