@@ -3,7 +3,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 export const analyticsApiSlice = createApi({
   reducerPath: 'analyticsApi',
   baseQuery: fetchBaseQuery({
-    baseUrl: '/api/v1',
+    baseUrl: process.env.REACT_APP_API_URL || 'https://construction-tracker-webapp.onrender.com/api/v1',
     prepareHeaders: (headers, { getState }) => {
       const token = getState().auth.token;
       if (token) {
