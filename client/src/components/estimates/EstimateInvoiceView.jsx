@@ -25,15 +25,15 @@ import { format } from 'date-fns';
 
 const EstimateInvoiceView = forwardRef(({ estimate, companyInfo }, ref) => {
   const defaultCompanyInfo = {
-    name: 'LKC HOME SERVICES LLC',
-    address: '350 K ST NW',
-    city: 'Alexandria',
+    name: 'DSJ Construction & Services LLC',
+    address: '803 Palmetto St',
+    city: 'McLean',
     state: 'VA',
-    zipCode: '22304',
+    zipCode: '22101',
     phone: '(571) 409-2313',
-    email: 'lkchomeservices21@gmail.com',
-    website: 'https://lkchomeserviceslkchomeservices.com',
-    logo: '/api/placeholder/120/80'
+    email: 'info@servicesdsj.com',
+    website: 'www.servicesdsj.com',
+    logo: 'https://res.cloudinary.com/dwqxiigpd/image/upload/v1756186310/dsj-logo_mb3npa.jpg'
   };
 
   const company = { ...defaultCompanyInfo, ...companyInfo };
@@ -70,33 +70,34 @@ const EstimateInvoiceView = forwardRef(({ estimate, companyInfo }, ref) => {
       ref={ref}
       sx={{ 
         p: 4, 
-        maxWidth: '800px', 
+        maxWidth: '900px', 
         margin: '0 auto',
-        backgroundColor: 'white',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+        backgroundColor: '#ffffff',
+        boxShadow: 'none',
+        border: '1px solid #e0e0e0',
+        fontFamily: 'Arial, sans-serif',
         '@media print': {
           boxShadow: 'none',
+          border: 'none',
           p: 2
         }
       }}
     >
-      {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Grid container spacing={3} alignItems="center">
-          <Grid item xs={12} md={8}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-              <Avatar
+      {/* Header with Logo and Company Info */}
+      <Box sx={{ mb: 3, pb: 2, borderBottom: '2px solid #4A90E2' }}>
+        <Grid container spacing={2} alignItems="flex-start">
+          <Grid item xs={12} md={6}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+              <Box
+                component="img"
                 src={company.logo}
+                alt="DSJ Logo"
                 sx={{ 
-                  width: 80, 
-                  height: 80, 
-                  bgcolor: 'primary.main',
-                  fontSize: '2rem',
-                  fontWeight: 'bold'
+                  width: 120, 
+                  height: 'auto',
+                  objectFit: 'contain'
                 }}
-              >
-                {company.name.charAt(0)}
-              </Avatar>
+              />
               <Box>
                 <Typography variant="h4" fontWeight="bold" color="primary">
                   {company.name}
@@ -106,130 +107,111 @@ const EstimateInvoiceView = forwardRef(({ estimate, companyInfo }, ref) => {
                 </Typography>
               </Box>
             </Box>
-            <Box>
-              <Typography variant="body2">{company.address}</Typography>
-              <Typography variant="body2">{company.city}, {company.state} {company.zipCode}</Typography>
-              <Typography variant="body2">📞 {company.phone}</Typography>
-              <Typography variant="body2">✉️ {company.email}</Typography>
-              {company.website && (
-                <Typography variant="body2">🌐 {company.website}</Typography>
-              )}
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body2" sx={{ fontSize: '0.875rem', lineHeight: 1.6 }}>
+                {company.address}
+              </Typography>
+              <Typography variant="body2" sx={{ fontSize: '0.875rem', lineHeight: 1.6 }}>
+                {company.city}, {company.state} {company.zipCode} / USA
+              </Typography>
+              <Typography variant="body2" sx={{ fontSize: '0.875rem', lineHeight: 1.6 }}>
+                {company.phone}
+              </Typography>
+              <Typography variant="body2" sx={{ fontSize: '0.875rem', lineHeight: 1.6 }}>
+                {company.email}
+              </Typography>
             </Box>
           </Grid>
-          <Grid item xs={12} md={4}>
-            <Box sx={{ textAlign: { xs: 'left', md: 'right' } }}>
-              <Typography variant="h3" fontWeight="bold" color="primary" gutterBottom>
-                PROJECT ESTIMATE
+          <Grid item xs={12} md={6}>
+            <Box sx={{ textAlign: 'right' }}>
+              <Typography 
+                variant="h3" 
+                fontWeight="bold" 
+                sx={{ 
+                  color: '#4A90E2',
+                  fontSize: '2.5rem',
+                  letterSpacing: '0.05em'
+                }}
+                gutterBottom
+              >
+                INVOICE
               </Typography>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="h6" color="text.secondary">
-                  Estimate #{estimate._id?.slice(-6).toUpperCase() || 'DRAFT'}
+              <Box sx={{ 
+                bgcolor: '#4A90E2', 
+                color: 'white', 
+                p: 2, 
+                borderRadius: 1,
+                display: 'inline-block',
+                minWidth: '200px'
+              }}>
+                <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                  INVOICE NUMBER
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Date: {format(new Date(estimate.visitDate || estimate.createdAt), 'MMM dd, yyyy')}
+                <Typography variant="h6" fontWeight="bold">
+                  {estimate._id?.slice(-6).toUpperCase() || '5736'}
                 </Typography>
               </Box>
-              <Box sx={{ display: 'flex', gap: 1, justifyContent: { xs: 'flex-start', md: 'flex-end' }, flexWrap: 'wrap' }}>
-                <Chip 
-                  label={estimate.status?.toUpperCase() || 'DRAFT'} 
-                  color={getStatusColor(estimate.status)}
-                  size="small"
-                />
-                <Chip 
-                  label={`${estimate.priority?.toUpperCase() || 'MEDIUM'} PRIORITY`} 
-                  color={getPriorityColor(estimate.priority)}
-                  size="small"
-                  variant="outlined"
-                />
+              <Box sx={{ 
+                bgcolor: '#5BA3F5', 
+                color: 'white', 
+                p: 2, 
+                borderRadius: 1,
+                display: 'inline-block',
+                minWidth: '200px',
+                mt: 1
+              }}>
+                <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                  DUE DATE
+                </Typography>
+                <Typography variant="h6" fontWeight="bold">
+                  {format(new Date(estimate.proposedStartDate || estimate.visitDate || estimate.createdAt), 'MM/dd/yyyy')}
+                </Typography>
               </Box>
             </Box>
           </Grid>
         </Grid>
       </Box>
 
-      <Divider sx={{ mb: 3 }} />
-
-      {/* Project Information */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h5" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <ProjectIcon color="primary" />
-          Project Details
-        </Typography>
-        
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={8}>
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="h6" fontWeight="bold" color="primary">
-                {estimate.title}
+      {/* BILL TO and SHIP TO Section */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} md={6}>
+          <Box sx={{ bgcolor: '#E8F4FD', p: 2, borderRadius: 1 }}>
+            <Typography variant="subtitle2" fontWeight="bold" sx={{ color: '#4A90E2', mb: 1 }}>
+              BILL TO:
+            </Typography>
+            <Typography variant="body2" fontWeight="bold">
+              {estimate.building?.name || 'Client Name'}
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+              {estimate.building?.address || 'Address'}
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+              {estimate.building?.city || 'McLean'}, VA {estimate.building?.zipCode || '22101'}
+            </Typography>
+          </Box>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <Box sx={{ bgcolor: '#E8F4FD', p: 2, borderRadius: 1 }}>
+            <Typography variant="subtitle2" fontWeight="bold" sx={{ color: '#4A90E2', mb: 1 }}>
+              SHIP TO:
+            </Typography>
+            <Typography variant="body2" fontWeight="bold">
+              {estimate.building?.name || 'Client Name'}
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+              {estimate.building?.address || 'Address'}
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+              {estimate.building?.city || 'McLean'}, VA {estimate.building?.zipCode || '22101'}
+            </Typography>
+            {estimate.apartmentNumber && (
+              <Typography variant="body2" sx={{ fontSize: '0.875rem', mt: 0.5 }}>
+                Unit: {estimate.apartmentNumber}
               </Typography>
-              <Typography variant="body1" sx={{ mt: 1, lineHeight: 1.6 }}>
-                {estimate.description}
-              </Typography>
-            </Box>
-            
-            {estimate.clientNotes && (
-              <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1, mb: 2 }}>
-                <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-                  Special Requirements:
-                </Typography>
-                <Typography variant="body2">
-                  {estimate.clientNotes}
-                </Typography>
-              </Box>
             )}
-          </Grid>
-          
-          <Grid item xs={12} md={4}>
-            <Box sx={{ p: 2, bgcolor: 'primary.light', borderRadius: 1, color: 'primary.contrastText' }}>
-              <Typography variant="h6" fontWeight="bold" gutterBottom>
-                Project Information
-              </Typography>
-              
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <BuildingIcon fontSize="small" />
-                <Box>
-                  <Typography variant="body2" fontWeight="bold">Building:</Typography>
-                  <Typography variant="body2">{estimate.building?.name || 'N/A'}</Typography>
-                </Box>
-              </Box>
-              
-              {estimate.apartmentNumber && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                  <Typography variant="body2" fontWeight="bold">Unit:</Typography>
-                  <Typography variant="body2">{estimate.apartmentNumber}</Typography>
-                </Box>
-              )}
-              
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <CalendarIcon fontSize="small" />
-                <Box>
-                  <Typography variant="body2" fontWeight="bold">Visit Date:</Typography>
-                  <Typography variant="body2">
-                    {format(new Date(estimate.visitDate || estimate.createdAt), 'MMM dd, yyyy')}
-                  </Typography>
-                </Box>
-              </Box>
-              
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <DurationIcon fontSize="small" />
-                <Box>
-                  <Typography variant="body2" fontWeight="bold">Duration:</Typography>
-                  <Typography variant="body2">{estimate.estimatedDuration || 1} day(s)</Typography>
-                </Box>
-              </Box>
-              
-              {estimate.proposedStartDate && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="body2" fontWeight="bold">Start Date:</Typography>
-                  <Typography variant="body2">
-                    {format(new Date(estimate.proposedStartDate), 'MMM dd, yyyy')}
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-          </Grid>
+          </Box>
         </Grid>
-      </Box>
+      </Grid>
 
       {/* Cost Breakdown */}
       <Box sx={{ mb: 4 }}>
@@ -241,7 +223,13 @@ const EstimateInvoiceView = forwardRef(({ estimate, companyInfo }, ref) => {
         <TableContainer component={Paper} variant="outlined">
           <Table>
             <TableHead>
-              <TableRow sx={{ bgcolor: 'grey.100' }}>
+              <TableRow sx={{ 
+                bgcolor: 'grey.100', 
+                color: 'primary.main', 
+                fontWeight: 'bold', 
+                fontSize: '1rem', 
+                textTransform: 'uppercase' 
+              }}>
                 {estimate.lineItems && estimate.lineItems.length > 0 ? (
                   <>
                     <TableCell><strong>Service Date</strong></TableCell>
