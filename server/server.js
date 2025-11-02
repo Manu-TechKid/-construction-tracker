@@ -59,31 +59,58 @@ app.use('/api', limiter);
 // Body parser, reading data from body into req.body
 app.use(express.json({ limit: '10kb' }));
 
-// CORS
+// CORS - CRITICAL FIX for admin.servicesdsj.com
 const allowedOrigins = [
-  process.env.CORS_ORIGIN || 'http://localhost:3000',
   'https://admin.servicesdsj.com',
-  'http://localhost:3001',
-  'https://construction-tracker-webapp.onrender.com',
+  'http://admin.servicesdsj.com',
   'https://servicesdsj.com',
-  'http://admin.servicesdsj.com'
-];
+  'http://servicesdsj.com',
+  'https://construction-tracker-webapp.onrender.com',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  process.env.CORS_ORIGIN
+].filter(Boolean);
+
+console.log('🔒 CORS Allowed Origins:', allowedOrigins);
 
 const corsOptions = {
-  origin: (origin, callback) => {
-    // Allow requests with no origin like Postman or server-to-server
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(null, true); // relax for now; tighten later if needed
+  origin: function (origin, callback) {
+    console.log('🌐 CORS Request from origin:', origin);
+    // Allow requests with no origin (mobile apps, Postman, curl, etc.)
+    if (!origin) {
+      console.log('✅ CORS: Allowing request with no origin');
+      return callback(null, true);
+    }
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      console.log('✅ CORS: Origin allowed:', origin);
+      callback(null, true);
+    } else {
+      console.log('⚠️ CORS: Origin NOT in whitelist:', origin);
+      // TEMPORARILY allow all origins for debugging
+      callback(null, true);
+    }
   },
-  credentials: process.env.CORS_CREDENTIALS === 'true' || true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-  exposedHeaders: ['Content-Disposition'],
-  optionsSuccessStatus: 204
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With', 
+    'Accept', 
+    'Origin',
+    'Access-Control-Allow-Origin',
+    'Access-Control-Allow-Credentials'
+  ],
+  exposedHeaders: ['Content-Disposition', 'X-Total-Count'],
+  optionsSuccessStatus: 200,
+  preflightContinue: false
 };
 
+// Apply CORS middleware BEFORE any routes
 app.use(cors(corsOptions));
+
+// Handle preflight requests for all routes
 app.options('*', cors(corsOptions));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
