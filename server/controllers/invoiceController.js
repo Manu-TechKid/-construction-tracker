@@ -745,7 +745,7 @@ exports.calculateTotals = catchAsync(async (req, res, next) => {
     });
 });
 
-// Helper function to generate HTML for PDF
+// Helper function to generate CLEAN PROFESSIONAL HTML for PDF (matching image 3 style)
 const generateInvoiceHTML = (invoice) => {
   const hasWorkOrders = Array.isArray(invoice.workOrders) && invoice.workOrders.length > 0;
   const lineItems = hasWorkOrders ? invoice.workOrders : invoice.lineItems || [];
@@ -758,7 +758,7 @@ const generateInvoiceHTML = (invoice) => {
   };
 
   const formatDate = (date) => {
-    if (!date) return '';
+    if (!date) return 'N/A';
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -775,330 +775,343 @@ const generateInvoiceHTML = (invoice) => {
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          font-size: 14px;
-          line-height: 1.5;
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          font-size: 11px;
+          line-height: 1.4;
           color: #333;
           background-color: #fff;
+          padding: 30px;
         }
         .invoice-container {
-          max-width: 800px;
+          max-width: 850px;
           margin: 0 auto;
-          padding: 40px 20px;
         }
+        
+        /* HEADER: Company Info LEFT + Logo RIGHT */
         .header {
-          text-align: center;
-          margin-bottom: 40px;
-          border-bottom: 3px solid #2c3e50;
-          padding-bottom: 30px;
-          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-          padding: 30px;
-          border-radius: 10px;
-          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+          display: table;
+          width: 100%;
+          margin-bottom: 30px;
         }
-        .logo-container {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-bottom: 20px;
-          background: white;
-          padding: 15px;
-          border-radius: 8px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        .header-left {
+          display: table-cell;
+          width: 70%;
+          vertical-align: top;
         }
-        .logo-placeholder {
-          width: 80px;
-          height: 80px;
-          margin-right: 15px;
-          background: linear-gradient(135deg, #3498db, #2c3e50);
-          border-radius: 8px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          position: relative;
-        }
-        .building-icon {
-          font-size: 24px;
-          margin-bottom: 2px;
-        }
-        .dsj-text {
-          font-size: 18px;
-          font-weight: bold;
-          letter-spacing: 1px;
-        }
-        .company-text {
-          text-align: left;
+        .header-right {
+          display: table-cell;
+          width: 30%;
+          text-align: right;
+          vertical-align: top;
         }
         .company-name {
-          font-size: 36px;
-          font-weight: bold;
-          color: #2c3e50;
-          margin: 0;
-          text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-          background: linear-gradient(135deg, #3498db, #2c3e50);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
+          font-size: 11px;
+          font-weight: 600;
+          color: #333;
+          margin-bottom: 4px;
         }
-        .company-tagline {
-          font-size: 16px;
-          color: #7f8c8d;
-          margin: 5px 0 15px 0;
-          font-style: italic;
+        .company-info {
+          font-size: 9px;
+          color: #666;
+          line-height: 1.5;
         }
-        .company-contact {
-          font-size: 14px;
-          color: #95a5a6;
-          margin: 0;
-          font-weight: 500;
+        .logo-img {
+          width: 80px;
+          height: 80px;
+          object-fit: contain;
         }
+        
+        /* INVOICE TITLE */
         .invoice-title {
-          font-size: 28px;
-          color: #2c3e50;
-          margin: 20px 0 10px 0;
+          font-size: 18px;
+          font-weight: 600;
+          color: #333;
+          margin-bottom: 20px;
         }
-        .invoice-info {
-          display: flex;
-          justify-content: space-between;
-          margin: 30px 0;
-          padding: 20px;
-          background-color: #f8f9fa;
-          border-radius: 8px;
+        
+        /* BILL TO + PAYMENT BOXES */
+        .info-section {
+          display: table;
+          width: 100%;
+          margin-bottom: 20px;
         }
-        .invoice-details, .client-details {
-          flex: 1;
+        .bill-to {
+          display: table-cell;
+          width: 50%;
+          vertical-align: top;
         }
-        .section-title {
-          font-size: 16px;
-          font-weight: bold;
-          color: #2c3e50;
-          margin-bottom: 10px;
-          border-bottom: 2px solid #3498db;
-          padding-bottom: 3px;
+        .payment-boxes {
+          display: table-cell;
+          width: 50%;
+          text-align: right;
+          vertical-align: top;
         }
-        .info-row {
-          margin-bottom: 8px;
+        .section-label {
+          font-size: 10px;
+          font-weight: 600;
+          color: #1976d2;
+          margin-bottom: 5px;
         }
-        .info-label {
-          font-weight: bold;
-          color: #555;
+        .bill-to-content {
+          font-size: 9px;
+          color: #666;
+          line-height: 1.5;
+        }
+        .bill-to-name {
+          font-size: 10px;
+          font-weight: 600;
+          color: #333;
+          margin-bottom: 3px;
+        }
+        
+        /* PAYMENT INFO BOXES */
+        .payment-box {
           display: inline-block;
-          width: 120px;
+          padding: 10px;
+          border-radius: 4px;
+          min-width: 90px;
+          text-align: center;
+          margin-left: 5px;
+          vertical-align: top;
         }
-        .info-value {
-          display: inline-block;
+        .box-light {
+          background-color: #E3F2FD;
         }
-        .work-orders-section {
-          margin: 30px 0;
+        .box-blue {
+          background-color: #1976d2;
+          color: #ffffff;
         }
-        .table-container {
+        .box-label {
+          font-size: 8px;
+          margin-bottom: 4px;
+        }
+        .box-value {
+          font-size: 10px;
+          font-weight: 600;
+        }
+        
+        /* SERVICES TABLE */
+        .services-table {
           width: 100%;
           border-collapse: collapse;
           margin: 20px 0;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          border: 1px solid #e0e0e0;
         }
-        .table-header {
-          background-color: #2c3e50;
-          color: white;
-          font-weight: bold;
+        .services-table thead {
+          background-color: #2C3E50;
         }
-        .table-header th {
-          padding: 15px;
+        .services-table th {
+          color: #ffffff;
+          font-size: 10px;
+          font-weight: 600;
+          padding: 12px 10px;
           text-align: left;
-          border-right: 1px solid #34495e;
         }
-        .table-header th:last-child {
-          border-right: none;
+        .services-table th:nth-child(4),
+        .services-table th:nth-child(5),
+        .services-table th:nth-child(6) {
+          text-align: right;
         }
-        .table-body td {
-          padding: 15px;
-          border-bottom: 1px solid #ecf0f1;
-          border-right: 1px solid #ecf0f1;
+        .services-table td {
+          font-size: 9px;
+          padding: 12px 10px;
+          border-bottom: 1px solid #e0e0e0;
         }
-        .table-body td:last-child {
-          border-right: none;
+        .services-table td:nth-child(4),
+        .services-table td:nth-child(5),
+        .services-table td:nth-child(6) {
+          text-align: right;
         }
-        .table-body tr:nth-child(even) {
-          background-color: #f8f9fa;
+        .services-table tbody tr:nth-child(even) {
+          background-color: #f9f9f9;
         }
+        
+        /* TOTALS */
         .totals-section {
-          background-color: #f8f9fa;
-          padding: 25px;
-          border-radius: 8px;
-          margin-top: 30px;
+          width: 250px;
+          margin-left: auto;
+          margin-top: 20px;
         }
         .totals-row {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 10px;
+          display: table;
+          width: 100%;
+          margin-bottom: 8px;
         }
-        .totals-row:last-child {
-          margin-bottom: 0;
-          border-top: 2px solid #2c3e50;
-          padding-top: 15px;
-          font-size: 18px;
-          font-weight: bold;
-          color: #2c3e50;
+        .totals-label {
+          display: table-cell;
+          font-size: 10px;
+          color: #666;
         }
+        .totals-value {
+          display: table-cell;
+          font-size: 10px;
+          color: #333;
+          text-align: right;
+        }
+        .totals-final {
+          border-top: 2px solid #2C3E50;
+          padding-top: 10px;
+          margin-top: 5px;
+        }
+        .totals-final .totals-label,
+        .totals-final .totals-value {
+          font-size: 12px;
+          font-weight: 600;
+        }
+        .totals-final .totals-value {
+          color: #1976d2;
+        }
+        
+        /* PAYMENT TERMS */
         .payment-terms {
-          background-color: #fff3cd;
-          border: 1px solid #ffeaa7;
-          padding: 15px;
-          border-radius: 5px;
+          background-color: #FFF9E6;
+          border: 1px solid #FFE082;
+          padding: 12px;
+          border-radius: 4px;
           margin: 20px 0;
         }
-        .notes-section {
-          background-color: #d1ecf1;
-          border: 1px solid #bee5eb;
-          padding: 15px;
-          border-radius: 5px;
-          margin: 20px 0;
+        .payment-terms-title {
+          font-size: 9px;
+          font-weight: 600;
+          color: #666;
+          margin-bottom: 4px;
         }
+        .payment-terms-text {
+          font-size: 9px;
+          color: #666;
+          line-height: 1.5;
+        }
+        
+        /* FOOTER */
         .footer {
           text-align: center;
-          margin-top: 50px;
+          margin-top: 30px;
           padding-top: 20px;
-          border-top: 1px solid #bdc3c7;
-          color: #7f8c8d;
-          font-size: 12px;
+          border-top: 1px solid #e0e0e0;
         }
-        .status-badge {
-          display: inline-block;
-          padding: 4px 12px;
-          border-radius: 20px;
+        .footer-title {
           font-size: 11px;
-          font-weight: bold;
-          text-transform: uppercase;
+          font-weight: 600;
+          color: #1976d2;
+          margin-bottom: 5px;
         }
-        .status-paid { background-color: #d4edda; color: #155724; }
-        .status-pending { background-color: #fff3cd; color: #856404; }
-        .status-overdue { background-color: #f8d7da; color: #721c24; }
-        .status-open { background-color: #e2e3e5; color: #383d41; }
+        .footer-text {
+          font-size: 8px;
+          color: #999;
+        }
       </style>
     </head>
     <body>
       <div class="invoice-container">
+        
+        <!-- HEADER: Company Info LEFT + Logo RIGHT -->
         <div class="header">
-          <div class="logo-container">
-            <div class="logo-placeholder">
-              <div class="building-icon">🏢</div>
-              <div class="dsj-text">DSJ</div>
-            </div>
-            <div class="company-text">
-              <div class="company-name">DSJ Construction & Services LLC</div>
-              <div class="company-tagline">Professional Construction & Renovation Services</div>
-            </div>
-          </div>
-          <div class="company-contact">
-            Phone: (555) 123-4567 | Email: info@dsjconstruction.com
-          </div>
-        </div>
-
-        <div class="invoice-title">INVOICE</div>
-
-        <div class="invoice-info">
-          <div class="invoice-details">
-            <div class="section-title">Invoice Details</div>
-            <div class="info-row">
-              <span class="info-label">Invoice Number:</span>
-              <span class="info-value">${invoice.invoiceNumber || 'N/A'}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Invoice Date:</span>
-              <span class="info-value">${formatDate(invoice.invoiceDate)}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Due Date:</span>
-              <span class="info-value">${formatDate(invoice.dueDate)}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Status:</span>
-              <span class="info-value">
-                <span class="status-badge status-${invoice.status}">${invoice.status.toUpperCase()}</span>
-              </span>
+          <div class="header-left">
+            <div class="company-name">DSJ Construction & Services LLC</div>
+            <div class="company-info">
+              651 Pullman Pl<br>
+              McLean, VA 22102<br>
+              Phone: (555) 123-4567<br>
+              Email: info@dsjconstruction.com
             </div>
           </div>
-
-          <div class="client-details">
-            <div class="section-title">Bill To</div>
-            <div class="info-row">
-              <span class="info-label">Building:</span>
-              <span class="info-value">${invoice.building?.name || 'N/A'}</span>
-            </div>
-            ${invoice.building?.address ? `
-              <div class="info-row">
-                <span class="info-label">Address:</span>
-                <span class="info-value">${invoice.building.address}</span>
-              </div>
-            ` : ''}
-            ${invoice.building?.city ? `
-              <div class="info-row">
-                <span class="info-label">City:</span>
-                <span class="info-value">${invoice.building.city}</span>
-              </div>
-            ` : ''}
+          <div class="header-right">
+            <img src="https://res.cloudinary.com/dwqxiigpd/image/upload/v1756186310/dsj-logo_mb3npa.jpg" 
+                 alt="DSJ Logo" 
+                 class="logo-img"
+                 onerror="this.style.display='none';" />
           </div>
         </div>
-
-        <div class="work-orders-section">
-          <div class="section-title">Services Performed</div>
-          <table class="table-container">
-            <thead class="table-header">
+        
+        <!-- INVOICE TITLE -->
+        <div class="invoice-title">INVOICE ${invoice.invoiceNumber || 'N/A'}</div>
+        
+        <!-- BILL TO + PAYMENT BOXES -->
+        <div class="info-section">
+          <div class="bill-to">
+            <div class="section-label">BILL TO</div>
+            <div class="bill-to-name">${invoice.building?.name || 'N/A'}</div>
+            <div class="bill-to-content">
+              ${invoice.building?.address || ''}<br>
+              ${invoice.building?.city ? `${invoice.building.city}, ${invoice.building.state || ''} ${invoice.building.zipCode || ''}` : ''}
+            </div>
+          </div>
+          <div class="payment-boxes">
+            <div class="payment-box box-light">
+              <div class="box-label">DATE ISSUED</div>
+              <div class="box-value">${formatDate(invoice.invoiceDate)}</div>
+            </div>
+            <div class="payment-box box-blue">
+              <div class="box-label" style="color:#ffffff;">PLEASE PAY</div>
+              <div class="box-value" style="color:#ffffff;">${formatCurrency(invoice.total)}</div>
+            </div>
+            <div class="payment-box box-light">
+              <div class="box-label">DUE DATE</div>
+              <div class="box-value">${formatDate(invoice.dueDate)}</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- SERVICES TABLE -->
+        <table class="services-table">
+          <thead>
+            <tr>
+              <th>DATE</th>
+              <th>ACTIVITY</th>
+              <th>DESCRIPTION</th>
+              <th>QTY</th>
+              <th>RATE</th>
+              <th>AMOUNT</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lineItems.length > 0 ? lineItems.map(item => `
               <tr>
-                <th>Description</th>
-                <th>Quantity</th>
-                <th>Unit Price</th>
-                <th>Total</th>
+                <td>${formatDate(item.date || invoice.invoiceDate)}</td>
+                <td>${item.activity || item.service || 'Service'}</td>
+                <td>${item.description || item.serviceSubcategory || ''}</td>
+                <td>${item.quantity || 1}</td>
+                <td>${formatCurrency(item.unitPrice || item.price || 0)}</td>
+                <td>${formatCurrency(item.totalPrice || ((item.quantity || 1) * (item.unitPrice || item.price || 0)))}</td>
               </tr>
-            </thead>
-            <tbody class="table-body">
-              ${lineItems.length > 0 ? lineItems.map(wo => `
-                <tr>
-                  <td>${wo.description || wo.serviceSubcategory || 'Work Order Service'}</td>
-                  <td>${wo.quantity || 1}</td>
-                  <td>${formatCurrency(wo.unitPrice)}</td>
-                  <td>${formatCurrency(wo.totalPrice)}</td>
-                </tr>
-              `).join('') : '<tr><td colspan="4">No services listed</td></tr>'}
-            </tbody>
-          </table>
-        </div>
-
+            `).join('') : '<tr><td colspan="6">No services listed</td></tr>'}
+          </tbody>
+        </table>
+        
+        <!-- TOTALS -->
         <div class="totals-section">
           <div class="totals-row">
-            <span>Subtotal:</span>
-            <span>${formatCurrency(invoice.subtotal)}</span>
+            <div class="totals-label">SUBTOTAL</div>
+            <div class="totals-value">${formatCurrency(invoice.subtotal)}</div>
           </div>
           ${invoice.tax ? `
             <div class="totals-row">
-              <span>Tax:</span>
-              <span>${formatCurrency(invoice.tax)}</span>
+              <div class="totals-label">TAX</div>
+              <div class="totals-value">${formatCurrency(invoice.tax)}</div>
             </div>
           ` : ''}
-          <div class="totals-row">
-            <span>TOTAL AMOUNT DUE:</span>
-            <span>${formatCurrency(invoice.total)}</span>
+          <div class="totals-row totals-final">
+            <div class="totals-label">TOTAL DUE</div>
+            <div class="totals-value">${formatCurrency(invoice.total)}</div>
           </div>
         </div>
-
+        
+        <!-- PAYMENT TERMS -->
         <div class="payment-terms">
-          <strong>Payment Terms:</strong> Payment is due within 30 days of the invoice date. Thank you for your business!
-        </div>
-
-        ${invoice.notes ? `
-          <div class="notes-section">
-            <strong>Notes:</strong><br>
-            ${invoice.notes}
+          <div class="payment-terms-title">Payment Terms:</div>
+          <div class="payment-terms-text">
+            Payment is due within 30 days of the invoice date. Thank you for your business!
           </div>
-        ` : ''}
-
-        <div class="footer">
-          <p>This invoice was generated electronically and is valid without signature.</p>
-          <p>For questions about this invoice, please contact DSJ Construction Services.</p>
-          <p>Generated on ${formatDate(new Date())}</p>
         </div>
+        
+        <!-- FOOTER -->
+        <div class="footer">
+          <div class="footer-title">THANK YOU FOR YOUR BUSINESS!</div>
+          <div class="footer-text">
+            For questions about this invoice, please contact info@dsjconstruction.com
+          </div>
+        </div>
+        
       </div>
     </body>
     </html>

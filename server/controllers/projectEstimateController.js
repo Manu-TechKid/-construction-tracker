@@ -692,7 +692,7 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
   try {
     const pdf = require('html-pdf');
 
-    // Create HTML content for the PDF
+    // Create CLEAN PROFESSIONAL HTML content for the PDF (matching image 3 style)
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -700,284 +700,442 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
           <title>Project Estimate - ${projectEstimate.title}</title>
           <meta charset="utf-8">
           <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
-              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-              line-height: 1.6;
+              font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+              font-size: 11px;
+              line-height: 1.4;
               color: #333;
-              margin: 0;
-              padding: 20px;
-              background-color: #f9f9f9;
+              background-color: #fff;
+              padding: 30px;
             }
+            .estimate-container {
+              max-width: 850px;
+              margin: 0 auto;
+            }
+            
+            /* HEADER: Company Info LEFT + Logo RIGHT */
             .header {
-              text-align: center;
-              margin-bottom: 40px;
-              border-bottom: 3px solid #2c3e50;
-              padding-bottom: 30px;
-              background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-              padding: 30px;
-              border-radius: 10px;
-              box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            }
-            .logo-container {
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              margin-bottom: 20px;
-              background: white;
-              padding: 15px;
-              border-radius: 8px;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            }
-            .logo-placeholder {
-              width: 80px;
-              height: 80px;
-              margin-right: 15px;
-              background: linear-gradient(135deg, #3498db, #2c3e50);
-              border-radius: 8px;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              color: white;
-              position: relative;
-            }
-            .building-icon {
-              font-size: 24px;
-              margin-bottom: 2px;
-            }
-            .dsj-text {
-              font-size: 18px;
-              font-weight: bold;
-              letter-spacing: 1px;
-            }
-            .company-text {
-              text-align: left;
-            }
-            .company-name {
-              font-size: 36px;
-              font-weight: bold;
-              color: #2c3e50;
-              margin: 0;
-              text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-            }
-            .company-tagline {
-              font-size: 16px;
-              color: #7f8c8d;
-              margin: 5px 0 15px 0;
-              font-style: italic;
-            }
-            .company-info {
-              text-align: center;
-              margin-bottom: 40px;
-              color: #666;
-            }
-            .estimate-details {
-              background-color: white;
-              padding: 30px;
-              border-radius: 8px;
-              box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+              display: table;
+              width: 100%;
               margin-bottom: 30px;
             }
-            .section {
-              margin-bottom: 25px;
+            .header-left {
+              display: table-cell;
+              width: 70%;
+              vertical-align: top;
             }
-            .section h3 {
-              color: #2c3e50;
-              border-bottom: 2px solid #3498db;
-              padding-bottom: 5px;
-              margin-bottom: 15px;
+            .header-right {
+              display: table-cell;
+              width: 30%;
+              text-align: right;
+              vertical-align: top;
             }
-            .info-grid {
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 20px;
+            .company-name {
+              font-size: 11px;
+              font-weight: 600;
+              color: #333;
+              margin-bottom: 4px;
+            }
+            .company-info {
+              font-size: 9px;
+              color: #666;
+              line-height: 1.5;
+            }
+            .logo-img {
+              width: 80px;
+              height: 80px;
+              object-fit: contain;
+            }
+            
+            /* ESTIMATE TITLE */
+            .estimate-title {
+              font-size: 18px;
+              font-weight: 600;
+              color: #333;
               margin-bottom: 20px;
             }
-            .info-item {
-              margin-bottom: 10px;
+            
+            /* ESTIMATE INFO SECTION */
+            .info-section {
+              padding-bottom: 15px;
+              margin-bottom: 20px;
+              border-bottom: 2px solid #1976d2;
+            }
+            .info-row {
+              display: table;
+              width: 100%;
+              margin-bottom: 8px;
             }
             .info-label {
-              font-weight: bold;
-              color: #555;
-              display: block;
+              display: table-cell;
+              font-size: 9px;
+              color: #666;
+              width: 150px;
             }
             .info-value {
-              margin-top: 3px;
-            }
-            .financial-summary {
-              background-color: #f8f9fa;
-              padding: 20px;
-              border-radius: 6px;
-              border-left: 4px solid #28a745;
-              margin: 20px 0;
-            }
-            .financial-row {
-              display: flex;
-              justify-content: space-between;
-              margin-bottom: 10px;
-            }
-            .financial-row:last-child {
-              margin-bottom: 0;
-            }
-            .total-row {
-              font-weight: bold;
-              font-size: 18px;
-              color: #28a745;
-              border-top: 2px solid #28a745;
-              padding-top: 10px;
-              margin-top: 15px;
-            }
-            .description {
-              background-color: #fff3cd;
-              padding: 15px;
-              border-radius: 6px;
-              border-left: 4px solid #ffc107;
-              margin: 20px 0;
-            }
-            .footer {
-              text-align: center;
-              margin-top: 40px;
-              padding-top: 20px;
-              border-top: 1px solid #ddd;
-              color: #666;
-              font-size: 12px;
+              display: table-cell;
+              font-size: 10px;
+              font-weight: 600;
+              color: #333;
             }
             .status-badge {
               display: inline-block;
-              padding: 4px 12px;
-              border-radius: 20px;
-              font-size: 12px;
-              font-weight: bold;
+              padding: 3px 10px;
+              border-radius: 3px;
+              font-size: 9px;
+              font-weight: 600;
               text-transform: uppercase;
+              background-color: #ff9800;
+              color: #ffffff;
             }
-            .status-draft { background-color: #e9ecef; color: #495057; }
-            .status-submitted { background-color: #d4edda; color: #155724; }
-            .status-approved { background-color: #d1ecf1; color: #0c5460; }
-            .status-rejected { background-color: #f8d7da; color: #721c24; }
-            .status-client_accepted { background-color: #d4edda; color: #155724; }
-            .status-client_rejected { background-color: #f8d7da; color: #721c24; }
-            .status-converted_to_invoice { background-color: #e2e3e5; color: #383d41; }
+            .status-approved {
+              background-color: #4caf50;
+            }
+            
+            /* DESCRIPTION BOX */
+            .description-box {
+              background-color: #FFF9E6;
+              border: 1px solid #FFE082;
+              padding: 12px;
+              border-radius: 4px;
+              margin: 15px 0;
+            }
+            .description-title {
+              font-size: 10px;
+              font-weight: 600;
+              color: #1976d2;
+              margin-bottom: 8px;
+            }
+            .description-text {
+              font-size: 9px;
+              color: #666;
+              line-height: 1.6;
+            }
+            
+            /* FINANCIAL TABLE */
+            .financial-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 20px 0;
+              border: 1px solid #e0e0e0;
+            }
+            .financial-table thead {
+              background-color: #2C3E50;
+            }
+            .financial-table th {
+              color: #ffffff;
+              font-size: 10px;
+              font-weight: 600;
+              padding: 12px 10px;
+              text-align: left;
+            }
+            .financial-table th:last-child {
+              text-align: right;
+            }
+            .financial-table td {
+              font-size: 9px;
+              padding: 12px 10px;
+              border-bottom: 1px solid #e0e0e0;
+            }
+            .financial-table td:last-child {
+              text-align: right;
+            }
+            .financial-table tbody tr:nth-child(even) {
+              background-color: #f9f9f9;
+            }
+            
+            /* TOTALS */
+            .totals-section {
+              width: 250px;
+              margin-left: auto;
+              margin-top: 20px;
+              background-color: #E8F5E9;
+              padding: 15px;
+              border-radius: 4px;
+            }
+            .totals-row {
+              display: table;
+              width: 100%;
+              margin-bottom: 8px;
+            }
+            .totals-label {
+              display: table-cell;
+              font-size: 10px;
+              color: #666;
+            }
+            .totals-value {
+              display: table-cell;
+              font-size: 10px;
+              color: #333;
+              text-align: right;
+            }
+            .totals-final {
+              border-top: 2px solid #2C3E50;
+              padding-top: 10px;
+              margin-top: 5px;
+            }
+            .totals-final .totals-label,
+            .totals-final .totals-value {
+              font-size: 12px;
+              font-weight: 600;
+            }
+            .totals-final .totals-value {
+              color: #2e7d32;
+            }
+            
+            /* NOTES BOX */
+            .notes-box {
+              background-color: #FFF9E6;
+              border: 1px solid #FFE082;
+              padding: 12px;
+              border-radius: 4px;
+              margin: 20px 0;
+            }
+            .notes-title {
+              font-size: 10px;
+              font-weight: 600;
+              color: #1976d2;
+              margin-bottom: 8px;
+            }
+            .notes-text {
+              font-size: 9px;
+              color: #666;
+              line-height: 1.6;
+            }
+            
+            /* TIMELINE */
+            .timeline-section {
+              margin: 20px 0;
+            }
+            .timeline-title {
+              font-size: 10px;
+              font-weight: 600;
+              color: #1976d2;
+              margin-bottom: 10px;
+            }
+            .timeline-grid {
+              display: table;
+              width: 100%;
+            }
+            .timeline-item {
+              display: table-row;
+            }
+            .timeline-label {
+              display: table-cell;
+              font-size: 9px;
+              color: #666;
+              padding: 4px 0;
+              width: 150px;
+            }
+            .timeline-value {
+              display: table-cell;
+              font-size: 10px;
+              font-weight: 600;
+              color: #333;
+              padding: 4px 0;
+            }
+            
+            /* TERMS BOX */
+            .terms-box {
+              background-color: #f5f5f5;
+              padding: 12px;
+              border-radius: 4px;
+              margin: 20px 0;
+            }
+            .terms-title {
+              font-size: 9px;
+              font-weight: 600;
+              color: #333;
+              margin-bottom: 8px;
+            }
+            .terms-text {
+              font-size: 8px;
+              color: #666;
+              line-height: 1.6;
+            }
+            
+            /* FOOTER */
+            .footer {
+              text-align: center;
+              margin-top: 30px;
+              padding-top: 20px;
+              border-top: 1px solid #e0e0e0;
+            }
+            .footer-text {
+              font-size: 8px;
+              color: #999;
+              margin-bottom: 5px;
+            }
           </style>
         </head>
         <body>
-          <div class="header">
-            <div class="logo-container">
-              <div class="logo-placeholder">
-                <div class="building-icon">🏢</div>
-                <div class="dsj-text">DSJ</div>
-              </div>
-              <div class="company-text">
+          <div class="estimate-container">
+            
+            <!-- HEADER: Company Info LEFT + Logo RIGHT -->
+            <div class="header">
+              <div class="header-left">
                 <div class="company-name">DSJ Construction & Services LLC</div>
-                <div class="company-tagline">Professional Construction & Renovation Services</div>
+                <div class="company-info">
+                  651 Pullman Pl<br>
+                  McLean, VA 22102<br>
+                  Phone: (555) 123-4567<br>
+                  Email: info@dsjconstruction.com
+                </div>
+              </div>
+              <div class="header-right">
+                <img src="https://res.cloudinary.com/dwqxiigpd/image/upload/v1756186310/dsj-logo_mb3npa.jpg" 
+                     alt="DSJ Logo" 
+                     class="logo-img"
+                     onerror="this.style.display='none';" />
               </div>
             </div>
-            <h2 style="color: #2c3e50; margin: 20px 0 0 0; font-size: 24px;">Project Estimate</h2>
-          </div>
-
-          <div class="company-info">
-            <p><strong>DSJ Construction Services</strong></p>
-            <p>Professional Construction & Renovation Services</p>
-            <p>Phone: (555) 123-4567 | Email: info@dsjconstruction.com</p>
-          </div>
-
-          <div class="estimate-details">
-            <div class="section">
-              <h3>Project Information</h3>
-              <div class="info-grid">
-                <div class="info-item">
-                  <span class="info-label">Estimate Number:</span>
-                  <div class="info-value">${projectEstimate._id}</div>
+            
+            <!-- ESTIMATE TITLE -->
+            <div class="estimate-title">PROJECT ESTIMATE</div>
+            
+            <!-- ESTIMATE INFO -->
+            <div class="info-section">
+              <div class="info-row">
+                <div class="info-label">Estimate Number:</div>
+                <div class="info-value">${projectEstimate._id.toString().substring(0, 12).toUpperCase()}</div>
+              </div>
+              <div class="info-row">
+                <div class="info-label">Status:</div>
+                <div class="info-value">
+                  <span class="status-badge ${projectEstimate.status === 'approved' ? 'status-approved' : ''}">
+                    ${projectEstimate.status.replace('_', ' ').toUpperCase()}
+                  </span>
                 </div>
-                <div class="info-item">
-                  <span class="info-label">Status:</span>
-                  <div class="info-value">
-                    <span class="status-badge status-${projectEstimate.status}">${projectEstimate.status.replace('_', ' ').toUpperCase()}</span>
-                  </div>
+              </div>
+              <div class="info-row">
+                <div class="info-label">Created Date:</div>
+                <div class="info-value">${new Date(projectEstimate.createdAt || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+              </div>
+              <div class="info-row">
+                <div class="info-label">Project Title:</div>
+                <div class="info-value">${projectEstimate.title}</div>
+              </div>
+              <div class="info-row">
+                <div class="info-label">Building:</div>
+                <div class="info-value">${projectEstimate.building?.name || 'N/A'}</div>
+              </div>
+              ${projectEstimate.building?.address ? `
+                <div class="info-row">
+                  <div class="info-label">Address:</div>
+                  <div class="info-value" style="font-size:9px;font-weight:normal;">${projectEstimate.building.address}</div>
                 </div>
-                <div class="info-item">
-                  <span class="info-label">Project Title:</span>
-                  <div class="info-value">${projectEstimate.title}</div>
+              ` : ''}
+              ${projectEstimate.apartmentNumber ? `
+                <div class="info-row">
+                  <div class="info-label">Apartment:</div>
+                  <div class="info-value">${projectEstimate.apartmentNumber}</div>
                 </div>
-                <div class="info-item">
-                  <span class="info-label">Building:</span>
-                  <div class="info-value">${projectEstimate.building?.name || 'N/A'}</div>
+              ` : ''}
+              ${projectEstimate.createdBy ? `
+                <div class="info-row">
+                  <div class="info-label">Created By:</div>
+                  <div class="info-value">${projectEstimate.createdBy.name || projectEstimate.createdBy.email || 'N/A'}</div>
                 </div>
-                ${projectEstimate.apartmentNumber ? `
-                  <div class="info-item">
-                    <span class="info-label">Apartment:</span>
-                    <div class="info-value">${projectEstimate.apartmentNumber}</div>
-                  </div>
+              ` : ''}
+            </div>
+            
+            <!-- PROJECT DESCRIPTION -->
+            ${projectEstimate.description ? `
+              <div class="description-box">
+                <div class="description-title">Project Description</div>
+                <div class="description-text">${projectEstimate.description}</div>
+              </div>
+            ` : ''}
+            
+            <!-- FINANCIAL SUMMARY -->
+            <div class="description-title" style="margin-top:20px;">Financial Summary</div>
+            <table class="financial-table">
+              <thead>
+                <tr>
+                  <th>ITEM</th>
+                  <th>DESCRIPTION</th>
+                  <th>TOTAL</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Estimated Cost</td>
+                  <td>Project materials and labor cost</td>
+                  <td>$${projectEstimate.estimatedCost?.toLocaleString() || '0.00'}</td>
+                </tr>
+                ${projectEstimate.estimatedPrice && projectEstimate.estimatedPrice !== projectEstimate.estimatedCost ? `
+                  <tr>
+                    <td>Estimated Price</td>
+                    <td>Client quoted price</td>
+                    <td>$${projectEstimate.estimatedPrice.toLocaleString()}</td>
+                  </tr>
                 ` : ''}
-                <div class="info-item">
-                  <span class="info-label">Created By:</span>
-                  <div class="info-value">${projectEstimate.createdBy?.name || 'N/A'}</div>
+              </tbody>
+            </table>
+            
+            <!-- TOTALS -->
+            <div class="totals-section">
+              <div class="totals-row">
+                <div class="totals-label">Estimated Cost:</div>
+                <div class="totals-value">$${projectEstimate.estimatedCost?.toLocaleString() || '0.00'}</div>
+              </div>
+              ${projectEstimate.estimatedPrice && projectEstimate.estimatedPrice !== projectEstimate.estimatedCost ? `
+                <div class="totals-row">
+                  <div class="totals-label">Estimated Price:</div>
+                  <div class="totals-value">$${projectEstimate.estimatedPrice.toLocaleString()}</div>
                 </div>
+              ` : ''}
+              <div class="totals-row totals-final">
+                <div class="totals-label">Total Amount:</div>
+                <div class="totals-value">$${(projectEstimate.estimatedPrice || projectEstimate.estimatedCost || 0).toLocaleString()}</div>
               </div>
             </div>
-
-            <div class="section">
-              <h3>Project Description</h3>
-              <div class="description">
-                ${projectEstimate.description || 'No description provided'}
-              </div>
-            </div>
-
-            <div class="section">
-              <h3>Financial Summary</h3>
-              <div class="financial-summary">
-                <div class="financial-row">
-                  <span>Estimated Cost:</span>
-                  <span>$${projectEstimate.estimatedCost?.toLocaleString() || '0.00'}</span>
-                </div>
-                <div class="financial-row">
-                  <span>Estimated Price:</span>
-                  <span>$${projectEstimate.estimatedPrice?.toLocaleString() || '0.00'}</span>
-                </div>
-                <div class="financial-row total-row">
-                  <span>Total Amount:</span>
-                  <span>$${projectEstimate.estimatedPrice?.toLocaleString() || '0.00'}</span>
-                </div>
-              </div>
-            </div>
-
+            
+            <!-- ADDITIONAL NOTES -->
             ${projectEstimate.notes ? `
-              <div class="section">
-                <h3>Additional Notes</h3>
-                <div class="description">
-                  ${projectEstimate.notes}
+              <div class="notes-box">
+                <div class="notes-title">Additional Notes</div>
+                <div class="notes-text">${projectEstimate.notes}</div>
+              </div>
+            ` : ''}
+            
+            <!-- PROJECT TIMELINE -->
+            ${projectEstimate.estimatedDuration || projectEstimate.targetYear ? `
+              <div class="timeline-section">
+                <div class="timeline-title">Project Timeline</div>
+                <div class="timeline-grid">
+                  ${projectEstimate.estimatedDuration ? `
+                    <div class="timeline-item">
+                      <div class="timeline-label">Estimated Duration:</div>
+                      <div class="timeline-value">${projectEstimate.estimatedDuration}</div>
+                    </div>
+                  ` : ''}
+                  ${projectEstimate.targetYear ? `
+                    <div class="timeline-item">
+                      <div class="timeline-label">Target Year:</div>
+                      <div class="timeline-value">${projectEstimate.targetYear}</div>
+                    </div>
+                  ` : ''}
                 </div>
               </div>
             ` : ''}
-
-            <div class="section">
-              <h3>Project Timeline</h3>
-              <div class="info-grid">
-                ${projectEstimate.estimatedDuration ? `
-                  <div class="info-item">
-                    <span class="info-label">Estimated Duration:</span>
-                    <div class="info-value">${projectEstimate.estimatedDuration} days</div>
-                  </div>
-                ` : ''}
-                ${projectEstimate.proposedStartDate ? `
-                  <div class="info-item">
-                    <span class="info-label">Proposed Start Date:</span>
-                    <div class="info-value">${new Date(projectEstimate.proposedStartDate).toLocaleDateString()}</div>
-                  </div>
-                ` : ''}
-                ${projectEstimate.targetYear ? `
-                  <div class="info-item">
-                    <span class="info-label">Target Year:</span>
-                    <div class="info-value">${projectEstimate.targetYear}</div>
-                  </div>
-                ` : ''}
+            
+            <!-- TERMS & CONDITIONS -->
+            <div class="terms-box">
+              <div class="terms-title">Terms & Conditions:</div>
+              <div class="terms-text">
+                This estimate is valid for 30 days from the date of issue. Actual costs may vary based on site conditions and material availability. A 50% deposit is required to begin work. Final payment is due upon project completion. All work will be performed in accordance with local building codes and regulations.
               </div>
             </div>
-          </div>
-
-          <div class="footer">
-            <p>This estimate is valid for 30 days from the date of issue.</p>
-            <p>For questions or concerns, please contact DSJ Construction Services.</p>
-            <p>Generated on: ${new Date().toLocaleDateString()}</p>
+            
+            <!-- FOOTER -->
+            <div class="footer">
+              <div class="footer-text">This estimate is valid for 30 days from the date of issue</div>
+              <div class="footer-text">For questions or concerns, please contact DSJ Construction & Services LLC at info@dsjconstruction.com</div>
+              <div class="footer-text" style="margin-top:10px;">Generated on ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+            </div>
+            
           </div>
         </body>
       </html>
