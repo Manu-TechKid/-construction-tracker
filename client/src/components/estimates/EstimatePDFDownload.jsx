@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { Button, Box } from '@mui/material';
 import { Download as DownloadIcon, Print as PrintIcon } from '@mui/icons-material';
 import { toast } from 'react-toastify';
-import EstimateInvoiceView from './EstimateInvoiceView';
+import ProjectEstimatePDF from './ProjectEstimatePDF';
 
 const EstimatePDFDownload = ({ estimate, companyInfo }) => {
   const printRef = useRef();
@@ -185,7 +185,7 @@ ${companyInfo?.name || 'LKC HOME SERVICES LLC'}`;
     <Box>
       {/* Hidden component for printing/downloading */}
       <Box sx={{ display: 'none' }}>
-        <EstimateInvoiceView 
+        <ProjectEstimatePDF 
           ref={printRef} 
           estimate={estimate} 
           companyInfo={companyInfo} 
@@ -221,7 +221,7 @@ ${companyInfo?.name || 'LKC HOME SERVICES LLC'}`;
 
       {/* Preview component for display */}
       <Box sx={{ mt: 3 }}>
-        <EstimateInvoiceView 
+        <ProjectEstimatePDF 
           estimate={estimate} 
           companyInfo={companyInfo} 
         />

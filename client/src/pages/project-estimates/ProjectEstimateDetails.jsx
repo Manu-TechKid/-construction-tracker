@@ -49,7 +49,7 @@ import {
   useSendToClientMutation
 } from '../../features/estimates/projectEstimatesApiSlice';
 import EstimatePDFDownload from '../../components/estimates/EstimatePDFDownload';
-import EstimateInvoiceView from '../../components/estimates/EstimateInvoiceView';
+import ProjectEstimatePDF from '../../components/estimates/ProjectEstimatePDF';
 
 const ProjectEstimateDetails = () => {
   const { id } = useParams();
@@ -420,7 +420,7 @@ const ProjectEstimateDetails = () => {
       )}
 
       {selectedTab === 1 && (
-        <EstimateInvoiceView estimate={estimate} />
+        <ProjectEstimatePDF estimate={estimate} />
       )}
 
       {selectedTab === 2 && (
