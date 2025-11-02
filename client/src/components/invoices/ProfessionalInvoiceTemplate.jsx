@@ -1,26 +1,5 @@
 import React, { forwardRef } from 'react';
-import {
-  Box,
-  Typography,
-  Paper,
-  Grid,
-  Divider,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
-  Avatar
-} from '@mui/material';
-import {
-  Business as BuildingIcon,
-  CalendarToday as CalendarIcon,
-  AttachMoney as MoneyIcon,
-  Receipt as InvoiceIcon,
-  QrCode as QrCodeIcon
-} from '@mui/icons-material';
+import { Box, Typography, Paper, Grid, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material';
 import { format } from 'date-fns';
 
 const ProfessionalInvoiceTemplate = forwardRef(({ invoice, companyInfo }, ref) => {
@@ -30,8 +9,8 @@ const ProfessionalInvoiceTemplate = forwardRef(({ invoice, companyInfo }, ref) =
     city: 'Gaithersburg',
     state: 'MD',
     zipCode: '20877',
-    phone: '(301) 123-4567',
-    email: 'info@servicesdsj.com',
+    phone: '(555) 123-4567',
+    email: 'info@dsjconstruction.com',
     website: 'www.servicesdsj.com',
     logo: 'https://res.cloudinary.com/dwqxiigpd/image/upload/v1756186310/dsj-logo_mb3npa.jpg'
   };
@@ -45,16 +24,6 @@ const ProfessionalInvoiceTemplate = forwardRef(({ invoice, companyInfo }, ref) =
     }).format(amount || 0);
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'paid': return 'success';
-      case 'sent': return 'info';
-      case 'accepted': return 'primary';
-      case 'overdue': return 'error';
-      case 'draft': return 'default';
-      default: return 'warning';
-    }
-  };
 
   const calculateSubtotal = () => {
     return invoice.lineItems?.reduce((sum, item) => sum + (item.totalPrice || 0), 0) || invoice.subtotal || 0;
@@ -76,241 +45,197 @@ const ProfessionalInvoiceTemplate = forwardRef(({ invoice, companyInfo }, ref) =
     <Paper 
       ref={ref}
       sx={{ 
-        p: 4, 
-        maxWidth: '900px', 
+        p: 3, 
+        maxWidth: '850px', 
         margin: '0 auto',
         backgroundColor: '#ffffff',
         boxShadow: 'none',
-        border: '1px solid #e0e0e0',
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: 'Arial, Helvetica, sans-serif',
+        fontSize: '12px',
         '@media print': {
           boxShadow: 'none',
-          border: 'none',
           p: 2
         }
       }}
     >
-      {/* Header with Logo and Company Info */}
-      <Box sx={{ mb: 4 }}>
-        <Grid container spacing={3}>
-          {/* Left: Logo and Company Info */}
-          <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
-              <Box
-                component="img"
-                src={company.logo}
-                alt="DSJ Logo"
-                sx={{ 
-                  width: 60, 
-                  height: 60,
-                  objectFit: 'contain'
-                }}
-              />
-              <Box>
-                <Typography variant="h5" fontWeight="bold" sx={{ color: '#4A90E2', mb: 0.5, fontSize: '1.5rem' }}>
-                  {company.name}
-                </Typography>
-                <Typography variant="body2" sx={{ fontSize: '0.75rem', color: '#666', fontStyle: 'italic' }}>
-                  Professional Construction & Renovation Services
-                </Typography>
-              </Box>
-            </Box>
-            <Box sx={{ mt: 2, fontSize: '0.875rem', color: '#333' }}>
-              <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
-                Phone: {company.phone} | Email: {company.email}
-              </Typography>
-              <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
-                {company.address}, {company.city}, {company.state} {company.zipCode}
-              </Typography>
-            </Box>
-          </Grid>
-          
-          {/* Right: Invoice Title */}
-          <Grid item xs={12} md={6}>
-            <Box sx={{ textAlign: 'right' }}>
-              <Typography 
-                variant="h3" 
-                fontWeight="bold" 
-                sx={{ 
-                  fontSize: '2rem',
-                  mb: 2,
-                  color: '#333'
-                }}
-              >
-                INVOICE
-              </Typography>
-            </Box>
-          </Grid>
-        </Grid>
-      </Box>
-
-      {/* Invoice Details Section */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 2, pb: 1, borderBottom: '2px solid #4A90E2' }}>
-          Invoice Details
-        </Typography>
-        <Grid container spacing={2}>
-          <Grid item xs={6} md={3}>
-            <Typography variant="caption" sx={{ color: '#666', display: 'block' }}>Invoice Number:</Typography>
-            <Typography variant="body2" fontWeight="bold">{invoice.invoiceNumber || '5733'}</Typography>
-          </Grid>
-          <Grid item xs={6} md={3}>
-            <Typography variant="caption" sx={{ color: '#666', display: 'block' }}>Invoice Date:</Typography>
-            <Typography variant="body2" fontWeight="bold">
-              {format(new Date(invoice.invoiceDate || invoice.createdAt), 'MMMM dd, yyyy')}
-            </Typography>
-          </Grid>
-          <Grid item xs={6} md={3}>
-            <Typography variant="caption" sx={{ color: '#666', display: 'block' }}>Due Date:</Typography>
-            <Typography variant="body2" fontWeight="bold">
-              {format(new Date(invoice.dueDate), 'MMMM dd, yyyy')}
-            </Typography>
-          </Grid>
-          <Grid item xs={6} md={3}>
-            <Typography variant="caption" sx={{ color: '#666', display: 'block' }}>Status:</Typography>
-            <Chip 
-              label={invoice.status?.toUpperCase() || 'SENT'} 
-              color={getStatusColor(invoice.status)}
-              size="small"
-              sx={{ fontWeight: 'bold', height: '24px' }}
+      {/* Header */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12}>
+          <Box sx={{ textAlign: 'center', mb: 2 }}>
+            <Box
+              component="img"
+              src={company.logo}
+              alt="DSJ Logo"
+              sx={{ width: 80, height: 80, mb: 1 }}
             />
-          </Grid>
+            <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '18px', color: '#4A90E2', mb: 0.5 }}>
+              {company.name}
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '11px', color: '#666', mb: 1 }}>
+              {company.address}, {company.city}, {company.state} {company.zipCode} / USA
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '11px', color: '#666' }}>
+              {company.phone} | Email: {company.email}
+            </Typography>
+          </Box>
         </Grid>
+      </Grid>
+
+      {/* Invoice Title and Number */}
+      <Box sx={{ textAlign: 'center', mb: 3 }}>
+        <Typography variant="h5" sx={{ fontWeight: 'bold', fontSize: '24px', mb: 1 }}>
+          INVOICE {invoice.invoiceNumber || '5736'}
+        </Typography>
       </Box>
 
-      {/* Bill To Section */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 2, pb: 1, borderBottom: '2px solid #4A90E2' }}>
-          Bill To
-        </Typography>
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
-            <Typography variant="body2" fontWeight="bold" sx={{ mb: 0.5 }}>
-              {invoice.client?.companyName || invoice.building?.name || 'Client Name'}
+      {/* Bill To and Ship To */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid item xs={6}>
+          <Box sx={{ bgcolor: '#E3F2FD', p: 2, borderRadius: 1, minHeight: '120px' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', fontSize: '11px', color: '#1976D2', mb: 1 }}>
+              BILL TO:
             </Typography>
-            <Typography variant="body2" sx={{ fontSize: '0.875rem', color: '#666' }}>
-              {invoice.building?.address || invoice.client?.address?.street || 'Address'}
+            <Typography variant="body2" sx={{ fontSize: '11px', fontWeight: 'bold', mb: 0.5 }}>
+              {invoice.client?.companyName || invoice.building?.name || 'Chattan at Park Crest'}
             </Typography>
-            <Typography variant="body2" sx={{ fontSize: '0.875rem', color: '#666' }}>
-              {invoice.building?.city || invoice.client?.address?.city || 'City'}, {invoice.client?.address?.state || 'MD'} {invoice.client?.address?.zipCode || ''}
+            <Typography variant="body2" sx={{ fontSize: '10px', color: '#666' }}>
+              {invoice.building?.address || '15256 Siesta Key Way'}
             </Typography>
-          </Grid>
+            <Typography variant="body2" sx={{ fontSize: '10px', color: '#666' }}>
+              {invoice.building?.city || 'Rockville'}, {invoice.client?.address?.state || 'MD'} {invoice.client?.address?.zipCode || '20877'}
+            </Typography>
+          </Box>
         </Grid>
-      </Box>
+        <Grid item xs={6}>
+          <Box sx={{ bgcolor: '#E3F2FD', p: 2, borderRadius: 1, minHeight: '120px' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', fontSize: '11px', color: '#1976D2', mb: 1 }}>
+              SHIP TO:
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '11px', fontWeight: 'bold', mb: 0.5 }}>
+              {invoice.client?.companyName || invoice.building?.name || 'Chattan at Park Crest'}
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '10px', color: '#666' }}>
+              {invoice.building?.address || '15256 Siesta Key Way'}
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '10px', color: '#666' }}>
+              {invoice.building?.city || 'Rockville'}, {invoice.client?.address?.state || 'MD'} {invoice.client?.address?.zipCode || '20877'}
+            </Typography>
+          </Box>
+        </Grid>
+      </Grid>
 
-      {/* Services Performed Table */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 2, pb: 1, borderBottom: '2px solid #4A90E2' }}>
-          Services Performed
-        </Typography>
-        <TableContainer sx={{ border: '1px solid #e0e0e0' }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ bgcolor: '#2C3E50' }}>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', fontSize: '0.813rem', py: 1.5 }}>Description</TableCell>
-                <TableCell align="center" sx={{ color: 'white', fontWeight: 'bold', fontSize: '0.813rem', py: 1.5 }}>Quantity</TableCell>
-                <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold', fontSize: '0.813rem', py: 1.5 }}>Unit Price</TableCell>
-                <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold', fontSize: '0.813rem', py: 1.5 }}>Total</TableCell>
+      {/* Date and Invoice Info */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={4}>
+          <Box sx={{ bgcolor: '#1976D2', color: 'white', p: 1.5, borderRadius: 1, textAlign: 'center' }}>
+            <Typography variant="caption" sx={{ fontSize: '9px', display: 'block', mb: 0.5 }}>DATE ISSUED</Typography>
+            <Typography variant="body2" sx={{ fontSize: '12px', fontWeight: 'bold' }}>
+              {format(new Date(invoice.invoiceDate || invoice.createdAt), 'MM/dd/yyyy')}
+            </Typography>
+          </Box>
+        </Grid>
+        <Grid item xs={4}>
+          <Box sx={{ bgcolor: '#42A5F5', color: 'white', p: 1.5, borderRadius: 1, textAlign: 'center' }}>
+            <Typography variant="caption" sx={{ fontSize: '9px', display: 'block', mb: 0.5 }}>PLEASE PAY BY</Typography>
+            <Typography variant="body2" sx={{ fontSize: '12px', fontWeight: 'bold' }}>
+              {format(new Date(invoice.dueDate), 'MM/dd/yyyy')}
+            </Typography>
+          </Box>
+        </Grid>
+        <Grid item xs={4}>
+          <Box sx={{ bgcolor: '#64B5F6', color: 'white', p: 1.5, borderRadius: 1, textAlign: 'center' }}>
+            <Typography variant="caption" sx={{ fontSize: '9px', display: 'block', mb: 0.5 }}>DUE DATE</Typography>
+            <Typography variant="body2" sx={{ fontSize: '12px', fontWeight: 'bold' }}>
+              {format(new Date(invoice.dueDate), 'MM/dd/yyyy')}
+            </Typography>
+          </Box>
+        </Grid>
+      </Grid>
+
+      {/* Services Table */}
+      <Table sx={{ mb: 3, border: '1px solid #ddd' }} size="small">
+        <TableHead>
+          <TableRow sx={{ bgcolor: '#2C3E50' }}>
+            <TableCell sx={{ color: 'white', fontSize: '10px', fontWeight: 'bold', py: 1, px: 1.5 }}>DATE</TableCell>
+            <TableCell sx={{ color: 'white', fontSize: '10px', fontWeight: 'bold', py: 1, px: 1.5 }}>ACTIVITY</TableCell>
+            <TableCell sx={{ color: 'white', fontSize: '10px', fontWeight: 'bold', py: 1, px: 1.5 }}>DESCRIPTION</TableCell>
+            <TableCell align="right" sx={{ color: 'white', fontSize: '10px', fontWeight: 'bold', py: 1, px: 1.5 }}>QTY</TableCell>
+            <TableCell align="right" sx={{ color: 'white', fontSize: '10px', fontWeight: 'bold', py: 1, px: 1.5 }}>RATE</TableCell>
+            <TableCell align="right" sx={{ color: 'white', fontSize: '10px', fontWeight: 'bold', py: 1, px: 1.5 }}>AMOUNT</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {invoice.lineItems && invoice.lineItems.length > 0 ? (
+            invoice.lineItems.map((item, index) => (
+              <TableRow key={index} sx={{ '&:nth-of-type(odd)': { bgcolor: '#f9f9f9' } }}>
+                <TableCell sx={{ fontSize: '10px', py: 1, px: 1.5, borderBottom: '1px solid #ddd' }}>
+                  {format(new Date(item.createdAt || invoice.createdAt), 'MM/dd/yyyy')}
+                </TableCell>
+                <TableCell sx={{ fontSize: '10px', py: 1, px: 1.5, borderBottom: '1px solid #ddd' }}>
+                  {item.serviceCategory || 'Services'}
+                </TableCell>
+                <TableCell sx={{ fontSize: '10px', py: 1, px: 1.5, borderBottom: '1px solid #ddd' }}>
+                  {item.description}
+                </TableCell>
+                <TableCell align="right" sx={{ fontSize: '10px', py: 1, px: 1.5, borderBottom: '1px solid #ddd' }}>
+                  {item.quantity || 1}
+                </TableCell>
+                <TableCell align="right" sx={{ fontSize: '10px', py: 1, px: 1.5, borderBottom: '1px solid #ddd' }}>
+                  {formatCurrency(item.unitPrice || item.totalPrice)}
+                </TableCell>
+                <TableCell align="right" sx={{ fontSize: '10px', py: 1, px: 1.5, borderBottom: '1px solid #ddd', fontWeight: 'bold' }}>
+                  {formatCurrency(item.totalPrice)}
+                </TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {invoice.lineItems && invoice.lineItems.length > 0 ? (
-                invoice.lineItems.map((item, index) => (
-                  <TableRow key={index} sx={{ '&:nth-of-type(odd)': { bgcolor: '#f9f9f9' } }}>
-                    <TableCell sx={{ py: 1.5 }}>
-                      <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.875rem' }}>
-                        {item.description}
-                      </Typography>
-                      {item.serviceCategory && item.serviceSubcategory && (
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                          {item.serviceCategory} - {item.serviceSubcategory}
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell align="center" sx={{ py: 1.5 }}>
-                      <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>{item.quantity}</Typography>
-                    </TableCell>
-                    <TableCell align="right" sx={{ py: 1.5 }}>
-                      <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>{formatCurrency(item.unitPrice)}</Typography>
-                    </TableCell>
-                    <TableCell align="right" sx={{ py: 1.5 }}>
-                      <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.875rem' }}>
-                        {formatCurrency(item.totalPrice)}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow sx={{ '&:nth-of-type(odd)': { bgcolor: '#f9f9f9' } }}>
-                  <TableCell sx={{ py: 1.5 }}>
-                    <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.875rem' }}>
-                      General Building - Replacement (Act. General Building)
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="center" sx={{ py: 1.5 }}>
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>1</Typography>
-                  </TableCell>
-                  <TableCell align="right" sx={{ py: 1.5 }}>
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>{formatCurrency(invoice.subtotal || invoice.total)}</Typography>
-                  </TableCell>
-                  <TableCell align="right" sx={{ py: 1.5 }}>
-                    <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.875rem' }}>
-                      {formatCurrency(invoice.subtotal || invoice.total)}
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Box>
+            ))
+          ) : (
+            <TableRow sx={{ '&:nth-of-type(odd)': { bgcolor: '#f9f9f9' } }}>
+              <TableCell sx={{ fontSize: '10px', py: 1, px: 1.5, borderBottom: '1px solid #ddd' }}>
+                {format(new Date(invoice.createdAt), 'MM/dd/yyyy')}
+              </TableCell>
+              <TableCell sx={{ fontSize: '10px', py: 1, px: 1.5, borderBottom: '1px solid #ddd' }}>Services</TableCell>
+              <TableCell sx={{ fontSize: '10px', py: 1, px: 1.5, borderBottom: '1px solid #ddd' }}>
+                Coding Wallcovering Repair - Lobby Area. Description of work performed.
+              </TableCell>
+              <TableCell align="right" sx={{ fontSize: '10px', py: 1, px: 1.5, borderBottom: '1px solid #ddd' }}>1</TableCell>
+              <TableCell align="right" sx={{ fontSize: '10px', py: 1, px: 1.5, borderBottom: '1px solid #ddd' }}>
+                {formatCurrency(invoice.subtotal || invoice.total)}
+              </TableCell>
+              <TableCell align="right" sx={{ fontSize: '10px', py: 1, px: 1.5, borderBottom: '1px solid #ddd', fontWeight: 'bold' }}>
+                {formatCurrency(invoice.subtotal || invoice.total)}
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
 
-      {/* Financial Summary */}
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
-        <Box sx={{ width: { xs: '100%', md: '300px' } }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, pb: 1, borderBottom: '1px solid #e0e0e0' }}>
-            <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>Subtotal:</Typography>
-            <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.875rem' }}>
-              {formatCurrency(calculateSubtotal())}
-            </Typography>
+      {/* Totals */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
+        <Box sx={{ width: '250px' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 0.5 }}>
+            <Typography sx={{ fontSize: '11px' }}>SUBTOTAL:</Typography>
+            <Typography sx={{ fontSize: '11px', fontWeight: 'bold' }}>{formatCurrency(calculateSubtotal())}</Typography>
           </Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, pb: 1, borderBottom: '1px solid #e0e0e0' }}>
-            <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>Tax:</Typography>
-            <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.875rem' }}>
-              {formatCurrency(calculateTax())}
-            </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 0.5 }}>
+            <Typography sx={{ fontSize: '11px' }}>TAX:</Typography>
+            <Typography sx={{ fontSize: '11px', fontWeight: 'bold' }}>{formatCurrency(calculateTax())}</Typography>
           </Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 1.5, bgcolor: '#f5f5f5', px: 2, borderRadius: 1 }}>
-            <Typography variant="h6" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>TOTAL AMOUNT DUE:</Typography>
-            <Typography variant="h6" fontWeight="bold" sx={{ fontSize: '1.1rem', color: '#4A90E2' }}>
-              {formatCurrency(calculateTotal())}
-            </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 1, borderTop: '2px solid #333', mt: 1 }}>
+            <Typography sx={{ fontSize: '13px', fontWeight: 'bold' }}>TOTAL:</Typography>
+            <Typography sx={{ fontSize: '13px', fontWeight: 'bold' }}>{formatCurrency(calculateTotal())}</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 1, bgcolor: '#1976D2', color: 'white', px: 2, mt: 1 }}>
+            <Typography sx={{ fontSize: '14px', fontWeight: 'bold' }}>TOTAL DUE:</Typography>
+            <Typography sx={{ fontSize: '14px', fontWeight: 'bold' }}>{formatCurrency(calculateTotal())}</Typography>
           </Box>
         </Box>
       </Box>
 
-      {/* Payment Terms */}
-      <Box sx={{ mb: 3, bgcolor: '#FFF9E6', p: 2, borderRadius: 1, border: '1px solid #FFE082' }}>
-        <Typography variant="body2" fontWeight="bold" sx={{ mb: 1, fontSize: '0.875rem' }}>
-          Payment Terms:
-        </Typography>
-        <Typography variant="body2" sx={{ fontSize: '0.813rem' }}>
-          Payment is due within 30 days of the invoice date. Thank you for your business!
-        </Typography>
-        {invoice.notes && (
-          <Typography variant="body2" sx={{ fontSize: '0.813rem', mt: 1 }}>
-            {invoice.notes}
-          </Typography>
-        )}
-      </Box>
-
-      {/* Footer */}
-      <Box sx={{ textAlign: 'center', pt: 3, borderTop: '1px solid #e0e0e0' }}>
-        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-          This invoice was generated electronically and is valid without signature.
-        </Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5, fontSize: '0.75rem' }}>
-          For questions about this invoice, please contact DSJ Construction & Services LLC at {company.phone} | November 1, 2025
+      {/* Thank You */}
+      <Box sx={{ textAlign: 'center', mt: 4, pt: 2, borderTop: '1px solid #ddd' }}>
+        <Typography sx={{ fontSize: '16px', fontWeight: 'bold', color: '#42A5F5', mb: 1 }}>THANK YOU</Typography>
+        <Typography sx={{ fontSize: '9px', color: '#666' }}>
+          This invoice was generated electronically and is valid without signature. For questions, please contact DSJ Construction & Services LLC.
         </Typography>
       </Box>
     </Paper>
