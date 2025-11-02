@@ -16,8 +16,17 @@ export const analyticsApiSlice = createApi({
     getDashboardStats: builder.query({
       query: (params) => ({
         url: '/analytics/dashboard',
-        params
+        params,
+        // Don't automatically refetch on error
+        refetchOnMountOrArgChange: false,
       }),
+      // Return empty data instead of error
+      transformErrorResponse: () => ({
+        stats: {},
+        error: 'Failed to load dashboard data'
+      }),
+      // Keep previous data on error
+      keepUnusedDataFor: 60, // 1 minute
     }),
     getTimeTrackingAnalytics: builder.query({
       query: (params) => ({
