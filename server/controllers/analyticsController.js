@@ -95,10 +95,10 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
     
     // Recent time sessions
     TimeSession.find()
-      .sort({ startTime: -1 })
+      .sort({ clockInTime: -1 })
       .limit(5)
-      .populate('workerId', 'name')
-      .populate('buildingId', 'name')
+      .populate('worker', 'name')
+      .populate('building', 'name')
   ]);
 
   // Format building stats
@@ -162,22 +162,22 @@ exports.getTimeTrackingAnalytics = catchAsync(async (req, res, next) => {
   const matchFilter = {};
   
   if (startDate && endDate) {
-    matchFilter.startTime = { 
+    matchFilter.clockInTime = { 
       $gte: new Date(startDate),
       $lte: new Date(endDate)
     };
   } else if (startDate) {
-    matchFilter.startTime = { $gte: new Date(startDate) };
+    matchFilter.clockInTime = { $gte: new Date(startDate) };
   } else if (endDate) {
-    matchFilter.startTime = { $lte: new Date(endDate) };
+    matchFilter.clockInTime = { $lte: new Date(endDate) };
   }
   
   if (buildingId) {
-    matchFilter.buildingId = buildingId;
+    matchFilter.building = buildingId;
   }
   
   if (workerId) {
-    matchFilter.workerId = workerId;
+    matchFilter.worker = workerId;
   }
 
   // Get time tracking stats by day
@@ -186,12 +186,12 @@ exports.getTimeTrackingAnalytics = catchAsync(async (req, res, next) => {
     {
       $group: {
         _id: { 
-          $dateToString: { format: "%Y-%m-%d", date: "$startTime" } 
+          $dateToString: { format: "%Y-%m-%d", date: "$clockInTime" } 
         },
         hoursWorked: { 
           $sum: { 
             $divide: [
-              { $subtract: ["$endTime", "$startTime"] }, 
+              { $subtract: ["$clockOutTime", "$clockInTime"] }, 
               3600000 // Convert ms to hours
             ] 
           } 
@@ -207,11 +207,11 @@ exports.getTimeTrackingAnalytics = catchAsync(async (req, res, next) => {
     { $match: matchFilter },
     {
       $group: {
-        _id: "$workerId",
+        _id: "$worker",
         hoursWorked: { 
           $sum: { 
             $divide: [
-              { $subtract: ["$endTime", "$startTime"] }, 
+              { $subtract: ["$clockOutTime", "$clockInTime"] }, 
               3600000 // Convert ms to hours
             ] 
           } 
