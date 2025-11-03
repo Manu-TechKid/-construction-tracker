@@ -16,6 +16,7 @@ import {
   ListItemIcon,
   ListItemText,
   Stack,
+  InputAdornment,
 } from '@mui/material';
 import { 
   Add as AddIcon, 
@@ -26,6 +27,7 @@ import {
   Pause as OnHoldIcon,
   Cancel as CancelledIcon,
   FilterList as FilterIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -67,6 +69,7 @@ const WorkOrders = () => {
   const [filters, setFilters] = useState({ 
     building: '', 
     apartment: '',
+    apartmentSearch: '', // NEW: Text search for apartment
     status: '',
     startDate: null,
     endDate: null,
@@ -146,12 +149,12 @@ const WorkOrders = () => {
   }, [filters]);
   
   const clearAllFilters = useCallback(() => {
-    setFilters({ building: '', apartment: '', status: '', startDate: null, endDate: null, workType: '', workSubType: '' });
+    setFilters({ building: '', apartment: '', apartmentSearch: '', status: '', startDate: null, endDate: null, workType: '', workSubType: '' });
   }, []);
   
   const handleBuildingChange = useCallback((e) => {
     const building = e.target.value;
-    setFilters({ ...filters, building, apartment: '' }); // Clear apartment when building changes
+    setFilters({ ...filters, building, apartment: '', apartmentSearch: '' }); // Clear apartment when building changes
   }, [filters]);
   
   const handleWorkTypeChange = useCallback((e) => {
@@ -265,13 +268,16 @@ const WorkOrders = () => {
             (wo.building && wo.building._id === filters.building)
           : true;
         
-        // Handle apartment filter
-        const apartmentMatch = filters.apartment 
-          ? wo.apartmentNumber === filters.apartment || 
-            wo.apartmentNumber === `Apt ${filters.apartment}` ||
-            wo.apartmentNumber === `${filters.apartment}` ||
-            (typeof wo.apartmentNumber === 'string' && wo.apartmentNumber.includes(filters.apartment)) ||
-            (wo.block && filters.apartment.includes(wo.block) && wo.apartmentNumber && filters.apartment.includes(wo.apartmentNumber))
+        // Handle apartment filter (dropdown OR search text)
+        const apartmentFilterValue = filters.apartment || filters.apartmentSearch;
+        const apartmentMatch = apartmentFilterValue 
+          ? wo.apartmentNumber === apartmentFilterValue || 
+            wo.apartmentNumber === `Apt ${apartmentFilterValue}` ||
+            wo.apartmentNumber === `${apartmentFilterValue}` ||
+            (typeof wo.apartmentNumber === 'string' && wo.apartmentNumber.toLowerCase().includes(apartmentFilterValue.toLowerCase())) ||
+            (wo.block && apartmentFilterValue.includes(wo.block) && wo.apartmentNumber && apartmentFilterValue.includes(wo.apartmentNumber)) ||
+            // Also match if just the number is typed (e.g., "284" matches "Apt 284")
+            (typeof wo.apartmentNumber === 'string' && wo.apartmentNumber.replace(/\D/g, '').includes(apartmentFilterValue.replace(/\D/g, '')))
           : true;
           
         // Handle status filter
@@ -1443,10 +1449,55 @@ const WorkOrders = () => {
                     }}>
                       🏠 Apartment
                     </Typography>
+                    
+                    {/* SEARCH INPUT - Type apartment number directly */}
+                    <TextField
+                      fullWidth
+                      label="🔍 Search Apartment"
+                      name="apartmentSearch"
+                      value={filters.apartmentSearch}
+                      onChange={handleFilterChange}
+                      variant="outlined"
+                      size="medium"
+                      placeholder="Type apartment number..."
+                      disabled={!filters.building}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <SearchIcon sx={{ color: '#9c27b0' }} />
+                          </InputAdornment>
+                        ),
+                      }}
+                      helperText={
+                        !filters.building 
+                          ? 'Select building first' 
+                          : 'Type to search (e.g., 284, Apt 284)'
+                      }
+                      sx={{
+                        mb: 1.5,
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '8px',
+                          backgroundColor: 'white'
+                        }
+                      }}
+                    />
+                    
+                    {/* OR DIVIDER */}
+                    <Typography variant="caption" sx={{ 
+                      display: 'block',
+                      textAlign: 'center',
+                      color: '#9c27b0',
+                      fontWeight: 'bold',
+                      mb: 1
+                    }}>
+                      — OR —
+                    </Typography>
+                    
+                    {/* DROPDOWN - Select from list */}
                     <TextField
                       select
                       fullWidth
-                      label="Select Apartment"
+                      label="Select from List"
                       name="apartment"
                       value={filters.apartment}
                       onChange={handleFilterChange}
@@ -1458,7 +1509,7 @@ const WorkOrders = () => {
                           ? 'Select building first' 
                           : availableApartments.length === 0
                           ? 'No apartments available'
-                          : ''
+                          : `${availableApartments.length} apartments`
                       }
                       sx={{
                         '& .MuiOutlinedInput-root': {
