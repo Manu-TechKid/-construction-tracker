@@ -70,6 +70,32 @@ export const invoicesApiSlice = apiSlice.injectEndpoints({
       },
       providesTags: ['WorkOrder'],
     }),
+    // NEW: Add work orders to invoice
+    addWorkOrdersToInvoice: builder.mutation({
+      query: ({ id, workOrderIds }) => ({
+        url: `/invoices/${id}/add-work-orders`,
+        method: 'POST',
+        body: { workOrderIds },
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Invoice', id },
+        'Invoice',
+        'WorkOrder',
+      ],
+    }),
+    // NEW: Remove work orders from invoice
+    removeWorkOrdersFromInvoice: builder.mutation({
+      query: ({ id, workOrderIds }) => ({
+        url: `/invoices/${id}/remove-work-orders`,
+        method: 'POST',
+        body: { workOrderIds },
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Invoice', id },
+        'Invoice',
+        'WorkOrder',
+      ],
+    }),
   }),
 });
 
@@ -82,4 +108,6 @@ export const {
   useDeleteInvoiceMutation,
   useGetUnbilledWorkOrdersQuery,
   useGetFilteredWorkOrdersQuery,
+  useAddWorkOrdersToInvoiceMutation,
+  useRemoveWorkOrdersFromInvoiceMutation,
 } = invoicesApiSlice;

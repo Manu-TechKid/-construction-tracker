@@ -306,9 +306,13 @@ const EditProjectEstimate = () => {
                         value={formData.estimatedCost}
                         onChange={(e) => handleInputChange('estimatedCost', e.target.value)}
                         error={!!errors.estimatedCost}
-                        helperText={errors.estimatedCost || 'Optional - Leave blank if cost is unknown'}
+                        helperText={
+                          errors.estimatedCost || 
+                          (formData.lineItems.length > 0 
+                            ? 'Auto-calculated from line items (editable for manual override)' 
+                            : 'Optional - Leave blank if cost is unknown')
+                        }
                         InputProps={{ inputProps: { min: 0, step: 0.01 } }}
-                        disabled={formData.lineItems.length > 0}
                       />
                     </Grid>
                     <Grid item xs={12}>
@@ -319,9 +323,13 @@ const EditProjectEstimate = () => {
                         value={formData.estimatedPrice}
                         onChange={(e) => handleInputChange('estimatedPrice', e.target.value)}
                         error={!!errors.estimatedPrice}
-                        helperText={errors.estimatedPrice || (formData.lineItems.length > 0 ? 'Calculated from line items' : 'Required when not using line items')}
+                        helperText={
+                          errors.estimatedPrice || 
+                          (formData.lineItems.length > 0 
+                            ? 'Auto-calculated from line items (editable for manual override)' 
+                            : 'Required when not using line items')
+                        }
                         InputProps={{ inputProps: { min: 0, step: 0.01 } }}
-                        disabled={formData.lineItems.length > 0}
                       />
                     </Grid>
                     <Grid item xs={12}>

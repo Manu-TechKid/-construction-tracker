@@ -45,9 +45,8 @@ import {
   useApproveProjectEstimateMutation,
   useDeleteProjectEstimateMutation,
   useConvertToWorkOrderMutation,
-  useConvertToInvoiceMutation,
-  useSendToClientMutation
-} from '../../features/estimates/projectEstimatesApiSlice';
+  useConvertToInvoiceMutation
+} from '../../features/projectEstimates/projectEstimatesApiSlice';
 import EstimatePDFDownload from '../../components/estimates/EstimatePDFDownload';
 import ProjectEstimatePDF from '../../components/estimates/ProjectEstimatePDF';
 
@@ -72,7 +71,6 @@ const ProjectEstimateDetails = () => {
   const [deleteEstimate, { isLoading: isDeleting }] = useDeleteProjectEstimateMutation();
   const [convertToWorkOrder, { isLoading: isConverting }] = useConvertToWorkOrderMutation();
   const [convertToInvoice, { isLoading: isConvertingToInvoice }] = useConvertToInvoiceMutation();
-  const [sendToClient, { isLoading: isSending }] = useSendToClientMutation();
 
   const estimate = estimateData?.data?.projectEstimate;
 
