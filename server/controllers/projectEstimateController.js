@@ -1048,31 +1048,60 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
               </div>
             ` : ''}
             
-            <!-- FINANCIAL SUMMARY -->
-            <div class="description-title" style="margin-top:20px;">Financial Summary</div>
-            <table class="financial-table">
-              <thead>
-                <tr>
-                  <th>ITEM</th>
-                  <th>DESCRIPTION</th>
-                  <th>TOTAL</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Estimated Cost</td>
-                  <td>Project materials and labor cost</td>
-                  <td>$${projectEstimate.estimatedCost?.toLocaleString() || '0.00'}</td>
-                </tr>
-                ${projectEstimate.estimatedPrice && projectEstimate.estimatedPrice !== projectEstimate.estimatedCost ? `
+            <!-- LINE ITEMS / SERVICES TABLE -->
+            ${projectEstimate.lineItems && projectEstimate.lineItems.length > 0 ? `
+              <div class="description-title" style="margin-top:20px;">Estimate Line Items</div>
+              <table class="financial-table">
+                <thead>
                   <tr>
-                    <td>Estimated Price</td>
-                    <td>Client quoted price</td>
-                    <td>$${projectEstimate.estimatedPrice.toLocaleString()}</td>
+                    <th>DATE</th>
+                    <th>PRODUCT/SERVICE</th>
+                    <th>DESCRIPTION</th>
+                    <th style="text-align:right;">QTY</th>
+                    <th style="text-align:right;">RATE</th>
+                    <th style="text-align:right;">AMOUNT</th>
                   </tr>
-                ` : ''}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  ${projectEstimate.lineItems.map(item => `
+                    <tr>
+                      <td>${item.serviceDate ? new Date(item.serviceDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : ''}</td>
+                      <td>${item.productService || ''}</td>
+                      <td>${item.description || ''}</td>
+                      <td style="text-align:right;">${item.qty || 1}</td>
+                      <td style="text-align:right;">$${(item.rate || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td style="text-align:right;">$${(item.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            ` : `
+              <!-- FINANCIAL SUMMARY (when no line items) -->
+              <div class="description-title" style="margin-top:20px;">Financial Summary</div>
+              <table class="financial-table">
+                <thead>
+                  <tr>
+                    <th>ITEM</th>
+                    <th>DESCRIPTION</th>
+                    <th>TOTAL</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Estimated Cost</td>
+                    <td>Project materials and labor cost</td>
+                    <td>$${projectEstimate.estimatedCost?.toLocaleString() || '0.00'}</td>
+                  </tr>
+                  ${projectEstimate.estimatedPrice && projectEstimate.estimatedPrice !== projectEstimate.estimatedCost ? `
+                    <tr>
+                      <td>Estimated Price</td>
+                      <td>Client quoted price</td>
+                      <td>$${projectEstimate.estimatedPrice.toLocaleString()}</td>
+                    </tr>
+                  ` : ''}
+                </tbody>
+              </table>
+            `}
             
             <!-- TOTALS -->
             <div class="totals-section">

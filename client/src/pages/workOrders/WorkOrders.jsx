@@ -902,11 +902,10 @@ const WorkOrders = () => {
           const billingStatus = params.row.billingStatus || 'pending';
           const invoiceId = params.row.invoice;
           
-          // Simplified billing status: only show Invoiced or Not Invoiced
-          const isInvoiced = billingStatus === 'invoiced' || billingStatus === 'paid' || invoiceId;
+          // Check if truly invoiced (has valid invoice reference)
+          const isInvoiced = invoiceId && (billingStatus === 'invoiced' || billingStatus === 'paid');
           const statusText = isInvoiced ? 'Invoiced' : 'Not Invoiced';
           const statusColor = isInvoiced ? 'success' : 'warning';
-          const isClickable = isInvoiced && invoiceId;
 
           return (
             <Chip
@@ -914,12 +913,18 @@ const WorkOrders = () => {
               color={statusColor}
               size="small"
               variant="outlined"
-              onClick={isClickable ? () => navigate(`/invoices/${invoiceId}`) : undefined}
+              onClick={isInvoiced ? () => navigate(`/invoices/${invoiceId}`) : undefined}
               sx={{ 
                 fontSize: '0.75rem',
-                cursor: isClickable ? 'pointer' : 'default',
-                '&:hover': isClickable ? { opacity: 0.8 } : {}
+                cursor: isInvoiced ? 'pointer' : 'default',
+                '&:hover': isInvoiced ? { 
+                  opacity: 0.8,
+                  transform: 'scale(1.05)',
+                  boxShadow: 1
+                } : {},
+                transition: 'all 0.2s'
               }}
+              title={isInvoiced ? `Click to view invoice ${invoiceId}` : 'Not yet invoiced'}
             />
           );
         } catch (error) {
