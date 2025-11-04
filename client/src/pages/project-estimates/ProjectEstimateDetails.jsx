@@ -170,19 +170,24 @@ const ProjectEstimateDetails = () => {
     }
     
     try {
-      // Generate PDF URL
-      const pdfUrl = `${process.env.REACT_APP_API_URL}/project-estimates/${id}/pdf`;
+      // Validate estimate data
+      if (!estimate) {
+        throw new Error('Estimate data not available');
+      }
       
       // Create email subject and body
-      const subject = `Project Estimate - ${estimate.title}`;
-      const body = `Dear Client,\n\nPlease find the attached project estimate for ${estimate.building?.name}.\n\nEstimate Details:\n- Title: ${estimate.title}\n- Estimated Price: $${estimate.estimatedPrice?.toFixed(2) || '0.00'}\n- Duration: ${estimate.estimatedDuration || 'TBD'} days\n\nYou can download the estimate PDF from: ${window.location.origin}/project-estimates/${id}\n\nBest regards,\nDSJ Construction Services`;
+      const subject = `Project Estimate - ${estimate.title || 'Estimate'}`;
+      const buildingName = estimate.building?.name || 'your building';
+      const estimatedPrice = estimate.estimatedPrice || estimate.estimatedCost || 0;
+      const duration = estimate.estimatedDuration || 'TBD';
+      
+      const body = `Dear Client,\n\nPlease find the project estimate for ${buildingName}.\n\nEstimate Details:\n- Title: ${estimate.title || 'N/A'}\n- Estimated Price: $${estimatedPrice.toFixed(2)}\n- Duration: ${duration} days\n\nYou can view the estimate at: ${window.location.origin}/project-estimates/${id}\n\nBest regards,\nDSJ Construction Services`;
       
       // Open email client
       window.location.href = `mailto:${clientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       
-      toast.success('Email client opened. Please send the email.');
+      toast.success('Email client opened successfully!');
       setSendToClientDialog(false);
-      setClientEmail('');
     } catch (error) {
       console.error('Send to client error:', error);
       toast.error('Failed to prepare email: ' + (error?.message || 'Unknown error'));

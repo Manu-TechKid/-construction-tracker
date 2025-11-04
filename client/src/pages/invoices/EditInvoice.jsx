@@ -27,12 +27,18 @@ import {
   Paper,
   Chip,
   Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
   Save as SaveIcon,
   Assignment as WorkOrderIcon,
   AttachMoney as MoneyIcon,
+  Add as AddIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -43,7 +49,10 @@ import { toast } from 'react-toastify';
 
 import {
   useGetInvoiceQuery,
-  useUpdateInvoiceMutation
+  useUpdateInvoiceMutation,
+  useAddWorkOrdersToInvoiceMutation,
+  useRemoveWorkOrdersFromInvoiceMutation,
+  useGetUnbilledWorkOrdersQuery
 } from '../../features/invoices/invoicesApiSlice';
 
 const validationSchema = Yup.object({
@@ -55,9 +64,21 @@ const validationSchema = Yup.object({
 const EditInvoice = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [selectedWorkOrders, setSelectedWorkOrders] = useState([]);
 
-  const { data: invoiceData, isLoading, error } = useGetInvoiceQuery(id);
+  const { data: invoiceData, isLoading, error, refetch } = useGetInvoiceQuery(id);
   const [updateInvoice, { isLoading: isUpdating }] = useUpdateInvoiceMutation();
+  const [addWorkOrders, { isLoading: isAdding }] = useAddWorkOrdersToInvoiceMutation();
+  const [removeWorkOrders, { isLoading: isRemoving }] = useRemoveWorkOrdersFromInvoiceMutation();
+  
+  const invoice = invoiceData?.data?.invoice;
+  const buildingId = invoice?.building?._id || invoice?.building;
+  
+  const { data: unbilledData } = useGetUnbilledWorkOrdersQuery(buildingId, {
+    skip: !buildingId || !addDialogOpen
+  });
 
   const formik = useFormik({
     initialValues: {
@@ -89,7 +110,7 @@ const EditInvoice = () => {
   useEffect(() => {
     console.log('EditInvoice: Invoice data received:', invoiceData);
     if (invoiceData?.data) {
-      const invoice = invoiceData.data;
+      const invoice = invoiceData.data.invoice || invoiceData.data;
       console.log('EditInvoice: Setting form values for invoice:', invoice);
       try {
         let dueDateValue = new Date();
@@ -116,6 +137,7 @@ const EditInvoice = () => {
         });
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invoiceData]);
 
   if (isLoading) {
@@ -139,8 +161,6 @@ const EditInvoice = () => {
     );
   }
 
-  const invoice = invoiceData?.data?.invoice;
-
   if (!invoice) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4 }}>
@@ -154,6 +174,40 @@ const EditInvoice = () => {
       </Container>
     );
   }
+  
+  // Handlers for work order management
+  const handleAddWorkOrders = async () => {
+    if (selectedWorkOrders.length === 0) {
+      toast.error('Please select at least one work order');
+      return;
+    }
+    
+    try {
+      await addWorkOrders({ id, workOrderIds: selectedWorkOrders }).unwrap();
+      toast.success(`${selectedWorkOrders.length} work order(s) added successfully!`);
+      setAddDialogOpen(false);
+      setSelectedWorkOrders([]);
+      refetch();
+    } catch (error) {
+      console.error('Add work orders error:', error);
+      toast.error('Failed to add work orders: ' + (error?.data?.message || 'Unknown error'));
+    }
+  };
+  
+  const handleRemoveWorkOrder = async (workOrderId) => {
+    if (!window.confirm('Remove this work order from the invoice?')) {
+      return;
+    }
+    
+    try {
+      await removeWorkOrders({ id, workOrderIds: [workOrderId] }).unwrap();
+      toast.success('Work order removed successfully!');
+      refetch();
+    } catch (error) {
+      console.error('Remove work order error:', error);
+      toast.error('Failed to remove work order: ' + (error?.data?.message || 'Unknown error'));
+    }
+  };
 
   // Helper function to get status color
   const getStatusColor = (status) => {
@@ -173,6 +227,8 @@ const EditInvoice = () => {
       currency: 'USD'
     }).format(amount || 0);
   };
+  
+  const availableWorkOrders = unbilledData?.data?.workOrders || [];
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -248,6 +304,16 @@ const EditInvoice = () => {
             <CardHeader
               title="Work Orders in This Invoice"
               avatar={<WorkOrderIcon />}
+              action={
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => setAddDialogOpen(true)}
+                  disabled={isAdding || isRemoving}
+                >
+                  Add Work Orders
+                </Button>
+              }
             />
             <CardContent>
               <TableContainer component={Paper}>
@@ -259,8 +325,7 @@ const EditInvoice = () => {
                       <TableCell>Apartment</TableCell>
                       <TableCell>Status</TableCell>
                       <TableCell align="right">Price</TableCell>
-                      <TableCell align="right">Cost</TableCell>
-                      <TableCell align="right">Profit</TableCell>
+                      <TableCell align="right">Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -306,14 +371,15 @@ const EditInvoice = () => {
                           </Typography>
                         </TableCell>
                         <TableCell align="right">
-                          <Typography variant="body2" color="error.main" fontWeight="medium">
-                            {formatCurrency(item.workOrder?.cost || item.workOrder?.actualCost)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography variant="body2" color="primary.main" fontWeight="medium">
-                            {formatCurrency(item.totalPrice || ((item.unitPrice || item.workOrder?.price || 0) * (item.quantity || 1)))}
-                          </Typography>
+                          <IconButton
+                            color="error"
+                            size="small"
+                            onClick={() => handleRemoveWorkOrder(item.workOrder?._id)}
+                            disabled={isRemoving}
+                            title="Remove from invoice"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -430,6 +496,90 @@ const EditInvoice = () => {
             </Button>
           </Box>
         </form>
+        
+        {/* Add Work Orders Dialog */}
+        <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)} maxWidth="md" fullWidth>
+          <DialogTitle>Add Work Orders to Invoice</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Select work orders from {invoice.building?.name || 'this building'} to add to the invoice.
+            </Typography>
+            
+            {availableWorkOrders.length === 0 ? (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                No unbilled work orders available for this building.
+              </Alert>
+            ) : (
+              <Box sx={{ mt: 2 }}>
+                <FormControl component="fieldset" fullWidth>
+                  {availableWorkOrders.map((wo) => (
+                    <Box
+                      key={wo._id}
+                      sx={{
+                        p: 2,
+                        mb: 1,
+                        border: '1px solid',
+                        borderColor: selectedWorkOrders.includes(wo._id) ? 'primary.main' : 'divider',
+                        borderRadius: 1,
+                        cursor: 'pointer',
+                        bgcolor: selectedWorkOrders.includes(wo._id) ? 'action.selected' : 'background.paper',
+                        '&:hover': { bgcolor: 'action.hover' }
+                      }}
+                      onClick={() => {
+                        setSelectedWorkOrders(prev =>
+                          prev.includes(wo._id)
+                            ? prev.filter(id => id !== wo._id)
+                            : [...prev, wo._id]
+                        );
+                      }}
+                    >
+                      <Box display="flex" justifyContent="space-between" alignItems="center">
+                        <Box>
+                          <Typography variant="subtitle2" fontWeight="bold">
+                            {wo.title || 'Untitled Work Order'}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Apt {wo.apartmentNumber || 'N/A'} • {wo.workType?.name || 'N/A'}
+                          </Typography>
+                        </Box>
+                        <Box textAlign="right">
+                          <Typography variant="h6" color="primary">
+                            {formatCurrency(wo.price || wo.estimatedCost || 0)}
+                          </Typography>
+                          <Chip
+                            label={wo.status || 'pending'}
+                            size="small"
+                            color={wo.status === 'completed' ? 'success' : 'default'}
+                          />
+                        </Box>
+                      </Box>
+                    </Box>
+                  ))}
+                </FormControl>
+                
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                  Selected: {selectedWorkOrders.length} work order(s)
+                </Typography>
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => {
+              setAddDialogOpen(false);
+              setSelectedWorkOrders([]);
+            }}>
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleAddWorkOrders}
+              disabled={selectedWorkOrders.length === 0 || isAdding}
+              startIcon={isAdding ? <CircularProgress size={20} /> : <AddIcon />}
+            >
+              {isAdding ? 'Adding...' : `Add ${selectedWorkOrders.length} Work Order(s)`}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Container>
     </LocalizationProvider>
   );
