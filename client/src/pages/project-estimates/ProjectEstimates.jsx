@@ -67,6 +67,8 @@ const ProjectEstimates = () => {
   const [selectedTab, setSelectedTab] = useState(0);
   const [selectedProject, setSelectedProject] = useState(null);
   const [detailsDialog, setDetailsDialog] = useState(false);
+  const [actionAnchorEl, setActionAnchorEl] = useState(null);
+  const [actionProject, setActionProject] = useState(null);
   const [filters, setFilters] = useState({
     status: '',
     building: '',
@@ -182,6 +184,42 @@ const ProjectEstimates = () => {
   const handleEdit = (projectId) => {
     navigate(`/project-estimates/edit/${projectId}`);
   };
+
+  const handleActionMenuOpen = (event, project) => {
+    setActionAnchorEl(event.currentTarget);
+    setActionProject(project);
+  };
+
+  const handleActionMenuClose = () => {
+    setActionAnchorEl(null);
+    setActionProject(null);
+  };
+
+  const handleActionView = () => {
+    if (!actionProject) return;
+    navigate(`/project-estimates/${actionProject._id}`);
+    handleActionMenuClose();
+  };
+
+  const handleActionEdit = () => {
+    if (!actionProject) return;
+    navigate(`/project-estimates/edit/${actionProject._id}`);
+    handleActionMenuClose();
+  };
+
+  const handleActionConvert = async () => {
+    if (!actionProject) return;
+    await handleConvertToInvoice(actionProject._id);
+    handleActionMenuClose();
+  };
+
+  const handleActionDelete = async () => {
+    if (!actionProject) return;
+    await handleDelete(actionProject._id);
+    handleActionMenuClose();
+  };
+
+  const canConvertProject = (project) => project?.status === 'approved';
 
   // Quick filter buttons for months
   const setMonthFilter = (monthsAgo) => {
@@ -496,30 +534,14 @@ const ProjectEstimates = () => {
                               <EditIcon />
                             </IconButton>
                           </Tooltip>
-                          {project.status === 'approved' && project.status !== 'invoiced' && (
-                            <Tooltip title="Convert to Invoice">
-                              <IconButton 
-                                size="small" 
-                                color="success"
-                                onClick={() => handleConvertToInvoice(project._id)}
-                                disabled={isConverting}
-                              >
-                                <InvoiceIcon />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                          {project.status !== 'converted' && project.status !== 'invoiced' && (
-                            <Tooltip title="Delete">
-                              <IconButton 
-                                size="small" 
-                                color="error"
-                                onClick={() => handleDelete(project._id)}
-                                disabled={isDeleting}
-                              >
-                                <DeleteIcon />
-                              </IconButton>
-                            </Tooltip>
-                          )}
+                          <Tooltip title="More actions">
+                            <IconButton 
+                              size="small"
+                              onClick={(event) => handleActionMenuOpen(event, project)}
+                            >
+                              <MoreVertIcon />
+                            </IconButton>
+                          </Tooltip>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -599,6 +621,37 @@ const ProjectEstimates = () => {
             <Button onClick={() => setDetailsDialog(false)}>Close</Button>
           </DialogActions>
         </Dialog>
+
+        {/* Actions Menu */}
+        <Menu
+          anchorEl={actionAnchorEl}
+          open={Boolean(actionAnchorEl)}
+          onClose={handleActionMenuClose}
+        >
+          <MenuItem onClick={handleActionView}>
+            <ViewIcon fontSize="small" sx={{ mr: 1 }} />
+            View Details
+          </MenuItem>
+          <MenuItem onClick={handleActionEdit}>
+            <EditIcon fontSize="small" sx={{ mr: 1 }} />
+            Edit
+          </MenuItem>
+          <MenuItem
+            onClick={handleActionConvert}
+            disabled={!canConvertProject(actionProject) || isConverting}
+          >
+            <InvoiceIcon fontSize="small" sx={{ mr: 1 }} />
+            Convert to Invoice
+          </MenuItem>
+          <MenuItem
+            onClick={handleActionDelete}
+            disabled={isDeleting}
+            sx={{ color: 'error.main' }}
+          >
+            <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+            Delete
+          </MenuItem>
+        </Menu>
       </Box>
     </Container>
   );

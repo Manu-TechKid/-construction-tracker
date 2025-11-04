@@ -64,9 +64,20 @@ const ProjectEstimateDetails = () => {
   const [sendToClientDialog, setSendToClientDialog] = useState(false);
   const [clientEmail, setClientEmail] = useState('');
   
+  // API queries and mutations
+  const { data: estimateData, isLoading, error, refetch } = useGetProjectEstimateQuery(id);
+  const [approveEstimate, { isLoading: isApproving }] = useApproveProjectEstimateMutation();
+  const [deleteEstimate, { isLoading: isDeleting }] = useDeleteProjectEstimateMutation();
+  const [convertToWorkOrder, { isLoading: isConverting }] = useConvertToWorkOrderMutation();
+  const [convertToInvoice, { isLoading: isConvertingToInvoice }] = useConvertToInvoiceMutation();
+
+  const estimate = estimateData?.data?.projectEstimate;
+
   // Auto-populate email from building contacts when dialog opens
   React.useEffect(() => {
-    if (sendToClientDialog && estimate?.building) {
+    if (!estimate) return;
+
+    if (sendToClientDialog && estimate.building) {
       const emails = [
         estimate.building.generalManagerEmail,
         estimate.building.maintenanceManagerEmail,
@@ -79,15 +90,6 @@ const ProjectEstimateDetails = () => {
     }
   }, [sendToClientDialog, estimate]);
   const [selectedTab, setSelectedTab] = useState(0);
-
-  // API queries and mutations
-  const { data: estimateData, isLoading, error, refetch } = useGetProjectEstimateQuery(id);
-  const [approveEstimate, { isLoading: isApproving }] = useApproveProjectEstimateMutation();
-  const [deleteEstimate, { isLoading: isDeleting }] = useDeleteProjectEstimateMutation();
-  const [convertToWorkOrder, { isLoading: isConverting }] = useConvertToWorkOrderMutation();
-  const [convertToInvoice, { isLoading: isConvertingToInvoice }] = useConvertToInvoiceMutation();
-
-  const estimate = estimateData?.data?.projectEstimate;
 
   // Event handlers
   const handleMenuClick = (event) => {

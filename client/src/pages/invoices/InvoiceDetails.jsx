@@ -58,10 +58,13 @@ const InvoiceDetails = () => {
   const { data: invoiceData, isLoading, error } = useGetInvoiceQuery(id);
   const [markAsPaid, { isLoading: isMarkingPaid }] = useMarkInvoiceAsPaidMutation();
   const [deleteInvoice, { isLoading: isDeleting }] = useDeleteInvoiceMutation();
+  const invoice = invoiceData?.data?.invoice;
   
   // Auto-populate email from building contacts when dialog opens
   React.useEffect(() => {
-    if (emailDialogOpen && invoice?.building) {
+    if (!invoice) return;
+
+    if (emailDialogOpen && invoice.building) {
       const emails = [
         invoice.building.generalManagerEmail,
         invoice.building.maintenanceManagerEmail,
@@ -91,8 +94,6 @@ const InvoiceDetails = () => {
       </Container>
     );
   }
-  
-  const invoice = invoiceData?.data?.invoice;
   
   // Debug logging for development
   if (process.env.NODE_ENV === 'development') {
