@@ -43,6 +43,10 @@ router.post('/:id/email', invoiceController.emailInvoice);
 router.patch('/:id/mark-paid', restrictToRoles('admin', 'manager'), invoiceController.markAsPaid);
 router.patch('/:id/update-payment', restrictToRoles('admin', 'manager'), invoiceController.updatePayment);
 
+// Work order management in invoices (NEW - allows editing invoices)
+router.post('/:id/add-work-orders', invoiceController.addWorkOrdersToInvoice);
+router.post('/:id/remove-work-orders', invoiceController.removeWorkOrdersFromInvoice);
+
 // Line items management
 router.post('/:id/line-items', invoiceController.addLineItem);
 router.put('/:id/line-items/:lineItemId', invoiceController.updateLineItem);

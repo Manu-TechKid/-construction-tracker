@@ -281,6 +281,111 @@ exports.updateInvoice = catchAsync(async (req, res, next) => {
     });
 });
 
+// Add work orders to existing invoice
+exports.addWorkOrdersToInvoice = catchAsync(async (req, res, next) => {
+    const { workOrderIds } = req.body;
+    
+    if (!workOrderIds || !Array.isArray(workOrderIds) || workOrderIds.length === 0) {
+        return next(new AppError('Please provide work order IDs to add', 400));
+    }
+
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) {
+        return next(new AppError('Invoice not found', 404));
+    }
+
+    // Fetch work orders with full details
+    const workOrders = await WorkOrder.find({ 
+        _id: { $in: workOrderIds },
+        billingStatus: { $ne: 'invoiced' } // Only add work orders that aren't already invoiced
+    }).populate('workType workSubType');
+
+    if (workOrders.length === 0) {
+        return next(new AppError('No valid work orders found to add', 400));
+    }
+
+    // Add work orders to invoice
+    workOrders.forEach(wo => {
+        // Check if work order is already in invoice
+        const exists = invoice.workOrders.some(
+            item => item.workOrder.toString() === wo._id.toString()
+        );
+        
+        if (!exists) {
+            invoice.workOrders.push({
+                workOrder: wo._id,
+                description: wo.description || wo.title,
+                quantity: 1,
+                unitPrice: wo.price || 0,
+                total: wo.price || 0
+            });
+        }
+    });
+
+    // Recalculate totals
+    invoice.subtotal = invoice.workOrders.reduce((sum, wo) => sum + (wo.total || 0), 0);
+    invoice.total = invoice.subtotal + (invoice.tax || 0) - (invoice.discount || 0);
+
+    await invoice.save();
+
+    // Update work orders billing status
+    await WorkOrder.updateMany(
+        { _id: { $in: workOrderIds } },
+        { billingStatus: 'invoiced', invoice: invoice._id }
+    );
+
+    const updatedInvoice = await Invoice.findById(invoice._id)
+        .populate('building', 'name address')
+        .populate('workOrders.workOrder', 'title description apartmentNumber price');
+
+    res.status(200).json({
+        status: 'success',
+        message: `${workOrders.length} work order(s) added to invoice`,
+        data: { invoice: updatedInvoice }
+    });
+});
+
+// Remove work orders from invoice
+exports.removeWorkOrdersFromInvoice = catchAsync(async (req, res, next) => {
+    const { workOrderIds } = req.body;
+    
+    if (!workOrderIds || !Array.isArray(workOrderIds) || workOrderIds.length === 0) {
+        return next(new AppError('Please provide work order IDs to remove', 400));
+    }
+
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) {
+        return next(new AppError('Invoice not found', 404));
+    }
+
+    // Remove work orders from invoice
+    invoice.workOrders = invoice.workOrders.filter(
+        item => !workOrderIds.includes(item.workOrder.toString())
+    );
+
+    // Recalculate totals
+    invoice.subtotal = invoice.workOrders.reduce((sum, wo) => sum + (wo.total || 0), 0);
+    invoice.total = invoice.subtotal + (invoice.tax || 0) - (invoice.discount || 0);
+
+    await invoice.save();
+
+    // Reset work orders billing status
+    await WorkOrder.updateMany(
+        { _id: { $in: workOrderIds } },
+        { billingStatus: 'pending', invoice: null }
+    );
+
+    const updatedInvoice = await Invoice.findById(invoice._id)
+        .populate('building', 'name address')
+        .populate('workOrders.workOrder', 'title description apartmentNumber price');
+
+    res.status(200).json({
+        status: 'success',
+        message: `${workOrderIds.length} work order(s) removed from invoice`,
+        data: { invoice: updatedInvoice }
+    });
+});
+
 // Mark invoice as paid
 exports.markAsPaid = catchAsync(async (req, res, next) => {
     const invoice = await Invoice.findByIdAndUpdate(
