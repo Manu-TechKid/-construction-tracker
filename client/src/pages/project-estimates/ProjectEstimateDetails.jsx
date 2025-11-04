@@ -147,15 +147,10 @@ const ProjectEstimateDetails = () => {
       return;
     }
     
-    try {
-      await sendToClient({ id, clientEmail }).unwrap();
-      toast.success('Estimate sent to client successfully');
-      setSendToClientDialog(false);
-      setClientEmail('');
-      refetch();
-    } catch (error) {
-      toast.error('Failed to send estimate: ' + (error?.data?.message || 'Unknown error'));
-    }
+    // TODO: Implement send to client functionality
+    toast.info('Send to client feature coming soon');
+    setSendToClientDialog(false);
+    setClientEmail('');
   };
 
   const getStatusColor = (status) => {
@@ -582,16 +577,15 @@ const ProjectEstimateDetails = () => {
           </Alert>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setSendToClientDialog(false)} disabled={isSending}>
+          <Button onClick={() => setSendToClientDialog(false)}>
             Cancel
           </Button>
           <Button 
             onClick={handleSendToClient} 
             variant="contained"
-            disabled={isSending || !clientEmail.trim()}
-            startIcon={isSending ? <CircularProgress size={16} /> : null}
+            disabled={!clientEmail.trim()}
           >
-            {isSending ? 'Sending...' : 'Send Estimate'}
+            Send Estimate
           </Button>
         </DialogActions>
       </Dialog>
