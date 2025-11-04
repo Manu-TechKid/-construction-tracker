@@ -63,6 +63,21 @@ const ProjectEstimateDetails = () => {
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [sendToClientDialog, setSendToClientDialog] = useState(false);
   const [clientEmail, setClientEmail] = useState('');
+  
+  // Auto-populate email from building contacts when dialog opens
+  React.useEffect(() => {
+    if (sendToClientDialog && estimate?.building) {
+      const emails = [
+        estimate.building.generalManagerEmail,
+        estimate.building.maintenanceManagerEmail,
+        estimate.building.serviceManagerEmail
+      ].filter(Boolean);
+      
+      if (emails.length > 0) {
+        setClientEmail(emails.join(', '));
+      }
+    }
+  }, [sendToClientDialog, estimate]);
   const [selectedTab, setSelectedTab] = useState(0);
 
   // API queries and mutations
@@ -132,11 +147,18 @@ const ProjectEstimateDetails = () => {
   };
 
   const handleConvertToInvoice = async () => {
+    // Check if estimate is approved
+    if (estimate?.status !== 'approved') {
+      toast.error('Only approved estimates can be converted to invoices. Please approve this estimate first.');
+      return;
+    }
+    
     try {
       const result = await convertToInvoice(id).unwrap();
-      toast.success('Successfully converted to invoice');
+      toast.success('Successfully converted to invoice!');
       navigate(`/invoices/${result.data.invoice._id}`);
     } catch (error) {
+      console.error('Convert to invoice error:', error);
       toast.error('Failed to convert to invoice: ' + (error?.data?.message || 'Unknown error'));
     }
   };
@@ -147,10 +169,24 @@ const ProjectEstimateDetails = () => {
       return;
     }
     
-    // TODO: Implement send to client functionality
-    toast.info('Send to client feature coming soon');
-    setSendToClientDialog(false);
-    setClientEmail('');
+    try {
+      // Generate PDF URL
+      const pdfUrl = `${process.env.REACT_APP_API_URL}/project-estimates/${id}/pdf`;
+      
+      // Create email subject and body
+      const subject = `Project Estimate - ${estimate.title}`;
+      const body = `Dear Client,\n\nPlease find the attached project estimate for ${estimate.building?.name}.\n\nEstimate Details:\n- Title: ${estimate.title}\n- Estimated Price: $${estimate.estimatedPrice?.toFixed(2) || '0.00'}\n- Duration: ${estimate.estimatedDuration || 'TBD'} days\n\nYou can download the estimate PDF from: ${window.location.origin}/project-estimates/${id}\n\nBest regards,\nDSJ Construction Services`;
+      
+      // Open email client
+      window.location.href = `mailto:${clientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      
+      toast.success('Email client opened. Please send the email.');
+      setSendToClientDialog(false);
+      setClientEmail('');
+    } catch (error) {
+      console.error('Send to client error:', error);
+      toast.error('Failed to prepare email: ' + (error?.message || 'Unknown error'));
+    }
   };
 
   const getStatusColor = (status) => {

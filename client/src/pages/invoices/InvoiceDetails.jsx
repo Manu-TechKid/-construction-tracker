@@ -24,7 +24,8 @@ import {
   DialogActions,
   CircularProgress,
   Alert,
-  Divider
+  Divider,
+  TextField
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -32,7 +33,8 @@ import {
   Delete as DeleteIcon,
   Payment as PaymentIcon,
   Print as PrintIcon,
-  Receipt as ReceiptIcon
+  Receipt as ReceiptIcon,
+  Email as EmailIcon
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
@@ -50,10 +52,27 @@ const InvoiceDetails = () => {
   const { hasPermission } = useAuth();
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [recipientEmail, setRecipientEmail] = useState('');
   
   const { data: invoiceData, isLoading, error } = useGetInvoiceQuery(id);
   const [markAsPaid, { isLoading: isMarkingPaid }] = useMarkInvoiceAsPaidMutation();
   const [deleteInvoice, { isLoading: isDeleting }] = useDeleteInvoiceMutation();
+  
+  // Auto-populate email from building contacts when dialog opens
+  React.useEffect(() => {
+    if (emailDialogOpen && invoice?.building) {
+      const emails = [
+        invoice.building.generalManagerEmail,
+        invoice.building.maintenanceManagerEmail,
+        invoice.building.serviceManagerEmail
+      ].filter(Boolean);
+      
+      if (emails.length > 0) {
+        setRecipientEmail(emails.join(', '));
+      }
+    }
+  }, [emailDialogOpen, invoice]);
   
   if (isLoading) {
     return (
@@ -118,6 +137,28 @@ const InvoiceDetails = () => {
     setDeleteDialogOpen(false);
   };
   
+  const handleEmailInvoice = () => {
+    if (!recipientEmail.trim()) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+    
+    try {
+      // Create email subject and body
+      const subject = `Invoice ${invoice.invoiceNumber} - DSJ Construction Services`;
+      const body = `Dear Building Manager,\n\nPlease find attached invoice ${invoice.invoiceNumber} for services provided at ${invoice.building?.name}.\n\nInvoice Details:\n- Invoice Number: ${invoice.invoiceNumber}\n- Date: ${invoice.issueDate ? format(new Date(invoice.issueDate), 'MM/dd/yyyy') : 'N/A'}\n- Total Amount: $${invoice.total?.toFixed(2) || '0.00'}\n\nYou can download the invoice PDF from: ${window.location.origin}/invoices/${id}\n\nBest regards,\nDSJ Construction Services`;
+      
+      // Open email client
+      window.location.href = `mailto:${recipientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      
+      toast.success('Email client opened. Please send the invoice.');
+      setEmailDialogOpen(false);
+    } catch (error) {
+      console.error('Email invoice error:', error);
+      toast.error('Failed to prepare email: ' + (error?.message || 'Unknown error'));
+    }
+  };
+  
   const getStatusColor = (status) => {
     switch (status) {
       case 'paid': return 'success';
@@ -173,6 +214,13 @@ const InvoiceDetails = () => {
             color={getStatusColor(invoice.status)}
             size="large"
           />
+          <Button
+            variant="contained"
+            startIcon={<EmailIcon />}
+            onClick={() => setEmailDialogOpen(true)}
+          >
+            Email Invoice
+          </Button>
           {hasPermission('update:invoices') && (
             <Button
               variant="outlined"
@@ -602,6 +650,52 @@ const InvoiceDetails = () => {
         </Grid>
       </Grid>
       
+      {/* Email Invoice Dialog */}
+      <Dialog open={emailDialogOpen} onClose={() => setEmailDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Email Invoice</DialogTitle>
+        <DialogContent>
+          <Typography gutterBottom>
+            Send invoice {invoice.invoiceNumber} to the building manager via email.
+          </Typography>
+          <Box component="form" sx={{ mt: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Recipient Email(s)
+            </Typography>
+            <input
+              type="text"
+              value={recipientEmail}
+              onChange={(e) => setRecipientEmail(e.target.value)}
+              placeholder="email@example.com"
+              style={{
+                width: '100%',
+                padding: '12px',
+                fontSize: '16px',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                marginTop: '8px'
+              }}
+              autoFocus
+            />
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              Separate multiple emails with commas. Auto-populated from building contacts.
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEmailDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleEmailInvoice} 
+            variant="contained"
+            disabled={!recipientEmail.trim()}
+            startIcon={<EmailIcon />}
+          >
+            Send Email
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
         <DialogTitle>Delete Invoice</DialogTitle>
