@@ -187,7 +187,7 @@ app.get('/api/v1/health', (req, res) => {
     status: 'ok', 
     time: new Date().toISOString(),
     environment: process.env.NODE_ENV,
-    version: '1.0.2'  // Trigger deployment
+    version: '1.0.3'  // Trigger deployment - Fixed navigation
   });
 });
 
