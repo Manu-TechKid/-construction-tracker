@@ -96,8 +96,9 @@ const EditInvoice = () => {
         };
 
         await updateInvoice({ id, ...updateData }).unwrap();
-        toast.success('Invoice updated successfully');
-        navigate('/invoices');
+        toast.success('Invoice updated successfully!');
+        // Navigate to invoices list to avoid detail page initialization errors
+        setTimeout(() => navigate('/invoices'), 500);
       } catch (error) {
         console.error('Failed to update invoice:', error);
         const errorMessage = error?.data?.message || error?.message || 'Failed to update invoice';
@@ -236,7 +237,7 @@ const EditInvoice = () => {
         {/* Header */}
         <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
           <IconButton
-            onClick={() => navigate(`/invoices/${id}`)}
+            onClick={() => navigate('/invoices')}
             color="primary"
             disabled={isUpdating}
           >
@@ -481,7 +482,7 @@ const EditInvoice = () => {
           <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
             <Button
               variant="outlined"
-              onClick={() => navigate(`/invoices/${id}`)}
+              onClick={() => navigate('/invoices')}
               disabled={isUpdating}
             >
               Cancel
