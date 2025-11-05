@@ -39,6 +39,7 @@ import {
   AttachMoney as MoneyIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
+  Edit as EditIcon,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -209,6 +210,11 @@ const EditInvoice = () => {
       toast.error('Failed to remove work order: ' + (error?.data?.message || 'Unknown error'));
     }
   };
+  
+  const handleEditWorkOrder = (workOrderId) => {
+    // Navigate to work order edit page with a return path to this invoice edit page
+    navigate(`/work-orders/${workOrderId}/edit?returnTo=/invoices/${id}/edit`);
+  };
 
   // Helper function to get status color
   const getStatusColor = (status) => {
@@ -372,6 +378,14 @@ const EditInvoice = () => {
                           </Typography>
                         </TableCell>
                         <TableCell align="right">
+                          <IconButton
+                            color="primary"
+                            size="small"
+                            onClick={() => handleEditWorkOrder(item.workOrder?._id)}
+                            title="Edit work order"
+                          >
+                            <EditIcon />
+                          </IconButton>
                           <IconButton
                             color="error"
                             size="small"

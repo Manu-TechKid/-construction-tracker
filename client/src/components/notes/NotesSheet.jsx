@@ -34,6 +34,8 @@ import {
   Cancel as CancelIcon,
   Note as NoteIcon,
   Business as BuildingIcon,
+  CheckCircle as CheckCircleIcon,
+  FilterList as FilterListIcon,
 } from '@mui/icons-material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -55,6 +57,9 @@ const NotesSheet = () => {
   const [notes, setNotes] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingNote, setEditingNote] = useState(null);
+  const [filterBuilding, setFilterBuilding] = useState('');
+  const [filterWeek, setFilterWeek] = useState(null);
+  const [showProcessed, setShowProcessed] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     content: '',
@@ -63,6 +68,7 @@ const NotesSheet = () => {
     visitDate: new Date(),
     estimateAmount: '',
     priority: 'medium',
+    workers: [],
   });
 
   const noteTypes = [
@@ -106,8 +112,28 @@ const NotesSheet = () => {
     }
   }, [notesData]);
 
-  // Don't filter by building here since we're already filtering in the API query
-  const filteredNotes = notes || [];
+  // Filter notes by building, week, and processed status
+  const filteredNotes = (notes || []).filter(note => {
+    // Filter by building if selected
+    if (filterBuilding && note.building !== filterBuilding) {
+      return false;
+    }
+    
+    // Filter by week if selected
+    if (filterWeek) {
+      const noteWeekStart = note.weekStart ? new Date(note.weekStart) : null;
+      if (!noteWeekStart || noteWeekStart.getTime() !== filterWeek.getTime()) {
+        return false;
+      }
+    }
+    
+    // Filter by processed status
+    if (!showProcessed && note.processedToWorkOrder) {
+      return false;
+    }
+    
+    return true;
+  });
 
   const handleOpenDialog = (note = null) => {
     if (note) {
@@ -126,6 +152,7 @@ const NotesSheet = () => {
         visitDate: new Date(),
         estimateAmount: '',
         priority: 'medium',
+        workers: [],
       });
     }
     setOpenDialog(true);
@@ -142,6 +169,7 @@ const NotesSheet = () => {
       visitDate: new Date(),
       estimateAmount: '',
       priority: 'medium',
+      workers: [],
     });
   };
 
@@ -163,7 +191,10 @@ const NotesSheet = () => {
         building: formData.building,
         type: formData.type === 'visit' ? 'visit' : formData.type || 'general', // Ensure 'visit' is handled
         priority: formData.priority || 'medium',
-        status: 'active'
+        status: 'active',
+        visitDate: formData.visitDate,
+        workers: formData.workers || [],
+        estimateAmount: formData.estimateAmount || null
       };
 
       console.log('Saving note with data:', noteData);
@@ -200,6 +231,21 @@ const NotesSheet = () => {
         console.error('Error deleting note:', error);
         toast.error('Failed to delete note');
       }
+    }
+  };
+
+  const handleMarkAsProcessed = async (noteId) => {
+    try {
+      await updateNote({ 
+        id: noteId, 
+        processedToWorkOrder: true,
+        status: 'processed'
+      }).unwrap();
+      toast.success('Note marked as processed');
+      refetch();
+    } catch (error) {
+      console.error('Error marking note as processed:', error);
+      toast.error('Failed to mark note as processed');
     }
   };
 
@@ -273,6 +319,54 @@ const NotesSheet = () => {
           )}
         </Box>
 
+        {/* Filters */}
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} sm={4}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Filter by Building</InputLabel>
+                  <Select
+                    value={filterBuilding}
+                    label="Filter by Building"
+                    onChange={(e) => setFilterBuilding(e.target.value)}
+                  >
+                    <MenuItem value="">All Buildings</MenuItem>
+                    {buildings.map((building) => (
+                      <MenuItem key={building._id} value={building._id}>
+                        {building.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <DateTimePicker
+                  label="Filter by Week Start"
+                  value={filterWeek}
+                  onChange={(newValue) => setFilterWeek(newValue)}
+                  renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+                  views={['year', 'month', 'day']}
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <FormControl component="fieldset">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="body2">Show Processed:</Typography>
+                    <Button
+                      size="small"
+                      variant={showProcessed ? 'contained' : 'outlined'}
+                      onClick={() => setShowProcessed(!showProcessed)}
+                    >
+                      {showProcessed ? 'Yes' : 'No'}
+                    </Button>
+                  </Box>
+                </FormControl>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+
         {!selectedBuilding && (
           <Card sx={{ mb: 3 }}>
             <CardContent sx={{ textAlign: 'center', py: 4 }}>
@@ -318,9 +412,32 @@ const NotesSheet = () => {
                 <Grid item xs={12} md={6} lg={4} key={note.id}>
                   <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                     <CardContent sx={{ flexGrow: 1 }}>
-                      <Typography variant="h6" gutterBottom noWrap>
-                        {note.title}
-                      </Typography>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                        <Typography variant="h6" gutterBottom noWrap sx={{ flexGrow: 1 }}>
+                          {note.title}
+                        </Typography>
+                        {note.processedToWorkOrder && (
+                          <Chip
+                            icon={<CheckCircleIcon />}
+                            label="Processed"
+                            color="success"
+                            size="small"
+                          />
+                        )}
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                        <BuildingIcon fontSize="small" color="action" />
+                        <Typography variant="body2" color="text.secondary">
+                          {getBuildingName(note.building)}
+                        </Typography>
+                      </Box>
+                      
+                      {note.workers && note.workers.length > 0 && (
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                          <strong>Workers:</strong> {note.workers.join(', ')}
+                        </Typography>
+                      )}
                       
                       <Typography variant="body2" sx={{ mb: 2 }}>
                         {note.content}
@@ -342,6 +459,17 @@ const NotesSheet = () => {
                         
                         {hasPermission(['update:notes', 'delete:notes']) && (
                           <Box>
+                            {!note.processedToWorkOrder && (
+                              <IconButton
+                                size="small"
+                                onClick={() => handleMarkAsProcessed(note._id)}
+                                disabled={isUpdating}
+                                color="success"
+                                title="Mark as Processed to Work Order"
+                              >
+                                <CheckCircleIcon fontSize="small" />
+                              </IconButton>
+                            )}
                             <IconButton
                               size="small"
                               onClick={() => handleOpenDialog(note)}
@@ -487,6 +615,24 @@ const NotesSheet = () => {
                   value={formData.visitDate}
                   onChange={(newValue) => setFormData({ ...formData, visitDate: newValue })}
                   renderInput={(params) => <TextField {...params} fullWidth />}
+                  disablePast={false}
+                  disableFuture={false}
+                  minDate={null}
+                  maxDate={null}
+                />
+              </Grid>
+              
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Workers (comma-separated)"
+                  value={formData.workers.join(', ')}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    workers: e.target.value.split(',').map(w => w.trim()).filter(w => w) 
+                  })}
+                  placeholder="e.g., John Doe, Jane Smith"
+                  helperText="Enter worker names separated by commas"
                 />
               </Grid>
               

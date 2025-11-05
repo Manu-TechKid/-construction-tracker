@@ -32,8 +32,33 @@ const noteSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['active', 'resolved', 'archived'],
+    enum: ['active', 'resolved', 'archived', 'processed'],
     default: 'active'
+  },
+  visitDate: {
+    type: Date,
+    default: Date.now
+  },
+  estimateAmount: {
+    type: Number
+  },
+  workers: [{
+    type: String,
+    trim: true
+  }],
+  weekStart: {
+    type: Date
+  },
+  weekEnd: {
+    type: Date
+  },
+  processedToWorkOrder: {
+    type: Boolean,
+    default: false
+  },
+  workOrder: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'WorkOrder'
   },
   tags: [{
     type: String,
@@ -81,6 +106,31 @@ noteSchema.index({
 noteSchema.index({ building: 1, status: 1 });
 noteSchema.index({ createdBy: 1 });
 noteSchema.index({ priority: 1, status: 1 });
+noteSchema.index({ weekStart: 1, weekEnd: 1 });
+noteSchema.index({ visitDate: 1 });
+noteSchema.index({ processedToWorkOrder: 1 });
+
+// Pre-save hook to calculate week start and end dates
+noteSchema.pre('save', function(next) {
+  if (this.visitDate) {
+    const visitDate = new Date(this.visitDate);
+    const dayOfWeek = visitDate.getDay();
+    
+    // Calculate Sunday (start of week)
+    const weekStart = new Date(visitDate);
+    weekStart.setDate(visitDate.getDate() - dayOfWeek);
+    weekStart.setHours(0, 0, 0, 0);
+    
+    // Calculate Saturday (end of week)
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+    
+    this.weekStart = weekStart;
+    this.weekEnd = weekEnd;
+  }
+  next();
+});
 
 // Static method to find building by name and auto-assign
 noteSchema.statics.findBuildingByName = async function(buildingName) {
@@ -99,6 +149,21 @@ noteSchema.statics.findBuildingByName = async function(buildingName) {
   }
   
   return building;
+};
+
+// Static method to get notes by week
+noteSchema.statics.getByWeek = async function(weekStartDate) {
+  const weekStart = new Date(weekStartDate);
+  weekStart.setHours(0, 0, 0, 0);
+  
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  weekEnd.setHours(23, 59, 59, 999);
+  
+  return this.find({
+    weekStart: weekStart,
+    weekEnd: weekEnd
+  }).populate('building').sort({ visitDate: 1 });
 };
 
 module.exports = mongoose.model('Note', noteSchema);
