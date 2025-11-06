@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Card,
@@ -35,12 +35,14 @@ import {
   Note as NoteIcon,
   Business as BuildingIcon,
   CheckCircle as CheckCircleIcon,
-  FilterList as FilterListIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
 } from '@mui/icons-material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { format } from 'date-fns';
+import { format, startOfWeek, endOfWeek, isWithinInterval, isSameDay, addWeeks, subWeeks } from 'date-fns';
 import { useBuildingContext } from '../../contexts/BuildingContext';
 import { useAuth } from '../../hooks/useAuth';
 import { 
@@ -58,7 +60,8 @@ const NotesSheet = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingNote, setEditingNote] = useState(null);
   const [filterBuilding, setFilterBuilding] = useState('');
-  const [filterWeek, setFilterWeek] = useState(null);
+  const [filterWeekDate, setFilterWeekDate] = useState(new Date());
+  const [filterDay, setFilterDay] = useState(null);
   const [showProcessed, setShowProcessed] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -95,7 +98,6 @@ const NotesSheet = () => {
   useEffect(() => {
     console.log('Notes Debug: Raw API response:', notesData);
     if (notesData) {
-      // Handle both array and object response structures
       let notesArray = [];
       if (Array.isArray(notesData)) {
         notesArray = notesData;
@@ -106,34 +108,79 @@ const NotesSheet = () => {
       } else if (notesData.data && Array.isArray(notesData.data)) {
         notesArray = notesData.data;
       }
-      
+
       console.log('Notes Debug: Extracted notes array:', notesArray);
       setNotes(notesArray);
     }
   }, [notesData]);
 
-  // Filter notes by building, week, and processed status
-  const filteredNotes = (notes || []).filter(note => {
-    // Filter by building if selected
-    if (filterBuilding && note.building !== filterBuilding) {
-      return false;
+  useEffect(() => {
+    // Sync filter with globally selected building for consistency
+    if (selectedBuilding?._id) {
+      setFilterBuilding(selectedBuilding._id);
+    } else {
+      setFilterBuilding('');
     }
-    
-    // Filter by week if selected
-    if (filterWeek) {
-      const noteWeekStart = note.weekStart ? new Date(note.weekStart) : null;
-      if (!noteWeekStart || noteWeekStart.getTime() !== filterWeek.getTime()) {
+  }, [selectedBuilding?._id]);
+
+  const currentWeekRange = useMemo(() => {
+    const start = startOfWeek(filterWeekDate, { weekStartsOn: 0 });
+    start.setHours(0, 0, 0, 0);
+    const end = endOfWeek(filterWeekDate, { weekStartsOn: 0 });
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  }, [filterWeekDate]);
+
+  const weekLabel = useMemo(() => {
+    return `${format(currentWeekRange.start, 'MMM dd')} - ${format(currentWeekRange.end, 'MMM dd, yyyy')}`;
+  }, [currentWeekRange]);
+
+  const filteredNotes = useMemo(() => {
+    return (notes || []).filter((note) => {
+      const buildingId = typeof note.building === 'object' ? note.building?._id : note.building;
+
+      if (filterBuilding && buildingId !== filterBuilding) {
         return false;
       }
+
+      const visitDate = note.visitDate ? new Date(note.visitDate) : null;
+      if (visitDate && !isWithinInterval(visitDate, { start: currentWeekRange.start, end: currentWeekRange.end })) {
+        return false;
+      }
+
+      if (filterDay && visitDate && !isSameDay(visitDate, filterDay)) {
+        return false;
+      }
+
+      if (!showProcessed && (note.processedToWorkOrder || note.status === 'processed')) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [notes, filterBuilding, currentWeekRange, filterDay, showProcessed]);
+
+  const buildingOptions = useMemo(() => {
+    if (buildings.length) {
+      return buildings;
     }
-    
-    // Filter by processed status
-    if (!showProcessed && note.processedToWorkOrder) {
-      return false;
-    }
-    
-    return true;
-  });
+    // Fallback to any buildings present in the notes payload
+    const map = new Map();
+    notes.forEach((note) => {
+      if (note.building && typeof note.building === 'object') {
+        map.set(note.building._id, note.building);
+      }
+    });
+    return Array.from(map.values());
+  }, [buildings, notes]);
+
+  const handleWeekNavigation = (direction) => {
+    setFilterDay(null);
+    setFilterWeekDate((prev) => {
+      const newDate = direction === 'prev' ? subWeeks(prev, 1) : addWeeks(prev, 1);
+      return new Date(newDate);
+    });
+  };
 
   const handleOpenDialog = (note = null) => {
     if (note) {
@@ -249,8 +296,11 @@ const NotesSheet = () => {
     }
   };
 
-  const getBuildingName = (buildingId) => {
-    const building = buildings.find(b => b._id === buildingId);
+  const getBuildingName = (note) => {
+    if (note.building && typeof note.building === 'object') {
+      return note.building.name || 'Unknown Building';
+    }
+    const building = buildingOptions.find((b) => b._id === note.building);
     return building?.name || 'Unknown Building';
   };
 
@@ -323,7 +373,7 @@ const NotesSheet = () => {
         <Card sx={{ mb: 3 }}>
           <CardContent>
             <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} md={4}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Filter by Building</InputLabel>
                   <Select
@@ -332,7 +382,7 @@ const NotesSheet = () => {
                     onChange={(e) => setFilterBuilding(e.target.value)}
                   >
                     <MenuItem value="">All Buildings</MenuItem>
-                    {buildings.map((building) => (
+                    {buildingOptions.map((building) => (
                       <MenuItem key={building._id} value={building._id}>
                         {building.name}
                       </MenuItem>
@@ -340,28 +390,66 @@ const NotesSheet = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={4}>
-                <DateTimePicker
-                  label="Filter by Week Start"
-                  value={filterWeek}
-                  onChange={(newValue) => setFilterWeek(newValue)}
-                  renderInput={(params) => <TextField {...params} fullWidth size="small" />}
-                  views={['year', 'month', 'day']}
-                />
+
+              <Grid item xs={12} md={5}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Week of
+                  </Typography>
+                  <IconButton size="small" onClick={() => handleWeekNavigation('prev')}>
+                    <ChevronLeftIcon fontSize="small" />
+                  </IconButton>
+                  <Typography variant="subtitle1" fontWeight="bold">
+                    {weekLabel}
+                  </Typography>
+                  <IconButton size="small" onClick={() => handleWeekNavigation('next')}>
+                    <ChevronRightIcon fontSize="small" />
+                  </IconButton>
+                  <DatePicker
+                    label="Jump to Week"
+                    value={filterWeekDate}
+                    onChange={(newValue) => {
+                      if (newValue) {
+                        setFilterDay(null);
+                        setFilterWeekDate(newValue);
+                      }
+                    }}
+                    slotProps={{
+                      textField: {
+                        size: 'small',
+                        sx: { minWidth: 180 }
+                      }
+                    }}
+                  />
+                </Box>
               </Grid>
-              <Grid item xs={12} sm={4}>
-                <FormControl component="fieldset">
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="body2">Show Processed:</Typography>
-                    <Button
-                      size="small"
-                      variant={showProcessed ? 'contained' : 'outlined'}
-                      onClick={() => setShowProcessed(!showProcessed)}
-                    >
-                      {showProcessed ? 'Yes' : 'No'}
+
+              <Grid item xs={12} md={3}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                  <DatePicker
+                    label="Filter by Day"
+                    value={filterDay}
+                    onChange={(newValue) => setFilterDay(newValue)}
+                    slotProps={{
+                      textField: {
+                        size: 'small',
+                        fullWidth: true,
+                      }
+                    }}
+                  />
+                  {filterDay && (
+                    <Button size="small" onClick={() => setFilterDay(null)}>
+                      Clear Day
                     </Button>
-                  </Box>
-                </FormControl>
+                  )}
+                  <Button
+                    size="small"
+                    variant={showProcessed ? 'contained' : 'outlined'}
+                    onClick={() => setShowProcessed(!showProcessed)}
+                  >
+                    {showProcessed ? 'Show All' : 'Hide Processed'}
+                  </Button>
+                </Box>
               </Grid>
             </Grid>
           </CardContent>
@@ -416,20 +504,18 @@ const NotesSheet = () => {
                         <Typography variant="h6" gutterBottom noWrap sx={{ flexGrow: 1 }}>
                           {note.title}
                         </Typography>
-                        {note.processedToWorkOrder && (
-                          <Chip
-                            icon={<CheckCircleIcon />}
-                            label="Processed"
-                            color="success"
-                            size="small"
-                          />
-                        )}
+                        <Chip
+                          icon={note.processedToWorkOrder || note.status === 'processed' ? <CheckCircleIcon /> : undefined}
+                          label={note.processedToWorkOrder || note.status === 'processed' ? 'Processed' : 'Pending'}
+                          color={note.processedToWorkOrder || note.status === 'processed' ? 'success' : 'error'}
+                          size="small"
+                        />
                       </Box>
                       
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                         <BuildingIcon fontSize="small" color="action" />
                         <Typography variant="body2" color="text.secondary">
-                          {getBuildingName(note.building)}
+                          {getBuildingName(note)}
                         </Typography>
                       </Box>
                       
@@ -438,6 +524,10 @@ const NotesSheet = () => {
                           <strong>Workers:</strong> {note.workers.join(', ')}
                         </Typography>
                       )}
+                      
+                      <Typography variant="h6">
+                        {note.workOrders?.length || 0}
+                      </Typography>
                       
                       <Typography variant="body2" sx={{ mb: 2 }}>
                         {note.content}
