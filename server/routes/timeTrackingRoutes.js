@@ -38,6 +38,10 @@ router.get('/sessions', timeTrackingController.getTimeSessions);
 // Statistics - accessible to all authenticated users
 router.get('/stats', timeTrackingController.getTimeStats);
 
+// Manual shift creation - accessible to all authenticated users
+router.post('/shifts', timeTrackingController.createShift);
+router.patch('/shifts/:shiftId', timeTrackingController.updateShift);
+
 // Admin/Manager only routes
 router.use(restrictToRoles('admin', 'manager'));
 

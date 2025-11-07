@@ -607,8 +607,20 @@ exports.getWeeklyHours = catchAsync(async (req, res, next) => {
   weekEnd.setHours(23, 59, 59, 999);
 
   let matchQuery = {
-    clockIn: { $gte: weekStart, $lte: weekEnd },
-    clockOut: { $exists: true, $ne: null }
+    $and: [
+      {
+        $or: [
+          { shiftStart: { $gte: weekStart, $lte: weekEnd } },
+          { clockInTime: { $gte: weekStart, $lte: weekEnd } }
+        ]
+      },
+      {
+        $or: [
+          { shiftEnd: { $exists: true, $ne: null } },
+          { clockOutTime: { $exists: true, $ne: null } }
+        ]
+      }
+    ]
   };
 
   if (workerId) {
@@ -619,14 +631,21 @@ exports.getWeeklyHours = catchAsync(async (req, res, next) => {
     { $match: matchQuery },
     {
       $addFields: {
+        // Use shiftStart/shiftEnd if available, fallback to clockInTime/clockOutTime
+        startTime: { $ifNull: ['$shiftStart', '$clockInTime'] },
+        endTime: { $ifNull: ['$shiftEnd', '$clockOutTime'] },
+      }
+    },
+    {
+      $addFields: {
         hoursWorked: {
           $divide: [
-            { $subtract: ['$clockOut', '$clockIn'] },
+            { $subtract: ['$endTime', '$startTime'] },
             1000 * 60 * 60 // Convert milliseconds to hours
           ]
         },
-        dayOfWeek: { $dayOfWeek: '$clockIn' },
-        dateString: { $dateToString: { format: '%Y-%m-%d', date: '$clockIn' } }
+        dayOfWeek: { $dayOfWeek: '$startTime' },
+        dateString: { $dateToString: { format: '%Y-%m-%d', date: '$startTime' } }
       }
     },
     {
@@ -637,8 +656,8 @@ exports.getWeeklyHours = catchAsync(async (req, res, next) => {
         },
         dailyHours: { $sum: '$hoursWorked' },
         sessions: { $push: {
-          clockIn: '$clockIn',
-          clockOut: '$clockOut',
+          clockIn: '$startTime',
+          clockOut: '$endTime',
           hoursWorked: '$hoursWorked',
           workOrder: '$workOrder',
           building: '$building'
@@ -928,6 +947,129 @@ exports.getPaymentReport = catchAsync(async (req, res, next) => {
         startDate: startDate || 'All time',
         endDate: endDate || 'All time'
       }
+    }
+  });
+});
+
+// Create manual shift
+exports.createShift = catchAsync(async (req, res, next) => {
+  const { workerId, buildingId, shiftStart, shiftEnd, breakMinutes, notes, status } = req.body;
+
+  console.log('Create shift request:', { workerId, buildingId, shiftStart, shiftEnd, breakMinutes, notes, status });
+
+  // Validate required fields
+  if (!workerId || !shiftStart) {
+    return next(new AppError('Worker ID and shift start time are required', 400));
+  }
+
+  // Get worker's hourly rate
+  const worker = await User.findById(workerId);
+  if (!worker) {
+    return next(new AppError('Worker not found', 404));
+  }
+
+  const hourlyRate = worker?.workerProfile?.hourlyRate || 0;
+
+  // Create shift data
+  const shiftData = {
+    worker: workerId,
+    building: buildingId || null,
+    shiftStart: new Date(shiftStart),
+    clockInTime: new Date(shiftStart), // Legacy support
+    hourlyRate: hourlyRate,
+    notes: notes || '',
+    status: status || 'active'
+  };
+
+  // Add shift end if provided
+  if (shiftEnd) {
+    shiftData.shiftEnd = new Date(shiftEnd);
+    shiftData.clockOutTime = new Date(shiftEnd); // Legacy support
+    shiftData.status = 'completed';
+  }
+
+  // Add breaks if provided
+  if (breakMinutes && breakMinutes > 0) {
+    shiftData.breaks = [{
+      startTime: new Date(shiftStart),
+      endTime: new Date(new Date(shiftStart).getTime() + breakMinutes * 60000),
+      duration: parseInt(breakMinutes),
+      isPaid: false,
+      reason: 'Manual entry'
+    }];
+  }
+
+  const timeSession = await TimeSession.create(shiftData);
+
+  // Populate references
+  await timeSession.populate('worker', 'name email');
+  if (buildingId) {
+    await timeSession.populate('building', 'name address');
+  }
+
+  res.status(201).json({
+    status: 'success',
+    message: 'Shift created successfully',
+    data: {
+      timeSession
+    }
+  });
+});
+
+// Update shift
+exports.updateShift = catchAsync(async (req, res, next) => {
+  const { shiftId } = req.params;
+  const { shiftStart, shiftEnd, breakMinutes, notes } = req.body;
+
+  const timeSession = await TimeSession.findById(shiftId);
+  if (!timeSession) {
+    return next(new AppError('Shift not found', 404));
+  }
+
+  // Update fields
+  if (shiftStart) {
+    timeSession.shiftStart = new Date(shiftStart);
+    timeSession.clockInTime = new Date(shiftStart);
+  }
+
+  if (shiftEnd) {
+    timeSession.shiftEnd = new Date(shiftEnd);
+    timeSession.clockOutTime = new Date(shiftEnd);
+    timeSession.status = 'completed';
+  }
+
+  if (notes !== undefined) {
+    timeSession.notes = notes;
+  }
+
+  // Update breaks
+  if (breakMinutes !== undefined) {
+    if (breakMinutes > 0) {
+      timeSession.breaks = [{
+        startTime: timeSession.shiftStart,
+        endTime: new Date(timeSession.shiftStart.getTime() + breakMinutes * 60000),
+        duration: parseInt(breakMinutes),
+        isPaid: false,
+        reason: 'Manual entry'
+      }];
+    } else {
+      timeSession.breaks = [];
+    }
+  }
+
+  await timeSession.save();
+
+  // Populate references
+  await timeSession.populate('worker', 'name email');
+  if (timeSession.building) {
+    await timeSession.populate('building', 'name address');
+  }
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Shift updated successfully',
+    data: {
+      timeSession
     }
   });
 });

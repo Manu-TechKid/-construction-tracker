@@ -132,6 +132,26 @@ export const timeTrackingApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ['TimeSession', 'PendingApproval', 'TimeStats']
     }),
+
+    // Create manual shift
+    createShift: builder.mutation({
+      query: (shiftData) => ({
+        url: '/time-tracking/shifts',
+        method: 'POST',
+        body: shiftData,
+      }),
+      invalidatesTags: ['TimeSession', 'WorkerStatus', 'TimeStats']
+    }),
+
+    // Update shift
+    updateShift: builder.mutation({
+      query: ({ shiftId, ...shiftData }) => ({
+        url: `/time-tracking/shifts/${shiftId}`,
+        method: 'PATCH',
+        body: shiftData,
+      }),
+      invalidatesTags: ['TimeSession', 'TimeStats']
+    }),
   })
 });
 
@@ -148,4 +168,6 @@ export const {
   useApproveTimeSessionMutation,
   useGetTimeStatsQuery,
   useDeleteTimeSessionMutation,
+  useCreateShiftMutation,
+  useUpdateShiftMutation,
 } = timeTrackingApiSlice;

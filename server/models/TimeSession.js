@@ -16,25 +16,48 @@ const timeSessionSchema = new mongoose.Schema({
     ref: 'Building',
     required: false
   },
-  clockInTime: {
+  
+  // Shift timing
+  shiftStart: {
     type: Date,
     required: true
+  },
+  shiftEnd: {
+    type: Date,
+    required: false
+  },
+  
+  // Legacy support - map to shift times
+  clockInTime: {
+    type: Date,
+    required: false
   },
   clockOutTime: {
     type: Date,
     required: false
   },
+  
+  // Calculated hours
   totalHours: {
     type: Number,
     default: 0
   },
-  breakTime: {
-    type: Number, // Minutes
+  totalPaidHours: {
+    type: Number, // Total hours minus unpaid breaks
     default: 0
   },
+  breakTime: {
+    type: Number, // Total break minutes
+    default: 0
+  },
+  unpaidBreakTime: {
+    type: Number, // Unpaid break minutes
+    default: 0
+  },
+  
   status: {
     type: String,
-    enum: ['active', 'completed', 'paused'],
+    enum: ['active', 'completed', 'paused', 'pending_approval', 'approved', 'rejected'],
     default: 'active'
   },
   location: {
@@ -84,7 +107,9 @@ const timeSessionSchema = new mongoose.Schema({
     startTime: { type: Date, required: true },
     endTime: { type: Date },
     duration: { type: Number }, // Minutes
+    isPaid: { type: Boolean, default: false }, // Whether break is paid or unpaid
     reason: { type: String },
+    notes: { type: String },
     location: {
       latitude: { type: Number },
       longitude: { type: Number },
@@ -149,10 +174,22 @@ const timeSessionSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Calculate total hours when clockOutTime is set
+// Calculate total hours when shift ends
 timeSessionSchema.pre('save', function(next) {
-  if (this.clockOutTime && this.clockInTime) {
-    const diffMs = this.clockOutTime - this.clockInTime;
+  // Sync legacy fields with shift fields
+  if (this.shiftStart && !this.clockInTime) {
+    this.clockInTime = this.shiftStart;
+  }
+  if (this.shiftEnd && !this.clockOutTime) {
+    this.clockOutTime = this.shiftEnd;
+  }
+  
+  // Calculate hours if shift has ended
+  const endTime = this.shiftEnd || this.clockOutTime;
+  const startTime = this.shiftStart || this.clockInTime;
+  
+  if (endTime && startTime) {
+    const diffMs = endTime - startTime;
     const calculatedHours = Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100; // Round to 2 decimal places
     
     // Store original hours if not already stored
@@ -163,9 +200,31 @@ timeSessionSchema.pre('save', function(next) {
     // Use corrected hours if available, otherwise use calculated hours
     this.totalHours = this.correctedHours || calculatedHours;
     
-    // Calculate payment if hourly rate is set
+    // Calculate total break time
+    let totalBreakMinutes = 0;
+    let unpaidBreakMinutes = 0;
+    
+    if (this.breaks && this.breaks.length > 0) {
+      this.breaks.forEach(breakItem => {
+        if (breakItem.duration) {
+          totalBreakMinutes += breakItem.duration;
+          if (!breakItem.isPaid) {
+            unpaidBreakMinutes += breakItem.duration;
+          }
+        }
+      });
+    }
+    
+    this.breakTime = totalBreakMinutes;
+    this.unpaidBreakTime = unpaidBreakMinutes;
+    
+    // Calculate paid hours (total hours minus unpaid break time)
+    const unpaidBreakHours = unpaidBreakMinutes / 60;
+    this.totalPaidHours = Math.max(0, Math.round((this.totalHours - unpaidBreakHours) * 100) / 100);
+    
+    // Calculate payment based on paid hours
     if (this.hourlyRate > 0) {
-      this.calculatedPay = Math.round(this.totalHours * this.hourlyRate * 100) / 100;
+      this.calculatedPay = Math.round(this.totalPaidHours * this.hourlyRate * 100) / 100;
     }
   }
   next();
