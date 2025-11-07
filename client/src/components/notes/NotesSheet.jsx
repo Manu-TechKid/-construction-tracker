@@ -136,6 +136,8 @@ const NotesSheet = () => {
   }, [currentWeekRange]);
 
   const filteredNotes = useMemo(() => {
+    const hideProcessed = !showProcessed && !filterBuilding && !selectedBuilding;
+
     return (notes || []).filter((note) => {
       const buildingId = typeof note.building === 'object' ? note.building?._id : note.building;
 
@@ -152,13 +154,13 @@ const NotesSheet = () => {
         return false;
       }
 
-      if (!showProcessed && (note.processedToWorkOrder || note.status === 'processed')) {
+      if (hideProcessed && (note.processedToWorkOrder || note.status === 'processed')) {
         return false;
       }
 
       return true;
     });
-  }, [notes, filterBuilding, currentWeekRange, filterDay, showProcessed]);
+  }, [notes, filterBuilding, currentWeekRange, filterDay, showProcessed, selectedBuilding]);
 
   const buildingOptions = useMemo(() => {
     if (buildings.length) {
@@ -174,6 +176,37 @@ const NotesSheet = () => {
     return Array.from(map.values());
   }, [buildings, notes]);
 
+  const groupedNotes = useMemo(() => {
+    const groups = new Map();
+
+    filteredNotes.forEach((note) => {
+      const buildingData = typeof note.building === 'object' ? note.building : null;
+      const buildingId = buildingData?._id || note.building || 'unknown';
+
+      if (!groups.has(buildingId)) {
+        let name = 'Unknown Building';
+        if (buildingData?.name) {
+          name = buildingData.name;
+        } else {
+          const option = buildingOptions.find((b) => b._id === buildingId);
+          if (option?.name) {
+            name = option.name;
+          }
+        }
+
+        groups.set(buildingId, { name, notes: [] });
+      }
+
+      groups.get(buildingId).notes.push(note);
+    });
+
+    return Array.from(groups.entries())
+      .map(([buildingId, value]) => ({ buildingId, ...value }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [filteredNotes, buildingOptions]);
+
+  const shouldGroupByBuilding = !filterBuilding && !selectedBuilding;
+
   const handleWeekNavigation = (direction) => {
     setFilterDay(null);
     setFilterWeekDate((prev) => {
@@ -187,7 +220,8 @@ const NotesSheet = () => {
       setEditingNote(note);
       setFormData({
         ...note,
-        visitDate: new Date(note.visitDate),
+        visitDate: note.visitDate ? new Date(note.visitDate) : new Date(),
+        building: typeof note.building === 'object' ? note.building?._id : note.building || '',
       });
     } else {
       setEditingNote(null);
@@ -447,7 +481,7 @@ const NotesSheet = () => {
                     variant={showProcessed ? 'contained' : 'outlined'}
                     onClick={() => setShowProcessed(!showProcessed)}
                   >
-                    {showProcessed ? 'Show All' : 'Hide Processed'}
+                    {showProcessed ? 'Hide Processed' : 'Show Processed'}
                   </Button>
                 </Box>
               </Grid>
@@ -469,7 +503,7 @@ const NotesSheet = () => {
           </Card>
         )}
 
-        {filteredNotes.length === 0 && selectedBuilding ? (
+        {filteredNotes.length === 0 && (selectedBuilding || filterBuilding) ? (
           <Card>
             <CardContent sx={{ textAlign: 'center', py: 4 }}>
               <NoteIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
@@ -477,7 +511,7 @@ const NotesSheet = () => {
                 No Notes Yet
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Start documenting your visits, estimates, and inspections for {selectedBuilding.name}.
+                Start documenting your visits, estimates, and inspections for this building.
               </Typography>
               {hasPermission(['create:notes']) && (
                 <Button
@@ -491,122 +525,133 @@ const NotesSheet = () => {
             </CardContent>
           </Card>
         ) : (
-          <Grid container spacing={3}>
-            {filteredNotes.map((note) => {
-              const typeConfig = getTypeConfig(note.type);
-              const priorityConfig = getPriorityConfig(note.priority);
-              
-              return (
-                <Grid item xs={12} md={6} lg={4} key={note.id}>
-                  <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                    <CardContent sx={{ flexGrow: 1 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                        <Typography variant="h6" gutterBottom noWrap sx={{ flexGrow: 1 }}>
-                          {note.title}
-                        </Typography>
-                        <Chip
-                          icon={note.processedToWorkOrder || note.status === 'processed' ? <CheckCircleIcon /> : undefined}
-                          label={note.processedToWorkOrder || note.status === 'processed' ? 'Processed' : 'Pending'}
-                          color={note.processedToWorkOrder || note.status === 'processed' ? 'success' : 'error'}
-                          size="small"
-                        />
-                      </Box>
-                      
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        <BuildingIcon fontSize="small" color="action" />
-                        <Typography variant="body2" color="text.secondary">
-                          {getBuildingName(note)}
-                        </Typography>
-                      </Box>
-                      
-                      {note.workers && note.workers.length > 0 && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                          <strong>Workers:</strong> {note.workers.join(', ')}
-                        </Typography>
-                      )}
-                      
-                      <Typography variant="h6">
-                        {note.workOrders?.length || 0}
-                      </Typography>
-                      
-                      <Typography variant="body2" sx={{ mb: 2 }}>
-                        {note.content}
-                      </Typography>
-                      
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Chip
-                            label={typeConfig.label}
-                            color={typeConfig.color}
-                            size="small"
-                          />
-                          <Chip
-                            label={priorityConfig.label}
-                            color={priorityConfig.color}
-                            size="small"
-                          />
-                        </Box>
-                        
-                        {hasPermission(['update:notes', 'delete:notes']) && (
-                          <Box>
-                            {!note.processedToWorkOrder && (
-                              <IconButton
+          <>
+            {groupedNotes.map((group) => (
+              <Box key={group.buildingId} sx={{ mb: 4 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <BuildingIcon color="primary" fontSize="small" />
+                  <Typography variant="h6" component="h2">
+                    {group.name}
+                  </Typography>
+                  <Chip label={`${group.notes.length} note${group.notes.length === 1 ? '' : 's'}`} size="small" />
+                </Box>
+
+                <Grid container spacing={3}>
+                  {group.notes.map((note) => {
+                    const typeConfig = getTypeConfig(note.type);
+                    const priorityConfig = getPriorityConfig(note.priority);
+                    const scheduledDate = note.visitDate ? new Date(note.visitDate) : null;
+                    const createdDate = note.createdAt ? new Date(note.createdAt) : null;
+
+                    return (
+                      <Grid item xs={12} md={6} lg={4} key={note._id || note.id}>
+                        <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                          <CardContent sx={{ flexGrow: 1 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                              <Typography variant="h6" gutterBottom noWrap sx={{ flexGrow: 1 }}>
+                                {note.title}
+                              </Typography>
+                              <Chip
+                                icon={note.processedToWorkOrder || note.status === 'processed' ? <CheckCircleIcon /> : undefined}
+                                label={note.processedToWorkOrder || note.status === 'processed' ? 'Processed' : 'Pending'}
+                                color={note.processedToWorkOrder || note.status === 'processed' ? 'success' : 'error'}
                                 size="small"
-                                onClick={() => handleMarkAsProcessed(note._id)}
-                                disabled={isUpdating}
-                                color="success"
-                                title="Mark as Processed to Work Order"
-                              >
-                                <CheckCircleIcon fontSize="small" />
-                              </IconButton>
+                              />
+                            </Box>
+
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 'bold' }}>
+                              {group.name}
+                            </Typography>
+
+                            {scheduledDate && (
+                              <Typography variant="body2" color="primary" sx={{ mb: 1 }}>
+                                Scheduled: {format(scheduledDate, 'MMM dd, yyyy hh:mm a')}
+                              </Typography>
                             )}
-                            <IconButton
-                              size="small"
-                              onClick={() => handleOpenDialog(note)}
-                              disabled={isUpdating}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton
-                              size="small"
-                              onClick={() => handleDeleteNote(note._id)}
-                              disabled={isDeleting}
-                              color="error"
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        )}
-                      </Box>
-                      
-                      <Typography variant="caption" color="text.secondary" sx={{ mt: 2 }}>
-                        {(() => {
-                          try {
-                            const date = note.createdAt || note.visitDate;
-                            if (!date) return 'No date';
-                            
-                            const parsedDate = new Date(date);
-                            if (isNaN(parsedDate.getTime())) return 'Invalid date';
-                            
-                            return format(parsedDate, 'MMM dd, yyyy HH:mm');
-                          } catch (error) {
-                            console.error('Date formatting error:', error, 'Date value:', note.createdAt || note.visitDate);
-                            return 'Invalid date';
-                          }
-                        })()}
-                      </Typography>
-                      
-                      {note.estimateAmount && (
-                        <Typography variant="body2" color="success.main" fontWeight="bold" sx={{ mt: 1 }}>
-                          Estimate: ${parseFloat(note.estimateAmount).toLocaleString()}
-                        </Typography>
-                      )}
-                    </CardContent>
-                  </Card>
+
+                            {note.workers && note.workers.length > 0 && (
+                              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                <strong>Workers:</strong> {note.workers.join(', ')}
+                              </Typography>
+                            )}
+
+                            <Typography variant="body2" sx={{ mb: 2 }}>
+                              {note.content}
+                            </Typography>
+
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+                              <Box sx={{ display: 'flex', gap: 1 }}>
+                                <Chip
+                                  label={typeConfig.label}
+                                  color={typeConfig.color}
+                                  size="small"
+                                />
+                                <Chip
+                                  label={priorityConfig.label}
+                                  color={priorityConfig.color}
+                                  size="small"
+                                />
+                              </Box>
+
+                              {hasPermission(['update:notes', 'delete:notes']) && (
+                                <Box>
+                                  {!(note.processedToWorkOrder || note.status === 'processed') && (
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => handleMarkAsProcessed(note._id)}
+                                      disabled={isUpdating}
+                                      color="success"
+                                      title="Mark as Processed"
+                                    >
+                                      <CheckCircleIcon fontSize="small" />
+                                    </IconButton>
+                                  )}
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleOpenDialog(note)}
+                                    disabled={isUpdating}
+                                  >
+                                    <EditIcon fontSize="small" />
+                                  </IconButton>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleDeleteNote(note._id)}
+                                    disabled={isDeleting}
+                                    color="error"
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                </Box>
+                              )}
+                            </Box>
+
+                            <Box sx={{ mt: 2 }}>
+                              {createdDate && (
+                                <Typography variant="caption" color="text.secondary" display="block">
+                                  Created: {format(createdDate, 'MMM dd, yyyy hh:mm a')}
+                                </Typography>
+                              )}
+                              {!scheduledDate && !createdDate && (
+                                <Typography variant="caption" color="text.secondary" display="block">
+                                  No date provided
+                                </Typography>
+                              )}
+                            </Box>
+
+                            {note.estimateAmount && (
+                              <Typography variant="body2" color="success.main" fontWeight="bold" sx={{ mt: 1 }}>
+                                Estimate: ${parseFloat(note.estimateAmount).toLocaleString()}
+                              </Typography>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    );
+                  })}
                 </Grid>
-              );
-            })}
-          </Grid>
+              </Box>
+            ))}
+          </>
         )}
 
         {/* Add Note FAB for mobile */}
