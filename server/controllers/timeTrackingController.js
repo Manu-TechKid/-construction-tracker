@@ -134,11 +134,13 @@ exports.clockIn = catchAsync(async (req, res, next) => {
 
   let timeSession;
   try {
+    const now = new Date();
     timeSession = await TimeSession.create({
       worker: actualWorkerId,
       workOrder: workOrderId || null,
       building: cleanBuildingId || null,
-      clockInTime: new Date(),
+      shiftStart: now, // REQUIRED field
+      clockInTime: now, // Legacy support
       hourlyRate: hourlyRate,
       apartmentNumber: apartmentNumber || null,
       workType: workType || 'General',
@@ -147,7 +149,7 @@ exports.clockIn = catchAsync(async (req, res, next) => {
           latitude: defaultLat ? parseFloat(defaultLat) : 0,
           longitude: defaultLng ? parseFloat(defaultLng) : 0,
           accuracy: accuracy ? parseFloat(accuracy) : null,
-          timestamp: new Date(),
+          timestamp: now,
           geofenceValidated: locationValidation.valid || false,
           geofenceMessage: locationValidation.message || 'Location not validated',
           geofenceDistance: locationValidation.distance || 0
@@ -196,10 +198,14 @@ exports.clockOut = catchAsync(async (req, res, next) => {
   const actualWorkerId = workerId || req.user.id;
 
   // Validate required fields
-  if (!actualWorkerId || !latitude || !longitude) {
-    console.log('Missing required fields:', { actualWorkerId, latitude, longitude });
-    return next(new AppError('Worker ID, latitude, and longitude are required', 400));
+  if (!actualWorkerId) {
+    console.log('Missing required fields:', { actualWorkerId });
+    return next(new AppError('Worker ID is required', 400));
   }
+
+  // Set default location if not provided
+  const defaultLat = latitude || 0;
+  const defaultLng = longitude || 0;
 
   // Find active session
   const activeSession = await TimeSession.findOne({
@@ -224,9 +230,9 @@ exports.clockOut = catchAsync(async (req, res, next) => {
   }
 
   // Geofencing validation - Check if worker is at the correct location
-  let locationValidation = { valid: true, message: 'Location not validated' };
+  let locationValidation = { valid: true, message: 'Location not validated', distance: 0 };
   
-  if (activeSession.building) {
+  if (activeSession.building && latitude && longitude) {
     const building = await Building.findById(activeSession.building);
     if (building && building.location && building.location.coordinates.latitude && building.location.coordinates.longitude) {
       const userLocation = {
@@ -252,12 +258,14 @@ exports.clockOut = catchAsync(async (req, res, next) => {
   }
 
   // Update session with clock out information
-  activeSession.clockOutTime = new Date();
+  const now = new Date();
+  activeSession.shiftEnd = now; // REQUIRED field
+  activeSession.clockOutTime = now; // Legacy support
   activeSession.location.clockOut = {
-    latitude: parseFloat(latitude),
-    longitude: parseFloat(longitude),
+    latitude: parseFloat(defaultLat),
+    longitude: parseFloat(defaultLng),
     accuracy: accuracy ? parseFloat(accuracy) : null,
-    timestamp: new Date(),
+    timestamp: now,
     geofenceValidated: locationValidation.valid,
     geofenceMessage: locationValidation.message,
     geofenceDistance: locationValidation.distance
