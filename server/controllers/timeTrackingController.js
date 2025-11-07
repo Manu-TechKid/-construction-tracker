@@ -303,10 +303,10 @@ exports.getWorkerStatus = catchAsync(async (req, res, next) => {
   // Use authenticated user's ID if workerId not provided or if accessing own status
   const actualWorkerId = workerId || req.user.id;
   
-  // Find active session for the worker
+  // Find active or paused session for the worker
   const activeSession = await TimeSession.findOne({
     worker: actualWorkerId,
-    status: 'active'
+    status: { $in: ['active', 'paused'] }
   }).populate([
     { path: 'worker', select: 'name email' },
     { path: 'workOrder', select: 'title description' },
@@ -350,6 +350,9 @@ exports.startBreak = catchAsync(async (req, res, next) => {
     location: latitude && longitude ? { latitude, longitude } : undefined
   });
 
+  // Update status to paused
+  activeSession.status = 'paused';
+
   await activeSession.save();
 
   res.status(200).json({
@@ -364,14 +367,14 @@ exports.endBreak = catchAsync(async (req, res, next) => {
   const { workerId } = req.body;
   const actualWorkerId = workerId || req.user.id;
 
-  // Find active session
+  // Find paused session (on break)
   const activeSession = await TimeSession.findOne({
     worker: actualWorkerId,
-    status: 'active'
+    status: 'paused'
   });
 
   if (!activeSession) {
-    return next(new AppError('No active session found', 400));
+    return next(new AppError('No active break session found', 400));
   }
 
   // Find active break
@@ -386,6 +389,9 @@ exports.endBreak = catchAsync(async (req, res, next) => {
 
   // Update total break time
   activeSession.breakTime = activeSession.breaks.reduce((total, b) => total + (b.duration || 0), 0);
+
+  // Update status back to active
+  activeSession.status = 'active';
 
   await activeSession.save();
 

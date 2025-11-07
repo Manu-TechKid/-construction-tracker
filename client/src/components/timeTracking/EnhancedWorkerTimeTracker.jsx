@@ -76,6 +76,7 @@ import {
 } from '../../features/timeTracking/timeTrackingApiSlice';
 import BuildingSelector from '../common/BuildingSelector';
 import { useBuildingContext } from '../../contexts/BuildingContext';
+import PhotoUploadDialog from '../workPhotos/PhotoUploadDialog';
 
 const EnhancedWorkerTimeTracker = () => {
   const theme = useTheme();
@@ -134,7 +135,8 @@ const EnhancedWorkerTimeTracker = () => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
       
-      if (isActive && activeSession?.shiftStart) {
+      // Run timer if session exists (active or paused)
+      if ((isActive || isOnBreak) && activeSession?.shiftStart) {
         const start = new Date(activeSession.shiftStart);
         const elapsed = Math.floor((new Date() - start) / 1000);
         setElapsedTime(elapsed);
@@ -330,7 +332,11 @@ const EnhancedWorkerTimeTracker = () => {
             Work Log Free
           </Typography>
           <Box>
-            <IconButton color="primary">
+            <IconButton 
+              color="primary"
+              onClick={() => setUploadPhotoDialog(true)}
+              title="Upload Work Photos"
+            >
               <PhotoIcon />
             </IconButton>
           </Box>
@@ -373,7 +379,7 @@ const EnhancedWorkerTimeTracker = () => {
         )}
 
         {/* Active Session Display */}
-        {isActive && (
+        {(isActive || isOnBreak) && (
           <Card elevation={3} sx={{ mb: 3, bgcolor: '#fff' }}>
             <CardContent>
               {/* Timer Display */}
@@ -476,7 +482,7 @@ const EnhancedWorkerTimeTracker = () => {
 
         {/* Action Buttons */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
-          {!isActive ? (
+          {!isActive && !isOnBreak ? (
             <Grid item xs={12}>
               <Button
                 fullWidth
@@ -782,6 +788,15 @@ const EnhancedWorkerTimeTracker = () => {
             </Box>
           </DialogContent>
         </Dialog>
+
+        {/* Photo Upload Dialog */}
+        <PhotoUploadDialog
+          open={uploadPhotoDialog}
+          onClose={() => setUploadPhotoDialog(false)}
+          onUploadSuccess={() => {
+            toast.success('Photos uploaded successfully!');
+          }}
+        />
       </Container>
     </LocalizationProvider>
   );
