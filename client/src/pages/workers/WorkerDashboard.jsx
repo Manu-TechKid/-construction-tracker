@@ -38,7 +38,7 @@ import { useGetWorkerAssignmentsQuery } from '../../features/workers/workersApiS
 import { useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 import { toast } from 'react-toastify';
 import { formatDate } from '../../utils/dateUtils';
-import WorkerTimeTracker from '../../components/timeTracking/WorkerTimeTracker';
+import EnhancedWorkerTimeTracker from '../../components/timeTracking/EnhancedWorkerTimeTracker';
 import WeeklyHoursSummary from '../../components/workers/WeeklyHoursSummary';
 import WorkerHoursSummary from '../../components/workers/WorkerHoursSummary';
 import EmploymentReferenceLetter from '../../components/workers/EmploymentReferenceLetter';
@@ -320,7 +320,7 @@ const WorkerDashboard = () => {
       )}
 
       {selectedTab === 1 && (
-        <WorkerTimeTracker />
+        <EnhancedWorkerTimeTracker />
       )}
 
       {selectedTab === 2 && (

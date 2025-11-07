@@ -34,6 +34,7 @@ import {
 } from '@mui/material';
 import {
   PlayArrow as PunchInIcon,
+  PlayArrow as PlayArrowIcon,
   Stop as PunchOutIcon,
   AddCircle as NewShiftIcon,
   List as ViewShiftsIcon,
