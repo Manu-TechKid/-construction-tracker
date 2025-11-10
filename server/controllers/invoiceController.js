@@ -64,7 +64,7 @@ exports.getAllInvoices = catchAsync(async (req, res, next) => {
 
   const invoices = await Invoice.find(filter)
     .populate('building', 'name address serviceManagerEmail generalManagerEmail maintenanceManagerEmail')
-    .populate('workOrders.workOrder', 'title description apartmentNumber status')
+    .populate('workOrders.workOrder', 'title description apartmentNumber status price cost scheduledDate')
     .sort('-createdAt');
 
   res.status(200).json({
@@ -80,7 +80,7 @@ exports.getAllInvoices = catchAsync(async (req, res, next) => {
 exports.getInvoice = catchAsync(async (req, res, next) => {
     const invoice = await Invoice.findById(req.params.id)
         .populate('building', 'name address serviceManagerEmail generalManagerEmail maintenanceManagerEmail')
-        .populate('workOrders.workOrder', 'title description apartmentNumber status');
+        .populate('workOrders.workOrder', 'title description apartmentNumber status price cost scheduledDate');
 
     if (!invoice) {
         return next(new AppError('No invoice found with that ID', 404));

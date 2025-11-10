@@ -10,7 +10,8 @@ const workOrderSchema = new mongoose.Schema({
   description: {
     type: String,
     required: [true, 'Description is required'],
-    trim: true
+    trim: true,
+    maxlength: [5000, 'Description cannot be longer than 5000 characters']
   },
   building: {
     type: mongoose.Schema.Types.ObjectId,

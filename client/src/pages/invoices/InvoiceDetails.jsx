@@ -368,84 +368,29 @@ const InvoiceDetails = () => {
                       <Table>
                         <TableHead>
                           <TableRow>
-                            <TableCell>Work Order</TableCell>
-                            <TableCell>Category</TableCell>
+                            <TableCell>Service Date</TableCell>
                             <TableCell>Description</TableCell>
                             <TableCell align="right">Quantity</TableCell>
-                            <TableCell align="right">Price</TableCell>
-                            <TableCell align="right">Cost</TableCell>
-                            <TableCell align="right">Total</TableCell>
+                            <TableCell align="right">Rate</TableCell>
+                            <TableCell align="right">Subtotal</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {invoice.workOrders.map((item, index) => (
                             <TableRow key={index}>
                               <TableCell>
-                                <Typography variant="body2" fontWeight="medium">
-                                  {(() => {
-                                    try {
-                                      return item.workOrder?.title || 'Work Order';
-                                    } catch (error) {
-                                      console.warn('Error rendering work order title:', error);
-                                      return 'Work Order';
-                                    }
-                                  })()}
-                                </Typography>
-                                <Typography variant="caption" color="textSecondary">
-                                  {(() => {
-                                    try {
-                                      return `Apt: ${item.workOrder?.apartmentNumber || 'N/A'}`;
-                                    } catch (error) {
-                                      console.warn('Error rendering apartment number:', error);
-                                      return 'Apt: N/A';
-                                    }
-                                  })()}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Box>
-                                  <Typography variant="body2" fontWeight="medium">
-                                    {(() => {
-                                      try {
-                                        const workType = item.workOrder?.workType;
-                                        if (!workType) return 'No Category';
-                                        
-                                        // Get work type name with icon
-                                        const typeName = workType.name || workType.code || 'Unknown';
-                                        let icon = '';
-                                        switch (typeName.toLowerCase()) {
-                                          case 'painting': icon = '🎨'; break;
-                                          case 'cleaning': icon = '🧹'; break;
-                                          case 'repair': icon = '🔧'; break;
-                                          case 'maintenance': icon = '⚙️'; break;
-                                          case 'inspection': icon = '🔍'; break;
-                                          default: icon = '📋'; break;
-                                        }
-                                        return `${icon} ${typeName.charAt(0).toUpperCase() + typeName.slice(1)}`;
-                                      } catch (error) {
-                                        console.warn('Error rendering work type:', error);
-                                        return 'No Category';
-                                      }
-                                    })()}
-                                  </Typography>
-                                  {(() => {
-                                    try {
-                                      const workSubType = item.workOrder?.workSubType;
-                                      if (workSubType && (workSubType.name || workSubType.code)) {
-                                        const subTypeName = workSubType.name || workSubType.code;
-                                        return (
-                                          <Typography variant="caption" color="textSecondary">
-                                            {subTypeName.charAt(0).toUpperCase() + subTypeName.slice(1).replace(/[-_]/g, ' ')}
-                                          </Typography>
-                                        );
-                                      }
-                                      return null;
-                                    } catch (error) {
-                                      console.warn('Error rendering work sub-type:', error);
-                                      return null;
-                                    }
-                                  })()}
-                                </Box>
+                                {(() => {
+                                  try {
+                                    const scheduledDate = item.workOrder?.scheduledDate;
+                                    if (!scheduledDate) return 'N/A';
+                                    const date = new Date(scheduledDate);
+                                    if (isNaN(date.getTime())) return 'Invalid';
+                                    return format(date, 'MMM dd, yyyy');
+                                  } catch (error) {
+                                    console.warn('Error rendering service date:', error);
+                                    return 'N/A';
+                                  }
+                                })()}
                               </TableCell>
                               <TableCell>
                                 {(() => {
@@ -470,10 +415,11 @@ const InvoiceDetails = () => {
                               <TableCell align="right">
                                 {(() => {
                                   try {
-                                    const price = item.workOrder?.price || item.unitPrice || 0;
+                                    // Use the latest work order price if available, otherwise fall back to stored unitPrice
+                                    const price = item.workOrder?.price !== undefined ? item.workOrder.price : (item.unitPrice || 0);
                                     return `$${price.toFixed(2)}`;
                                   } catch (error) {
-                                    console.warn('Error rendering price:', error);
+                                    console.warn('Error rendering rate:', error);
                                     return '$0.00';
                                   }
                                 })()}
@@ -481,21 +427,13 @@ const InvoiceDetails = () => {
                               <TableCell align="right">
                                 {(() => {
                                   try {
-                                    const cost = item.workOrder?.cost || 0;
-                                    return `$${cost.toFixed(2)}`;
+                                    // Calculate subtotal using latest price if available
+                                    const price = item.workOrder?.price !== undefined ? item.workOrder.price : (item.unitPrice || 0);
+                                    const quantity = item.quantity || 1;
+                                    const subtotal = quantity * price;
+                                    return `$${subtotal.toFixed(2)}`;
                                   } catch (error) {
-                                    console.warn('Error rendering cost:', error);
-                                    return '$0.00';
-                                  }
-                                })()}
-                              </TableCell>
-                              <TableCell align="right">
-                                {(() => {
-                                  try {
-                                    const total = item.totalPrice || (item.quantity * (item.workOrder?.price || item.unitPrice || 0));
-                                    return `$${total.toFixed(2)}`;
-                                  } catch (error) {
-                                    console.warn('Error rendering total price:', error);
+                                    console.warn('Error rendering subtotal:', error);
                                     return '$0.00';
                                   }
                                 })()}
