@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useFormik } from 'formik';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -42,6 +42,8 @@ import {
 const WorkOrderForm = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get('returnTo');
   const isEdit = Boolean(id);
   const [photos, setPhotos] = useState([]);
   const { selectedBuilding } = useBuildingContext();
@@ -135,7 +137,8 @@ const WorkOrderForm = () => {
         });
         
         // Immediate navigation without delay
-        navigate('/work-orders', { replace: true });
+        // If returnTo is specified, go back to that page, otherwise go to work orders list
+        navigate(returnTo || '/work-orders', { replace: true });
       } catch (error) {
         console.error('Failed to save work order:', error);
         toast.error(`Failed to save work order: ${error.message || 'Unknown error'}`, {
@@ -215,8 +218,8 @@ const WorkOrderForm = () => {
     <Container>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4">{isEdit ? 'Edit Work Order' : 'Create Work Order'}</Typography>
-        <Button variant="outlined" onClick={() => navigate('/work-orders')}>
-          Back to Work Orders
+        <Button variant="outlined" onClick={() => navigate(returnTo || '/work-orders')}>
+          {returnTo ? 'Back to Invoice' : 'Back to Work Orders'}
         </Button>
       </Box>
       <form onSubmit={formik.handleSubmit}>
