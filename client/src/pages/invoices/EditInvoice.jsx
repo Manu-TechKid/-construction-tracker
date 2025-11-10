@@ -262,7 +262,15 @@ const EditInvoice = () => {
               <Grid item xs={12} md={3}>
                 <Box sx={{ textAlign: 'center' }}>
                   <Typography variant="h4" color="primary" fontWeight="bold">
-                    {formatCurrency(invoice.total)}
+                    {(() => {
+                      const workOrders = invoice.workOrders || [];
+                      const calculatedTotal = workOrders.reduce((sum, item) => {
+                        const price = item.workOrder?.price !== undefined ? item.workOrder.price : (item.unitPrice || 0);
+                        const quantity = item.quantity || 1;
+                        return sum + (price * quantity);
+                      }, 0);
+                      return formatCurrency(calculatedTotal);
+                    })()}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
                     Total Amount

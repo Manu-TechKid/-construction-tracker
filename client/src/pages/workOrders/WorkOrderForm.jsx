@@ -250,12 +250,12 @@ const WorkOrderForm = () => {
                       name="description"
                       label="Description"
                       multiline
-                      rows={4}
+                      rows={6}
                       value={formik.values.description}
                       onChange={formik.handleChange}
                       error={formik.touched.description && Boolean(formik.errors.description)}
                       helperText={formik.touched.description && formik.errors.description}
-                      inputProps={{ maxLength: 500 }}
+                      inputProps={{ maxLength: 5000 }}
                     />
                   </Grid>
                 </Grid>
