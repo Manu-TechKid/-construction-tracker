@@ -661,7 +661,7 @@ const Invoices = () => {
                           if (!invoice.invoiceDate) return 'N/A';
                           const date = new Date(invoice.invoiceDate);
                           if (isNaN(date.getTime())) return 'Invalid Date';
-                          return date.toLocaleDateString();
+                          return date.toLocaleDateString('en-US');
                         } catch (error) {
                           console.warn('Error formatting invoice date:', error);
                           return 'Error';
@@ -674,7 +674,7 @@ const Invoices = () => {
                           if (!invoice.dueDate) return 'N/A';
                           const date = new Date(invoice.dueDate);
                           if (isNaN(date.getTime())) return 'Invalid Date';
-                          return date.toLocaleDateString();
+                          return date.toLocaleDateString('en-US');
                         } catch (error) {
                           console.warn('Error formatting due date:', error);
                           return 'Error';

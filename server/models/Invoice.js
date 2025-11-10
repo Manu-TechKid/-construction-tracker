@@ -427,12 +427,17 @@ invoiceSchema.pre('save', async function(next) {
 });
 
 // Calculate due date based on invoice date and building payment terms
+// Only auto-calculate if dueDate was not explicitly set by the user
 invoiceSchema.pre('save', async function(next) {
     if (!this.isNew && !this.isModified('invoiceDate') && !this.isModified('building')) return next();
 
     try {
-        // If invoiceDate is being set, calculate dueDate based on building's payment terms
-        if (this.invoiceDate && this.building) {
+        // Only auto-calculate dueDate if it wasn't explicitly provided by the user
+        // Check if dueDate is not set or if it's the default 30-day value
+        const shouldCalculateDueDate = !this.dueDate || 
+            (this.isNew && !this.isModified('dueDate'));
+        
+        if (shouldCalculateDueDate && this.invoiceDate && this.building) {
             const Building = mongoose.model('Building');
             const building = await Building.findById(this.building);
 
