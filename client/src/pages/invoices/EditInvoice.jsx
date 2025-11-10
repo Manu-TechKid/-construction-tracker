@@ -284,7 +284,7 @@ const EditInvoice = () => {
               <Grid item xs={12} md={3}>
                 <Box sx={{ textAlign: 'center' }}>
                   <Typography variant="h6">
-                    {new Date(invoice.dueDate).toLocaleDateString()}
+                    {new Date(invoice.dueDate).toLocaleDateString('en-US')}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
                     Due Date
@@ -374,7 +374,7 @@ const EditInvoice = () => {
                         </TableCell>
                         <TableCell align="right">
                           <Typography variant="body2" color="success.main" fontWeight="medium">
-                            {formatCurrency(item.unitPrice || item.workOrder?.price || item.workOrder?.estimatedCost)}
+                            {formatCurrency(item.workOrder?.price !== undefined ? item.workOrder.price : (item.unitPrice || item.workOrder?.estimatedCost))}
                           </Typography>
                         </TableCell>
                         <TableCell align="right">
@@ -412,14 +412,30 @@ const EditInvoice = () => {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
               <Typography variant="body2">Total Work Order Value:</Typography>
               <Typography variant="body2">
-                {formatCurrency(invoice.total)}
+                {(() => {
+                  const workOrders = invoice.workOrders || [];
+                  const calculatedTotal = workOrders.reduce((sum, item) => {
+                    const price = item.workOrder?.price !== undefined ? item.workOrder.price : (item.unitPrice || 0);
+                    const quantity = item.quantity || 1;
+                    return sum + (price * quantity);
+                  }, 0);
+                  return formatCurrency(calculatedTotal);
+                })()}
               </Typography>
             </Box>
             <Divider sx={{ my: 1 }} />
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
               <Typography variant="h6">Invoice Total:</Typography>
               <Typography variant="h6">
-                {formatCurrency(invoice.total)}
+                {(() => {
+                  const workOrders = invoice.workOrders || [];
+                  const calculatedTotal = workOrders.reduce((sum, item) => {
+                    const price = item.workOrder?.price !== undefined ? item.workOrder.price : (item.unitPrice || 0);
+                    const quantity = item.quantity || 1;
+                    return sum + (price * quantity);
+                  }, 0);
+                  return formatCurrency(calculatedTotal);
+                })()}
               </Typography>
             </Box>
             <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>

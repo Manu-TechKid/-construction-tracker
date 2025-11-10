@@ -222,7 +222,7 @@ const Invoices = () => {
             `Please find attached invoice ${invoice.invoiceNumber || invoice._id} for services provided at ${building?.name || 'your building'}.\n\n` +
             `Invoice Details:\n` +
             `- Invoice Number: ${invoice.invoiceNumber || invoice._id}\n` +
-            `- Date: ${new Date(invoice.invoiceDate || invoice.createdAt).toLocaleDateString()}\n` +
+            `- Date: ${new Date(invoice.invoiceDate || invoice.createdAt).toLocaleDateString('en-US')}\n` +
             `- Total Amount: $${invoice.total?.toFixed(2) || '0.00'}\n\n` +
             `You can download the invoice PDF from: ${window.location.origin}/invoices/${invoice._id}\n\n` +
             `Best regards,\nDSJ Construction Services`;
