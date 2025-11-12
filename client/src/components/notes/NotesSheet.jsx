@@ -72,6 +72,7 @@ const NotesSheet = () => {
     estimateAmount: '',
     priority: 'medium',
     workers: [],
+    workersText: '',
   });
 
   const noteTypes = [
@@ -222,6 +223,8 @@ const NotesSheet = () => {
         ...note,
         visitDate: note.visitDate ? new Date(note.visitDate) : new Date(),
         building: typeof note.building === 'object' ? note.building?._id : note.building || '',
+        workers: note.workers || [],
+        workersText: (note.workers || []).join(', '),
       });
     } else {
       setEditingNote(null);
@@ -234,6 +237,7 @@ const NotesSheet = () => {
         estimateAmount: '',
         priority: 'medium',
         workers: [],
+        workersText: '',
       });
     }
     setOpenDialog(true);
@@ -251,6 +255,7 @@ const NotesSheet = () => {
       estimateAmount: '',
       priority: 'medium',
       workers: [],
+      workersText: '',
     });
   };
 
@@ -266,6 +271,13 @@ const NotesSheet = () => {
     }
 
     try {
+      const workersArray = formData.workersText
+        ? formData.workersText
+            .split(',')
+            .map((worker) => worker.trim())
+            .filter((worker) => worker.length > 0)
+        : [];
+
       const noteData = {
         title: formData.title.trim() || formData.content.trim().substring(0, 50) + (formData.content.trim().length > 50 ? '...' : ''), // Use title if provided, otherwise generate from content
         content: formData.content.trim(),
@@ -274,7 +286,7 @@ const NotesSheet = () => {
         priority: formData.priority || 'medium',
         status: 'active',
         visitDate: formData.visitDate,
-        workers: formData.workers || [],
+        workers: workersArray,
         estimateAmount: formData.estimateAmount || null
       };
 
@@ -761,10 +773,10 @@ const NotesSheet = () => {
                 <TextField
                   fullWidth
                   label="Workers (comma-separated)"
-                  value={formData.workers.join(', ')}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    workers: e.target.value.split(',').map(w => w.trim()).filter(w => w) 
+                  value={formData.workersText}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    workersText: e.target.value,
                   })}
                   placeholder="e.g., John Doe, Jane Smith"
                   helperText="Enter worker names separated by commas"

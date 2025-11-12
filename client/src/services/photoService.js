@@ -1,5 +1,3 @@
-import { apiSlice } from '../app/api/apiSlice';
-
 // Photo upload service for work orders
 export const photoService = {
   // Upload photos to work order

@@ -22,16 +22,6 @@ import {
   FormControl,
   InputLabel,
   Select,
-  OutlinedInput,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Tooltip,
-  Badge,
   Tabs,
   Tab,
   Autocomplete
@@ -41,13 +31,10 @@ import {
   MoreVert as MoreVertIcon,
   Person as PersonIcon,
   Phone as PhoneIcon,
-  Email as EmailIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
-  Work as WorkIcon,
-  FilterList as FilterIcon,
-  Search as SearchIcon
+  Work as WorkIcon
 } from '@mui/icons-material';
 import { useGetUsersQuery, useDeleteUserMutation, useUpdateUserMutation, useCreateUserMutation } from '../../features/users/usersApiSlice';
 import { toast } from 'react-toastify';
@@ -60,7 +47,7 @@ const WORKER_SKILLS = [
 
 const Workers = () => {
   const navigate = useNavigate();
-  const { hasPermission, currentUser } = useAuth();
+  const { hasPermission } = useAuth();
   
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedWorker, setSelectedWorker] = useState(null);
@@ -80,12 +67,12 @@ const Workers = () => {
   const [editMode, setEditMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tabValue, setTabValue] = useState(0);
-  const [filters, setFilters] = useState({
+  const filters = useMemo(() => ({
     search: '',
     status: '',
     approvalStatus: '',
     skills: []
-  });
+  }), []);
 
   // Worker form state
   const [workerForm, setWorkerForm] = useState({
@@ -117,20 +104,14 @@ const Workers = () => {
     }
   });
 
-  const workers = usersData?.data?.users || [];
+  const workers = useMemo(() => usersData?.data?.users ?? [], [usersData]);
   
   const [deleteWorker, { isLoading: isDeleting }] = useDeleteUserMutation();
   const [updateWorker, { isLoading: isUpdating }] = useUpdateUserMutation();
-  const [createWorker, { isLoading: isCreating }] = useCreateUserMutation();
+  const [createWorker] = useCreateUserMutation();
 
   // Filter workers based on tab
-  const filteredWorkers = useMemo(() => {
-    if (!workers) return [];
-    
-    // Since we're already filtering for approved workers in the query,
-    // we can just return the workers directly
-    return workers;
-  }, [workers]);
+  const filteredWorkers = workers;
 
   // Get counts for approved workers only
   const approvedCount = workers.length;

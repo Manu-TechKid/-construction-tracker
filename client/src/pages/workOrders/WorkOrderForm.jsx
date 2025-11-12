@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useFormik } from 'formik';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -38,6 +38,7 @@ import {
   useGetWorkSubTypesQuery,
   useGetDropdownOptionsQuery
 } from '../../features/setup/setupApiSlice';
+import { useGetBuildingServicesQuery } from '../../features/clientPricing/clientPricingApiSlice';
 
 const WorkOrderForm = () => {
   const navigate = useNavigate();
@@ -168,9 +169,99 @@ const WorkOrderForm = () => {
   const { data: priorityOptionsData } = useGetDropdownOptionsQuery('priority');
   const { data: statusOptionsData } = useGetDropdownOptionsQuery('status');
 
+  const {
+    data: buildingServicesData,
+    isFetching: isFetchingPricing,
+  } = useGetBuildingServicesQuery(
+    { buildingId: formik.values.building },
+    { skip: !formik.values.building }
+  );
+
   const [createWorkOrder, { isLoading: isCreating }] = useCreateWorkOrderMutation();
   const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
   // Photo functionality integrated below with PhotoUpload component
+
+  const previousBuildingRef = useRef(formik.values.building);
+
+  useEffect(() => {
+    if (!isEdit && previousBuildingRef.current && formik.values.building && previousBuildingRef.current !== formik.values.building) {
+      formik.setFieldValue('price', 0);
+      formik.setFieldValue('cost', 0);
+    }
+    previousBuildingRef.current = formik.values.building;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formik.values.building]);
+
+  const workTypes = useMemo(() => workTypesData?.data?.workTypes || workTypesData?.workTypes || [], [workTypesData]);
+  const workSubTypes = useMemo(() => workSubTypesData?.data?.workSubTypes || workSubTypesData?.workSubTypes || [], [workSubTypesData]);
+
+  const selectedWorkType = useMemo(
+    () => workTypes.find((wt) => wt._id === formik.values.workType),
+    [workTypes, formik.values.workType]
+  );
+
+  const selectedWorkSubType = useMemo(
+    () => workSubTypes.find((st) => st._id === formik.values.workSubType),
+    [workSubTypes, formik.values.workSubType]
+  );
+
+  const buildingServices = useMemo(() => {
+    if (!buildingServicesData) return [];
+    if (Array.isArray(buildingServicesData)) return buildingServicesData;
+    if (buildingServicesData.data?.services) return buildingServicesData.data.services;
+    if (buildingServicesData.services) return buildingServicesData.services;
+    return [];
+  }, [buildingServicesData]);
+
+  const matchedPricingService = useMemo(() => {
+    if (!selectedWorkSubType) return null;
+    const targetSubcategory = selectedWorkSubType.code || selectedWorkSubType.name;
+    const targetCategory = selectedWorkType?.code || selectedWorkType?.name;
+
+    return (
+      buildingServices.find((service) => {
+        const serviceCategory = service.category;
+        const serviceSubcategory = service.subcategory;
+
+        const categoryMatches = targetCategory
+          ? serviceCategory?.toLowerCase() === targetCategory.toLowerCase()
+          : true;
+
+        const subCategoryMatches = targetSubcategory
+          ? serviceSubcategory?.toLowerCase() === targetSubcategory.toLowerCase()
+          : false;
+
+        return categoryMatches && subCategoryMatches;
+      }) || null
+    );
+  }, [buildingServices, selectedWorkSubType, selectedWorkType]);
+
+  useEffect(() => {
+    if (!matchedPricingService) return;
+
+    const basePrice = matchedPricingService.calculatedPricing?.basePrice ?? matchedPricingService.pricing?.basePrice ?? 0;
+    if (basePrice > 0) {
+      const currentPrice = Number(formik.values.price) || 0;
+      if (currentPrice <= 0 || Math.abs(currentPrice - basePrice) > 0.009) {
+        formik.setFieldValue('price', Number(basePrice.toFixed(2)));
+      }
+    }
+
+    const laborCost = matchedPricingService.cost?.laborCost || 0;
+    const materialCost = matchedPricingService.cost?.materialCost || 0;
+    const equipmentCost = matchedPricingService.cost?.equipmentCost || 0;
+    const overheadPercentage = matchedPricingService.cost?.overheadPercentage || 0;
+    const baseCost = laborCost + materialCost + equipmentCost;
+    const totalCost = baseCost * (1 + overheadPercentage / 100);
+
+    if (totalCost > 0) {
+      const currentCost = Number(formik.values.cost) || 0;
+      if (currentCost <= 0 || Math.abs(currentCost - totalCost) > 0.009) {
+        formik.setFieldValue('cost', Number(totalCost.toFixed(2)));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchedPricingService]);
 
   useEffect(() => {
     if (isEdit && workOrderData?.data) {
@@ -407,7 +498,7 @@ const WorkOrderForm = () => {
                         onChange={formik.handleChange}
                         label="Work Sub-Type *"
                       >
-                        {workSubTypesData?.data?.workSubTypes?.map(subType => (
+                        {workSubTypes.map(subType => (
                           <MenuItem key={subType._id} value={subType._id}>{subType.name}</MenuItem>
                         ))}
                       </Select>
@@ -471,10 +562,28 @@ const WorkOrderForm = () => {
                     </FormControl>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <TextField fullWidth id="price" name="price" label="Price (What customer pays)" type="number" value={formik.values.price} onChange={formik.handleChange} />
+                    <TextField
+                      fullWidth
+                      id="price"
+                      name="price"
+                      label="Price (What customer pays)"
+                      type="number"
+                      value={formik.values.price}
+                      onChange={formik.handleChange}
+                      helperText={matchedPricingService ? `Auto-filled from price sheet: ${matchedPricingService.name}${isFetchingPricing ? ' (updating...)' : ''}` : undefined}
+                    />
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <TextField fullWidth id="cost" name="cost" label="Cost (What it costs us)" type="number" value={formik.values.cost} onChange={formik.handleChange} />
+                    <TextField
+                      fullWidth
+                      id="cost"
+                      name="cost"
+                      label="Cost (What it costs us)"
+                      type="number"
+                      value={formik.values.cost}
+                      onChange={formik.handleChange}
+                      helperText={matchedPricingService ? 'Includes labor, material, equipment, and overhead from price sheet.' : undefined}
+                    />
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <FormControl fullWidth>

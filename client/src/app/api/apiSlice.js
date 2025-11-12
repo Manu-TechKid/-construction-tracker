@@ -26,6 +26,6 @@ export const apiSlice = createApi({
   // Use baseQuery directly; avoid global auto-logout on any 401 to prevent
   // redirect flashes during app boot. Individual components can handle 401s.
   baseQuery,
-  tagTypes: ['Building', 'WorkOrder', 'Worker', 'Reminder', 'Invoice', 'Schedule', 'Note', 'WorkType', 'WorkSubType', 'DropdownConfig', 'ProjectEstimate'],
+  tagTypes: ['Building', 'WorkOrder', 'Worker', 'Reminder', 'Invoice', 'Schedule', 'Note', 'WorkType', 'WorkSubType', 'DropdownConfig', 'ProjectEstimate', 'ClientPricing'],
   endpoints: (builder) => ({}),
 });

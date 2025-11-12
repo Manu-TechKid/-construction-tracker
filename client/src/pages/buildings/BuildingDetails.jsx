@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { 
   Box, 
@@ -46,6 +46,7 @@ import {
   Description as DescriptionIcon,
   Notifications as ReminderIcon,
   PhotoCamera as PhotoCameraIcon,
+  MonetizationOn as PricingIcon,
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import ApartmentForm from '../../components/apartments/ApartmentForm';
@@ -56,6 +57,7 @@ import {
 } from '../../features/buildings/buildingsApiSlice';
 import { formatDate } from '../../utils/dateUtils';
 import RemindersTab from './RemindersTab';
+import BuildingPricingTab from './BuildingPricingTab';
 
 // Tab components
 const BuildingInfoTab = ({ building }) => {
@@ -443,6 +445,7 @@ const BuildingDetails = () => {
   const { hasPermission } = useAuth();
   // Get apartment ID from URL if present
   const [apartmentId, setApartmentId] = useState(null);
+  const canManagePricing = hasPermission(['manage:system']) || hasPermission(['view:costs']) || hasPermission(['update:buildings']);
   
   useEffect(() => {
     // Check URL for apartment ID
@@ -454,12 +457,12 @@ const BuildingDetails = () => {
   }, []);
 
   const [activeTab, setActiveTab] = useState(() => {
-    // Get the active tab from URL hash if present
     const hash = window.location.hash;
-    if (hash === '#reminders') return 3;
-    if (hash === '#work-orders') return 2;
+    if (hash === '#pricing' && canManagePricing) return 2;
+    if (hash === '#reminders') return canManagePricing ? 3 : 2;
+    if (hash === '#work-orders') return canManagePricing ? 3 : 2;
     if (hash === '#apartments') return 1;
-    return 0; // Default to info tab
+    return 0;
   });
   
   // Fetch building data
@@ -472,7 +475,64 @@ const BuildingDetails = () => {
   } = useGetBuildingQuery(id);
   
   const building = buildingData?.data || buildingData;
-  
+
+  const tabs = useMemo(() => {
+    if (!building) {
+      return [];
+    }
+
+    const computedTabs = [];
+
+    computedTabs.push({
+      label: 'Info',
+      icon: <InfoIcon />,
+      component: <BuildingInfoTab building={building} />,
+      hash: '#info',
+    });
+
+    computedTabs.push({
+      label: 'Apartments',
+      icon: <ApartmentIcon />,
+      component: <ApartmentsTab building={building} />,
+      hash: '#apartments',
+      onEnter: () => refetchBuilding(),
+    });
+
+    if (canManagePricing) {
+      computedTabs.push({
+        label: 'Pricing',
+        icon: <PricingIcon />,
+        component: <BuildingPricingTab buildingId={id} building={building} />,
+        hash: '#pricing',
+      });
+    }
+
+    computedTabs.push({
+      label: apartmentId ? 'Apartment Reminders' : 'Reminders',
+      icon: building.reminders?.length > 0 ? (
+        <Badge badgeContent={building.reminders.length} color="error">
+          <ReminderIcon />
+        </Badge>
+      ) : (
+        <ReminderIcon />
+      ),
+      component: <RemindersTab buildingId={id} apartmentId={apartmentId} />,
+      badge: building.reminders?.length > 0 ? building.reminders.length : null,
+      hidden: apartmentId && activeTab !== computedTabs.length,
+      hash: '#reminders',
+    });
+
+    return computedTabs;
+  }, [apartmentId, building, canManagePricing, id, refetchBuilding, activeTab]);
+
+  useEffect(() => {
+    if (!building) return;
+    if (tabs.length === 0) return;
+    if (activeTab >= tabs.length) {
+      setActiveTab(Math.max(tabs.length - 1, 0));
+    }
+  }, [activeTab, tabs, building]);
+
   // Loading state
   if (isLoading) {
     return (
@@ -498,16 +558,12 @@ const BuildingDetails = () => {
   // Handle tab change
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
-    // Refresh building data when switching tabs to ensure we have the latest data
-    if (newValue === 1) { // Assuming 1 is the index of the apartments tab
-      refetchBuilding();
+    const nextTab = tabs[newValue];
+    if (nextTab?.onEnter) {
+      nextTab.onEnter();
     }
-    // Update URL hash without page reload
-    let hash = '#';
-    if (newValue === 3) hash = '#reminders';
-    else if (newValue === 2) hash = '#work-orders';
-    else if (newValue === 1) hash = '#apartments';
-    window.history.replaceState(null, '', `${window.location.pathname}${hash}`);
+    const nextHash = nextTab?.hash || '';
+    window.history.replaceState(null, '', `${window.location.pathname}${nextHash}`);
   };
   
   // Handle edit building
@@ -516,32 +572,6 @@ const BuildingDetails = () => {
   };
   
   // Render tabs
-  const tabs = [
-    { 
-      label: 'Info', 
-      icon: <InfoIcon />,
-      component: <BuildingInfoTab building={building} /> 
-    },
-    { 
-      label: 'Apartments', 
-      icon: <ApartmentIcon />,
-      component: <ApartmentsTab building={building} /> 
-    },
-    { 
-      label: apartmentId ? 'Apartment Reminders' : 'Reminders', 
-      icon: building.reminders?.length > 0 ? (
-        <Badge badgeContent={building.reminders.length} color="error">
-          <ReminderIcon />
-        </Badge>
-      ) : (
-        <ReminderIcon />
-      ),
-      component: <RemindersTab buildingId={id} apartmentId={apartmentId} />,
-      badge: building.reminders?.length > 0 ? building.reminders.length : null,
-      hidden: apartmentId && activeTab !== 3 // Hide if apartment context but not on reminders tab
-    },
-  ];
-
   return (
     <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
       <Box sx={{ mb: 3 }}>
