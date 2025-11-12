@@ -474,7 +474,18 @@ const WorkOrderForm = () => {
                           formik.setFieldValue('workSubType', '');
                         }}
                         label="Work Type *"
+                        displayEmpty
+                        renderValue={(selected) => {
+                          if (!selected) {
+                            return <em>Select a Service type or category</em>;
+                          }
+                          const workType = workTypes.find(wt => wt._id === selected);
+                          return workType?.name || selected;
+                        }}
                       >
+                        <MenuItem value="" disabled>
+                          <em>Select a Service type or category</em>
+                        </MenuItem>
                         {workTypesData?.data?.workTypes?.map((workType) => (
                           <MenuItem key={workType._id} value={workType._id}>
                             {workType.name}
