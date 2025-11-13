@@ -69,6 +69,7 @@ import CreateProjectEstimate from './pages/project-estimates/CreateProjectEstima
 import EditProjectEstimate from './pages/project-estimates/EditProjectEstimate';
 import ProjectEstimateDetails from './pages/project-estimates/ProjectEstimateDetails';
 import ProjectEstimatesNew from './pages/estimates/ProjectEstimates';
+import CustomerServicesPrices from './pages/pricing/CustomerServicesPrices';
 
 // Route Protection
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -356,6 +357,16 @@ const AppContent = () => {
                 element={
                   <RoleBasedRoute requiredPermissions={['update:invoices']}>
                     <EditInvoice />
+                  </RoleBasedRoute>
+                } 
+              />
+
+              {/* Pricing */}
+              <Route 
+                path="pricing" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['read:buildings']}>
+                    <CustomerServicesPrices />
                   </RoleBasedRoute>
                 } 
               />

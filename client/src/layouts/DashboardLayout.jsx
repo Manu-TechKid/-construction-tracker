@@ -38,6 +38,7 @@ import {
   Search as SearchIcon,
   AccessTime as TimeIcon,
   Approval as ProjectApprovalIcon,
+  AttachMoney as PricingIcon,
 } from '@mui/icons-material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
@@ -242,6 +243,16 @@ const DashboardLayout = () => {
         icon: <ReceiptIcon />,
         path: '/invoices',
         permission: 'read:invoices'
+      });
+    }
+
+    // Pricing - not for workers
+    if (!isWorker && hasPermission(['read:buildings'])) {
+      items.push({
+        text: 'Customer Pricing',
+        icon: <PricingIcon />,
+        path: '/pricing',
+        permission: 'read:buildings'
       });
     }
 
