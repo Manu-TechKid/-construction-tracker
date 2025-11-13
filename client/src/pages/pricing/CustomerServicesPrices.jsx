@@ -188,17 +188,26 @@ const CustomerServicesPrices = () => {
   const workTypes = workTypesData?.data?.workTypes || [];
   const workSubTypes = workSubTypesData?.data?.workSubTypes || [];
 
-  // Prepare categories for filter dropdown
+  // Prepare categories for filter dropdown (use code for filtering)
   const serviceCategories = useMemo(() => {
     const categories = [{ value: '', label: 'All Categories' }];
     workTypes.forEach(workType => {
       categories.push({
-        value: workType._id,
+        value: workType.code, // Use code for filtering to match service.category
         label: workType.name,
         code: workType.code
       });
     });
     return categories;
+  }, [workTypes]);
+
+  // Prepare categories for form dropdown (use _id for subcategory fetching)
+  const formCategories = useMemo(() => {
+    return workTypes.map(workType => ({
+      value: workType._id, // Use _id for subcategory fetching
+      label: workType.name,
+      code: workType.code
+    }));
   }, [workTypes]);
 
   // Prepare subcategories for form dropdown
@@ -522,11 +531,11 @@ const CustomerServicesPrices = () => {
               <TextField
                 select
                 fullWidth
-                label="Customer"
+                label="Building"
                 value={filters.building}
                 onChange={(e) => handleFilterChange('building', e.target.value)}
               >
-                <MenuItem value="">All Customers</MenuItem>
+                <MenuItem value="">All Buildings</MenuItem>
                 {buildings.map((building) => (
                   <MenuItem key={building._id} value={building._id}>
                     {building.name}
@@ -625,7 +634,7 @@ const CustomerServicesPrices = () => {
                   fullWidth
                   required
                 >
-                  {serviceCategories.slice(1).map((option) => (
+                  {formCategories.map((option) => (
                     <MenuItem key={option.value} value={option.value}>
                       {option.label}
                     </MenuItem>
