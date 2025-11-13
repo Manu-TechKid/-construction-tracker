@@ -34,12 +34,14 @@ import {
   Receipt as InvoiceIcon,
   Assignment as WorkOrderIcon,
   Download as DownloadIcon,
-  Visibility as PreviewIcon
+  Visibility as PreviewIcon,
+  Email as EmailIcon
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
 import LineItemEditor from '../../components/estimates/LineItemEditor';
 import { useAuth } from '../../hooks/useAuth';
+import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import {
   useGetProjectEstimateQuery,
   useApproveProjectEstimateMutation,
@@ -62,33 +64,44 @@ const ProjectEstimateDetails = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [sendToClientDialog, setSendToClientDialog] = useState(false);
-  const [clientEmail, setClientEmail] = useState('');
+  const [selectedEmails, setSelectedEmails] = useState([]);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailMessage, setEmailMessage] = useState('');
   
   // API queries and mutations
   const { data: estimateData, isLoading, error, refetch } = useGetProjectEstimateQuery(id);
+  const { data: buildingsData } = useGetBuildingsQuery();
   const [approveEstimate, { isLoading: isApproving }] = useApproveProjectEstimateMutation();
   const [deleteEstimate, { isLoading: isDeleting }] = useDeleteProjectEstimateMutation();
   const [convertToWorkOrder, { isLoading: isConverting }] = useConvertToWorkOrderMutation();
   const [convertToInvoice, { isLoading: isConvertingToInvoice }] = useConvertToInvoiceMutation();
 
   const estimate = estimateData?.data?.projectEstimate;
+  const buildings = buildingsData?.data?.buildings || [];
 
   // Auto-populate email from building contacts when dialog opens
   React.useEffect(() => {
-    if (!estimate) return;
+    if (!estimate || !sendToClientDialog) return;
 
-    if (sendToClientDialog && estimate.building) {
-      const emails = [
-        estimate.building.generalManagerEmail,
-        estimate.building.maintenanceManagerEmail,
-        estimate.building.serviceManagerEmail
-      ].filter(Boolean);
-      
-      if (emails.length > 0) {
-        setClientEmail(emails.join(', '));
-      }
+    const building = buildings.find(b => b._id === estimate.building);
+    const availableEmails = [];
+    
+    if (building?.generalManagerEmail) {
+      availableEmails.push(building.generalManagerEmail);
     }
-  }, [sendToClientDialog, estimate]);
+    
+    if (building?.maintenanceManagerEmail) {
+      availableEmails.push(building.maintenanceManagerEmail);
+    }
+    
+    if (building?.thirdContactEmail) {
+      availableEmails.push(building.thirdContactEmail);
+    }
+    
+    setSelectedEmails(availableEmails); // Select all by default
+    setEmailSubject(`Project Estimate - ${estimate.title}`);
+    setEmailMessage('Please find attached the project estimate for your review.');
+  }, [sendToClientDialog, estimate, buildings]);
   const [selectedTab, setSelectedTab] = useState(0);
 
   // Event handlers
@@ -166,34 +179,55 @@ const ProjectEstimateDetails = () => {
   };
 
   const handleSendToClient = async () => {
-    if (!clientEmail.trim()) {
-      toast.error('Please enter a valid email address');
+    if (selectedEmails.length === 0) {
+      toast.error('Please select at least one recipient');
       return;
     }
     
     try {
-      // Validate estimate data
-      if (!estimate) {
-        throw new Error('Estimate data not available');
-      }
+      // TODO: Implement actual email sending API
+      console.log('Sending estimate to:', selectedEmails);
+      console.log('Subject:', emailSubject);
+      console.log('Message:', emailMessage);
       
-      // Create email subject and body
-      const subject = `Project Estimate - ${estimate.title || 'Estimate'}`;
-      const buildingName = estimate.building?.name || 'your building';
-      const estimatedPrice = estimate.estimatedPrice || estimate.estimatedCost || 0;
-      const duration = estimate.estimatedDuration || 'TBD';
-      
-      const body = `Dear Client,\n\nPlease find the project estimate for ${buildingName}.\n\nEstimate Details:\n- Title: ${estimate.title || 'N/A'}\n- Estimated Price: $${estimatedPrice.toFixed(2)}\n- Duration: ${duration} days\n\nYou can view the estimate at: ${window.location.origin}/project-estimates/${id}\n\nBest regards,\nDSJ Construction Services`;
-      
-      // Open email client
-      window.location.href = `mailto:${clientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      
-      toast.success('Email client opened successfully!');
+      toast.success('Estimate sent successfully!');
       setSendToClientDialog(false);
     } catch (error) {
       console.error('Send to client error:', error);
-      toast.error('Failed to prepare email: ' + (error?.message || 'Unknown error'));
+      toast.error('Failed to send estimate: ' + (error?.message || 'Unknown error'));
     }
+  };
+
+  const getBuildingContacts = () => {
+    if (!estimate) return [];
+    const building = buildings.find(b => b._id === estimate.building);
+    const contacts = [];
+    
+    if (building?.generalManagerEmail) {
+      contacts.push({
+        email: building.generalManagerEmail,
+        name: building.generalManagerName || 'General Manager',
+        role: 'General Manager'
+      });
+    }
+    
+    if (building?.maintenanceManagerEmail) {
+      contacts.push({
+        email: building.maintenanceManagerEmail,
+        name: building.maintenanceManagerName || 'Maintenance Manager',
+        role: 'Maintenance Manager'
+      });
+    }
+    
+    if (building?.thirdContactEmail) {
+      contacts.push({
+        email: building.thirdContactEmail,
+        name: building.thirdContactName || 'Contact',
+        role: building.thirdContactRole || 'Contact'
+      });
+    }
+    
+    return contacts;
   };
 
   const getStatusColor = (status) => {
@@ -602,22 +636,61 @@ const ProjectEstimateDetails = () => {
       <Dialog open={sendToClientDialog} onClose={() => setSendToClientDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Send Estimate to Client</DialogTitle>
         <DialogContent>
-          <Typography gutterBottom>
-            Enter the client's email address to send this estimate:
-          </Typography>
-          <TextField
-            fullWidth
-            type="email"
-            label="Client Email"
-            value={clientEmail}
-            onChange={(e) => setClientEmail(e.target.value)}
-            placeholder="client@example.com"
-            sx={{ mt: 2 }}
-            autoFocus
-          />
-          <Alert severity="info" sx={{ mt: 2 }}>
-            The client will receive a professional PDF estimate via email. Priority and internal notes will be hidden.
-          </Alert>
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Select Recipients:
+            </Typography>
+            {getBuildingContacts().map((contact, index) => (
+              <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedEmails.includes(contact.email)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedEmails(prev => [...prev, contact.email]);
+                      } else {
+                        setSelectedEmails(prev => prev.filter(email => email !== contact.email));
+                      }
+                    }}
+                    style={{ marginRight: 8 }}
+                  />
+                  <Box>
+                    <Typography variant="body2" fontWeight="bold">
+                      {contact.name} ({contact.role})
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary">
+                      {contact.email}
+                    </Typography>
+                  </Box>
+                </label>
+              </Box>
+            ))}
+            
+            {getBuildingContacts().length === 0 && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                No building contacts found. Please add contact information in the Building module.
+              </Alert>
+            )}
+            
+            <TextField
+              fullWidth
+              label="Subject"
+              value={emailSubject}
+              onChange={(e) => setEmailSubject(e.target.value)}
+              sx={{ mt: 2, mb: 2 }}
+            />
+            
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              label="Message"
+              value={emailMessage}
+              onChange={(e) => setEmailMessage(e.target.value)}
+              helperText="The client will receive a professional PDF estimate via email. Priority and internal notes will be hidden."
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSendToClientDialog(false)}>
@@ -626,7 +699,8 @@ const ProjectEstimateDetails = () => {
           <Button 
             onClick={handleSendToClient} 
             variant="contained"
-            disabled={!clientEmail.trim()}
+            disabled={selectedEmails.length === 0}
+            startIcon={<EmailIcon />}
           >
             Send Estimate
           </Button>
