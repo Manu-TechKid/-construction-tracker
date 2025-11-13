@@ -72,13 +72,13 @@ const defaultServiceForm = {
   subcategory: '',
   name: '',
   description: '',
-  basePrice: '',
+  basePrice: '0',
   unitType: 'per_apartment',
-  minimumCharge: '',
+  minimumCharge: '0',
   maximumCharge: '',
-  laborCost: '',
-  materialCost: '',
-  equipmentCost: '',
+  laborCost: '0',
+  materialCost: '0',
+  equipmentCost: '0',
   overheadPercentage: '15',
   isActive: true,
 };
@@ -260,14 +260,14 @@ const BuildingPricingTab = ({ buildingId, building }) => {
         subcategory: service.subcategory || '',
         name: service.name || '',
         description: service.description || '',
-        basePrice: service.pricing?.basePrice ?? '',
+        basePrice: service.pricing?.basePrice?.toString() ?? '0',
         unitType: service.pricing?.unitType || 'per_apartment',
-        minimumCharge: service.pricing?.minimumCharge ?? '',
-        maximumCharge: service.pricing?.maximumCharge ?? '',
-        laborCost: service.cost?.laborCost ?? '',
-        materialCost: service.cost?.materialCost ?? '',
-        equipmentCost: service.cost?.equipmentCost ?? '',
-        overheadPercentage: service.cost?.overheadPercentage ?? '15',
+        minimumCharge: service.pricing?.minimumCharge?.toString() ?? '0',
+        maximumCharge: service.pricing?.maximumCharge?.toString() ?? '',
+        laborCost: service.cost?.laborCost?.toString() ?? '0',
+        materialCost: service.cost?.materialCost?.toString() ?? '0',
+        equipmentCost: service.cost?.equipmentCost?.toString() ?? '0',
+        overheadPercentage: service.cost?.overheadPercentage?.toString() ?? '15',
         isActive: service.isActive ?? true,
       });
     } else {
@@ -313,7 +313,7 @@ const BuildingPricingTab = ({ buildingId, building }) => {
       category,
       subcategory: subcategory.trim(),
       name: name.trim(),
-      description: description.trim(),
+      description: description.trim() || '',
       pricing: {
         basePrice: Number(basePrice) || 0,
         unitType,
@@ -329,11 +329,8 @@ const BuildingPricingTab = ({ buildingId, building }) => {
       isActive,
     };
 
-    if (!payload.description) {
-      delete payload.description;
-    }
-
-    if (!payload.pricing.maximumCharge && payload.pricing.maximumCharge !== 0) {
+    // Only remove maximumCharge if it's undefined
+    if (payload.pricing.maximumCharge === undefined) {
       delete payload.pricing.maximumCharge;
     }
 
@@ -341,7 +338,10 @@ const BuildingPricingTab = ({ buildingId, building }) => {
   };
 
   const handleSaveService = async () => {
-    if (!pricingConfig?._id) return;
+    if (!pricingConfig?._id) {
+      toast.error('No pricing configuration found. Please create a price sheet first.');
+      return;
+    }
 
     if (!serviceForm.name.trim()) {
       toast.error('Service name is required.');
@@ -353,21 +353,29 @@ const BuildingPricingTab = ({ buildingId, building }) => {
       return;
     }
 
+    if (!serviceForm.basePrice || Number(serviceForm.basePrice) <= 0) {
+      toast.error('Base price must be greater than 0.');
+      return;
+    }
+
     try {
       const payload = buildServicePayload();
+      console.log('Saving service with payload:', payload);
 
       if (editingService) {
-        await updatePricingService({
+        const result = await updatePricingService({
           pricingId: pricingConfig._id,
           serviceId: editingService._id,
           service: payload,
         }).unwrap();
+        console.log('Service updated successfully:', result);
         toast.success('Service updated.');
       } else {
-        await addPricingService({
+        const result = await addPricingService({
           pricingId: pricingConfig._id,
           service: payload,
         }).unwrap();
+        console.log('Service added successfully:', result);
         toast.success('Service added.');
       }
 
@@ -377,7 +385,10 @@ const BuildingPricingTab = ({ buildingId, building }) => {
       refetch();
     } catch (mutationError) {
       console.error('Failed to save service', mutationError);
-      toast.error(mutationError?.data?.message || 'Failed to save service');
+      const errorMessage = mutationError?.data?.message || 
+                          mutationError?.message || 
+                          'Failed to save service. Please check all required fields.';
+      toast.error(errorMessage);
     }
   };
 
