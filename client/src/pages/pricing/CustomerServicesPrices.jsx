@@ -425,12 +425,21 @@ const CustomerServicesPrices = () => {
           equipmentCost: Number(serviceForm.equipmentCost) || 0,
           overheadPercentage: Number(serviceForm.overheadPercentage) || 0,
         },
+        specifications: {
+          estimatedDuration: 1,
+          workersRequired: 1,
+          materialsIncluded: true,
+          equipmentIncluded: true,
+          notes: ''
+        },
         isActive: serviceForm.isActive,
       };
 
       if (payload.pricing.maximumCharge === undefined) {
         delete payload.pricing.maximumCharge;
       }
+
+      console.log('Service payload:', payload);
 
       if (editingService) {
         await updatePricingService({
@@ -484,7 +493,12 @@ const CustomerServicesPrices = () => {
       refetchPricing();
     } catch (error) {
       console.error('Failed to save service:', error);
-      toast.error(error?.data?.message || 'Failed to save service');
+      console.error('Error details:', {
+        status: error?.status,
+        data: error?.data,
+        message: error?.data?.message || error?.message
+      });
+      toast.error(error?.data?.message || error?.message || 'Failed to save service');
     }
   };
 
