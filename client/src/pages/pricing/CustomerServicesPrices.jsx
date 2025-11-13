@@ -45,17 +45,13 @@ import {
   useAddPricingServiceMutation,
   useUpdatePricingServiceMutation,
   useRemovePricingServiceMutation,
+  useCreateClientPricingMutation,
 } from '../../features/clientPricing/clientPricingApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
-
-const serviceCategories = [
-  { value: '', label: 'All Categories' },
-  { value: 'painting', label: 'Painting' },
-  { value: 'cleaning', label: 'Cleaning' },
-  { value: 'repairs', label: 'Repairs' },
-  { value: 'remodeling', label: 'Remodeling' },
-  { value: 'other', label: 'Other' },
-];
+import {
+  useGetWorkTypesQuery,
+  useGetWorkSubTypesQuery,
+} from '../../features/setup/setupApiSlice';
 
 const unitTypes = [
   { value: 'per_room', label: 'Per Room' },
@@ -66,7 +62,7 @@ const unitTypes = [
 ];
 
 const defaultServiceForm = {
-  category: 'other',
+  category: '',
   subcategory: '',
   name: '',
   description: '',
@@ -119,6 +115,11 @@ const CustomerServicesPrices = () => {
 
   // API hooks
   const { data: buildingsData, isLoading: isLoadingBuildings } = useGetBuildingsQuery();
+  const { data: workTypesData, isLoading: isLoadingWorkTypes } = useGetWorkTypesQuery();
+  const { data: workSubTypesData, isLoading: isLoadingWorkSubTypes } = useGetWorkSubTypesQuery(
+    serviceForm.category || undefined
+  );
+  
   const { 
     data: pricingData, 
     isLoading: isLoadingPricing, 
@@ -132,6 +133,7 @@ const CustomerServicesPrices = () => {
   const [addPricingService, { isLoading: isAddingService }] = useAddPricingServiceMutation();
   const [updatePricingService, { isLoading: isUpdatingService }] = useUpdatePricingServiceMutation();
   const [removePricingService, { isLoading: isRemovingService }] = useRemovePricingServiceMutation();
+  const [createClientPricing, { isLoading: isCreatingPricing }] = useCreateClientPricingMutation();
 
   // Prepare data for DataGrid
   const rows = useMemo(() => {
@@ -173,6 +175,31 @@ const CustomerServicesPrices = () => {
   }, [pricingData]);
 
   const buildings = buildingsData?.data?.buildings || [];
+  const workTypes = workTypesData?.data?.workTypes || [];
+  const workSubTypes = workSubTypesData?.data?.workSubTypes || [];
+
+  // Prepare categories for filter dropdown
+  const serviceCategories = useMemo(() => {
+    const categories = [{ value: '', label: 'All Categories' }];
+    workTypes.forEach(workType => {
+      categories.push({
+        value: workType._id,
+        label: workType.name,
+        code: workType.code
+      });
+    });
+    return categories;
+  }, [workTypes]);
+
+  // Prepare subcategories for form dropdown
+  const serviceSubCategories = useMemo(() => {
+    if (!serviceForm.category) return [];
+    return workSubTypes.map(subType => ({
+      value: subType.code || subType._id,
+      label: subType.name,
+      code: subType.code
+    }));
+  }, [workSubTypes, serviceForm.category]);
 
   const columns = [
     {
@@ -359,8 +386,11 @@ const CustomerServicesPrices = () => {
     }
 
     try {
+      // Find the selected work type for category mapping
+      const selectedWorkType = workTypes.find(wt => wt._id === serviceForm.category);
+      
       const payload = {
-        category: serviceForm.category,
+        category: selectedWorkType?.code || serviceForm.category,
         subcategory: serviceForm.subcategory.trim(),
         name: serviceForm.name.trim(),
         description: serviceForm.description.trim() || '',
@@ -391,14 +421,34 @@ const CustomerServicesPrices = () => {
         }).unwrap();
         toast.success('Service updated successfully');
       } else {
-        // For new services, we need to find the pricing config for the selected building
-        const buildingPricing = pricingData?.data?.clientPricing?.find(
+        // For new services, find or create pricing config for the selected building
+        let buildingPricing = pricingData?.data?.clientPricing?.find(
           p => p.building?._id === selectedBuilding
         );
         
         if (!buildingPricing) {
-          toast.error('No pricing configuration found for this building. Please create a price sheet first.');
-          return;
+          // Create new pricing configuration for this building
+          const selectedBuildingData = buildings.find(b => b._id === selectedBuilding);
+          
+          const newPricingConfig = {
+            company: {
+              name: selectedBuildingData?.name || 'Default Company',
+              type: 'other'
+            },
+            building: selectedBuilding,
+            services: [],
+            terms: {
+              paymentTerms: 'net_30',
+              discountPercentage: 0,
+              bulkDiscountThreshold: 0,
+              specialInstructions: ''
+            },
+            isActive: true
+          };
+
+          const createdPricing = await createClientPricing(newPricingConfig).unwrap();
+          buildingPricing = createdPricing.data.clientPricing;
+          toast.success('Created new price sheet for building');
         }
 
         await addPricingService({
@@ -421,14 +471,21 @@ const CustomerServicesPrices = () => {
 
   const handleServiceFormChange = (event) => {
     const { name, value } = event.target;
-    setServiceForm(prev => ({ ...prev, [name]: value }));
+    setServiceForm(prev => {
+      const newForm = { ...prev, [name]: value };
+      // Clear subcategory when category changes
+      if (name === 'category') {
+        newForm.subcategory = '';
+      }
+      return newForm;
+    });
   };
 
   const handleServiceActiveToggle = (event) => {
     setServiceForm(prev => ({ ...prev, isActive: event.target.checked }));
   };
 
-  if (isLoadingBuildings || isLoadingPricing) {
+  if (isLoadingBuildings || isLoadingPricing || isLoadingWorkTypes) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
@@ -567,6 +624,7 @@ const CustomerServicesPrices = () => {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
+                  select
                   label="Sub-Category"
                   name="subcategory"
                   value={serviceForm.subcategory}
@@ -574,7 +632,14 @@ const CustomerServicesPrices = () => {
                   fullWidth
                   required
                   helperText="Match this to work sub-type code for auto-fill"
-                />
+                  disabled={!serviceForm.category}
+                >
+                  {serviceSubCategories.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
