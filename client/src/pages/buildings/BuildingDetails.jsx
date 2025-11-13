@@ -57,7 +57,7 @@ import {
 } from '../../features/buildings/buildingsApiSlice';
 import { formatDate } from '../../utils/dateUtils';
 import RemindersTab from './RemindersTab';
-import BuildingPricingTab from './BuildingPricingTab';
+import BuildingPricingRedirect from './BuildingPricingRedirect';
 
 // Tab components
 const BuildingInfoTab = ({ building }) => {
@@ -502,7 +502,7 @@ const BuildingDetails = () => {
       computedTabs.push({
         label: 'Pricing',
         icon: <PricingIcon />,
-        component: <BuildingPricingTab buildingId={id} building={building} />,
+        component: <BuildingPricingRedirect buildingId={id} building={building} />,
         hash: '#pricing',
       });
     }

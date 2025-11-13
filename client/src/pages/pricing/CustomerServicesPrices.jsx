@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Box,
   Card,
@@ -104,10 +105,19 @@ function CustomToolbar({ onRefresh, onAddService }) {
 }
 
 const CustomerServicesPrices = () => {
+  const [searchParams] = useSearchParams();
   const [filters, setFilters] = useState({
     building: '',
     category: '',
   });
+
+  // Handle URL parameters for pre-filtering
+  useEffect(() => {
+    const buildingParam = searchParams.get('building');
+    if (buildingParam) {
+      setFilters(prev => ({ ...prev, building: buildingParam }));
+    }
+  }, [searchParams]);
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState(null);
   const [serviceForm, setServiceForm] = useState(defaultServiceForm);
