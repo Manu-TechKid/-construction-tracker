@@ -127,7 +127,7 @@ const CustomerServicesPrices = () => {
   const { data: buildingsData, isLoading: isLoadingBuildings } = useGetBuildingsQuery();
   const { data: workTypesData, isLoading: isLoadingWorkTypes } = useGetWorkTypesQuery();
   const { data: workSubTypesData, isLoading: isLoadingWorkSubTypes } = useGetWorkSubTypesQuery(
-    serviceForm.category || undefined
+    filters.category ? workTypes.find(wt => wt.code === filters.category)?._id : undefined
   );
   
   const { 
@@ -336,10 +336,17 @@ const CustomerServicesPrices = () => {
   const handleFilterChange = async (field, value) => {
     setFilters(prev => ({ ...prev, [field]: value }));
     
-    // Auto-load subtypes when both building and category are selected
-    if (field === 'category' && filters.building && value) {
-      await handleAutoLoadSubtypes(filters.building, value);
-    } else if (field === 'building' && filters.category && value) {
+    // Auto-load subtypes when category is selected (with or without building)
+    if (field === 'category' && value) {
+      if (filters.building) {
+        // If building is already selected, auto-load immediately
+        await handleAutoLoadSubtypes(filters.building, value);
+      } else {
+        // If no building selected, show info message
+        toast.info('Select a building to auto-load services for this category');
+      }
+    } else if (field === 'building' && value && filters.category) {
+      // If building is selected and category exists, auto-load
       await handleAutoLoadSubtypes(value, filters.category);
     }
   };
@@ -656,7 +663,7 @@ const CustomerServicesPrices = () => {
                 ))}
               </TextField>
             </Grid>
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid item xs={12} sm={6} md={3}>
               <TextField
                 select
                 fullWidth
@@ -670,6 +677,19 @@ const CustomerServicesPrices = () => {
                   </MenuItem>
                 ))}
               </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <Button
+                variant="contained"
+                color="secondary"
+                fullWidth
+                sx={{ height: '56px' }}
+                disabled={!filters.building || !filters.category}
+                onClick={() => filters.building && filters.category && handleAutoLoadSubtypes(filters.building, filters.category)}
+                startIcon={<AddIcon />}
+              >
+                Auto-Load Services
+              </Button>
             </Grid>
           </Grid>
         </CardContent>

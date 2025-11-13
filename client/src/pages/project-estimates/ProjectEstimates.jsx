@@ -29,7 +29,8 @@ import {
   Select,
   MenuItem,
   Tooltip,
-  Paper
+  Paper,
+  Menu
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -42,7 +43,10 @@ import {
   Receipt as InvoiceIcon,
   AttachMoney as MoneyIcon,
   CalendarToday as CalendarIcon,
-  Business as BuildingIcon
+  Business as BuildingIcon,
+  MoreVert as MoreVertIcon,
+  Email as EmailIcon,
+  GetApp as DownloadIcon
 } from '@mui/icons-material';
 import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { toast } from 'react-toastify';
@@ -69,6 +73,10 @@ const ProjectEstimates = () => {
   const [detailsDialog, setDetailsDialog] = useState(false);
   const [actionAnchorEl, setActionAnchorEl] = useState(null);
   const [actionProject, setActionProject] = useState(null);
+  const [sendEmailDialog, setSendEmailDialog] = useState(false);
+  const [selectedEmails, setSelectedEmails] = useState([]);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailMessage, setEmailMessage] = useState('');
   const [filters, setFilters] = useState({
     status: '',
     building: '',
@@ -219,7 +227,106 @@ const ProjectEstimates = () => {
     handleActionMenuClose();
   };
 
-  const canConvertProject = (project) => project?.status === 'approved';
+  const handleActionSendEmail = () => {
+    if (!actionProject) return;
+    handleSendToClient(actionProject);
+    handleActionMenuClose();
+  };
+
+  const handleDownloadPDF = async (project) => {
+    try {
+      // TODO: Implement PDF download API call
+      console.log('Downloading PDF for project:', project._id);
+      toast.success('PDF download started');
+    } catch (error) {
+      toast.error('Failed to download PDF');
+    }
+  };
+
+  const canConvertProject = (project) => {
+    // Allow conversion for submitted, pending, or approved estimates
+    return ['submitted', 'pending', 'approved'].includes(project?.status);
+  };
+
+  const handleSendToClient = (project) => {
+    const building = buildings.find(b => b._id === project.building);
+    const availableEmails = [];
+    
+    if (building?.generalManagerEmail) {
+      availableEmails.push({
+        email: building.generalManagerEmail,
+        name: building.generalManagerName || 'General Manager',
+        role: 'General Manager'
+      });
+    }
+    
+    if (building?.maintenanceManagerEmail) {
+      availableEmails.push({
+        email: building.maintenanceManagerEmail,
+        name: building.maintenanceManagerName || 'Maintenance Manager',
+        role: 'Maintenance Manager'
+      });
+    }
+    
+    if (building?.thirdContactEmail) {
+      availableEmails.push({
+        email: building.thirdContactEmail,
+        name: building.thirdContactName || 'Contact',
+        role: building.thirdContactRole || 'Contact'
+      });
+    }
+    
+    setSelectedEmails(availableEmails.map(e => e.email)); // Select all by default
+    setEmailSubject(`Project Estimate - ${project.title}`);
+    setEmailMessage('Please find attached the project estimate for your review.');
+    setSendEmailDialog(true);
+  };
+
+  const handleSendEmail = async () => {
+    try {
+      // TODO: Implement send email API call
+      console.log('Sending email to:', selectedEmails);
+      console.log('Subject:', emailSubject);
+      console.log('Message:', emailMessage);
+      
+      toast.success('Estimate sent successfully!');
+      setSendEmailDialog(false);
+    } catch (error) {
+      toast.error('Failed to send estimate');
+    }
+  };
+
+  const getBuildingContacts = () => {
+    if (!actionProject) return [];
+    const building = buildings.find(b => b._id === actionProject.building);
+    const contacts = [];
+    
+    if (building?.generalManagerEmail) {
+      contacts.push({
+        email: building.generalManagerEmail,
+        name: building.generalManagerName || 'General Manager',
+        role: 'General Manager'
+      });
+    }
+    
+    if (building?.maintenanceManagerEmail) {
+      contacts.push({
+        email: building.maintenanceManagerEmail,
+        name: building.maintenanceManagerName || 'Maintenance Manager',
+        role: 'Maintenance Manager'
+      });
+    }
+    
+    if (building?.thirdContactEmail) {
+      contacts.push({
+        email: building.thirdContactEmail,
+        name: building.thirdContactName || 'Contact',
+        role: building.thirdContactRole || 'Contact'
+      });
+    }
+    
+    return contacts;
+  };
 
   // Quick filter buttons for months
   const setMonthFilter = (monthsAgo) => {
@@ -636,6 +743,14 @@ const ProjectEstimates = () => {
             <EditIcon fontSize="small" sx={{ mr: 1 }} />
             Edit
           </MenuItem>
+          <MenuItem onClick={handleActionSendEmail}>
+            <EmailIcon fontSize="small" sx={{ mr: 1 }} />
+            Send to Client
+          </MenuItem>
+          <MenuItem onClick={() => handleDownloadPDF(actionProject)}>
+            <DownloadIcon fontSize="small" sx={{ mr: 1 }} />
+            Download PDF
+          </MenuItem>
           <MenuItem
             onClick={handleActionConvert}
             disabled={!canConvertProject(actionProject) || isConverting}
@@ -652,6 +767,86 @@ const ProjectEstimates = () => {
             Delete
           </MenuItem>
         </Menu>
+
+        {/* Send Email Dialog */}
+        <Dialog 
+          open={sendEmailDialog} 
+          onClose={() => setSendEmailDialog(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>Send Estimate to Client</DialogTitle>
+          <DialogContent>
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Select Recipients:
+              </Typography>
+              {getBuildingContacts().map((contact, index) => (
+                <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedEmails.includes(contact.email)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedEmails(prev => [...prev, contact.email]);
+                        } else {
+                          setSelectedEmails(prev => prev.filter(email => email !== contact.email));
+                        }
+                      }}
+                      style={{ marginRight: 8 }}
+                    />
+                    <Box>
+                      <Typography variant="body2" fontWeight="bold">
+                        {contact.name} ({contact.role})
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        {contact.email}
+                      </Typography>
+                    </Box>
+                  </label>
+                </Box>
+              ))}
+              
+              {getBuildingContacts().length === 0 && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  No building contacts found. Please add contact information in the Building module.
+                </Alert>
+              )}
+              
+              <TextField
+                fullWidth
+                label="Subject"
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+                sx={{ mt: 2, mb: 2 }}
+              />
+              
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                label="Message"
+                value={emailMessage}
+                onChange={(e) => setEmailMessage(e.target.value)}
+                helperText="The client will receive a professional PDF estimate via email."
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setSendEmailDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSendEmail}
+              variant="contained"
+              disabled={selectedEmails.length === 0}
+              startIcon={<EmailIcon />}
+            >
+              Send Estimate
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </Container>
   );

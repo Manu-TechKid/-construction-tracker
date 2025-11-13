@@ -17,7 +17,7 @@ const validationSchema = Yup.object().shape({
   name: Yup.string().required('Building name is required'),
   address: Yup.string().required('Address is required'),
   city: Yup.string().required('City is required'),
-  serviceManager: Yup.string().required('Service manager name is required'),
+  serviceManager: Yup.string(),
   
   // Contact fields for automated email sending
   generalManagerName: Yup.string().required('General Manager name is required'),
@@ -144,12 +144,12 @@ const BuildingForm = ({
                       fullWidth
                       id="serviceManager"
                       name="serviceManager"
-                      label="Service Manager Name"
+                      label="Service Manager Name (Optional)"
                       value={formik.values.serviceManager}
                       onChange={formik.handleChange}
                       onBlur={formik.handleBlur}
                       error={formik.touched.serviceManager && Boolean(formik.errors.serviceManager)}
-                      helperText={formik.touched.serviceManager && formik.errors.serviceManager}
+                      helperText="Leave empty if same as Maintenance Manager"
                       variant="outlined"
                       margin="normal"
                     />
