@@ -55,8 +55,7 @@ import { useAuth } from '../../hooks/useAuth';
 import {
   useGetPendingProjectApprovalsQuery,
   useApproveProjectEstimateMutation,
-  useDeleteProjectEstimateMutation,
-  useConvertToWorkOrderMutation
+  useDeleteProjectEstimateMutation
 } from '../../features/estimates/projectEstimatesApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 
@@ -81,7 +80,6 @@ const ProjectsPendingApproval = () => {
   // Mutations
   const [approveProject, { isLoading: isApproving }] = useApproveProjectEstimateMutation();
   const [deleteProject, { isLoading: isDeleting }] = useDeleteProjectEstimateMutation();
-  const [convertToWorkOrder, { isLoading: isConverting }] = useConvertToWorkOrderMutation();
 
   const pendingProjects = pendingData?.data?.projectEstimates || [];
   const buildings = buildingsData?.data?.buildings || [];
@@ -174,19 +172,7 @@ const ProjectsPendingApproval = () => {
     }
   };
 
-  const handleConvert = async (projectId) => {
-    try {
-      const confirmed = window.confirm('Convert this project estimate to a work order?');
-      if (!confirmed) return;
-
-      await convertToWorkOrder(projectId).unwrap();
-      toast.success('Project estimate converted to work order successfully');
-      refetchPending();
-    } catch (error) {
-      console.error('Convert error:', error);
-      toast.error(`Failed to convert project estimate: ${error?.data?.message || error?.message || 'Unknown error'}`);
-    }
-  };
+  // Convert functionality moved to Project Estimates module to avoid conflicts
 
   const handleViewDetails = (project) => {
     setSelectedProject(project);
@@ -458,16 +444,6 @@ const ProjectsPendingApproval = () => {
                             >
                               Reject
                             </Button>
-                            <Tooltip title="Convert to Work Order">
-                              <IconButton 
-                                size="small" 
-                                color="secondary"
-                                onClick={() => handleConvert(project._id)}
-                                disabled={isConverting}
-                              >
-                                <ConvertIcon />
-                              </IconButton>
-                            </Tooltip>
                             <Tooltip title="Delete Project">
                               <IconButton 
                                 size="small" 
