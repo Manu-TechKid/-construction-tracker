@@ -396,7 +396,7 @@ const ProjectEstimateDetails = () => {
                 
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="subtitle2" color="text.secondary">
-                    Location
+                    Service Location
                   </Typography>
                   <Typography variant="body1">
                     {estimate.apartmentNumber || 'General Area'}

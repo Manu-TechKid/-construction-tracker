@@ -480,7 +480,7 @@ const ProjectEstimates = () => {
                             <Typography variant="subtitle2">{project.title}</Typography>
                             {project.apartmentNumber && (
                               <Typography variant="caption" color="textSecondary">
-                                Apt: {project.apartmentNumber}
+                                Location: {project.apartmentNumber}
                               </Typography>
                             )}
                           </Box>
@@ -572,8 +572,8 @@ const ProjectEstimates = () => {
                   <Typography>{getBuildingName(selectedProject)}</Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2">Apartment</Typography>
-                  <Typography>{selectedProject.apartmentNumber || 'N/A'}</Typography>
+                  <Typography variant="subtitle2">Service Location</Typography>
+                  <Typography>{selectedProject.apartmentNumber || 'General Area'}</Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2">Estimated Price</Typography>

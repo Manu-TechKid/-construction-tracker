@@ -233,10 +233,11 @@ const EditProjectEstimate = () => {
                     <Grid item xs={12} md={6}>
                       <TextField
                         fullWidth
-                        label="Apartment Number"
+                        label="Service Location"
                         value={formData.apartmentNumber}
                         onChange={(e) => handleInputChange('apartmentNumber', e.target.value)}
-                        placeholder="Optional"
+                        placeholder="e.g., Apt 101, Parking Lot, Roof, Basement, Drainage System"
+                        helperText="Specify exact location: apartment, parking, roof, basement, etc."
                       />
                     </Grid>
                     <Grid item xs={12} md={6}>
