@@ -174,12 +174,49 @@ const ProjectEstimates = () => {
 
   const handleConvertToInvoice = async () => {
     try {
+      // Check if estimate needs approval first
+      if (selectedEstimate.status !== 'approved') {
+        const confirmApprove = window.confirm(
+          'This estimate needs to be approved before converting to invoice. Would you like to approve it now?'
+        );
+        
+        if (!confirmApprove) {
+          toast.info('Conversion cancelled. Please approve the estimate first.');
+          return;
+        }
+        
+        // Auto-approve the estimate
+        try {
+          await fetch(`${process.env.REACT_APP_API_URL || 'https://construction-tracker-webapp.onrender.com/api/v1'}/project-estimates/${selectedEstimate._id}/approve`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+            body: JSON.stringify({ approved: true, rejectionReason: '' })
+          });
+          
+          toast.success('Estimate approved successfully');
+        } catch (approveError) {
+          toast.error('Failed to approve estimate. Please try again.');
+          return;
+        }
+      }
+      
+      // Now convert to invoice
       const result = await convertToInvoice(selectedEstimate._id).unwrap();
-      toast.success('Successfully converted to invoice');
+      toast.success('🎉 Successfully converted to invoice!');
       handleMenuClose();
       navigate(`/invoices/${result.data.invoice._id}`);
     } catch (error) {
-      toast.error('Failed to convert to invoice: ' + (error?.data?.message || 'Unknown error'));
+      console.error('Convert to invoice error:', error);
+      const errorMessage = error?.data?.message || error?.message || 'Unknown error';
+      
+      if (errorMessage.includes('approved')) {
+        toast.error('❌ Estimate must be approved first. Please approve it in Pending Project Approval.');
+      } else {
+        toast.error(`❌ Failed to convert to invoice: ${errorMessage}`);
+      }
     }
   };
 

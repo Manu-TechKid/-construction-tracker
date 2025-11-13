@@ -56,7 +56,7 @@ import {
   useGetPendingProjectApprovalsQuery,
   useApproveProjectEstimateMutation,
   useDeleteProjectEstimateMutation
-} from '../../features/estimates/projectEstimatesApiSlice';
+} from '../../features/projectEstimates/projectEstimatesApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 
 const ProjectsPendingApproval = () => {
@@ -148,13 +148,24 @@ const ProjectsPendingApproval = () => {
         rejectionReason: reason
       }).unwrap();
 
-      toast.success(`Project ${approved ? 'approved' : 'rejected'} successfully`);
+      if (approved) {
+        toast.success('✅ Project approved successfully! It can now be converted to invoice.');
+      } else {
+        toast.success('❌ Project rejected successfully.');
+      }
+      
       setApprovalDialog(false);
       setRejectionReason('');
       refetchPending();
     } catch (error) {
       console.error('Approval error:', error);
-      toast.error(`Failed to ${approved ? 'approve' : 'reject'} project: ${error?.data?.message || error?.message || 'Unknown error'}`);
+      const errorMessage = error?.data?.message || error?.message || 'Something went very wrong!';
+      
+      if (errorMessage.includes('Something went very wrong')) {
+        toast.error(`🚨 Server Error: Unable to ${approved ? 'approve' : 'reject'} project. Please check your connection and try again.`);
+      } else {
+        toast.error(`❌ Failed to ${approved ? 'approve' : 'reject'} project: ${errorMessage}`);
+      }
     }
   };
 
