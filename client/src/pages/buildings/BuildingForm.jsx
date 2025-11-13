@@ -46,7 +46,7 @@ const validationSchema = Yup.object({
   address: Yup.string().required('Address is required'),
   status: Yup.string().required('Status is required'),
   description: Yup.string(),
-  serviceManager: Yup.string().required('Service manager name is required'),
+  serviceManager: Yup.string(), // Made optional as requested by Carlos
   yearBuilt: Yup.number().min(1800, 'Invalid year').max(new Date().getFullYear(), 'Year cannot be in the future'),
   floors: Yup.number().min(1, 'Must be at least 1').max(200, 'Must be 200 or less'),
   
@@ -304,14 +304,14 @@ const BuildingForm = ({ isEdit = false }) => {
                           fullWidth
                           id="serviceManager"
                           name="serviceManager"
-                          label="Service Manager Name"
+                          label="Service Manager Name (Optional)"
                           value={formik.values.serviceManager}
                           onChange={formik.handleChange}
                           onBlur={formik.handleBlur}
                           error={formik.touched.serviceManager && Boolean(formik.errors.serviceManager)}
-                          helperText={formik.touched.serviceManager && formik.errors.serviceManager}
+                          helperText={formik.touched.serviceManager && formik.errors.serviceManager || "Same as Maintenance Manager - many buildings only have Community Manager"}
                           disabled={isLoading}
-                          placeholder="Enter the name of the maintenance/service manager"
+                          placeholder="Leave empty if same as Maintenance Manager"
                         />
                       </Grid>
                       

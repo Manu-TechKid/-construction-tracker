@@ -236,6 +236,7 @@ const WorkOrderForm = () => {
     );
   }, [buildingServices, selectedWorkSubType, selectedWorkType]);
 
+  // Auto-populate price and cost from Customer Pricing
   useEffect(() => {
     if (!matchedPricingService) return;
 
@@ -262,6 +263,24 @@ const WorkOrderForm = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchedPricingService]);
+
+  // Auto-populate title and description from System Setup WorkSubType
+  useEffect(() => {
+    if (!selectedWorkSubType) return;
+    
+    // Auto-fill title if empty
+    const currentTitle = formik.values.title?.trim() || '';
+    if (!currentTitle && selectedWorkSubType.name) {
+      formik.setFieldValue('title', selectedWorkSubType.name);
+    }
+    
+    // Auto-fill description if empty
+    const currentDescription = formik.values.description?.trim() || '';
+    if (!currentDescription && selectedWorkSubType.description) {
+      formik.setFieldValue('description', selectedWorkSubType.description);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedWorkSubType]);
 
   useEffect(() => {
     if (isEdit && workOrderData?.data) {
@@ -315,44 +334,7 @@ const WorkOrderForm = () => {
       </Box>
       <form onSubmit={formik.handleSubmit}>
         <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <Card>
-              <CardHeader title="Work Order Details" />
-              <Divider />
-              <CardContent>
-                <Grid container spacing={3}>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      id="title"
-                      name="title"
-                      label="Title"
-                      value={formik.values.title}
-                      onChange={formik.handleChange}
-                      error={formik.touched.title && Boolean(formik.errors.title)}
-                      helperText={formik.touched.title && formik.errors.title}
-                      inputProps={{ maxLength: 100 }}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      id="description"
-                      name="description"
-                      label="Description"
-                      multiline
-                      rows={6}
-                      value={formik.values.description}
-                      onChange={formik.handleChange}
-                      error={formik.touched.description && Boolean(formik.errors.description)}
-                      helperText={formik.touched.description && formik.errors.description}
-                      inputProps={{ maxLength: 5000 }}
-                    />
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
-          </Grid>
+          {/* 1. Location & Type - FIRST as requested by Carlos */}
           <Grid item xs={12}>
             <Card>
               <CardHeader title="Location & Type" />
@@ -524,14 +506,48 @@ const WorkOrderForm = () => {
               </CardContent>
             </Card>
           </Grid>
+          
+          {/* 2. Work Order Details - SECOND as requested by Carlos */}
           <Grid item xs={12}>
-            <PhotoUpload 
-              photos={photos}
-              onPhotosChange={setPhotos}
-              maxPhotos={10}
-              workOrderId={id}
-            />
+            <Card>
+              <CardHeader title="Work Order Details" />
+              <Divider />
+              <CardContent>
+                <Grid container spacing={3}>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      id="title"
+                      name="title"
+                      label="Title"
+                      value={formik.values.title}
+                      onChange={formik.handleChange}
+                      error={formik.touched.title && Boolean(formik.errors.title)}
+                      helperText={formik.touched.title && formik.errors.title}
+                      inputProps={{ maxLength: 100 }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      id="description"
+                      name="description"
+                      label="Description"
+                      multiline
+                      rows={6}
+                      value={formik.values.description}
+                      onChange={formik.handleChange}
+                      error={formik.touched.description && Boolean(formik.errors.description)}
+                      helperText={formik.touched.description && formik.errors.description}
+                      inputProps={{ maxLength: 5000 }}
+                    />
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
           </Grid>
+
+          {/* 3. Assignment & Priority - THIRD as requested by Carlos */}
           <Grid item xs={12}>
             <Card>
               <CardHeader title="Assignment & Priority" />
@@ -609,6 +625,16 @@ const WorkOrderForm = () => {
                 </Grid>
               </CardContent>
             </Card>
+          </Grid>
+
+          {/* 4. Photo Documentation - FOURTH as requested by Carlos */}
+          <Grid item xs={12}>
+            <PhotoUpload 
+              photos={photos}
+              onPhotosChange={setPhotos}
+              maxPhotos={10}
+              workOrderId={id}
+            />
           </Grid>
         </Grid>
         <Box mt={3} display="flex" justifyContent="flex-end">
