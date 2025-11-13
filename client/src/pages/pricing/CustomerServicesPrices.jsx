@@ -333,8 +333,107 @@ const CustomerServicesPrices = () => {
     },
   ];
 
-  const handleFilterChange = (field, value) => {
+  const handleFilterChange = async (field, value) => {
     setFilters(prev => ({ ...prev, [field]: value }));
+    
+    // Auto-load subtypes when both building and category are selected
+    if (field === 'category' && filters.building && value) {
+      await handleAutoLoadSubtypes(filters.building, value);
+    } else if (field === 'building' && filters.category && value) {
+      await handleAutoLoadSubtypes(value, filters.category);
+    }
+  };
+
+  const handleAutoLoadSubtypes = async (buildingId, categoryCode) => {
+    try {
+      // Find the WorkType by code to get its _id for fetching subtypes
+      const selectedWorkType = workTypes.find(wt => wt.code === categoryCode);
+      if (!selectedWorkType) return;
+
+      // Fetch subtypes for this category
+      const subtypesResponse = await fetch(`${process.env.REACT_APP_API_URL}/setup/work-subtypes?workType=${selectedWorkType._id}`);
+      const subtypesData = await subtypesResponse.json();
+      
+      if (!subtypesData.success) return;
+
+      const subtypes = subtypesData.data.workSubTypes || [];
+      
+      // Check if pricing config exists for this building
+      let buildingPricing = pricingData?.data?.clientPricing?.find(
+        p => p.building?._id === buildingId
+      );
+      
+      if (!buildingPricing) {
+        // Create new pricing configuration
+        const selectedBuildingData = buildings.find(b => b._id === buildingId);
+        const newPricingConfig = {
+          company: {
+            name: selectedBuildingData?.name || 'Default Company',
+            type: 'other'
+          },
+          building: buildingId,
+          services: [],
+          terms: {
+            paymentTerms: 'net_30',
+            discountPercentage: 0,
+            bulkDiscountThreshold: 0,
+            specialInstructions: ''
+          },
+          isActive: true
+        };
+
+        const createdPricing = await createClientPricing(newPricingConfig).unwrap();
+        buildingPricing = createdPricing.data.clientPricing;
+      }
+
+      // Add services for each subtype that doesn't already exist
+      for (const subtype of subtypes) {
+        const existingService = buildingPricing.services?.find(
+          s => s.category === categoryCode && s.subcategory === subtype.code
+        );
+        
+        if (!existingService) {
+          const servicePayload = {
+            category: categoryCode,
+            subcategory: subtype.code,
+            name: subtype.name,
+            description: subtype.description || '',
+            pricing: {
+              basePrice: 0, // Default price - user will set this
+              unitType: 'per_apartment',
+              minimumCharge: 0,
+            },
+            cost: {
+              laborCost: 0,
+              materialCost: 0,
+              equipmentCost: 0,
+              overheadPercentage: 15,
+            },
+            specifications: {
+              estimatedDuration: subtype.estimatedDuration || 1,
+              workersRequired: 1,
+              materialsIncluded: true,
+              equipmentIncluded: true,
+              notes: ''
+            },
+            isActive: true,
+          };
+
+          await addPricingService({
+            pricingId: buildingPricing._id,
+            service: servicePayload,
+          }).unwrap();
+        }
+      }
+
+      // Refresh the pricing data
+      refetchPricing();
+      toast.success(`Auto-loaded ${subtypes.length} ${selectedWorkType.name} services for ${buildings.find(b => b._id === buildingId)?.name}`);
+      
+    } catch (error) {
+      console.error('Failed to auto-load subtypes:', error);
+      toast.error('Failed to auto-load services');
+    }
   };
 
   const handleEditService = (row) => {
