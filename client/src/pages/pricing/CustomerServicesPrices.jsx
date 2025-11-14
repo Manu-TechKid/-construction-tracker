@@ -481,9 +481,24 @@ const CustomerServicesPrices = () => {
   };
 
   const handleAddService = () => {
+    // Validate that building and category are selected
+    if (!filters.building) {
+      toast.warning('⚠️ Please select a building first before adding services.');
+      return;
+    }
+    
+    if (!filters.category) {
+      toast.warning('⚠️ Please select a service category first before adding services.');
+      return;
+    }
+    
     setEditingService(null);
-    setServiceForm(defaultServiceForm);
-    setSelectedBuilding('');
+    // Pre-populate form with selected filters
+    setServiceForm({
+      ...defaultServiceForm,
+      category: workTypes.find(wt => wt.code === filters.category)?._id || filters.category
+    });
+    setSelectedBuilding(filters.building);
     setServiceDialogOpen(true);
   };
 
@@ -506,32 +521,43 @@ const CustomerServicesPrices = () => {
   };
 
   const handleSaveService = async () => {
-    if (!selectedBuilding) {
-      toast.error('Please select a building/customer');
+    // Use pre-selected building and category from filters
+    const targetBuilding = editingService ? selectedBuilding : filters.building;
+    const targetCategory = editingService ? serviceForm.category : filters.category;
+    
+    if (!targetBuilding) {
+      toast.error('❌ Please select a building first from the filters above');
+      return;
+    }
+
+    if (!targetCategory) {
+      toast.error('❌ Please select a service category first from the filters above');
       return;
     }
 
     if (!serviceForm.name.trim()) {
-      toast.error('Service name is required');
+      toast.error('❌ Service name is required');
       return;
     }
 
     if (!serviceForm.subcategory.trim()) {
-      toast.error('Sub-category is required');
+      toast.error('❌ Sub-category is required');
       return;
     }
 
     if (!serviceForm.basePrice || Number(serviceForm.basePrice) <= 0) {
-      toast.error('Base price must be greater than 0');
+      toast.error('❌ Base price must be greater than 0');
       return;
     }
 
     try {
-      // Find the selected work type for category mapping
-      const selectedWorkType = workTypes.find(wt => wt._id === serviceForm.category);
+      // Use the category from filters for new services, or form category for editing
+      const categoryCode = editingService ? 
+        (workTypes.find(wt => wt._id === serviceForm.category)?.code || serviceForm.category) : 
+        targetCategory;
       
       const payload = {
-        category: selectedWorkType?.code || serviceForm.category,
+        category: categoryCode,
         subcategory: serviceForm.subcategory.trim(),
         name: serviceForm.name.trim(),
         description: serviceForm.description.trim() || '',
@@ -571,21 +597,21 @@ const CustomerServicesPrices = () => {
         }).unwrap();
         toast.success('Service updated successfully');
       } else {
-        // For new services, find or create pricing config for the selected building
+        // For new services, find or create pricing config for the target building
         let buildingPricing = pricingData?.data?.clientPricing?.find(
-          p => p.building?._id === selectedBuilding
+          p => p.building?._id === targetBuilding
         );
         
         if (!buildingPricing) {
           // Create new pricing configuration for this building
-          const selectedBuildingData = buildings.find(b => b._id === selectedBuilding);
+          const selectedBuildingData = buildings.find(b => b._id === targetBuilding);
           
           const newPricingConfig = {
             company: {
               name: selectedBuildingData?.name || 'Default Company',
               type: 'other'
             },
-            building: selectedBuilding,
+            building: targetBuilding,
             services: [],
             terms: {
               paymentTerms: 'net_30',
@@ -628,10 +654,24 @@ const CustomerServicesPrices = () => {
     const { name, value } = event.target;
     setServiceForm(prev => {
       const newForm = { ...prev, [name]: value };
+      
       // Clear subcategory when category changes
       if (name === 'category') {
         newForm.subcategory = '';
+        newForm.name = '';
+        newForm.description = '';
       }
+      
+      // Auto-fill name and description when subcategory is selected
+      if (name === 'subcategory' && value) {
+        const selectedSubType = workSubTypes.find(st => st.code === value || st._id === value);
+        if (selectedSubType) {
+          newForm.name = selectedSubType.name || '';
+          newForm.description = selectedSubType.description || '';
+          toast.success(`✅ Auto-filled service details from System Setup`);
+        }
+      }
+      
       return newForm;
     });
   };
@@ -754,54 +794,29 @@ const CustomerServicesPrices = () => {
         </DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            {!editingService && (
-              <TextField
-                select
-                fullWidth
-                label="Customer/Building"
-                value={selectedBuilding}
-                onChange={(e) => setSelectedBuilding(e.target.value)}
-                required
-              >
-                <MenuItem value="">Select a building</MenuItem>
-                {buildings.map((building) => (
-                  <MenuItem key={building._id} value={building._id}>
-                    {building.name}
-                  </MenuItem>
-                ))}
-              </TextField>
-            )}
+            {/* Show selected building and category (read-only) */}
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                <strong>Adding service for:</strong> {buildings.find(b => b._id === filters.building)?.name || 'No building selected'} 
+                {filters.category && (
+                  <span> • <strong>Category:</strong> {workTypes.find(wt => wt.code === filters.category)?.name || filters.category}</span>
+                )}
+              </Typography>
+            </Alert>
             
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12}>
                 <TextField
                   select
-                  label="Category"
-                  name="category"
-                  value={serviceForm.category}
-                  onChange={handleServiceFormChange}
-                  fullWidth
-                  required
-                >
-                  {formCategories.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  select
-                  label="Sub-Category"
+                  label="Sub-Category / Service Type"
                   name="subcategory"
                   value={serviceForm.subcategory}
                   onChange={handleServiceFormChange}
                   fullWidth
                   required
-                  helperText="Match this to work sub-type code for auto-fill"
-                  disabled={!serviceForm.category}
+                  helperText="Select from System Setup work sub-types - Name and description will auto-fill"
                 >
+                  <MenuItem value="">Select a sub-category</MenuItem>
                   {serviceSubCategories.map((option) => (
                     <MenuItem key={option.value} value={option.value}>
                       {option.label}
@@ -809,6 +824,7 @@ const CustomerServicesPrices = () => {
                   ))}
                 </TextField>
               </Grid>
+              
               <Grid item xs={12} sm={6}>
                 <TextField
                   label="Service Name"
@@ -817,6 +833,7 @@ const CustomerServicesPrices = () => {
                   onChange={handleServiceFormChange}
                   fullWidth
                   required
+                  helperText="Auto-filled from System Setup"
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -836,6 +853,7 @@ const CustomerServicesPrices = () => {
                   ))}
                 </TextField>
               </Grid>
+              
               <Grid item xs={12}>
                 <TextField
                   label="Description"
@@ -845,6 +863,7 @@ const CustomerServicesPrices = () => {
                   fullWidth
                   multiline
                   minRows={2}
+                  helperText="Auto-filled from System Setup, can be customized"
                 />
               </Grid>
             </Grid>
