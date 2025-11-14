@@ -126,6 +126,10 @@ const CustomerServicesPrices = () => {
   // API hooks
   const { data: buildingsData, isLoading: isLoadingBuildings } = useGetBuildingsQuery();
   const { data: workTypesData, isLoading: isLoadingWorkTypes } = useGetWorkTypesQuery();
+  
+  // Extract workTypes first to avoid initialization error
+  const workTypes = workTypesData?.data?.workTypes || [];
+  
   const { data: workSubTypesData, isLoading: isLoadingWorkSubTypes } = useGetWorkSubTypesQuery(
     filters.category ? workTypes.find(wt => wt.code === filters.category)?._id : undefined
   );
@@ -185,7 +189,6 @@ const CustomerServicesPrices = () => {
   }, [pricingData]);
 
   const buildings = buildingsData?.data?.buildings || [];
-  const workTypes = workTypesData?.data?.workTypes || [];
   const workSubTypes = workSubTypesData?.data?.workSubTypes || [];
 
   // Prepare categories for filter dropdown (use code for filtering)
@@ -334,20 +337,25 @@ const CustomerServicesPrices = () => {
   ];
 
   const handleFilterChange = async (field, value) => {
-    setFilters(prev => ({ ...prev, [field]: value }));
-    
-    // Auto-load subtypes when category is selected (with or without building)
-    if (field === 'category' && value) {
-      if (filters.building) {
-        // If building is already selected, auto-load immediately
-        await handleAutoLoadSubtypes(filters.building, value);
-      } else {
-        // If no building selected, show info message
-        toast.info('Select a building to auto-load services for this category');
+    try {
+      setFilters(prev => ({ ...prev, [field]: value }));
+      
+      // Auto-load subtypes when category is selected (with or without building)
+      if (field === 'category' && value) {
+        if (filters.building) {
+          // If building is already selected, auto-load immediately
+          await handleAutoLoadSubtypes(filters.building, value);
+        } else {
+          // If no building selected, show info message
+          toast.info('💡 Select a building to auto-load services for this category');
+        }
+      } else if (field === 'building' && value && filters.category) {
+        // If building is selected and category exists, auto-load
+        await handleAutoLoadSubtypes(value, filters.category);
       }
-    } else if (field === 'building' && value && filters.category) {
-      // If building is selected and category exists, auto-load
-      await handleAutoLoadSubtypes(value, filters.category);
+    } catch (error) {
+      console.error('Filter change error:', error);
+      toast.error('❌ Something went wrong while updating filters. Please try again.');
     }
   };
 
@@ -435,11 +443,19 @@ const CustomerServicesPrices = () => {
 
       // Refresh the pricing data
       refetchPricing();
-      toast.success(`Auto-loaded ${subtypes.length} ${selectedWorkType.name} services for ${buildings.find(b => b._id === buildingId)?.name}`);
+      toast.success(`✅ Auto-loaded ${subtypes.length} ${selectedWorkType.name} services for ${buildings.find(b => b._id === buildingId)?.name}`);
       
     } catch (error) {
       console.error('Failed to auto-load subtypes:', error);
-      toast.error('Failed to auto-load services');
+      const errorMessage = error?.data?.message || error?.message || 'Unknown error';
+      
+      if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+        toast.error('🌐 Network error. Please check your connection and try again.');
+      } else if (errorMessage.includes('permission') || errorMessage.includes('unauthorized')) {
+        toast.error('🔒 You don\'t have permission to add services to this building.');
+      } else {
+        toast.error(`❌ Failed to auto-load services: ${errorMessage}`);
+      }
     }
   };
 

@@ -18,12 +18,23 @@ const BuildingEdit = () => {
   const handleSubmit = async (formData) => {
     try {
       const result = await updateBuilding({ id, ...formData }).unwrap();
-      toast.success('Building updated successfully');
+      toast.success('✅ Building updated successfully! All changes have been saved.');
       navigate(`/buildings/${id}`);
     } catch (error) {
       console.error('Failed to update building:', error);
       const errorMessage = error?.data?.message || error?.message || 'Failed to update building';
-      toast.error(errorMessage);
+      
+      if (errorMessage.includes('duplicate') || errorMessage.includes('already exists')) {
+        toast.error('❌ A building with this name already exists. Please choose a different name.');
+      } else if (errorMessage.includes('validation') || errorMessage.includes('required')) {
+        toast.error('❌ Please fill in all required fields correctly.');
+      } else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+        toast.error('🌐 Network error. Please check your connection and try again.');
+      } else if (errorMessage.includes('not found') || errorMessage.includes('404')) {
+        toast.error('❌ Building not found. It may have been deleted by another user.');
+      } else {
+        toast.error(`❌ Failed to update building: ${errorMessage}`);
+      }
     }
   };
 

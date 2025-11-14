@@ -20,26 +20,22 @@ const CreateBuilding = () => {
         administrator: user?._id || user?.id
       };
       
-      console.log('=== BUILDING CREATION DEBUG ===');
-      console.log('Form Data:', JSON.stringify(formData, null, 2));
-      console.log('Submit Data (with administrator):', JSON.stringify(submitData, null, 2));
-      console.log('User:', JSON.stringify(user, null, 2));
-      console.log('Contact fields check:');
-      console.log('- generalManagerName:', formData.generalManagerName);
-      console.log('- generalManagerEmail:', formData.generalManagerEmail);
-      console.log('- generalManagerPhone:', formData.generalManagerPhone);
-      console.log('- maintenanceManagerName:', formData.maintenanceManagerName);
-      console.log('- maintenanceManagerEmail:', formData.maintenanceManagerEmail);
-      console.log('- maintenanceManagerPhone:', formData.maintenanceManagerPhone);
-      
       const result = await createBuilding(submitData).unwrap();
-      toast.success('Building created successfully');
+      toast.success('🏢 Building created successfully! You can now add apartments and manage services.');
       navigate('/buildings');
     } catch (error) {
       console.error('Failed to create building:', error);
-      console.error('Error details:', error?.data);
       const errorMessage = error?.data?.message || error?.message || 'Failed to create building';
-      toast.error(errorMessage);
+      
+      if (errorMessage.includes('duplicate') || errorMessage.includes('already exists')) {
+        toast.error('❌ A building with this name already exists. Please choose a different name.');
+      } else if (errorMessage.includes('validation') || errorMessage.includes('required')) {
+        toast.error('❌ Please fill in all required fields correctly.');
+      } else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+        toast.error('🌐 Network error. Please check your connection and try again.');
+      } else {
+        toast.error(`❌ Failed to create building: ${errorMessage}`);
+      }
     }
   };
 

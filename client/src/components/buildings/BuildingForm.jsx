@@ -19,15 +19,25 @@ const validationSchema = Yup.object().shape({
   city: Yup.string().required('City is required'),
   serviceManager: Yup.string(),
   
-  // Contact fields for automated email sending
+  // Contact fields for automated email sending - Only General Manager required
   generalManagerName: Yup.string().required('General Manager name is required'),
   generalManagerEmail: Yup.string().email('Invalid email').required('General Manager email is required'),
   generalManagerPhone: Yup.string().required('General Manager phone is required'),
   
-  maintenanceManagerName: Yup.string().required('Maintenance Manager name is required'),
-  maintenanceManagerEmail: Yup.string().email('Invalid email').required('Maintenance Manager email is required'),
-  maintenanceManagerPhone: Yup.string().required('Maintenance Manager phone is required'),
+  // Maintenance Manager - Optional but if email provided, name and phone required
+  maintenanceManagerName: Yup.string().when('maintenanceManagerEmail', {
+    is: (email) => email && email.length > 0,
+    then: (schema) => schema.required('Maintenance Manager name is required when email is provided'),
+    otherwise: (schema) => schema
+  }),
+  maintenanceManagerEmail: Yup.string().email('Invalid email'),
+  maintenanceManagerPhone: Yup.string().when('maintenanceManagerEmail', {
+    is: (email) => email && email.length > 0,
+    then: (schema) => schema.required('Maintenance Manager phone is required when email is provided'),
+    otherwise: (schema) => schema
+  }),
   
+  // Third Contact - All optional
   thirdContactName: Yup.string(),
   thirdContactRole: Yup.string(),
   thirdContactEmail: Yup.string().email('Invalid email'),
