@@ -50,30 +50,60 @@ const WeeklyRevenue = () => {
     for (let i = 0; i < selectedWeeks; i++) {
       const weekStart = startOfWeek(subWeeks(today, i), { weekStartsOn: 1 }); // Monday start
       const weekEnd = endOfWeek(subWeeks(today, i), { weekStartsOn: 1 }); // Sunday end
-      
+
       // Filter invoices for this week
-      const weekInvoices = invoices.filter(invoice => {
-        if (!invoice.paidAt) return false;
-        const paidDate = parseISO(invoice.paidAt);
+      const weekInvoices = invoices.filter((invoice) => {
+        // Only count paid invoices for revenue
+        if (invoice.status !== 'paid') return false;
+
+        // Back-end fields: paidDate / paymentDate / invoiceDate / createdAt
+        const dateSource =
+          invoice.paidDate ||
+          invoice.paymentDate ||
+          invoice.invoiceDate ||
+          invoice.createdAt;
+
+        if (!dateSource) return false;
+
+        const paidDate = parseISO(dateSource);
+        if (isNaN(paidDate.getTime())) return false;
+
         return paidDate >= weekStart && paidDate <= weekEnd;
       });
 
       // Calculate totals
-      const totalRevenue = weekInvoices.reduce((sum, invoice) => sum + (invoice.totalAmount || 0), 0);
+      const totalRevenue = weekInvoices.reduce((sum, invoice) => {
+        // Back-end total fields: prefer amountPaid, fallback to total
+        const invoiceTotal =
+          typeof invoice.amountPaid === 'number' && invoice.amountPaid > 0
+            ? invoice.amountPaid
+            : (invoice.total || 0);
+
+        return sum + invoiceTotal;
+      }, 0);
+
       const invoiceCount = weekInvoices.length;
       const avgInvoiceValue = invoiceCount > 0 ? totalRevenue / invoiceCount : 0;
 
       // Group by customer
       const customerBreakdown = {};
-      weekInvoices.forEach(invoice => {
-        const customerName = invoice.customer?.name || invoice.building?.name || 'Unknown Customer';
+      weekInvoices.forEach((invoice) => {
+        const customerName =
+          invoice.customer?.name || invoice.building?.name || 'Unknown Customer';
+
         if (!customerBreakdown[customerName]) {
           customerBreakdown[customerName] = {
             revenue: 0,
-            invoiceCount: 0
+            invoiceCount: 0,
           };
         }
-        customerBreakdown[customerName].revenue += invoice.totalAmount || 0;
+
+        const invoiceTotal =
+          typeof invoice.amountPaid === 'number' && invoice.amountPaid > 0
+            ? invoice.amountPaid
+            : (invoice.total || 0);
+
+        customerBreakdown[customerName].revenue += invoiceTotal;
         customerBreakdown[customerName].invoiceCount += 1;
       });
 
