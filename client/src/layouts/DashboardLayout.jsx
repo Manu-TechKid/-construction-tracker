@@ -39,6 +39,7 @@ import {
   AccessTime as TimeIcon,
   Approval as ProjectApprovalIcon,
   AttachMoney as PricingIcon,
+  Call as CallIcon,
 } from '@mui/icons-material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
@@ -253,6 +254,16 @@ const DashboardLayout = () => {
         icon: <PricingIcon />,
         path: '/pricing',
         permission: 'read:buildings'
+      });
+    }
+
+    // Calls (Call Module) - basic read access
+    if (hasPermission(['read:all'])) {
+      items.push({
+        text: 'Calls',
+        icon: <CallIcon />,
+        path: '/calls',
+        permission: 'read:all'
       });
     }
 

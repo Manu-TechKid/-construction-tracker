@@ -14,6 +14,7 @@ const searchRoutes = require('./routes/searchRoutes');
 const timeTrackingRoutes = require('./routes/timeTrackingRoutes');
 const projectEstimateRoutes = require('./routes/projectEstimateRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
+const callLogRoutes = require('./routes/callLogRoutes');
 const workPhotoRoutes = require('./routes/workPhotoRoutes');
 
 // Initialize Express app
@@ -37,5 +38,6 @@ app.use('/api/v1/time-tracking', timeTrackingRoutes);
 app.use('/api/v1/project-estimates', projectEstimateRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/work-photos', workPhotoRoutes);
+app.use('/api/v1/calls', callLogRoutes);
 
 module.exports = app;

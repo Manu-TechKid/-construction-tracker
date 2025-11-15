@@ -70,6 +70,7 @@ import EditProjectEstimate from './pages/project-estimates/EditProjectEstimate';
 import ProjectEstimateDetails from './pages/project-estimates/ProjectEstimateDetails';
 import ProjectEstimatesNew from './pages/estimates/ProjectEstimates';
 import CustomerServicesPrices from './pages/pricing/CustomerServicesPrices';
+import Calls from './pages/calls/Calls';
 
 // Route Protection
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -369,6 +370,16 @@ const AppContent = () => {
                     <CustomerServicesPrices />
                   </RoleBasedRoute>
                 } 
+              />
+
+              {/* Calls */}
+              <Route
+                path="calls"
+                element={
+                  <RoleBasedRoute requiredPermissions={['read:all']}>
+                    <Calls />
+                  </RoleBasedRoute>
+                }
               />
 
               {/* Reminders */}
