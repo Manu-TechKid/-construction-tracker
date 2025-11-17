@@ -288,6 +288,26 @@ const WorkOrderForm = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedWorkSubType]);
 
+  // Auto-populate title and description from Customer Pricing when available
+  // This prefers the price sheet service definition over the generic work sub-type
+  // but only overrides if the user hasn't customized the fields yet.
+  useEffect(() => {
+    if (!matchedPricingService) return;
+
+    const currentTitle = formik.values.title?.trim() || '';
+    const subTypeTitle = selectedWorkSubType?.name?.trim() || '';
+    if ((!currentTitle || currentTitle === subTypeTitle) && matchedPricingService.name) {
+      formik.setFieldValue('title', matchedPricingService.name);
+    }
+
+    const currentDescription = formik.values.description?.trim() || '';
+    const subTypeDescription = selectedWorkSubType?.description?.trim() || '';
+    if ((!currentDescription || currentDescription === subTypeDescription) && matchedPricingService.description) {
+      formik.setFieldValue('description', matchedPricingService.description);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchedPricingService]);
+
   useEffect(() => {
     if (isEdit && workOrderData?.data) {
       // Exclude fields that are not part of the form to avoid warnings
