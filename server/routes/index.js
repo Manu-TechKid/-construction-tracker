@@ -21,6 +21,7 @@ const projectEstimateRoutes = require('./projectEstimateRoutes');
 const searchRoutes = require('./searchRoutes');
 const analyticsRoutes = require('./analyticsRoutes');
 const clientPricingRoutes = require('./clientPricing');
+const callLogRoutes = require('./callLogRoutes');
 
 // API routes
 router.use('/auth', authRoutes);
@@ -42,6 +43,7 @@ router.use('/project-estimates', projectEstimateRoutes);
 router.use('/search', searchRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/client-pricing', clientPricingRoutes);
+router.use('/calls', callLogRoutes);
 
 // All routes are now properly organized above
 // Frontend should use /setup/work-types, /users for workers, etc.
