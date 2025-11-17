@@ -25,15 +25,48 @@ import {
 } from '@mui/material';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { 
   useGetCallsQuery,
   useCreateCallMutation,
   useDeleteCallMutation,
   useGetCallStatsQuery,
+  useUpdateCallMutation,
 } from '../../features/calls/callsApiSlice';
 import { toast } from 'react-toastify';
+
+const INITIAL_FORM_STATE = {
+  isProspect: false,
+  building: '',
+  prospectCompanyName: '',
+  contactName: '',
+  contactPhone: '',
+  contactEmail: '',
+  type: 'phone',
+  direction: 'outbound',
+  outcome: 'no_answer',
+  notes: '',
+  nextActionDate: null,
+  nextActionType: '',
+  nextActionNote: '',
+};
+
+const formStateFromCall = (call) => ({
+  isProspect: !!call.isProspect,
+  building: call.isProspect ? '' : (call.building?._id || call.building || ''),
+  prospectCompanyName: call.isProspect ? call.prospect?.companyName || '' : '',
+  contactName: call.contactName || '',
+  contactPhone: call.contactPhone || '',
+  contactEmail: call.contactEmail || '',
+  type: call.type || 'phone',
+  direction: call.direction || 'outbound',
+  outcome: call.outcome || 'no_answer',
+  notes: call.notes || '',
+  nextActionDate: call.nextAction?.date ? new Date(call.nextAction.date) : null,
+  nextActionType: call.nextAction?.type || '',
+  nextActionNote: call.nextAction?.note || '',
+});
 
 const outcomeOptions = [
   { value: 'no_answer', label: 'No answer' },
@@ -68,21 +101,8 @@ const Calls = () => {
     search: '',
   });
   const [addOpen, setAddOpen] = useState(false);
-  const [form, setForm] = useState({
-    isProspect: false,
-    building: '',
-    prospectCompanyName: '',
-    contactName: '',
-    contactPhone: '',
-    contactEmail: '',
-    type: 'phone',
-    direction: 'outbound',
-    outcome: 'no_answer',
-    notes: '',
-    nextActionDate: null,
-    nextActionType: '',
-    nextActionNote: '',
-  });
+  const [form, setForm] = useState({ ...INITIAL_FORM_STATE });
+  const [editingCall, setEditingCall] = useState(null);
 
   const { data: buildingsData } = useGetBuildingsQuery();
   const buildings = buildingsData?.data?.buildings || [];
@@ -101,16 +121,25 @@ const Calls = () => {
   const { data: callsData, refetch, isFetching } = useGetCallsQuery(queryParams);
   const { data: statsData } = useGetCallStatsQuery(queryParams);
   const [createCall, { isLoading: isCreating }] = useCreateCallMutation();
+  const [updateCall, { isLoading: isUpdating }] = useUpdateCallMutation();
   const [deleteCall] = useDeleteCallMutation();
 
   const calls = callsData?.data?.callLogs || [];
   const byOutcome = statsData?.data?.byOutcome || [];
   const totals = statsData?.data?.totals || { total: 0, meetings: 0 };
 
-  const handleOpenAdd = () => setAddOpen(true);
-  const handleCloseAdd = () => setAddOpen(false);
+  const handleOpenAdd = () => {
+    setEditingCall(null);
+    setForm({ ...INITIAL_FORM_STATE });
+    setAddOpen(true);
+  };
+  const handleCloseAdd = () => {
+    setAddOpen(false);
+    setEditingCall(null);
+    setForm({ ...INITIAL_FORM_STATE });
+  };
 
-  const handleCreate = async () => {
+  const handleSave = async () => {
     try {
       if (!form.isProspect && !form.building) {
         toast.warning('Select a building or mark as prospect');
@@ -127,15 +156,18 @@ const Calls = () => {
             direction: form.direction,
             outcome: form.outcome,
             notes: form.notes || undefined,
-            nextAction: form.nextActionDate ? {
-              date: form.nextActionDate,
-              type: form.nextActionType || undefined,
-              note: form.nextActionNote || undefined,
-            } : undefined,
+            nextAction: form.nextActionDate
+              ? {
+                  date: form.nextActionDate,
+                  type: form.nextActionType || undefined,
+                  note: form.nextActionNote || undefined,
+                }
+              : undefined,
           }
         : {
             building: form.building,
             isProspect: false,
+            prospect: undefined,
             contactName: form.contactName || undefined,
             contactPhone: form.contactPhone || undefined,
             contactEmail: form.contactEmail || undefined,
@@ -143,36 +175,37 @@ const Calls = () => {
             direction: form.direction,
             outcome: form.outcome,
             notes: form.notes || undefined,
-            nextAction: form.nextActionDate ? {
-              date: form.nextActionDate,
-              type: form.nextActionType || undefined,
-              note: form.nextActionNote || undefined,
-            } : undefined,
+            nextAction: form.nextActionDate
+              ? {
+                  date: form.nextActionDate,
+                  type: form.nextActionType || undefined,
+                  note: form.nextActionNote || undefined,
+                }
+              : undefined,
           };
 
-      await createCall(payload).unwrap();
-      toast.success('Call saved');
+      if (editingCall) {
+        await updateCall({ id: editingCall._id, ...payload }).unwrap();
+        toast.success('Call updated');
+      } else {
+        await createCall(payload).unwrap();
+        toast.success('Call saved');
+      }
+
       setAddOpen(false);
-      setForm({
-        isProspect: false,
-        building: '',
-        prospectCompanyName: '',
-        contactName: '',
-        contactPhone: '',
-        contactEmail: '',
-        type: 'phone',
-        direction: 'outbound',
-        outcome: 'no_answer',
-        notes: '',
-        nextActionDate: null,
-        nextActionType: '',
-        nextActionNote: '',
-      });
+      setEditingCall(null);
+      setForm({ ...INITIAL_FORM_STATE });
       refetch();
     } catch (err) {
       const msg = err?.data?.message || err?.message || 'Failed to save call';
       toast.error(msg);
     }
+  };
+
+  const handleEdit = (call) => {
+    setEditingCall(call);
+    setForm(formStateFromCall(call));
+    setAddOpen(true);
   };
 
   const handleDelete = async (id) => {
@@ -323,7 +356,14 @@ const Calls = () => {
                     <TableCell><Chip label={c.outcome} size="small" color={c.outcome === 'meeting_scheduled' || c.outcome === 'interested' ? 'success' : 'default'} /></TableCell>
                     <TableCell>{c.nextAction?.date ? new Date(c.nextAction.date).toLocaleDateString() : '-'}</TableCell>
                     <TableCell align="right">
-                      <IconButton color="error" onClick={() => handleDelete(c._id)}><DeleteIcon fontSize="small" /></IconButton>
+                      <Stack direction="row" spacing={1} justifyContent="flex-end">
+                        <IconButton color="primary" onClick={() => handleEdit(c)}>
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton color="error" onClick={() => handleDelete(c._id)}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Stack>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -338,7 +378,7 @@ const Calls = () => {
         </Card>
 
         <Dialog open={addOpen} onClose={handleCloseAdd} maxWidth="md" fullWidth>
-          <DialogTitle>Add Call</DialogTitle>
+          <DialogTitle>{editingCall ? 'Edit Call' : 'Add Call'}</DialogTitle>
           <DialogContent dividers>
             <Stack spacing={2} sx={{ mt: 1 }}>
               <TextField
@@ -414,7 +454,9 @@ const Calls = () => {
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCloseAdd}>Cancel</Button>
-            <Button onClick={handleCreate} variant="contained" disabled={isCreating}>{isCreating ? 'Saving...' : 'Save Call'}</Button>
+            <Button onClick={handleSave} variant="contained" disabled={isCreating || isUpdating}>
+              {isCreating || isUpdating ? 'Saving...' : editingCall ? 'Save Changes' : 'Save Call'}
+            </Button>
           </DialogActions>
         </Dialog>
       </Box>

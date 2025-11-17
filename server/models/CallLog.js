@@ -13,7 +13,7 @@ const prospectSchema = new mongoose.Schema({
 
 const nextActionSchema = new mongoose.Schema({
   date: { type: Date },
-  type: { type: String, enum: ['call', 'visit', 'email', 'whatsapp'] },
+  type: { type: String, enum: ['phone', 'in_person', 'whatsapp', 'email', 'call', 'visit'] },
   note: { type: String, trim: true }
 }, { _id: false });
 
