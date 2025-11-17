@@ -130,33 +130,42 @@ exports.createBuilding = catchAsync(async (req, res, next) => {
         console.log('Creating building with data:', req.body);
         
         // Validate required fields
-        if (!req.body.name || !req.body.address || !req.body.serviceManager) {
-            return next(new AppError('Name, address, and service manager are required', 400));
+        if (!req.body.name || !req.body.address) {
+            return next(new AppError('Name and address are required', 400));
         }
         
+        // Normalize optional email fields on create: treat empty strings as undefined
+        // so optional contacts don't fail regex validation when left blank
+        const sanitizedBody = { ...req.body };
+        ['serviceManagerEmail', 'maintenanceManagerEmail', 'thirdContactEmail'].forEach((field) => {
+            if (Object.prototype.hasOwnProperty.call(sanitizedBody, field) && sanitizedBody[field] === '') {
+                sanitizedBody[field] = undefined;
+            }
+        });
+
         // Prepare location data if coordinates are provided
         const buildingData = {
-            name: req.body.name,
-            address: req.body.address,
-            city: req.body.city || '',
-            administrator: req.body.administrator || req.user._id,
-            administratorName: req.body.administratorName || '',
-            serviceManager: req.body.serviceManager,
-            serviceManagerEmail: req.body.serviceManagerEmail,
-            paymentTerms: req.body.paymentTerms,
-            description: req.body.description,
+            name: sanitizedBody.name,
+            address: sanitizedBody.address,
+            city: sanitizedBody.city || '',
+            administrator: sanitizedBody.administrator || req.user._id,
+            administratorName: sanitizedBody.administratorName || '',
+            serviceManager: sanitizedBody.serviceManager,
+            serviceManagerEmail: sanitizedBody.serviceManagerEmail,
+            paymentTerms: sanitizedBody.paymentTerms,
+            description: sanitizedBody.description,
             
             // Contact fields
-            generalManagerName: req.body.generalManagerName,
-            generalManagerEmail: req.body.generalManagerEmail,
-            generalManagerPhone: req.body.generalManagerPhone,
-            maintenanceManagerName: req.body.maintenanceManagerName,
-            maintenanceManagerEmail: req.body.maintenanceManagerEmail,
-            maintenanceManagerPhone: req.body.maintenanceManagerPhone,
-            thirdContactName: req.body.thirdContactName,
-            thirdContactRole: req.body.thirdContactRole,
-            thirdContactEmail: req.body.thirdContactEmail,
-            thirdContactPhone: req.body.thirdContactPhone,
+            generalManagerName: sanitizedBody.generalManagerName,
+            generalManagerEmail: sanitizedBody.generalManagerEmail,
+            generalManagerPhone: sanitizedBody.generalManagerPhone,
+            maintenanceManagerName: sanitizedBody.maintenanceManagerName,
+            maintenanceManagerEmail: sanitizedBody.maintenanceManagerEmail,
+            maintenanceManagerPhone: sanitizedBody.maintenanceManagerPhone,
+            thirdContactName: sanitizedBody.thirdContactName,
+            thirdContactRole: sanitizedBody.thirdContactRole,
+            thirdContactEmail: sanitizedBody.thirdContactEmail,
+            thirdContactPhone: sanitizedBody.thirdContactPhone,
             
             createdBy: req.user ? req.user._id : null
         };
@@ -189,6 +198,14 @@ exports.createBuilding = catchAsync(async (req, res, next) => {
 exports.updateBuilding = catchAsync(async (req, res, next) => {
     // Process geofencing data if provided
     const updateData = { ...req.body };
+
+    // Normalize optional email fields: treat empty strings as undefined so
+    // optional contacts don't fail regex validation when left blank
+    ['serviceManagerEmail', 'maintenanceManagerEmail', 'thirdContactEmail'].forEach((field) => {
+        if (Object.prototype.hasOwnProperty.call(updateData, field) && updateData[field] === '') {
+            updateData[field] = undefined;
+        }
+    });
     
     if (updateData.latitude && updateData.longitude) {
         updateData.location = {

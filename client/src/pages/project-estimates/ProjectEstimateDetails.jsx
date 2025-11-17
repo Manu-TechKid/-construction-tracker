@@ -49,6 +49,7 @@ import {
   useConvertToWorkOrderMutation,
   useConvertToInvoiceMutation
 } from '../../features/projectEstimates/projectEstimatesApiSlice';
+import { useSendToClientMutation } from '../../features/estimates/projectEstimatesApiSlice';
 import EstimatePDFDownload from '../../components/estimates/EstimatePDFDownload';
 import ProjectEstimatePDF from '../../components/estimates/ProjectEstimatePDF';
 
@@ -75,6 +76,7 @@ const ProjectEstimateDetails = () => {
   const [deleteEstimate, { isLoading: isDeleting }] = useDeleteProjectEstimateMutation();
   const [convertToWorkOrder, { isLoading: isConverting }] = useConvertToWorkOrderMutation();
   const [convertToInvoice, { isLoading: isConvertingToInvoice }] = useConvertToInvoiceMutation();
+  const [sendToClient, { isLoading: isSending }] = useSendToClientMutation();
 
   const estimate = estimateData?.data?.projectEstimate;
   const buildings = buildingsData?.data?.buildings || [];
@@ -83,21 +85,9 @@ const ProjectEstimateDetails = () => {
   React.useEffect(() => {
     if (!estimate || !sendToClientDialog) return;
 
-    const building = buildings.find(b => b._id === estimate.building);
-    const availableEmails = [];
-    
-    if (building?.generalManagerEmail) {
-      availableEmails.push(building.generalManagerEmail);
-    }
-    
-    if (building?.maintenanceManagerEmail) {
-      availableEmails.push(building.maintenanceManagerEmail);
-    }
-    
-    if (building?.thirdContactEmail) {
-      availableEmails.push(building.thirdContactEmail);
-    }
-    
+    const contacts = getBuildingContacts();
+    const availableEmails = contacts.map((c) => c.email);
+
     setSelectedEmails(availableEmails); // Select all by default
     setEmailSubject(`Project Estimate - ${estimate.title}`);
     setEmailMessage('Please find attached the project estimate for your review.');
@@ -183,15 +173,24 @@ const ProjectEstimateDetails = () => {
       toast.error('Please select at least one recipient');
       return;
     }
-    
+
     try {
-      // TODO: Implement actual email sending API
-      console.log('Sending estimate to:', selectedEmails);
-      console.log('Subject:', emailSubject);
-      console.log('Message:', emailMessage);
-      
+      if (!estimate?._id) {
+        toast.error('No estimate selected to send. Please refresh and try again.');
+        return;
+      }
+
+      await Promise.all(
+        selectedEmails.map((email) =>
+          sendToClient({ id: estimate._id, clientEmail: email }).unwrap()
+        )
+      );
+
       toast.success('Estimate sent successfully!');
       setSendToClientDialog(false);
+      setSelectedEmails([]);
+      setEmailSubject('');
+      setEmailMessage('');
     } catch (error) {
       console.error('Send to client error:', error);
       toast.error('Failed to send estimate: ' + (error?.message || 'Unknown error'));
@@ -200,7 +199,11 @@ const ProjectEstimateDetails = () => {
 
   const getBuildingContacts = () => {
     if (!estimate) return [];
-    const building = buildings.find(b => b._id === estimate.building);
+    const buildingId =
+      typeof estimate.building === 'object'
+        ? estimate.building._id
+        : estimate.building;
+    const building = buildings.find((b) => b._id === buildingId);
     const contacts = [];
     
     if (building?.generalManagerEmail) {

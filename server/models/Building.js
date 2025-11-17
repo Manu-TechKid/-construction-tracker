@@ -51,7 +51,6 @@ const buildingSchema = new mongoose.Schema({
     },
     serviceManager: {
         type: String,
-        required: [true, 'Service manager name is required'],
         trim: true
     },
     serviceManagerEmail: {
@@ -82,19 +81,16 @@ const buildingSchema = new mongoose.Schema({
     // Maintenance Manager Contact
     maintenanceManagerName: {
         type: String,
-        required: [true, 'Maintenance Manager name is required'],
         trim: true
     },
     maintenanceManagerEmail: {
         type: String,
-        required: [true, 'Maintenance Manager email is required'],
         trim: true,
         lowercase: true,
         match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
     },
     maintenanceManagerPhone: {
         type: String,
-        required: [true, 'Maintenance Manager phone is required'],
         trim: true
     },
     

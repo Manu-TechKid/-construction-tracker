@@ -109,13 +109,19 @@ const ProjectEstimates = () => {
       toast.error('Please select at least one recipient');
       return;
     }
-    
+
     try {
-      // TODO: Update API to accept multiple emails
-      console.log('Sending estimate to:', selectedEmails);
-      console.log('Subject:', emailSubject);
-      console.log('Message:', emailMessage);
-      
+      if (!selectedEstimate?._id) {
+        toast.error('No estimate selected to send. Please try again.');
+        return;
+      }
+
+      await Promise.all(
+        selectedEmails.map((email) =>
+          sendToClient({ id: selectedEstimate._id, clientEmail: email }).unwrap()
+        )
+      );
+
       toast.success('Estimate sent to client successfully');
       setSendToClientDialog(false);
       setSelectedEmails([]);
@@ -130,7 +136,11 @@ const ProjectEstimates = () => {
 
   const getBuildingContacts = () => {
     if (!selectedEstimate) return [];
-    const building = buildings.find(b => b._id === selectedEstimate.building);
+    const buildingId =
+      typeof selectedEstimate.building === 'object'
+        ? selectedEstimate.building._id
+        : selectedEstimate.building;
+    const building = buildings.find((b) => b._id === buildingId);
     const contacts = [];
     
     if (building?.generalManagerEmail) {
@@ -464,7 +474,7 @@ const ProjectEstimates = () => {
                         {estimate.building?.name || 'N/A'}
                       </Typography>
                       {estimate.apartmentNumber && (
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" color="textSecondary">
                           Apt {estimate.apartmentNumber}
                         </Typography>
                       )}
@@ -517,7 +527,7 @@ const ProjectEstimates = () => {
         </MenuItem>
         <MenuItem onClick={() => {
           setSendToClientDialog(true);
-          handleMenuClose();
+          setAnchorEl(null);
         }}>
           <SendIcon sx={{ mr: 1 }} />
           Send to Client

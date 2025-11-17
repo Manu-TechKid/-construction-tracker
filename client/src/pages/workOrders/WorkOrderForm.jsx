@@ -215,21 +215,27 @@ const WorkOrderForm = () => {
 
   const matchedPricingService = useMemo(() => {
     if (!selectedWorkSubType) return null;
-    const targetSubcategory = selectedWorkSubType.code || selectedWorkSubType.name;
-    const targetCategory = selectedWorkType?.code || selectedWorkType?.name;
+
+    const categoryCandidates = [];
+    if (selectedWorkType?.code) categoryCandidates.push(String(selectedWorkType.code).toLowerCase());
+    if (selectedWorkType?.name) categoryCandidates.push(String(selectedWorkType.name).toLowerCase());
+    if (selectedWorkType?._id) categoryCandidates.push(String(selectedWorkType._id).toLowerCase());
+
+    const subcategoryCandidates = [];
+    if (selectedWorkSubType.code) subcategoryCandidates.push(String(selectedWorkSubType.code).toLowerCase());
+    if (selectedWorkSubType.name) subcategoryCandidates.push(String(selectedWorkSubType.name).toLowerCase());
+    if (selectedWorkSubType._id) subcategoryCandidates.push(String(selectedWorkSubType._id).toLowerCase());
 
     return (
       buildingServices.find((service) => {
-        const serviceCategory = service.category;
-        const serviceSubcategory = service.subcategory;
+        const serviceCategory = service.category ? String(service.category).toLowerCase() : '';
+        const serviceSubcategory = service.subcategory ? String(service.subcategory).toLowerCase() : '';
 
-        const categoryMatches = targetCategory
-          ? serviceCategory?.toLowerCase() === targetCategory.toLowerCase()
-          : true;
+        const categoryMatches =
+          categoryCandidates.length === 0 || categoryCandidates.includes(serviceCategory);
 
-        const subCategoryMatches = targetSubcategory
-          ? serviceSubcategory?.toLowerCase() === targetSubcategory.toLowerCase()
-          : false;
+        const subCategoryMatches =
+          subcategoryCandidates.length > 0 && subcategoryCandidates.includes(serviceSubcategory);
 
         return categoryMatches && subCategoryMatches;
       }) || null
