@@ -35,6 +35,7 @@ import StatCard from '../../components/dashboard/StatCard';
 import BuildingStatus from '../../components/dashboard/BuildingStatus';
 import WorkerAvailability from '../../components/dashboard/WorkerAvailability';
 import WeeklyRevenue from '../../components/dashboard/WeeklyRevenue';
+import WeeklyProduction from '../../components/dashboard/WeeklyProduction';
 import { formatDate, timeAgo } from '../../utils/dateUtils';
 import ResponsiveContainer from '../../components/layout/ResponsiveContainer';
 import NotificationTest from '../../components/Notifications/NotificationTest';
@@ -315,6 +316,15 @@ const Dashboard = () => {
           <Card elevation={3}>
             <CardContent sx={{ p: 0 }}>
               <WeeklyRevenue />
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Weekly Production by Customer */}
+        <Grid item xs={12}>
+          <Card elevation={3}>
+            <CardContent sx={{ p: 0 }}>
+              <WeeklyProduction />
             </CardContent>
           </Card>
         </Grid>

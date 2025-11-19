@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -35,6 +35,9 @@ import {
   useUpdateCallMutation,
 } from '../../features/calls/callsApiSlice';
 import { toast } from 'react-toastify';
+import { loadFilters, saveFilters } from '../../utils/filterStorage';
+
+const CALLS_FILTERS_KEY = 'ct_filters_calls';
 
 const INITIAL_FORM_STATE = {
   isProspect: false,
@@ -91,7 +94,7 @@ const directionOptions = [
 ];
 
 const Calls = () => {
-  const [filters, setFilters] = useState({
+  const defaultFilters = {
     startDate: null,
     endDate: null,
     buildingId: '',
@@ -99,6 +102,15 @@ const Calls = () => {
     type: '',
     direction: '',
     search: '',
+  };
+
+  const [filters, setFilters] = useState(() => {
+    const saved = loadFilters(CALLS_FILTERS_KEY, defaultFilters);
+    return {
+      ...saved,
+      startDate: saved.startDate ? new Date(saved.startDate) : null,
+      endDate: saved.endDate ? new Date(saved.endDate) : null,
+    };
   });
   const [addOpen, setAddOpen] = useState(false);
   const [form, setForm] = useState({ ...INITIAL_FORM_STATE });
@@ -123,6 +135,14 @@ const Calls = () => {
   const [createCall, { isLoading: isCreating }] = useCreateCallMutation();
   const [updateCall, { isLoading: isUpdating }] = useUpdateCallMutation();
   const [deleteCall] = useDeleteCallMutation();
+
+  useEffect(() => {
+    saveFilters(CALLS_FILTERS_KEY, {
+      ...filters,
+      startDate: filters.startDate ? filters.startDate.toISOString() : null,
+      endDate: filters.endDate ? filters.endDate.toISOString() : null,
+    });
+  }, [filters]);
 
   const calls = callsData?.data?.callLogs || [];
   const byOutcome = statsData?.data?.byOutcome || [];

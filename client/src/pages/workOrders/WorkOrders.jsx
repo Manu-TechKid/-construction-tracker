@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -39,6 +39,9 @@ import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice
 import { useGetWorkTypesQuery, useGetWorkSubTypesQuery } from '../../features/setup/setupApiSlice';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, isWithinInterval, parseISO } from 'date-fns';
 import { toast } from 'react-toastify';
+import { loadFilters, saveFilters } from '../../utils/filterStorage';
+
+const WORK_ORDERS_FILTERS_KEY = 'ct_filters_workOrders';
 
 const getStatusChipColor = (status) => {
   switch (status) {
@@ -65,17 +68,34 @@ const WorkOrders = () => {
   const navigate = useNavigate();
   const { canViewCosts } = useAuth();
   
-  // Initialize state first
-  const [filters, setFilters] = useState({ 
+  const defaultFilters = { 
     building: '', 
     apartment: '',
-    apartmentSearch: '', // NEW: Text search for apartment
+    apartmentSearch: '',
     status: '',
     startDate: null,
     endDate: null,
     workType: '',
     workSubType: ''
+  };
+
+  // Initialize state first
+  const [filters, setFilters] = useState(() => {
+    const saved = loadFilters(WORK_ORDERS_FILTERS_KEY, defaultFilters);
+    return {
+      ...saved,
+      startDate: saved.startDate ? new Date(saved.startDate) : null,
+      endDate: saved.endDate ? new Date(saved.endDate) : null
+    };
   });
+
+  useEffect(() => {
+    saveFilters(WORK_ORDERS_FILTERS_KEY, {
+      ...filters,
+      startDate: filters.startDate ? filters.startDate.toISOString() : null,
+      endDate: filters.endDate ? filters.endDate.toISOString() : null
+    });
+  }, [filters]);
 
   // Then use hooks that depend on state
   const { data: workOrdersData, isLoading, error } = useGetWorkOrdersQuery();

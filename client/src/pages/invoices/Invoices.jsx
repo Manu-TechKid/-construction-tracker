@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -51,6 +51,9 @@ import { useNavigate } from 'react-router-dom';
 import { useGetInvoicesQuery, useMarkInvoiceAsPaidMutation, useDeleteInvoiceMutation } from '../../features/invoices/invoicesApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { toast } from 'react-toastify';
+import { loadFilters, saveFilters } from '../../utils/filterStorage';
+
+const INVOICE_FILTERS_KEY = 'ct_filters_invoices';
 
 const Invoices = () => {
   const navigate = useNavigate();
@@ -61,11 +64,48 @@ const Invoices = () => {
   const [filterBuilding, setFilterBuilding] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
-  // Monthly filtering state
-  const [monthFilter, setMonthFilter] = useState({
+  const defaultMonthRange = {
     startDate: startOfMonth(new Date()),
     endDate: endOfMonth(new Date())
-  });
+  };
+
+  // Monthly filtering state
+  const [monthFilter, setMonthFilter] = useState(defaultMonthRange);
+  const [filtersLoaded, setFiltersLoaded] = useState(false);
+
+  useEffect(() => {
+    const defaults = {
+      searchQuery: '',
+      filterStatus: '',
+      filterBuilding: '',
+      startDate: defaultMonthRange.startDate.toISOString(),
+      endDate: defaultMonthRange.endDate.toISOString()
+    };
+
+    const saved = loadFilters(INVOICE_FILTERS_KEY, defaults);
+
+    setSearchQuery(saved.searchQuery || '');
+    setFilterStatus(saved.filterStatus || '');
+    setFilterBuilding(saved.filterBuilding || '');
+    setMonthFilter({
+      startDate: saved.startDate ? new Date(saved.startDate) : defaultMonthRange.startDate,
+      endDate: saved.endDate ? new Date(saved.endDate) : defaultMonthRange.endDate
+    });
+
+    setFiltersLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!filtersLoaded) return;
+
+    saveFilters(INVOICE_FILTERS_KEY, {
+      searchQuery,
+      filterStatus,
+      filterBuilding,
+      startDate: monthFilter.startDate ? monthFilter.startDate.toISOString() : null,
+      endDate: monthFilter.endDate ? monthFilter.endDate.toISOString() : null
+    });
+  }, [filtersLoaded, searchQuery, filterStatus, filterBuilding, monthFilter.startDate, monthFilter.endDate]);
 
   const invoiceQueryParams = useMemo(() => {
     const params = {

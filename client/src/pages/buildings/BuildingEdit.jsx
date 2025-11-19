@@ -22,9 +22,15 @@ const BuildingEdit = () => {
       navigate(`/buildings/${id}`);
     } catch (error) {
       console.error('Failed to update building:', error);
-      const errorMessage = error?.data?.message || error?.message || 'Failed to update building';
-      
-      if (errorMessage.includes('duplicate') || errorMessage.includes('already exists')) {
+      const backendMessage = error?.data?.message || error?.message || 'Failed to update building';
+      const fieldErrors = error?.data?.fieldErrors;
+      const errorMessage = Array.isArray(fieldErrors) && fieldErrors.length > 0
+        ? fieldErrors.join('; ')
+        : backendMessage;
+
+      if (backendMessage === 'Something went very wrong!') {
+        toast.error('❌ Unexpected server error while updating building. Please try again or contact support.');
+      } else if (errorMessage.includes('duplicate') || errorMessage.includes('already exists')) {
         toast.error('❌ A building with this name already exists. Please choose a different name.');
       } else if (errorMessage.includes('validation') || errorMessage.includes('required')) {
         toast.error('❌ Please fill in all required fields correctly.');
