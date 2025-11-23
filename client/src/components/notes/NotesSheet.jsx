@@ -125,9 +125,9 @@ const NotesSheet = () => {
   }, [selectedBuilding?._id]);
 
   const currentWeekRange = useMemo(() => {
-    const start = startOfWeek(filterWeekDate, { weekStartsOn: 0 });
+    const start = startOfWeek(filterWeekDate, { weekStartsOn: 1 });
     start.setHours(0, 0, 0, 0);
-    const end = endOfWeek(filterWeekDate, { weekStartsOn: 0 });
+    const end = endOfWeek(filterWeekDate, { weekStartsOn: 1 });
     end.setHours(23, 59, 59, 999);
     return { start, end };
   }, [filterWeekDate]);

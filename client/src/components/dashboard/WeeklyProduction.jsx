@@ -19,43 +19,46 @@ import {
 } from '@mui/material';
 import { BarChart as BarChartIcon, Apartment as BuildingIcon } from '@mui/icons-material';
 import { format, startOfWeek, endOfWeek, subWeeks, parseISO } from 'date-fns';
-import { useGetInvoicesQuery } from '../../features/invoices/invoicesApiSlice';
+import { useGetWorkOrdersQuery } from '../../features/workOrders/workOrdersApiSlice';
 
 const WeeklyProduction = () => {
   const [selectedWeeks, setSelectedWeeks] = useState(4); // Last 4 weeks by default
 
-  const { data: invoicesData, isLoading, error } = useGetInvoicesQuery({
-    limit: 1000,
-  });
+  // Use completed work orders as the source of "production" instead of invoices
+  const { data: workOrdersData, isLoading, error } = useGetWorkOrdersQuery();
 
-  const invoices = invoicesData?.data?.invoices || [];
+  const workOrders = workOrdersData?.data?.workOrders || [];
 
   const weeklyProduction = useMemo(() => {
-    if (!invoices.length) return [];
+    if (!workOrders.length) return [];
 
     const weeks = [];
     const today = new Date();
 
     for (let i = 0; i < selectedWeeks; i++) {
-      const weekStart = startOfWeek(subWeeks(today, i), { weekStartsOn: 1 });
-      const weekEnd = endOfWeek(subWeeks(today, i), { weekStartsOn: 1 });
+      const referenceDate = subWeeks(today, i);
+      const weekStart = startOfWeek(referenceDate, { weekStartsOn: 1 }); // Monday
+      const weekEnd = endOfWeek(referenceDate, { weekStartsOn: 1 }); // Sunday
 
-      const weekInvoices = invoices.filter((invoice) => {
+      // Filter to completed work orders that fall in this week
+      const weekWorkOrders = workOrders.filter((wo) => {
+        if (!wo || wo.status !== 'completed') return false;
+
         const dateSource =
-          invoice.invoiceDate ||
-          invoice.createdAt ||
-          invoice.paidDate ||
-          invoice.paymentDate;
+          wo.completedAt ||
+          wo.updatedAt ||
+          wo.scheduledDate ||
+          wo.createdAt;
 
         if (!dateSource) return false;
 
-        const invoiceDate = parseISO(dateSource);
-        if (isNaN(invoiceDate.getTime())) return false;
+        const rawDate = typeof dateSource === 'string' ? parseISO(dateSource) : new Date(dateSource);
+        if (isNaN(rawDate.getTime())) return false;
 
-        return invoiceDate >= weekStart && invoiceDate <= weekEnd;
+        return rawDate >= weekStart && rawDate <= weekEnd;
       });
 
-      if (!weekInvoices.length) {
+      if (!weekWorkOrders.length) {
         weeks.push({
           weekStart,
           weekEnd,
@@ -69,11 +72,8 @@ const WeeklyProduction = () => {
       const customerMap = {};
       const categorySet = new Set();
 
-      weekInvoices.forEach((invoice) => {
-        const customerName =
-          invoice.customer?.name ||
-          invoice.building?.name ||
-          'Unknown Customer';
+      weekWorkOrders.forEach((wo) => {
+        const customerName = wo.building?.name || 'Unknown Building';
 
         if (!customerMap[customerName]) {
           customerMap[customerName] = {
@@ -83,41 +83,46 @@ const WeeklyProduction = () => {
           };
         }
 
-        const lineItems = Array.isArray(invoice.lineItems)
-          ? invoice.lineItems
-          : [];
-
-        if (lineItems.length) {
-          lineItems.forEach((item) => {
-            const category = item.serviceCategory || 'Uncategorized';
-            const amount =
-              typeof item.totalPrice === 'number'
-                ? item.totalPrice
-                : (item.quantity || 1) * (item.unitPrice || 0);
-
-            categorySet.add(category);
-
-            if (!customerMap[customerName].services[category]) {
-              customerMap[customerName].services[category] = 0;
-            }
-
-            customerMap[customerName].services[category] += amount;
-            customerMap[customerName].total += amount;
-          });
-        } else {
-          const fallbackAmount =
-            typeof invoice.total === 'number' ? invoice.total : 0;
-          const category = 'Uncategorized';
-
-          categorySet.add(category);
-
-          if (!customerMap[customerName].services[category]) {
-            customerMap[customerName].services[category] = 0;
+        // Derive a category from the work type for breakdown columns
+        let category = 'Uncategorized';
+        if (wo.workType) {
+          if (typeof wo.workType === 'string') {
+            category = wo.workType;
+          } else if (wo.workType.name) {
+            category = wo.workType.name;
+          } else if (wo.workType.code) {
+            category = wo.workType.code;
           }
-
-          customerMap[customerName].services[category] += fallbackAmount;
-          customerMap[customerName].total += fallbackAmount;
         }
+
+        // Amount calculation aligned with invoiceController.createInvoice:
+        // Priority: services -> price -> actualCost -> estimatedCost
+        let amount = 0;
+
+        if (Array.isArray(wo.services) && wo.services.length > 0) {
+          amount = wo.services.reduce((sum, service) => {
+            return (
+              sum +
+              (service.laborCost || 0) +
+              (service.materialCost || 0)
+            );
+          }, 0);
+        } else if (typeof wo.price === 'number' && wo.price > 0) {
+          amount = wo.price;
+        } else if (typeof wo.actualCost === 'number' && wo.actualCost > 0) {
+          amount = wo.actualCost;
+        } else if (typeof wo.estimatedCost === 'number') {
+          amount = wo.estimatedCost;
+        }
+
+        categorySet.add(category);
+
+        if (!customerMap[customerName].services[category]) {
+          customerMap[customerName].services[category] = 0;
+        }
+
+        customerMap[customerName].services[category] += amount;
+        customerMap[customerName].total += amount;
       });
 
       const customers = Object.values(customerMap).sort(
@@ -139,7 +144,7 @@ const WeeklyProduction = () => {
     }
 
     return weeks.reverse();
-  }, [invoices, selectedWeeks]);
+  }, [workOrders, selectedWeeks]);
 
   const summary = useMemo(() => {
     if (!weeklyProduction.length) return null;
@@ -235,7 +240,7 @@ const WeeklyProduction = () => {
 
       {weeklyProduction.length === 0 ? (
         <Alert severity="info">
-          No invoices found for the selected time period.
+          No completed work orders found for the selected time period.
         </Alert>
       ) : (
         weeklyProduction.map((week, index) => {
@@ -275,7 +280,7 @@ const WeeklyProduction = () => {
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                               <BuildingIcon fontSize="small" />
                               <Typography variant="body2" fontWeight="bold">
-                                Customer
+                                Customer (Building)
                               </Typography>
                             </Box>
                           </TableCell>

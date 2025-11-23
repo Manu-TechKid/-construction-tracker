@@ -136,8 +136,8 @@ const WorkOrders = () => {
         endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
         break;
       case 'thisWeek':
-        startDate = startOfWeek(now);
-        endDate = endOfWeek(now);
+        startDate = startOfWeek(now, { weekStartsOn: 1 });
+        endDate = endOfWeek(now, { weekStartsOn: 1 });
         break;
       case 'thisMonth':
         startDate = startOfMonth(now);

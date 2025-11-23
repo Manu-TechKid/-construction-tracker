@@ -36,6 +36,7 @@ import BuildingStatus from '../../components/dashboard/BuildingStatus';
 import WorkerAvailability from '../../components/dashboard/WorkerAvailability';
 import WeeklyRevenue from '../../components/dashboard/WeeklyRevenue';
 import WeeklyProduction from '../../components/dashboard/WeeklyProduction';
+import DashboardAlerts from '../../components/dashboard/DashboardAlerts';
 import { formatDate, timeAgo } from '../../utils/dateUtils';
 import ResponsiveContainer from '../../components/layout/ResponsiveContainer';
 import NotificationTest from '../../components/Notifications/NotificationTest';
@@ -311,6 +312,11 @@ const Dashboard = () => {
       </Grid>
 
       <Grid container spacing={3}>
+        {/* Alerts for reminders and calls */}
+        <Grid item xs={12} md={6}>
+          <DashboardAlerts />
+        </Grid>
+
         {/* Weekly Revenue Dashboard */}
         <Grid item xs={12}>
           <Card elevation={3}>

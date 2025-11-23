@@ -158,6 +158,7 @@ const WorkOrderForm = () => {
   const { data: usersData, isLoading: isLoadingUsers } = useGetUsersQuery({ role: 'worker' });
   const { data: workOrderData, isLoading: isLoadingWorkOrder } = useGetWorkOrderQuery(id, { skip: !isEdit });
   const { data: selectedBuildingData } = useGetBuildingQuery(formik.values.building, { skip: !formik.values.building });
+  const apartmentCount = selectedBuildingData?.data?.apartments?.length || 0;
   
   // Setup data queries
   const { data: workTypesData, isLoading: isLoadingWorkTypes } = useGetWorkTypesQuery();
@@ -424,7 +425,9 @@ const WorkOrderForm = () => {
                   </Grid>
                   <Grid item xs={12} sm={6} md={4}>
                     <FormControl fullWidth disabled={!formik.values.building}>
-                      <InputLabel>Apartment</InputLabel>
+                      <InputLabel>
+                        {apartmentCount > 0 ? `Apartment (${apartmentCount} units)` : 'Apartment'}
+                      </InputLabel>
                       <Select
                         id="apartmentNumber"
                         name="apartmentNumber"

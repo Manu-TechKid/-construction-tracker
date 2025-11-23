@@ -63,6 +63,7 @@ const Invoices = () => {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterBuilding, setFilterBuilding] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [sortBy, setSortBy] = useState('invoiceDateDesc');
   
   const defaultMonthRange = {
     startDate: startOfMonth(new Date()),
@@ -327,7 +328,30 @@ const Invoices = () => {
     }
   };
 
-  const filteredInvoices = invoices;
+  const filteredInvoices = useMemo(() => {
+    const list = [...invoices];
+
+    list.sort((a, b) => {
+      const numA = a.invoiceNumber || '';
+      const numB = b.invoiceNumber || '';
+      const dateA = a.invoiceDate ? new Date(a.invoiceDate) : new Date(a.createdAt || 0);
+      const dateB = b.invoiceDate ? new Date(b.invoiceDate) : new Date(b.createdAt || 0);
+
+      switch (sortBy) {
+        case 'invoiceNumberAsc':
+          return String(numA).localeCompare(String(numB), undefined, { numeric: true });
+        case 'invoiceNumberDesc':
+          return String(numB).localeCompare(String(numA), undefined, { numeric: true });
+        case 'invoiceDateAsc':
+          return dateA - dateB;
+        case 'invoiceDateDesc':
+        default:
+          return dateB - dateA;
+      }
+    });
+
+    return list;
+  }, [invoices, sortBy]);
   
   // Quick month filter functions
   const setQuickMonthFilter = (monthsBack = 0) => {
@@ -552,6 +576,22 @@ const Invoices = () => {
                         {building.name}
                       </MenuItem>
                     ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              {/* Sort By */}
+              <Grid item xs={12} sm={6} md={3}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Sort By</InputLabel>
+                  <Select
+                    value={sortBy}
+                    label="Sort By"
+                    onChange={(e) => setSortBy(e.target.value)}
+                  >
+                    <MenuItem value="invoiceDateDesc">Date (newest first)</MenuItem>
+                    <MenuItem value="invoiceDateAsc">Date (oldest first)</MenuItem>
+                    <MenuItem value="invoiceNumberAsc">Invoice # (ascending)</MenuItem>
+                    <MenuItem value="invoiceNumberDesc">Invoice # (descending)</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
