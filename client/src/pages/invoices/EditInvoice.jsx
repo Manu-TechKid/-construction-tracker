@@ -58,6 +58,7 @@ import {
 
 const validationSchema = Yup.object({
   status: Yup.string().oneOf(['open', 'sent', 'paid', 'overdue', 'cancelled']),
+  invoiceDate: Yup.date().required('Invoice date is required'),
   dueDate: Yup.date().required('Due date is required'),
   notes: Yup.string(),
 });
@@ -84,6 +85,7 @@ const EditInvoice = () => {
   const formik = useFormik({
     initialValues: {
       status: 'open',
+      invoiceDate: new Date(),
       dueDate: new Date(),
       notes: '',
     },
@@ -92,7 +94,14 @@ const EditInvoice = () => {
       try {
         const updateData = {
           status: values.status,
-          dueDate: values.dueDate instanceof Date ? values.dueDate.toISOString() : new Date(values.dueDate).toISOString(),
+          invoiceDate:
+            values.invoiceDate instanceof Date
+              ? values.invoiceDate.toISOString()
+              : new Date(values.invoiceDate).toISOString(),
+          dueDate:
+            values.dueDate instanceof Date
+              ? values.dueDate.toISOString()
+              : new Date(values.dueDate).toISOString(),
           notes: values.notes,
         };
 
@@ -115,7 +124,17 @@ const EditInvoice = () => {
       const invoice = invoiceData.data.invoice || invoiceData.data;
       console.log('EditInvoice: Setting form values for invoice:', invoice);
       try {
+        let invoiceDateValue = new Date();
         let dueDateValue = new Date();
+
+        if (invoice.invoiceDate) {
+          const parsedInvoiceDate = new Date(invoice.invoiceDate);
+          if (!isNaN(parsedInvoiceDate.getTime())) {
+            invoiceDateValue = new Date(
+              parsedInvoiceDate.getTime() - parsedInvoiceDate.getTimezoneOffset() * 60000
+            );
+          }
+        }
         if (invoice.dueDate) {
           const parsedDate = new Date(invoice.dueDate);
           if (!isNaN(parsedDate.getTime())) {
@@ -126,6 +145,7 @@ const EditInvoice = () => {
 
         formik.setValues({
           status: invoice.status || 'open',
+          invoiceDate: invoiceDateValue,
           dueDate: dueDateValue,
           notes: invoice.notes || '',
         });
@@ -134,6 +154,7 @@ const EditInvoice = () => {
         // Set default values if there's an error
         formik.setValues({
           status: invoice.status || 'open',
+          invoiceDate: new Date(),
           dueDate: new Date(),
           notes: invoice.notes || '',
         });
@@ -485,9 +506,25 @@ const EditInvoice = () => {
 
                 <Grid item xs={12} sm={6}>
                   <DatePicker
+                    label="Invoice Date"
+                    value={formik.values.invoiceDate}
+                    onChange={(newValue) => formik.setFieldValue('invoiceDate', newValue)}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        error: formik.touched.invoiceDate && Boolean(formik.errors.invoiceDate),
+                        helperText: formik.touched.invoiceDate && formik.errors.invoiceDate
+                      }
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <DatePicker
                     label="Due Date"
                     value={formik.values.dueDate}
                     onChange={(newValue) => formik.setFieldValue('dueDate', newValue)}
+                    minDate={formik.values.invoiceDate || new Date()}
                     slotProps={{
                       textField: {
                         fullWidth: true,

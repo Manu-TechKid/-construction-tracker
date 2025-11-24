@@ -445,7 +445,18 @@ const WorkOrderForm = () => {
                         renderValue={(selected) => {
                           if (!selected) return <em>Select an apartment</em>;
                           const apartment = selectedBuildingData?.data?.apartments?.find(a => a.number === selected);
-                          return apartment ? `${apartment.number}${apartment.block ? ` (Block ${apartment.block})` : ''}` : selected;
+                          if (!apartment) return selected;
+
+                          const blockPart = apartment.block ? ` (Block ${apartment.block})` : '';
+                          let typeLabel = '';
+                          if (apartment.type === 'studio') {
+                            typeLabel = 'Studio';
+                          } else if (typeof apartment.bedrooms === 'number' && apartment.bedrooms > 0) {
+                            typeLabel = `${apartment.bedrooms}Br`;
+                          }
+                          const typePart = typeLabel ? ` - ${typeLabel}` : '';
+
+                          return `${apartment.number}${blockPart}${typePart}`;
                         }}
                       >
                         <MenuItem value="" disabled>
@@ -464,7 +475,17 @@ const WorkOrderForm = () => {
                           })
                           .map((apartment) => (
                             <MenuItem key={apartment._id} value={apartment.number}>
-                              {apartment.number} {apartment.block && `(Block ${apartment.block})`}
+                              {(() => {
+                                const blockPart = apartment.block ? ` (Block ${apartment.block})` : '';
+                                let typeLabel = '';
+                                if (apartment.type === 'studio') {
+                                  typeLabel = 'Studio';
+                                } else if (typeof apartment.bedrooms === 'number' && apartment.bedrooms > 0) {
+                                  typeLabel = `${apartment.bedrooms}Br`;
+                                }
+                                const typePart = typeLabel ? ` - ${typeLabel}` : '';
+                                return `${apartment.number}${blockPart}${typePart}`;
+                              })()}
                             </MenuItem>
                           ))}
                         {selectedBuildingData?.data?.apartments?.length === 0 && (
