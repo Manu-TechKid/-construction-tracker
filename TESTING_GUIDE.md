@@ -70,32 +70,61 @@
 5. **Expected**: Call should appear under "Pending Call Follow-Ups" section
 
 ### 5. Dashboard Work Orders Count Discrepancy (November/Mallory)
-**Problem**: Dashboard shows 33 work orders but manual count differs
-**Root Cause**: Different date basis and week start logic
-**Solution**: Verify filtering logic and week calculations
+**Problem**: Dashboard shows different count than Work Orders page
+**Root Cause**: Dashboard only shows **completed** work orders, while Work Orders page shows all statuses
+**Solution**: Added building filter to Dashboard and clarified the difference
 
 **Test Steps**:
 1. Go to **Work Orders** page
 2. Filter by:
    - **Building**: Mallory Square
    - **Date Range**: Nov 01, 2025 - Nov 30, 2025
-   - **Status**: (leave blank for all statuses)
-3. Count total work orders shown
-4. Note this number as your "reference count"
-5. Go to **Dashboard** → **Weekly Production**
+   - **Status**: completed (IMPORTANT: only completed)
+3. Count total work orders shown (e.g., 15 completed)
+4. Go to **Dashboard** → **Weekly Production**
+5. Select **Building**: Mallory Square
 6. Set time period to "Last 8 weeks" to include November
-7. Find November weeks and sum up all work orders for Mallory Square
-8. **Expected**: Dashboard count should match Work Orders filtered count
-9. **Note**: Dashboard only shows "completed" work orders, so filter Work Orders by Status = "completed" for exact match
+7. Sum up all work orders shown for November weeks
+8. **Expected**: Dashboard count should now match Work Orders filtered count (both showing only completed)
+9. **Note**: If you don't filter by "completed" status in Work Orders, the count will be higher because it includes pending, in_progress, on_hold, and cancelled orders
+
+**Key Difference**:
+- **Work Orders page**: Shows all statuses (pending, in_progress, completed, on_hold, cancelled)
+- **Dashboard**: Shows only "completed" work orders (production metrics)
+- **Solution**: Use the new Building filter on Dashboard to compare specific buildings
 
 ### 6. Email Notifications (Reminders and Schedule Changes)
-**Status**: Feature not yet implemented
-**Planned**: 
-- Email notifications when reminders are created/due
-- Email notifications when employee schedules change
-- Manager emails configured in Building settings
+**Status**: ✅ Implemented
+**Features**:
+- Email notifications sent when reminders are created
+- Email notifications sent when schedules are created
+- Email notifications sent when schedules are updated (with change details)
+- Non-blocking: Email failures don't prevent reminder/schedule creation
 
-**Current Workaround**: Manual email sending available in Invoices page
+**Test Steps for Reminder Emails**:
+1. Go to **Reminders** page
+2. Create a new reminder with title "Test Email Reminder"
+3. Check server console for email notification log (development mode)
+4. **Expected**: Console shows email details with reminder title, due date, priority, and building
+5. In production, actual emails would be sent to the creator's email address
+
+**Test Steps for Schedule Emails**:
+1. Go to **Schedules** page
+2. Create a new schedule and assign workers
+3. Check server console for email notification log
+4. **Expected**: Console shows schedule details and assigned worker emails
+5. Update the schedule (change title, dates, or status)
+6. **Expected**: Console shows update email with change details
+
+**Email Configuration**:
+- Development mode: Emails logged to console (no actual sending)
+- Production mode: Uses configured SMTP server (set via environment variables)
+- Environment variables needed:
+  - `EMAIL_HOST`: SMTP server hostname
+  - `EMAIL_PORT`: SMTP server port
+  - `EMAIL_USERNAME`: SMTP username
+  - `EMAIL_PASSWORD`: SMTP password
+  - `EMAIL_FROM`: From email address
 
 ---
 
@@ -108,6 +137,11 @@
 - [ ] Today's reminder appears in Dashboard alerts
 - [ ] Today's or earlier call appears in Dashboard alerts
 - [ ] Work Orders count matches Dashboard count (when filtered same way)
+- [ ] Reminder creation sends email notification (check server console)
+- [ ] Schedule creation sends email notification (check server console)
+- [ ] Schedule update sends email with change details (check server console)
+- [ ] Dashboard Weekly Production has building filter dropdown
+- [ ] Building filter on Dashboard correctly filters work orders
 
 ---
 
@@ -132,9 +166,21 @@ npm test --prefix client
 
 ## Known Limitations
 
-1. **Email Notifications**: Not yet implemented. Currently requires manual email sending.
-2. **Dashboard Week Start**: Uses Monday as week start (ISO standard). Work Orders page can use different week start.
-3. **Overdue Marking**: Only marks invoices as overdue when they're retrieved or saved. May not update in real-time if invoice is not accessed.
+1. **Email Notifications**: 
+   - Development mode logs to console instead of sending actual emails
+   - Production mode requires SMTP configuration via environment variables
+   - Email failures are non-blocking (don't prevent reminder/schedule creation)
+
+2. **Dashboard Week Start**: Uses Monday as week start (ISO standard). Same as Work Orders page.
+
+3. **Overdue Marking**: 
+   - Only marks invoices as overdue when they're retrieved or saved
+   - May not update in real-time if invoice is not accessed
+   - Use Dashboard to see current overdue status
+
+4. **Dashboard Building Filter**: 
+   - Only affects completed work orders
+   - To see all work orders for a building, use Work Orders page with building filter
 
 ---
 
@@ -159,8 +205,11 @@ npm test --prefix client
 
 ## Next Steps
 
-1. Implement email notification service for reminders
-2. Implement email notification service for schedule changes
-3. Add email configuration to Building settings
-4. Align Dashboard week start with Work Orders page (Sunday vs Monday)
-5. Add real-time overdue invoice checking (background job)
+1. ✅ Implement email notification service for reminders - DONE
+2. ✅ Implement email notification service for schedule changes - DONE
+3. ✅ Add building filter to Dashboard - DONE
+4. Configure SMTP email server for production deployment
+5. Add email configuration UI to Building settings (optional)
+6. Implement background job for real-time overdue invoice checking
+7. Add more granular filtering options to Dashboard (by manager, work type, etc.)
+8. Create email templates for different notification types
