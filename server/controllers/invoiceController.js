@@ -67,6 +67,24 @@ exports.getAllInvoices = catchAsync(async (req, res, next) => {
     .populate('workOrders.workOrder', 'title description apartmentNumber status price cost scheduledDate')
     .sort('-createdAt');
 
+  // Auto-mark overdue invoices
+  const now = new Date();
+  for (const invoice of invoices) {
+    if (invoice.status !== 'paid' && invoice.status !== 'cancelled' && invoice.dueDate) {
+      const dueDate = new Date(invoice.dueDate);
+      if (now > dueDate && invoice.status !== 'overdue') {
+        invoice.status = 'overdue';
+        if (!invoice.statusHistory) invoice.statusHistory = [];
+        invoice.statusHistory.push({
+          status: 'overdue',
+          timestamp: new Date(),
+          notes: 'Automatically marked as overdue - due date passed'
+        });
+        await invoice.save();
+      }
+    }
+  }
+
   res.status(200).json({
     status: 'success',
     results: invoices.length,

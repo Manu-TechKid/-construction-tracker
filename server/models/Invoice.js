@@ -455,6 +455,44 @@ invoiceSchema.pre('save', async function(next) {
     next();
 });
 
+// Pre-save hook to auto-mark invoices as overdue if past due date
+invoiceSchema.pre('save', function(next) {
+    // Only check if invoice is not already paid or cancelled
+    if (this.status !== 'paid' && this.status !== 'cancelled' && this.dueDate) {
+        const now = new Date();
+        const dueDate = new Date(this.dueDate);
+        
+        // If due date has passed and status is not overdue, mark as overdue
+        if (now > dueDate && this.status !== 'overdue') {
+            this.status = 'overdue';
+            this.statusHistory.push({
+                status: 'overdue',
+                timestamp: new Date(),
+                notes: 'Automatically marked as overdue - due date passed'
+            });
+        }
+    }
+    next();
+});
+
+// Post-find hook to recalculate totals when invoices are retrieved
+invoiceSchema.post('find', function(docs) {
+    if (!Array.isArray(docs)) return;
+    
+    docs.forEach(doc => {
+        if (doc && typeof doc.calculateTotals === 'function') {
+            doc.calculateTotals();
+        }
+    });
+});
+
+// Post-findOne hook to recalculate totals for single invoice retrieval
+invoiceSchema.post('findOne', function(doc) {
+    if (doc && typeof doc.calculateTotals === 'function') {
+        doc.calculateTotals();
+    }
+});
+
 // Helper function to get grace days from payment terms
 invoiceSchema.methods.getGraceDaysFromPaymentTerms = function(paymentTerms) {
     switch (paymentTerms) {
