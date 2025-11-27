@@ -20,14 +20,18 @@ import {
 import { BarChart as BarChartIcon, Apartment as BuildingIcon } from '@mui/icons-material';
 import { format, startOfWeek, endOfWeek, subWeeks, parseISO } from 'date-fns';
 import { useGetWorkOrdersQuery } from '../../features/workOrders/workOrdersApiSlice';
+import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 
 const WeeklyProduction = () => {
   const [selectedWeeks, setSelectedWeeks] = useState(4); // Last 4 weeks by default
+  const [selectedBuilding, setSelectedBuilding] = useState(''); // Filter by building
 
   // Use completed work orders as the source of "production" instead of invoices
   const { data: workOrdersData, isLoading, error } = useGetWorkOrdersQuery();
+  const { data: buildingsData } = useGetBuildingsQuery();
 
   const workOrders = workOrdersData?.data?.workOrders || [];
+  const buildings = buildingsData?.data?.buildings || [];
 
   const weeklyProduction = useMemo(() => {
     if (!workOrders.length) return [];
@@ -43,6 +47,13 @@ const WeeklyProduction = () => {
       // Filter to completed work orders that fall in this week
       const weekWorkOrders = workOrders.filter((wo) => {
         if (!wo || wo.status !== 'completed') return false;
+
+        // Apply building filter if selected
+        if (selectedBuilding) {
+          const buildingMatch = wo.building?._id === selectedBuilding || 
+                               (typeof wo.building === 'string' && wo.building === selectedBuilding);
+          if (!buildingMatch) return false;
+        }
 
         const dateSource =
           wo.completedAt ||
@@ -144,7 +155,7 @@ const WeeklyProduction = () => {
     }
 
     return weeks.reverse();
-  }, [workOrders, selectedWeeks]);
+  }, [workOrders, selectedWeeks, selectedBuilding]);
 
   const summary = useMemo(() => {
     if (!weeklyProduction.length) return null;
@@ -183,6 +194,8 @@ const WeeklyProduction = () => {
           justifyContent: 'space-between',
           alignItems: 'center',
           mb: 3,
+          gap: 2,
+          flexWrap: 'wrap'
         }}
       >
         <Typography
@@ -194,19 +207,37 @@ const WeeklyProduction = () => {
           Weekly Production by Customer
         </Typography>
 
-        <TextField
-          select
-          size="small"
-          label="Time Period"
-          value={selectedWeeks}
-          onChange={(e) => setSelectedWeeks(Number(e.target.value))}
-          sx={{ minWidth: 150 }}
-        >
-          <MenuItem value={2}>Last 2 weeks</MenuItem>
-          <MenuItem value={4}>Last 4 weeks</MenuItem>
-          <MenuItem value={8}>Last 8 weeks</MenuItem>
-          <MenuItem value={12}>Last 12 weeks</MenuItem>
-        </TextField>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <TextField
+            select
+            size="small"
+            label="Building"
+            value={selectedBuilding}
+            onChange={(e) => setSelectedBuilding(e.target.value)}
+            sx={{ minWidth: 180 }}
+          >
+            <MenuItem value="">All Buildings</MenuItem>
+            {buildings.map((building) => (
+              <MenuItem key={building._id} value={building._id}>
+                {building.name}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          <TextField
+            select
+            size="small"
+            label="Time Period"
+            value={selectedWeeks}
+            onChange={(e) => setSelectedWeeks(Number(e.target.value))}
+            sx={{ minWidth: 150 }}
+          >
+            <MenuItem value={2}>Last 2 weeks</MenuItem>
+            <MenuItem value={4}>Last 4 weeks</MenuItem>
+            <MenuItem value={8}>Last 8 weeks</MenuItem>
+            <MenuItem value={12}>Last 12 weeks</MenuItem>
+          </TextField>
+        </Box>
       </Box>
 
       {summary && (
