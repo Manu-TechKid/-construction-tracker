@@ -1,7 +1,9 @@
 const Reminder = require('../models/Reminder');
 const Building = require('../models/Building');
+const User = require('../models/User');
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
+const { sendReminderEmail } = require('../services/emailService');
 
 // @desc    Create a new reminder
 // @route   POST /api/v1/reminders
@@ -15,11 +17,12 @@ exports.createReminder = catchAsync(async (req, res, next) => {
     dueDate,
     priority,
     category,
-    type = 'building' // Default to building-level reminder
+    type = 'building', // Default to building-level reminder
+    sendEmail = true // Send email notification by default
   } = req.body;
 
   // Verify building exists and user has access
-  const buildingDoc = await Building.findById(building);
+  const buildingDoc = await Building.findById(building).populate('serviceManagerEmail generalManagerEmail maintenanceManagerEmail');
   if (!buildingDoc) {
     return next(new AppError('No building found with that ID', 404));
   }
@@ -61,6 +64,19 @@ exports.createReminder = catchAsync(async (req, res, next) => {
   }
 
   const reminder = await Reminder.create(reminderData);
+  
+  // Populate building info for email
+  await reminder.populate('building', 'name address');
+
+  // Send email notification if enabled
+  if (sendEmail && req.user.email) {
+    try {
+      await sendReminderEmail(reminder, req.user.email, req.user.name || 'User');
+    } catch (emailError) {
+      console.error('Failed to send reminder email:', emailError);
+      // Don't fail the reminder creation if email fails
+    }
+  }
 
   res.status(201).json({
     status: 'success',

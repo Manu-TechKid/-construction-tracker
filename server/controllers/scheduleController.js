@@ -3,6 +3,7 @@ const Building = require('../models/Building');
 const User = require('../models/User');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
+const { sendScheduleChangeEmail } = require('../services/emailService');
 
 // Get all schedules
 exports.getAllSchedules = catchAsync(async (req, res, next) => {
@@ -68,6 +69,16 @@ exports.createSchedule = catchAsync(async (req, res, next) => {
     { path: 'createdBy', select: 'name' }
   ]);
 
+  // Send email notification to assigned workers
+  if (schedule.assignedWorkers && schedule.assignedWorkers.length > 0) {
+    try {
+      await sendScheduleChangeEmail(schedule, schedule.assignedWorkers, 'created');
+    } catch (emailError) {
+      console.error('Failed to send schedule creation email:', emailError);
+      // Don't fail the schedule creation if email fails
+    }
+  }
+
   res.status(201).json({
     status: 'success',
     data: {
@@ -78,6 +89,12 @@ exports.createSchedule = catchAsync(async (req, res, next) => {
 
 // Update schedule
 exports.updateSchedule = catchAsync(async (req, res, next) => {
+  // Get the original schedule to detect changes
+  const originalSchedule = await Schedule.findById(req.params.id);
+  if (!originalSchedule) {
+    return next(new AppError('No schedule found with that ID', 404));
+  }
+
   const updateData = {
     ...req.body,
     updatedBy: req.user.id
@@ -99,6 +116,31 @@ exports.updateSchedule = catchAsync(async (req, res, next) => {
 
   if (!schedule) {
     return next(new AppError('No schedule found with that ID', 404));
+  }
+
+  // Detect changes and send email notification
+  const changes = {};
+  if (originalSchedule.title !== schedule.title) {
+    changes['Title'] = `${originalSchedule.title} → ${schedule.title}`;
+  }
+  if (originalSchedule.startDate.toString() !== schedule.startDate.toString()) {
+    changes['Start Date'] = `${new Date(originalSchedule.startDate).toLocaleDateString()} → ${new Date(schedule.startDate).toLocaleDateString()}`;
+  }
+  if (originalSchedule.endDate.toString() !== schedule.endDate.toString()) {
+    changes['End Date'] = `${new Date(originalSchedule.endDate).toLocaleDateString()} → ${new Date(schedule.endDate).toLocaleDateString()}`;
+  }
+  if (originalSchedule.status !== schedule.status) {
+    changes['Status'] = `${originalSchedule.status} → ${schedule.status}`;
+  }
+
+  // Send email notification if there are changes and workers are assigned
+  if (Object.keys(changes).length > 0 && schedule.assignedWorkers && schedule.assignedWorkers.length > 0) {
+    try {
+      await sendScheduleChangeEmail(schedule, schedule.assignedWorkers, 'updated', changes);
+    } catch (emailError) {
+      console.error('Failed to send schedule update email:', emailError);
+      // Don't fail the schedule update if email fails
+    }
   }
 
   res.status(200).json({

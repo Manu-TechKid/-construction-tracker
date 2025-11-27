@@ -142,6 +142,195 @@ const initEmailService = async () => {
   await exports.verifyEmailConnection();
 };
 
+// Send reminder notification email
+exports.sendReminderEmail = async (reminder, recipientEmail, recipientName = 'User') => {
+  try {
+    const dueDate = new Date(reminder.dueDate).toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
+    // In development, log the email instead of sending
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`\n=== REMINDER NOTIFICATION EMAIL (Development Mode) ===`);
+      console.log(`To: ${recipientEmail}`);
+      console.log(`Subject: Reminder: ${reminder.title}`);
+      console.log(`Title: ${reminder.title}`);
+      console.log(`Description: ${reminder.description}`);
+      console.log(`Due Date: ${dueDate}`);
+      console.log(`Priority: ${reminder.priority}`);
+      console.log(`Building: ${reminder.building?.name || 'N/A'}`);
+      console.log(`======================================\n`);
+      return { previewUrl: 'Reminder email logged in console (development mode)' };
+    }
+
+    // In production, send actual email
+    const info = await transporter.sendMail({
+      from: `"Construction Tracker" <${process.env.EMAIL_FROM || 'noreply@constructiontracker.com'}>`,
+      to: recipientEmail,
+      subject: `Reminder: ${reminder.title}`,
+      text: `Hello ${recipientName},
+
+You have a reminder due on ${dueDate}:
+
+Title: ${reminder.title}
+Description: ${reminder.description}
+Priority: ${reminder.priority.toUpperCase()}
+Building: ${reminder.building?.name || 'N/A'}
+
+Please log in to the Construction Tracker system to view and manage this reminder.
+
+Best regards,
+Construction Tracker Team`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #f8f9fa; padding: 20px; text-align: center;">
+            <h1 style="color: #333; margin-bottom: 10px;">Construction Tracker</h1>
+            <p style="color: #666; margin: 0;">Reminder Notification</p>
+          </div>
+
+          <div style="padding: 20px;">
+            <p>Hello ${recipientName},</p>
+
+            <p>You have a reminder due on <strong>${dueDate}</strong>:</p>
+
+            <div style="background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #ff9800;">
+              <h3 style="margin-top: 0; color: #333;">${reminder.title}</h3>
+              <p><strong>Description:</strong> ${reminder.description}</p>
+              <p><strong>Priority:</strong> <span style="color: ${reminder.priority === 'high' ? '#d32f2f' : reminder.priority === 'medium' ? '#ff9800' : '#4caf50'};">${reminder.priority.toUpperCase()}</span></p>
+              <p><strong>Building:</strong> ${reminder.building?.name || 'N/A'}</p>
+            </div>
+
+            <p>Please log in to the Construction Tracker system to view and manage this reminder.</p>
+
+            <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+              Best regards,<br>
+              <strong>Construction Tracker Team</strong>
+            </p>
+          </div>
+        </div>
+      `
+    });
+
+    console.log('Reminder email sent: %s', info.messageId);
+    return { previewUrl: nodemailer.getTestMessageUrl(info) };
+  } catch (error) {
+    console.error('Error sending reminder email:', error);
+    throw new AppError('Failed to send reminder email', 500);
+  }
+};
+
+// Send schedule change notification email to workers
+exports.sendScheduleChangeEmail = async (schedule, workers, changeType = 'created', changes = {}) => {
+  try {
+    const startDate = new Date(schedule.startDate).toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    const workerEmails = workers.filter(w => w.email).map(w => w.email);
+    
+    if (workerEmails.length === 0) {
+      console.warn('No valid worker emails found for schedule notification');
+      return { previewUrl: 'No worker emails available' };
+    }
+
+    // In development, log the email instead of sending
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`\n=== SCHEDULE CHANGE EMAIL (Development Mode) ===`);
+      console.log(`To: ${workerEmails.join(', ')}`);
+      console.log(`Subject: Schedule ${changeType === 'created' ? 'Created' : 'Updated'}: ${schedule.title}`);
+      console.log(`Title: ${schedule.title}`);
+      console.log(`Building: ${schedule.building?.name || 'N/A'}`);
+      console.log(`Start Date: ${startDate}`);
+      console.log(`Type: ${schedule.type}`);
+      console.log(`Change Type: ${changeType}`);
+      if (Object.keys(changes).length > 0) {
+        console.log(`Changes:`, changes);
+      }
+      console.log(`======================================\n`);
+      return { previewUrl: 'Schedule email logged in console (development mode)' };
+    }
+
+    // In production, send actual email
+    const changeDescription = changeType === 'created' 
+      ? 'A new schedule has been created for you'
+      : 'Your schedule has been updated with the following changes';
+
+    const info = await transporter.sendMail({
+      from: `"Construction Tracker" <${process.env.EMAIL_FROM || 'noreply@constructiontracker.com'}>`,
+      to: workerEmails,
+      subject: `Schedule ${changeType === 'created' ? 'Created' : 'Updated'}: ${schedule.title}`,
+      text: `Hello,
+
+${changeDescription}:
+
+Title: ${schedule.title}
+Building: ${schedule.building?.name || 'N/A'}
+Type: ${schedule.type}
+Start Date: ${startDate}
+Description: ${schedule.description || 'N/A'}
+
+${Object.keys(changes).length > 0 ? `Changes:\n${Object.entries(changes).map(([key, value]) => `- ${key}: ${value}`).join('\n')}` : ''}
+
+Please log in to the Construction Tracker system for more details.
+
+Best regards,
+Construction Tracker Team`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #f8f9fa; padding: 20px; text-align: center;">
+            <h1 style="color: #333; margin-bottom: 10px;">Construction Tracker</h1>
+            <p style="color: #666; margin: 0;">Schedule Notification</p>
+          </div>
+
+          <div style="padding: 20px;">
+            <p>Hello,</p>
+
+            <p>${changeDescription}:</p>
+
+            <div style="background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #2196f3;">
+              <h3 style="margin-top: 0; color: #333;">${schedule.title}</h3>
+              <p><strong>Building:</strong> ${schedule.building?.name || 'N/A'}</p>
+              <p><strong>Type:</strong> ${schedule.type}</p>
+              <p><strong>Start Date:</strong> ${startDate}</p>
+              ${schedule.description ? `<p><strong>Description:</strong> ${schedule.description}</p>` : ''}
+            </div>
+
+            ${Object.keys(changes).length > 0 ? `
+            <div style="background-color: #fff3cd; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #ffc107;">
+              <h4 style="margin-top: 0; color: #856404;">Changes Made:</h4>
+              <ul style="margin: 10px 0; padding-left: 20px;">
+                ${Object.entries(changes).map(([key, value]) => `<li>${key}: ${value}</li>`).join('')}
+              </ul>
+            </div>
+            ` : ''}
+
+            <p>Please log in to the Construction Tracker system for more details.</p>
+
+            <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+              Best regards,<br>
+              <strong>Construction Tracker Team</strong>
+            </p>
+          </div>
+        </div>
+      `
+    });
+
+    console.log('Schedule email sent: %s', info.messageId);
+    return { previewUrl: nodemailer.getTestMessageUrl(info) };
+  } catch (error) {
+    console.error('Error sending schedule email:', error);
+    throw new AppError('Failed to send schedule email', 500);
+  }
+};
+
 // Send invoice email to client
 exports.sendInvoiceEmail = async (invoice, emailAddresses, customMessage = '') => {
   try {
