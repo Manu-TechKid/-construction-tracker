@@ -763,26 +763,7 @@ const Invoices = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight="medium">
-                        {(() => {
-                          try {
-                            // Calculate total from latest work order prices
-                            const workOrders = invoice.workOrders || [];
-                            if (workOrders.length === 0) {
-                              return `$${invoice.total?.toFixed(2) || '0.00'}`;
-                            }
-                            
-                            const calculatedTotal = workOrders.reduce((sum, item) => {
-                              const price = item.workOrder?.price !== undefined ? item.workOrder.price : (item.unitPrice || 0);
-                              const quantity = item.quantity || 1;
-                              return sum + (price * quantity);
-                            }, 0);
-                            
-                            return `$${calculatedTotal.toFixed(2)}`;
-                          } catch (error) {
-                            console.warn('Error calculating total:', error);
-                            return `$${invoice.total?.toFixed(2) || '0.00'}`;
-                          }
-                        })()}
+                        ${invoice.total?.toFixed(2) || '0.00'}
                       </Typography>
                     </TableCell>
                     <TableCell>
