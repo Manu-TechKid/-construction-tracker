@@ -220,7 +220,7 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
         invoiceDate: invoiceDate ? new Date(invoiceDate) : new Date(), // Date to send to client
         dueDate: dueDate ? new Date(dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Due date
         notes,
-        createdBy: req.user ? req.user._id : null
+        createdBy: req.user.id
     };
 
     // Add manual invoice number if provided
@@ -277,6 +277,8 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
 
 // Update invoice
 exports.updateInvoice = catchAsync(async (req, res, next) => {
+    req.body.updatedBy = req.user.id;
+
     const invoice = await Invoice.findByIdAndUpdate(
         req.params.id,
         req.body,
@@ -718,7 +720,12 @@ exports.deleteInvoice = catchAsync(async (req, res, next) => {
         { billingStatus: 'pending', invoice: null }
     );
 
-    await Invoice.findByIdAndDelete(req.params.id);
+    // Perform a soft delete instead of a hard delete
+    invoice.deleted = true;
+    invoice.deletedBy = req.user.id;
+    invoice.deletedAt = new Date();
+    invoice.status = 'cancelled'; // Also mark as cancelled
+    await invoice.save();
 
     res.status(204).json({
         status: 'success',
