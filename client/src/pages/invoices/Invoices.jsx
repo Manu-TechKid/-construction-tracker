@@ -640,6 +640,8 @@ const Invoices = () => {
                 <TableCell>Due Date</TableCell>
                 <TableCell>Total</TableCell>
                 <TableCell>Status</TableCell>
+                <TableCell>Created By</TableCell>
+                <TableCell>Last Updated By</TableCell>
                 <TableCell>Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -772,6 +774,16 @@ const Invoices = () => {
                         color={getStatusColor(invoice.status)}
                         size="small"
                       />
+                    </TableCell>
+                    <TableCell>
+                      <Tooltip title={`Created on ${new Date(invoice.createdAt).toLocaleString()}`}>
+                        <Typography variant="body2">{invoice.createdBy?.name || 'System'}</Typography>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell>
+                      <Tooltip title={`Last updated on ${new Date(invoice.updatedAt).toLocaleString()}`}>
+                        <Typography variant="body2">{invoice.updatedBy?.name || 'N/A'}</Typography>
+                      </Tooltip>
                     </TableCell>
                     <TableCell>
                       <IconButton

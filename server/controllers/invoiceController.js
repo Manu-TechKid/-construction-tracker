@@ -63,8 +63,10 @@ exports.getAllInvoices = catchAsync(async (req, res, next) => {
   console.log('Invoice filter applied:', filter);
 
   const invoices = await Invoice.find(filter)
-    .populate('building', 'name address serviceManagerEmail generalManagerEmail maintenanceManagerEmail')
-    .populate('workOrders.workOrder', 'title description apartmentNumber status price cost scheduledDate')
+    .populate('building', 'name address')
+    .populate('workOrders.workOrder', 'title description apartmentNumber status price')
+    .populate('createdBy', 'name') // <-- ADDED
+    .populate('updatedBy', 'name') // <-- ADDED
     .sort('-createdAt');
 
   // Auto-mark overdue invoices
