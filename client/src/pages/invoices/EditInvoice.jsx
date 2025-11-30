@@ -94,14 +94,8 @@ const EditInvoice = () => {
       try {
         const updateData = {
           status: values.status,
-          invoiceDate:
-            values.invoiceDate instanceof Date
-              ? values.invoiceDate.toISOString()
-              : new Date(values.invoiceDate).toISOString(),
-          dueDate:
-            values.dueDate instanceof Date
-              ? values.dueDate.toISOString()
-              : new Date(values.dueDate).toISOString(),
+          invoiceDate: values.invoiceDate,
+          dueDate: values.dueDate,
           notes: values.notes,
         };
 
@@ -119,49 +113,16 @@ const EditInvoice = () => {
 
   // Load invoice data when available
   useEffect(() => {
-    console.log('EditInvoice: Invoice data received:', invoiceData);
-    if (invoiceData?.data) {
-      const invoice = invoiceData.data.invoice || invoiceData.data;
-      console.log('EditInvoice: Setting form values for invoice:', invoice);
-      try {
-        let invoiceDateValue = new Date();
-        let dueDateValue = new Date();
-
-        if (invoice.invoiceDate) {
-          const parsedInvoiceDate = new Date(invoice.invoiceDate);
-          if (!isNaN(parsedInvoiceDate.getTime())) {
-            invoiceDateValue = new Date(
-              parsedInvoiceDate.getTime() - parsedInvoiceDate.getTimezoneOffset() * 60000
-            );
-          }
-        }
-        if (invoice.dueDate) {
-          const parsedDate = new Date(invoice.dueDate);
-          if (!isNaN(parsedDate.getTime())) {
-            // Ensure we handle timezone properly - convert to local date
-            dueDateValue = new Date(parsedDate.getTime() - parsedDate.getTimezoneOffset() * 60000);
-          }
-        }
-
-        formik.setValues({
-          status: invoice.status || 'open',
-          invoiceDate: invoiceDateValue,
-          dueDate: dueDateValue,
-          notes: invoice.notes || '',
-        });
-      } catch (error) {
-        console.warn('Error setting form values:', error);
-        // Set default values if there's an error
-        formik.setValues({
-          status: invoice.status || 'open',
-          invoiceDate: new Date(),
-          dueDate: new Date(),
-          notes: invoice.notes || '',
-        });
-      }
+    if (invoice) {
+      formik.setValues({
+        status: invoice.status || 'open',
+        invoiceDate: invoice.invoiceDate ? new Date(invoice.invoiceDate) : new Date(),
+        dueDate: invoice.dueDate ? new Date(invoice.dueDate) : new Date(),
+        notes: invoice.notes || '',
+      });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invoiceData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoice]);
 
   if (isLoading) {
     return (
