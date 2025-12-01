@@ -17,6 +17,7 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  Checkbox,
   CircularProgress,
   Alert,
   Tabs,
