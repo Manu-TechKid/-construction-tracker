@@ -112,6 +112,13 @@ const workOrderSchema = new mongoose.Schema({
       uploadedAt: { type: Date, default: Date.now },
     },
   ],
+  deleted: {
+    type: Boolean,
+    default: false
+  },
+  deletedAt: {
+    type: Date
+  },
   services: [
     {
       name: { type: String, required: true },
