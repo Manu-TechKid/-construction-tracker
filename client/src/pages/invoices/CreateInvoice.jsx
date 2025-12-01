@@ -144,31 +144,10 @@ const CreateInvoice = () => {
 
   const [createInvoice, { isLoading: isCreating }] = useCreateInvoiceMutation();
 
-  // Calculate total amount from selected work orders with proper cost calculation
   const calculateTotal = () => {
     return selectedWorkOrders.reduce((total, workOrder) => {
-      let workOrderTotal = 0;
-      
-      // Priority 1: Calculate from services if available
-      if (workOrder.services && workOrder.services.length > 0) {
-        workOrderTotal = workOrder.services.reduce((sum, service) => {
-          return sum + (service.laborCost || 0) + (service.materialCost || 0);
-        }, 0);
-      }
-      // Priority 2: Use price field (what customer pays)
-      else if (workOrder.price && workOrder.price > 0) {
-        workOrderTotal = workOrder.price;
-      }
-      // Priority 3: Fall back to actual cost
-      else if (workOrder.actualCost && workOrder.actualCost > 0) {
-        workOrderTotal = workOrder.actualCost;
-      }
-      // Priority 4: Use estimated cost
-      else {
-        workOrderTotal = workOrder.estimatedCost || 0;
-      }
-      
-      return total + workOrderTotal;
+      const price = getWorkOrderCost(workOrder);
+      return total + price;
     }, 0);
   };
   
@@ -206,10 +185,11 @@ const CreateInvoice = () => {
         const invoiceData = {
           buildingId: values.buildingId,
           workOrderIds: values.workOrderIds,
-          invoiceDate: values.invoiceDate instanceof Date ? values.invoiceDate.toISOString() : new Date(values.invoiceDate).toISOString(),
-          dueDate: values.dueDate instanceof Date ? values.dueDate.toISOString() : new Date(values.dueDate).toISOString(),
+          invoiceDate: values.invoiceDate,
+          dueDate: values.dueDate,
           notes: values.notes,
-          invoiceNumber: values.invoiceNumber?.trim() || undefined
+          invoiceNumber: values.invoiceNumber?.trim() || undefined,
+          totalAmount: calculateTotal()
         };
 
         console.log('Invoice data being sent to API:', invoiceData);

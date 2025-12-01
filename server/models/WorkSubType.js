@@ -24,6 +24,11 @@ const workSubTypeSchema = new mongoose.Schema({
     trim: true,
     maxlength: [200, 'Description cannot be longer than 200 characters']
   },
+  price: {
+    type: Number,
+    min: [0, 'Price cannot be negative'],
+    default: 0
+  },
   estimatedDuration: {
     type: Number, // in hours
     min: [0, 'Estimated duration cannot be negative'],

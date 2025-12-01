@@ -49,10 +49,6 @@ const buildingSchema = new mongoose.Schema({
         enum: ['net_15', 'net_30', 'net_60', 'net_90'],
         default: 'net_30'
     },
-    serviceManager: {
-        type: String,
-        trim: true
-    },
     serviceManagerEmail: {
         type: String,
         trim: true,
@@ -62,19 +58,16 @@ const buildingSchema = new mongoose.Schema({
     // General Manager / Community Manager Contact
     generalManagerName: {
         type: String,
-        required: [true, 'General Manager name is required'],
         trim: true
     },
     generalManagerEmail: {
         type: String,
-        required: [true, 'General Manager email is required'],
         trim: true,
         lowercase: true,
         match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
     },
     generalManagerPhone: {
         type: String,
-        required: [true, 'General Manager phone is required'],
         trim: true
     },
     

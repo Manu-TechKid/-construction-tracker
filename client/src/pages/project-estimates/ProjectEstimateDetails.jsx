@@ -646,8 +646,7 @@ const ProjectEstimateDetails = () => {
             {getBuildingContacts().map((contact, index) => (
               <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selectedEmails.includes(contact.email)}
                     onChange={(e) => {
                       if (e.target.checked) {
@@ -656,7 +655,6 @@ const ProjectEstimateDetails = () => {
                         setSelectedEmails(prev => prev.filter(email => email !== contact.email));
                       }
                     }}
-                    style={{ marginRight: 8 }}
                   />
                   <Box>
                     <Typography variant="body2" fontWeight="bold">

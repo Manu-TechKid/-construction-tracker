@@ -271,21 +271,27 @@ const WorkOrderForm = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchedPricingService]);
 
-  // Auto-populate title and description from System Setup WorkSubType
+  // Auto-populate title, description, and price from System Setup WorkSubType
   useEffect(() => {
     if (!selectedWorkSubType) return;
-    
+
     // Auto-fill title if empty
     const currentTitle = formik.values.title?.trim() || '';
     if (!currentTitle && selectedWorkSubType.name) {
       formik.setFieldValue('title', selectedWorkSubType.name);
     }
-    
+
     // Auto-fill description if empty
     const currentDescription = formik.values.description?.trim() || '';
     if (!currentDescription && selectedWorkSubType.description) {
       formik.setFieldValue('description', selectedWorkSubType.description);
     }
+
+    // Auto-fill price from subtype if available
+    if (selectedWorkSubType.price > 0) {
+      formik.setFieldValue('price', selectedWorkSubType.price);
+    }
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedWorkSubType]);
 

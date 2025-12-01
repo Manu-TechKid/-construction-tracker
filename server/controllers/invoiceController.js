@@ -133,11 +133,8 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
         _id: { $in: workOrderIds },
         building: buildingId,
         $or: [
-            { billingStatus: { $exists: false } },
             { billingStatus: 'pending' },
-            { billingStatus: null }
-        ],
-        $or: [
+            { billingStatus: { $exists: false } },
             { invoice: { $exists: false } },
             { invoice: null }
         ]
@@ -195,9 +192,8 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
         };
     });
 
-    // NO TAX - invoices should not include tax
-    const tax = 0;
-    const total = subtotal;
+    // Use the total amount calculated from the frontend
+    const total = totalAmount || subtotal;
 
     // Create invoice with proper date handling
     const invoiceData = {
