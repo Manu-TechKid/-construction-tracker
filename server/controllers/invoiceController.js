@@ -193,6 +193,7 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
     });
 
     // Use the total amount calculated from the frontend
+    const tax = 0; // Tax is always 0 for now
     const total = totalAmount || subtotal;
 
     // Create invoice with proper date handling
