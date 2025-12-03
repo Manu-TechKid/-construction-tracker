@@ -89,11 +89,8 @@ const NotesSheet = () => {
     { value: 'high', label: 'High', color: 'error' },
   ];
 
-  const { data: notesData, isLoading, isError, refetch } = useGetNotesQuery({
-    building: selectedBuilding?._id
-  }, {
-    skip: !selectedBuilding?._id
-  });
+  // Fetch all notes and let the client-side filters handle display
+  const { data: notesData, isLoading, isError, refetch } = useGetNotesQuery();
   const [createNote, { isLoading: isCreating }] = useCreateNoteMutation();
   const [updateNote, { isLoading: isUpdating }] = useUpdateNoteMutation();
   const [deleteNote, { isLoading: isDeleting }] = useDeleteNoteMutation();
