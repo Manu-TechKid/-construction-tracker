@@ -91,6 +91,8 @@ const NotesSheet = () => {
 
   const { data: notesData, isLoading, isError, refetch } = useGetNotesQuery({
     building: selectedBuilding?._id
+  }, {
+    skip: !selectedBuilding?._id
   });
   const [createNote, { isLoading: isCreating }] = useCreateNoteMutation();
   const [updateNote, { isLoading: isUpdating }] = useUpdateNoteMutation();
