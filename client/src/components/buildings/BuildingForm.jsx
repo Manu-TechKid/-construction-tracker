@@ -17,12 +17,19 @@ const validationSchema = Yup.object().shape({
   name: Yup.string().required('Building name is required'),
   address: Yup.string().required('Address is required'),
   city: Yup.string().required('City is required'),
-  serviceManager: Yup.string(),
   
-  // Contact fields for automated email sending - Only General Manager required
-  generalManagerName: Yup.string().required('General Manager name is required'),
-  generalManagerEmail: Yup.string().email('Invalid email').required('General Manager email is required'),
-  generalManagerPhone: Yup.string().required('General Manager phone is required'),
+  // Contact fields - All optional but if email provided, name and phone required
+  generalManagerName: Yup.string().when('generalManagerEmail', {
+    is: (email) => email && email.length > 0,
+    then: (schema) => schema.required('General Manager name is required when email is provided'),
+    otherwise: (schema) => schema
+  }),
+  generalManagerEmail: Yup.string().email('Invalid email'),
+  generalManagerPhone: Yup.string().when('generalManagerEmail', {
+    is: (email) => email && email.length > 0,
+    then: (schema) => schema.required('General Manager phone is required when email is provided'),
+    otherwise: (schema) => schema
+  }),
   
   // Maintenance Manager - Optional but if email provided, name and phone required
   maintenanceManagerName: Yup.string().when('maintenanceManagerEmail', {
@@ -55,7 +62,6 @@ const BuildingForm = ({
     name: '',
     address: '',
     city: '',
-    serviceManager: '',
     
     // Contact fields
     generalManagerName: '',
@@ -148,22 +154,6 @@ const BuildingForm = ({
                       margin="normal"
                     />
                   </Grid>
-                  
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      id="serviceManager"
-                      name="serviceManager"
-                      label="Service Manager Name (Optional)"
-                      value={formik.values.serviceManager}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
-                      error={formik.touched.serviceManager && Boolean(formik.errors.serviceManager)}
-                      helperText="Leave empty if same as Maintenance Manager"
-                      variant="outlined"
-                      margin="normal"
-                    />
-                  </Grid>
                 </Grid>
               </CardContent>
             </Card>
@@ -178,7 +168,7 @@ const BuildingForm = ({
                 
                 {/* General Manager */}
                 <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
-                  General Manager / Community Manager
+                  General Manager / Community Manager (Optional)
                 </Typography>
                 <Grid container spacing={2} sx={{ mb: 3 }}>
                   <Grid item xs={12} sm={4}>
@@ -186,7 +176,7 @@ const BuildingForm = ({
                       fullWidth
                       id="generalManagerName"
                       name="generalManagerName"
-                      label="Full Name *"
+                      label="Full Name"
                       value={formik.values.generalManagerName}
                       onChange={formik.handleChange}
                       onBlur={formik.handleBlur}
@@ -201,7 +191,7 @@ const BuildingForm = ({
                       fullWidth
                       id="generalManagerEmail"
                       name="generalManagerEmail"
-                      label="Email *"
+                      label="Email"
                       type="email"
                       value={formik.values.generalManagerEmail}
                       onChange={formik.handleChange}
@@ -217,7 +207,7 @@ const BuildingForm = ({
                       fullWidth
                       id="generalManagerPhone"
                       name="generalManagerPhone"
-                      label="Phone *"
+                      label="Phone"
                       value={formik.values.generalManagerPhone}
                       onChange={formik.handleChange}
                       onBlur={formik.handleBlur}
@@ -231,7 +221,7 @@ const BuildingForm = ({
 
                 {/* Maintenance Manager */}
                 <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
-                  Maintenance Manager
+                  Maintenance Manager (Optional)
                 </Typography>
                 <Grid container spacing={2} sx={{ mb: 3 }}>
                   <Grid item xs={12} sm={4}>
@@ -239,7 +229,7 @@ const BuildingForm = ({
                       fullWidth
                       id="maintenanceManagerName"
                       name="maintenanceManagerName"
-                      label="Full Name *"
+                      label="Full Name"
                       value={formik.values.maintenanceManagerName}
                       onChange={formik.handleChange}
                       onBlur={formik.handleBlur}
@@ -254,7 +244,7 @@ const BuildingForm = ({
                       fullWidth
                       id="maintenanceManagerEmail"
                       name="maintenanceManagerEmail"
-                      label="Email *"
+                      label="Email"
                       type="email"
                       value={formik.values.maintenanceManagerEmail}
                       onChange={formik.handleChange}
@@ -270,7 +260,7 @@ const BuildingForm = ({
                       fullWidth
                       id="maintenanceManagerPhone"
                       name="maintenanceManagerPhone"
-                      label="Phone *"
+                      label="Phone"
                       value={formik.values.maintenanceManagerPhone}
                       onChange={formik.handleChange}
                       onBlur={formik.handleBlur}

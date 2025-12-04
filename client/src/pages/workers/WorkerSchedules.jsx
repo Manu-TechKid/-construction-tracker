@@ -125,7 +125,7 @@ const WorkerSchedules = () => {
   
   // State management
   const [currentWeek, setCurrentWeek] = useState(new Date());
-  const [selectedWorker, setSelectedWorker] = useState('');
+  const [selectedWorkers, setSelectedWorkers] = useState([]); // Changed to array for multi-select
   const [tabValue, setTabValue] = useState(0);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(null);
@@ -137,7 +137,7 @@ const WorkerSchedules = () => {
   const { data: schedulesData, isLoading: isLoadingSchedules, error: schedulesError } = useGetSchedulesQuery({
     startDate: startOfWeek(currentWeek).toISOString(),
     endDate: endOfWeek(currentWeek).toISOString(),
-    workerId: selectedWorker || undefined,
+    workerIds: selectedWorkers.length > 0 ? selectedWorkers : undefined,
   });
 
   // Debug logging removed for performance
@@ -343,9 +343,9 @@ const WorkerSchedules = () => {
   }, [currentWeek]);
 
   const filteredWorkers = useMemo(() => {
-    if (!selectedWorker) return workers;
-    return workers.filter(worker => worker._id === selectedWorker);
-  }, [workers, selectedWorker]);
+    if (selectedWorkers.length === 0) return workers;
+    return workers.filter(worker => selectedWorkers.includes(worker._id));
+  }, [workers, selectedWorkers]);
 
   // Calculate weekly hours for each worker
   const calculateWeeklyHours = useCallback((workerId) => {
@@ -596,13 +596,13 @@ const WorkerSchedules = () => {
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={12} sm={6} md={3}>
                 <FormControl fullWidth size="small">
-                  <InputLabel>Filter by Worker</InputLabel>
+                  <InputLabel>Filter by Workers</InputLabel>
                   <Select
-                    value={selectedWorker}
-                    onChange={(e) => setSelectedWorker(e.target.value)}
-                    label="Filter by Worker"
+                    multiple
+                    value={selectedWorkers}
+                    onChange={(e) => setSelectedWorkers(e.target.value)}
+                    label="Filter by Workers"
                   >
-                    <MenuItem value="">All Workers</MenuItem>
                     {Array.isArray(workers) && workers.length > 0 ? workers.map((worker) => (
                       <MenuItem key={worker._id || worker.id} value={worker._id || worker.id}>
                         {(() => {
