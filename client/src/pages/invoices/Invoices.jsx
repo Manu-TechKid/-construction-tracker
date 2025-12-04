@@ -63,7 +63,7 @@ const Invoices = () => {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterBuilding, setFilterBuilding] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [sortBy, setSortBy] = useState('invoiceDateDesc');
+  const [sortBy, setSortBy] = useState('invoiceNumberAsc');
   
   const defaultMonthRange = {
     startDate: startOfMonth(new Date()),
