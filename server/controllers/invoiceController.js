@@ -276,6 +276,18 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
 
 // Update invoice
 exports.updateInvoice = catchAsync(async (req, res, next) => {
+    // First, fetch the invoice to check its current status
+    const existingInvoice = await Invoice.findById(req.params.id);
+    
+    if (!existingInvoice) {
+        return next(new AppError('No invoice found with that ID', 404));
+    }
+    
+    // Prevent editing of paid invoices
+    if (existingInvoice.status === 'paid') {
+        return next(new AppError('Cannot edit a paid invoice. Please contact an administrator if you need to make changes.', 400));
+    }
+    
     req.body.updatedBy = req.user.id;
 
     const invoice = await Invoice.findByIdAndUpdate(
@@ -288,12 +300,9 @@ exports.updateInvoice = catchAsync(async (req, res, next) => {
     ).populate('building', 'name address')
      .populate('workOrders.workOrder', 'title description apartmentNumber');
 
-    if (!invoice) {
-        return next(new AppError('No invoice found with that ID', 404));
-    }
-
     res.status(200).json({
         status: 'success',
+        message: '✅ Invoice updated successfully',
         data: {
             invoice
         }

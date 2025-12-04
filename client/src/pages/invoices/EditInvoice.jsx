@@ -106,7 +106,7 @@ const EditInvoice = () => {
       } catch (error) {
         console.error('Failed to update invoice:', error);
         const errorMessage = error?.data?.message || error?.message || 'Failed to update invoice';
-        toast.error(errorMessage);
+        toast.error('❌ ' + errorMessage);
       }
     },
   });
