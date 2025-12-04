@@ -20,7 +20,8 @@ import {
 } from '@mui/material';
 
 const validationSchema = Yup.object().shape({
-  name: Yup.string().required('Name is required'),
+  firstName: Yup.string().required('First name is required'),
+  lastName: Yup.string().required('Last name is required'),
   email: Yup.string().email('Invalid email').required('Email is required'),
   phone: Yup.string().required('Phone is required'),
   skills: Yup.array().min(1, 'At least one skill is required'),
@@ -35,7 +36,8 @@ const WorkerForm = ({
   onCancel,
 }) => {
   const initialValues = {
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
     skills: [],
@@ -88,14 +90,30 @@ const WorkerForm = ({
                   <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
-                      id="name"
-                      name="name"
-                      label="Full Name"
-                      value={formik.values.name}
+                      id="firstName"
+                      name="firstName"
+                      label="First Name"
+                      value={formik.values.firstName}
                       onChange={formik.handleChange}
                       onBlur={formik.handleBlur}
-                      error={formik.touched.name && Boolean(formik.errors.name)}
-                      helperText={formik.touched.name && formik.errors.name}
+                      error={formik.touched.firstName && Boolean(formik.errors.firstName)}
+                      helperText={formik.touched.firstName && formik.errors.firstName}
+                      variant="outlined"
+                      margin="normal"
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      id="lastName"
+                      name="lastName"
+                      label="Last Name"
+                      value={formik.values.lastName}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      error={formik.touched.lastName && Boolean(formik.errors.lastName)}
+                      helperText={formik.touched.lastName && formik.errors.lastName}
                       variant="outlined"
                       margin="normal"
                     />

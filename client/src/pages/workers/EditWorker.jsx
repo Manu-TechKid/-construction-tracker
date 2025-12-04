@@ -77,7 +77,8 @@ const EditWorker = () => {
         
         <WorkerForm
           initialValues={{
-            name: worker.name || '',
+            firstName: worker.firstName || '',
+            lastName: worker.lastName || '',
             email: worker.email || '',
             phone: worker.phone || '',
             skills: worker.skills || [],
