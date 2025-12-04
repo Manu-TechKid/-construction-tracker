@@ -362,6 +362,14 @@ router.post('/:id/services', auth, authorize(['admin', 'manager']), async (req, 
       });
     }
     
+    // Validate service data
+    if (!req.body.category || !req.body.subcategory || !req.body.name) {
+      return res.status(400).json({
+        success: false,
+        message: 'Service must have category, subcategory, and name'
+      });
+    }
+    
     clientPricing.services.push(req.body);
     clientPricing.updatedBy = req.user.id;
     
@@ -374,9 +382,19 @@ router.post('/:id/services', auth, authorize(['admin', 'manager']), async (req, 
     });
   } catch (error) {
     console.error('Error adding service:', error);
+    
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors
+      });
+    }
+    
     res.status(500).json({
       success: false,
-      message: 'Server error while adding service'
+      message: 'Server error while adding service: ' + error.message
     });
   }
 });
@@ -400,10 +418,11 @@ router.put('/:id/services/:serviceId', auth, authorize(['admin', 'manager']), as
     if (!service) {
       return res.status(404).json({
         success: false,
-        message: 'Service not found'
+        message: 'Service not found in this pricing configuration'
       });
     }
     
+    // Update service fields
     Object.keys(req.body).forEach(key => {
       service[key] = req.body[key];
     });
@@ -419,9 +438,19 @@ router.put('/:id/services/:serviceId', auth, authorize(['admin', 'manager']), as
     });
   } catch (error) {
     console.error('Error updating service:', error);
+    
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors
+      });
+    }
+    
     res.status(500).json({
       success: false,
-      message: 'Server error while updating service'
+      message: 'Server error while updating service: ' + error.message
     });
   }
 });
@@ -445,7 +474,7 @@ router.delete('/:id/services/:serviceId', auth, authorize(['admin', 'manager']),
     if (!service) {
       return res.status(404).json({
         success: false,
-        message: 'Service not found'
+        message: 'Service not found in this pricing configuration'
       });
     }
     
@@ -461,9 +490,10 @@ router.delete('/:id/services/:serviceId', auth, authorize(['admin', 'manager']),
     });
   } catch (error) {
     console.error('Error removing service:', error);
+    
     res.status(500).json({
       success: false,
-      message: 'Server error while removing service'
+      message: 'Server error while removing service: ' + error.message
     });
   }
 });

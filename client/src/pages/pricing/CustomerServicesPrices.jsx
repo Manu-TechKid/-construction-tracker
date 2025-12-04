@@ -590,12 +590,17 @@ const CustomerServicesPrices = () => {
       console.log('Service payload:', payload);
 
       if (editingService) {
-        await updatePricingService({
-          pricingId: editingService.pricingId,
-          serviceId: editingService.serviceId,
-          service: payload,
-        }).unwrap();
-        toast.success('Service updated successfully');
+        try {
+          await updatePricingService({
+            pricingId: editingService.pricingId,
+            serviceId: editingService.serviceId,
+            service: payload,
+          }).unwrap();
+          toast.success('✅ Service updated successfully');
+        } catch (updateError) {
+          console.error('Update service error:', updateError);
+          throw updateError;
+        }
       } else {
         // For new services, find or create pricing config for the target building
         let buildingPricing = pricingData?.data?.clientPricing?.find(
@@ -622,16 +627,26 @@ const CustomerServicesPrices = () => {
             isActive: true
           };
 
-          const createdPricing = await createClientPricing(newPricingConfig).unwrap();
-          buildingPricing = createdPricing.data.clientPricing;
-          toast.success('Created new price sheet for building');
+          try {
+            const createdPricing = await createClientPricing(newPricingConfig).unwrap();
+            buildingPricing = createdPricing.data.clientPricing;
+            toast.success('✅ Created new price sheet for building');
+          } catch (pricingError) {
+            console.error('Create pricing error:', pricingError);
+            throw new Error('Failed to create price sheet: ' + (pricingError?.data?.message || pricingError?.message));
+          }
         }
 
-        await addPricingService({
-          pricingId: buildingPricing._id,
-          service: payload,
-        }).unwrap();
-        toast.success('Service added successfully');
+        try {
+          await addPricingService({
+            pricingId: buildingPricing._id,
+            service: payload,
+          }).unwrap();
+          toast.success('✅ Service added successfully');
+        } catch (addError) {
+          console.error('Add service error:', addError);
+          throw addError;
+        }
       }
 
       setServiceDialogOpen(false);
@@ -646,7 +661,13 @@ const CustomerServicesPrices = () => {
         data: error?.data,
         message: error?.data?.message || error?.message
       });
-      toast.error(error?.data?.message || error?.message || 'Failed to save service');
+      
+      const errorMessage = error?.data?.message || 
+                          error?.data?.errors?.[0] || 
+                          error?.message || 
+                          'Failed to save service. Please check all required fields and try again.';
+      
+      toast.error('❌ ' + errorMessage);
     }
   };
 
