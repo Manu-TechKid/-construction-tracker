@@ -25,11 +25,13 @@ const clientPricingSchema = new mongoose.Schema({
   
   // Service categories with pricing
   services: [{
-    // Main category (painting, cleaning, repairs, remodeling)
+    // Main category (painting, cleaning, repairs, remodeling, electrical, plumbing, hvac, etc.)
     category: {
       type: String,
       required: true,
-      enum: ['painting', 'cleaning', 'repairs', 'remodeling', 'other']
+      enum: ['painting', 'cleaning', 'repairs', 'remodeling', 'electrical', 'plumbing', 'hvac', 'carpentry', 'flooring', 'roofing', 'landscaping', 'security', 'inspection', 'maintenance', 'other'],
+      lowercase: true,
+      trim: true
     },
     
     // Subcategory (interior_painting, exterior_painting, deep_cleaning, etc.)

@@ -662,10 +662,23 @@ const CustomerServicesPrices = () => {
         message: error?.data?.message || error?.message
       });
       
-      const errorMessage = error?.data?.message || 
-                          error?.data?.errors?.[0] || 
-                          error?.message || 
-                          'Failed to save service. Please check all required fields and try again.';
+      // Extract detailed error message
+      let errorMessage = 'Failed to save service';
+      
+      if (error?.data?.message) {
+        errorMessage = error.data.message;
+      } else if (error?.data?.errors && Array.isArray(error.data.errors) && error.data.errors.length > 0) {
+        errorMessage = error.data.errors[0];
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      // Log full error for debugging
+      console.error('Full error object:', {
+        status: error?.status,
+        data: error?.data,
+        message: errorMessage
+      });
       
       toast.error('❌ ' + errorMessage);
     }

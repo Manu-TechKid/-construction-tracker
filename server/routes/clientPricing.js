@@ -412,10 +412,15 @@ router.post('/:id/services', auth, authorize(['admin', 'manager']), async (req, 
     console.error('Error adding service:', error);
     
     if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map(err => err.message);
+      const errors = Object.values(error.errors).map(err => {
+        if (err.kind === 'enum') {
+          return `${err.path} must be one of: ${err.enumValues.join(', ')}`;
+        }
+        return err.message;
+      });
       return res.status(400).json({
         success: false,
-        message: 'Validation error',
+        message: 'Validation error: ' + errors.join('; '),
         errors
       });
     }
@@ -497,10 +502,15 @@ router.put('/:id/services/:serviceId', auth, authorize(['admin', 'manager']), as
     console.error('Error updating service:', error);
     
     if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map(err => err.message);
+      const errors = Object.values(error.errors).map(err => {
+        if (err.kind === 'enum') {
+          return `${err.path} must be one of: ${err.enumValues.join(', ')}`;
+        }
+        return err.message;
+      });
       return res.status(400).json({
         success: false,
-        message: 'Validation error',
+        message: 'Validation error: ' + errors.join('; '),
         errors
       });
     }
