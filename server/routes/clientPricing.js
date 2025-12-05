@@ -362,11 +362,39 @@ router.post('/:id/services', auth, authorize(['admin', 'manager']), async (req, 
       });
     }
     
-    // Validate service data
-    if (!req.body.category || !req.body.subcategory || !req.body.name) {
+    // Validate service data - check required fields
+    if (!req.body.category) {
       return res.status(400).json({
         success: false,
-        message: 'Service must have category, subcategory, and name'
+        message: 'Service category is required'
+      });
+    }
+    
+    if (!req.body.subcategory) {
+      return res.status(400).json({
+        success: false,
+        message: 'Service subcategory is required'
+      });
+    }
+    
+    if (!req.body.name) {
+      return res.status(400).json({
+        success: false,
+        message: 'Service name is required'
+      });
+    }
+    
+    if (!req.body.pricing || !req.body.pricing.basePrice) {
+      return res.status(400).json({
+        success: false,
+        message: 'Service pricing with basePrice is required'
+      });
+    }
+    
+    if (!req.body.pricing.unitType) {
+      return res.status(400).json({
+        success: false,
+        message: 'Service unitType is required'
       });
     }
     
@@ -419,6 +447,35 @@ router.put('/:id/services/:serviceId', auth, authorize(['admin', 'manager']), as
       return res.status(404).json({
         success: false,
         message: 'Service not found in this pricing configuration'
+      });
+    }
+    
+    // Validate required fields if being updated
+    if (req.body.category !== undefined && !req.body.category) {
+      return res.status(400).json({
+        success: false,
+        message: 'Service category cannot be empty'
+      });
+    }
+    
+    if (req.body.subcategory !== undefined && !req.body.subcategory) {
+      return res.status(400).json({
+        success: false,
+        message: 'Service subcategory cannot be empty'
+      });
+    }
+    
+    if (req.body.name !== undefined && !req.body.name) {
+      return res.status(400).json({
+        success: false,
+        message: 'Service name cannot be empty'
+      });
+    }
+    
+    if (req.body.pricing && !req.body.pricing.basePrice) {
+      return res.status(400).json({
+        success: false,
+        message: 'Service basePrice cannot be empty'
       });
     }
     
