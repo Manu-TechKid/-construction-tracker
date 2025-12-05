@@ -257,17 +257,21 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
     // Add manual invoice number if provided
     if (invoiceNumber && invoiceNumber.trim()) {
         // Check if invoice number already exists (excluding deleted invoices)
+        const normalizedNumber = invoiceNumber.trim().toUpperCase();
+        console.log('Checking for existing invoice with number:', normalizedNumber);
+        
         const existingInvoice = await Invoice.findOne({ 
-            invoiceNumber: invoiceNumber.trim().toUpperCase(),
-            $or: [
-                { deleted: { $exists: false } },
-                { deleted: false }
-            ]
+            invoiceNumber: normalizedNumber,
+            deleted: { $ne: true } // Only check non-deleted invoices
         });
+        
+        console.log('Existing invoice check result:', existingInvoice ? 'FOUND' : 'NOT FOUND');
+        
         if (existingInvoice) {
-            return next(new AppError('An invoice with this number already exists', 400));
+            console.log('Invoice number conflict:', existingInvoice._id, existingInvoice.deleted);
+            return next(new AppError(`An invoice with this invoiceNumber already exists`, 400));
         }
-        invoiceData.invoiceNumber = invoiceNumber.trim().toUpperCase();
+        invoiceData.invoiceNumber = normalizedNumber;
     }
     // If no invoice number provided, the pre-save hook will generate one
 
