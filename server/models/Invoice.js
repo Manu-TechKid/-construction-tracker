@@ -95,16 +95,20 @@ invoiceSchema.pre('save', async function(next) {
     if (this.isNew && !this.invoiceNumber) {
         try {
             const currentYear = new Date().getFullYear();
+            console.log('Generating invoice number for year:', currentYear);
             let counter = await InvoiceCounter.findOneAndUpdate(
                 { year: currentYear },
                 { $inc: { count: 1 } },
                 { new: true, upsert: true }
             );
+            console.log('Counter result:', counter);
             this.invoiceNumber = `${currentYear}-${String(counter.count).padStart(4, '0')}`;
+            console.log('Generated invoice number:', this.invoiceNumber);
         } catch (err) {
             console.error('Error generating invoice number:', err);
             // Fallback to timestamp-based number
-            this.invoiceNumber = `${Date.now()}`;
+            this.invoiceNumber = `INV-${Date.now()}`;
+            console.log('Using fallback invoice number:', this.invoiceNumber);
         }
     }
     next();

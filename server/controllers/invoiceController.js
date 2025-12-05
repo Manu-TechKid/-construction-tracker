@@ -264,10 +264,11 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
         console.log('Generated invoice number:', invoice.invoiceNumber);
 
         // Update work orders billing status
-        await WorkOrder.updateMany(
+        const updateResult = await WorkOrder.updateMany(
             { _id: { $in: workOrderIds } },
             { billingStatus: 'invoiced', invoice: invoice._id }
         );
+        console.log('Work orders updated:', updateResult);
 
         const populatedInvoice = await Invoice.findById(invoice._id)
             .populate('building', 'name address')
@@ -286,10 +287,24 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
         console.error('Error creating invoice:', error);
         console.error('Error message:', error.message);
         console.error('Error stack:', error.stack);
+        console.error('Error code:', error.code);
+        console.error('Error name:', error.name);
 
         if (error.name === 'ValidationError') {
             console.error('Validation errors:', error.errors);
-            return next(new AppError(`Validation failed: ${Object.values(error.errors).map(err => err.message).join(', ')}`, 400));
+            const validationMessages = Object.entries(error.errors)
+                .map(([field, err]) => `${field}: ${err.message}`)
+                .join('; ');
+            return next(new AppError(`Validation failed: ${validationMessages}`, 400));
+        }
+
+        if (error.code === 11000) {
+            const field = Object.keys(error.keyPattern)[0];
+            return next(new AppError(`An invoice with this ${field} already exists`, 400));
+        }
+
+        if (error.message) {
+            return next(new AppError(`Failed to create invoice: ${error.message}`, 400));
         }
 
         return next(new AppError('Failed to create invoice', 500));
