@@ -310,11 +310,23 @@ exports.updateInvoice = catchAsync(async (req, res, next) => {
         return next(new AppError('Cannot edit a paid invoice. Please contact an administrator if you need to make changes.', 400));
     }
     
-    req.body.updatedBy = req.user.id;
+    // Allow updating: status, invoiceDate, dueDate, notes
+    const allowedFields = ['status', 'invoiceDate', 'dueDate', 'notes'];
+    const updateData = {};
+    
+    allowedFields.forEach(field => {
+        if (req.body[field] !== undefined) {
+            updateData[field] = req.body[field];
+        }
+    });
+    
+    updateData.updatedBy = req.user.id;
+    
+    console.log('Updating invoice with:', updateData);
 
     const invoice = await Invoice.findByIdAndUpdate(
         req.params.id,
-        req.body,
+        updateData,
         {
             new: true,
             runValidators: true
@@ -344,22 +356,34 @@ exports.addWorkOrdersToInvoice = catchAsync(async (req, res, next) => {
         return next(new AppError('Invoice not found', 404));
     }
 
-    // Fetch work orders with full details
+    // Fetch work orders with full details using proper billing status check
     const workOrders = await WorkOrder.find({ 
         _id: { $in: workOrderIds },
-        $or: [
-            { billingStatus: { $exists: false } },
-            { billingStatus: 'pending' },
-            { billingStatus: null },
-            { billingStatus: { $ne: 'invoiced' } }
+        $and: [
+            {
+                $or: [
+                    { billingStatus: { $exists: false } },
+                    { billingStatus: 'pending' },
+                    { billingStatus: null }
+                ]
+            },
+            {
+                $or: [
+                    { invoice: { $exists: false } },
+                    { invoice: null }
+                ]
+            }
         ]
     }).populate('workType workSubType');
 
+    console.log('Found work orders to add:', workOrders.length);
+    
     if (workOrders.length === 0) {
-        return next(new AppError('No valid work orders found to add', 400));
+        return next(new AppError('No unbilled work orders found to add', 400));
     }
 
     // Add work orders to invoice
+    let addedCount = 0;
     workOrders.forEach(wo => {
         // Check if work order is already in invoice
         const exists = invoice.workOrders.some(
@@ -367,18 +391,33 @@ exports.addWorkOrdersToInvoice = catchAsync(async (req, res, next) => {
         );
         
         if (!exists) {
+            // Calculate price using same priority as createInvoice
+            let totalPrice = 0;
+            if (wo.services && wo.services.length > 0) {
+                totalPrice = wo.services.reduce((sum, service) => {
+                    return sum + (service.laborCost || 0) + (service.materialCost || 0);
+                }, 0);
+            } else if (wo.price && wo.price > 0) {
+                totalPrice = wo.price;
+            } else if (wo.actualCost && wo.actualCost > 0) {
+                totalPrice = wo.actualCost;
+            } else {
+                totalPrice = wo.estimatedCost || 0;
+            }
+            
             invoice.workOrders.push({
                 workOrder: wo._id,
-                description: wo.description || wo.title,
+                description: `${wo.title || 'Work Order'} (Apt: ${wo.apartmentNumber || 'N/A'})`,
                 quantity: 1,
-                unitPrice: wo.price || 0,
-                total: wo.price || 0
+                unitPrice: Number(totalPrice.toFixed(2)),
+                totalPrice: Number(totalPrice.toFixed(2))
             });
+            addedCount++;
         }
     });
 
     // Recalculate totals
-    invoice.subtotal = invoice.workOrders.reduce((sum, wo) => sum + (wo.total || 0), 0);
+    invoice.subtotal = invoice.workOrders.reduce((sum, wo) => sum + (wo.totalPrice || 0), 0);
     invoice.total = invoice.subtotal + (invoice.tax || 0) - (invoice.discount || 0);
 
     await invoice.save();
@@ -395,7 +434,7 @@ exports.addWorkOrdersToInvoice = catchAsync(async (req, res, next) => {
 
     res.status(200).json({
         status: 'success',
-        message: `${workOrders.length} work order(s) added to invoice`,
+        message: `${addedCount} work order(s) added to invoice`,
         data: { invoice: updatedInvoice }
     });
 });
