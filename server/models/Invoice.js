@@ -102,6 +102,9 @@ invoiceSchema.pre('save', async function(next) {
                 { new: true, upsert: true }
             );
             console.log('Counter result:', counter);
+            if (!counter || !counter.count) {
+                throw new Error('Failed to generate counter');
+            }
             this.invoiceNumber = `${currentYear}-${String(counter.count).padStart(4, '0')}`;
             console.log('Generated invoice number:', this.invoiceNumber);
         } catch (err) {
@@ -116,19 +119,29 @@ invoiceSchema.pre('save', async function(next) {
 
 // Pre-save hook to auto-mark invoices as overdue if past due date
 invoiceSchema.pre('save', function(next) {
-    if (this.status !== 'paid' && this.status !== 'cancelled' && this.dueDate) {
-        const now = new Date();
-        const dueDate = new Date(this.dueDate);
-        if (now > dueDate && this.status !== 'overdue') {
-            this.status = 'overdue';
-            this.statusHistory.push({
-                status: 'overdue',
-                timestamp: new Date(),
-                notes: 'Automatically marked as overdue - due date passed'
-            });
+    try {
+        // Initialize statusHistory if it doesn't exist
+        if (!this.statusHistory) {
+            this.statusHistory = [];
         }
+        
+        if (this.status !== 'paid' && this.status !== 'cancelled' && this.dueDate) {
+            const now = new Date();
+            const dueDate = new Date(this.dueDate);
+            if (now > dueDate && this.status !== 'overdue') {
+                this.status = 'overdue';
+                this.statusHistory.push({
+                    status: 'overdue',
+                    timestamp: new Date(),
+                    notes: 'Automatically marked as overdue - due date passed'
+                });
+            }
+        }
+        next();
+    } catch (error) {
+        console.error('Error in invoice pre-save hook:', error);
+        next(error);
     }
-    next();
 });
 
 // Post-find hook to recalculate totals when invoices are retrieved
