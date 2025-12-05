@@ -132,16 +132,32 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
     const workOrders = await WorkOrder.find({
         _id: { $in: workOrderIds },
         building: buildingId,
-        $or: [
-            { billingStatus: 'pending' },
-            { billingStatus: { $exists: false } },
-            { invoice: { $exists: false } },
-            { invoice: null }
+        $and: [
+            {
+                $or: [
+                    { billingStatus: { $exists: false } },
+                    { billingStatus: 'pending' },
+                    { billingStatus: null }
+                ]
+            },
+            {
+                $or: [
+                    { invoice: { $exists: false } },
+                    { invoice: null }
+                ]
+            }
         ]
     }).populate('building', 'name address');
 
     console.log('Found work orders for invoice:', workOrders.length);
     console.log('Work orders:', workOrders);
+    
+    if (workOrders.length < workOrderIds.length) {
+        console.log('Warning: Not all work orders found. Requested:', workOrderIds.length, 'Found:', workOrders.length);
+        const foundIds = workOrders.map(wo => wo._id.toString());
+        const missingIds = workOrderIds.filter(id => !foundIds.includes(id.toString()));
+        console.log('Missing work order IDs:', missingIds);
+    }
 
     if (workOrders.length === 0) {
         return next(new AppError('No eligible work orders found for invoicing. Work orders may already be invoiced.', 400));
