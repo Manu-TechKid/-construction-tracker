@@ -549,8 +549,16 @@ exports.getUnbilledWorkOrders = catchAsync(async (req, res, next) => {
     }).populate('building', 'name address')
       .sort('-createdAt');
 
-    console.log('Found work orders:', workOrders.length);
-    console.log('Work orders data:', workOrders);
+    console.log('Found unbilled work orders:', workOrders.length);
+    if (workOrders.length > 0) {
+        console.log('First work order sample:', {
+            id: workOrders[0]._id,
+            title: workOrders[0].title,
+            billingStatus: workOrders[0].billingStatus,
+            invoice: workOrders[0].invoice,
+            status: workOrders[0].status
+        });
+    }
 
     res.status(200).json({
         status: 'success',
@@ -734,10 +742,22 @@ exports.deleteInvoice = catchAsync(async (req, res, next) => {
 
     // Reset work orders billing status if invoice is deleted
     const workOrderIds = invoice.workOrders.map(wo => wo.workOrder).filter(Boolean);
-    await WorkOrder.updateMany(
-        { _id: { $in: workOrderIds } },
-        { billingStatus: 'pending', invoice: null }
-    );
+    
+    console.log('Deleting invoice:', req.params.id);
+    console.log('Work order IDs to reset:', workOrderIds);
+    
+    if (workOrderIds.length > 0) {
+        const updateResult = await WorkOrder.updateMany(
+            { _id: { $in: workOrderIds } },
+            { 
+                $set: {
+                    billingStatus: 'pending',
+                    invoice: null
+                }
+            }
+        );
+        console.log('Work orders updated:', updateResult);
+    }
 
     // Perform a soft delete instead of a hard delete
     invoice.deleted = true;
@@ -745,6 +765,8 @@ exports.deleteInvoice = catchAsync(async (req, res, next) => {
     invoice.deletedAt = new Date();
     invoice.status = 'cancelled'; // Also mark as cancelled
     await invoice.save();
+    
+    console.log('Invoice marked as deleted:', invoice._id);
 
     res.status(204).json({
         status: 'success',
