@@ -74,7 +74,7 @@ const CreateInvoice = () => {
     endDate: endOfMonth(new Date()),
     workType: '',
     workSubType: '',
-    status: 'completed' // Default to completed work orders
+    status: '' // Show all work orders regardless of status
   });
   
   const { data: buildingsResponse, isLoading: isLoadingBuildings, error: buildingsError } = useGetBuildingsQuery();
