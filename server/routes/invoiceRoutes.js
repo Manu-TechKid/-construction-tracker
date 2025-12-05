@@ -14,8 +14,9 @@ router.get('/building/:buildingId/unbilled', invoiceController.getUnbilledWorkOr
 // Get filtered work orders for invoice creation
 router.get('/work-orders/filtered', invoiceController.getFilteredWorkOrders);
 
-// Debug endpoint
+// Debug endpoints
 router.get('/debug/invoice-number/:invoiceNumber', invoiceController.debugInvoiceNumber);
+router.post('/debug/force-delete-draft/:invoiceNumber', invoiceController.forceDeleteDraftInvoice);
 
 // Worker routes (view only)
 router.get('/my-invoices', invoiceController.getMyInvoices);

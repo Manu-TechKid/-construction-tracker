@@ -7,7 +7,7 @@ const mongoose = require('mongoose');
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
 
-// Debug: Check and fix invoice 5811 issue
+// Debug: Check and fix invoice number issue
 exports.debugInvoiceNumber = catchAsync(async (req, res, next) => {
     const { invoiceNumber } = req.params;
     
@@ -41,6 +41,53 @@ exports.debugInvoiceNumber = catchAsync(async (req, res, next) => {
         withPreFindHook: withDeletedFilter,
         allInvoices,
         message: 'Debug info retrieved'
+    });
+});
+
+// Admin: Force delete all draft invoices with a specific number
+exports.forceDeleteDraftInvoice = catchAsync(async (req, res, next) => {
+    const { invoiceNumber } = req.params;
+    
+    console.log('=== FORCE DELETE: Marking draft invoices as deleted ===');
+    console.log('Invoice number:', invoiceNumber);
+    
+    // Find all draft invoices with this number
+    const draftInvoices = await Invoice.collection.find({
+        invoiceNumber: invoiceNumber.toUpperCase(),
+        status: 'draft',
+        deleted: { $ne: true }
+    }).toArray();
+    
+    console.log('Found draft invoices:', draftInvoices.length);
+    
+    if (draftInvoices.length === 0) {
+        return res.status(200).json({
+            message: 'No draft invoices found to delete',
+            deleted: 0
+        });
+    }
+    
+    // Mark them as deleted
+    const result = await Invoice.collection.updateMany(
+        {
+            invoiceNumber: invoiceNumber.toUpperCase(),
+            status: 'draft',
+            deleted: { $ne: true }
+        },
+        {
+            $set: {
+                deleted: true,
+                deletedAt: new Date(),
+                status: 'cancelled'
+            }
+        }
+    );
+    
+    console.log('Deleted invoices:', result.modifiedCount);
+    
+    res.status(200).json({
+        message: `Successfully marked ${result.modifiedCount} draft invoice(s) as deleted`,
+        deleted: result.modifiedCount
     });
 });
 
@@ -297,14 +344,19 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
         const normalizedNumber = invoiceNumber.trim().toUpperCase();
         console.log('Checking for existing invoice with number:', normalizedNumber);
         
-        // Use .findOne() which will trigger the pre-find hook to exclude deleted invoices
+        // Explicitly check for non-deleted invoices
+        // This bypasses any issues with pre-find hooks not applying
         const existingInvoice = await Invoice.findOne({ 
-            invoiceNumber: normalizedNumber
+            invoiceNumber: normalizedNumber,
+            $or: [
+                { deleted: { $exists: false } },
+                { deleted: false }
+            ]
         });
         
         console.log('Existing invoice check result:', existingInvoice ? 'FOUND' : 'NOT FOUND');
         if (existingInvoice) {
-            console.log('Invoice number conflict - found invoice:', {
+            console.log('Invoice number conflict - found active invoice:', {
                 id: existingInvoice._id,
                 number: existingInvoice.invoiceNumber,
                 deleted: existingInvoice.deleted,
