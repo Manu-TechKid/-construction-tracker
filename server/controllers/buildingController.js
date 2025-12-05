@@ -150,7 +150,6 @@ exports.createBuilding = catchAsync(async (req, res, next) => {
             city: sanitizedBody.city || '',
             administrator: sanitizedBody.administrator || req.user._id,
             administratorName: sanitizedBody.administratorName || '',
-            serviceManager: sanitizedBody.serviceManager,
             serviceManagerEmail: sanitizedBody.serviceManagerEmail,
             paymentTerms: sanitizedBody.paymentTerms,
             description: sanitizedBody.description,

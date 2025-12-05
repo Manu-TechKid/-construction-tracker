@@ -325,7 +325,12 @@ exports.addWorkOrdersToInvoice = catchAsync(async (req, res, next) => {
     // Fetch work orders with full details
     const workOrders = await WorkOrder.find({ 
         _id: { $in: workOrderIds },
-        billingStatus: { $ne: 'invoiced' } // Only add work orders that aren't already invoiced
+        $or: [
+            { billingStatus: { $exists: false } },
+            { billingStatus: 'pending' },
+            { billingStatus: null },
+            { billingStatus: { $ne: 'invoiced' } }
+        ]
     }).populate('workType workSubType');
 
     if (workOrders.length === 0) {
