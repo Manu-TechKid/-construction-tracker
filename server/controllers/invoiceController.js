@@ -165,26 +165,39 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
 
     // Calculate totals using consistent logic with frontend
     let subtotal = 0;
-    const invoiceWorkOrders = workOrders.map(wo => {
+    const invoiceWorkOrders = workOrders.map((wo, index) => {
         let totalPrice = 0;
+
+        console.log(`Processing work order ${index + 1}:`, {
+            id: wo._id,
+            title: wo.title,
+            services: wo.services?.length || 0,
+            price: wo.price,
+            actualCost: wo.actualCost,
+            estimatedCost: wo.estimatedCost
+        });
 
         // Priority 1: Calculate from services if available
         if (wo.services && wo.services.length > 0) {
             totalPrice = wo.services.reduce((sum, service) => {
                 return sum + (service.laborCost || 0) + (service.materialCost || 0);
             }, 0);
+            console.log(`  → Using services total: ${totalPrice}`);
         }
         // Priority 2: Use price field (what customer pays)
         else if (wo.price && wo.price > 0) {
             totalPrice = wo.price;
+            console.log(`  → Using price field: ${totalPrice}`);
         }
         // Priority 3: Fall back to actual cost
         else if (wo.actualCost && wo.actualCost > 0) {
             totalPrice = wo.actualCost;
+            console.log(`  → Using actualCost: ${totalPrice}`);
         }
         // Priority 4: Use estimated cost
         else {
             totalPrice = wo.estimatedCost || 0;
+            console.log(`  → Using estimatedCost: ${totalPrice}`);
         }
 
         subtotal += totalPrice;
@@ -207,6 +220,9 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
             }
         };
     });
+    
+    console.log('Calculated subtotal:', subtotal);
+    console.log('Invoice work orders:', invoiceWorkOrders);
 
     // Use the total amount calculated from the frontend
     const tax = 0; // Tax is always 0 for now
