@@ -224,8 +224,14 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
 
     // Add manual invoice number if provided
     if (invoiceNumber && invoiceNumber.trim()) {
-        // Check if invoice number already exists
-        const existingInvoice = await Invoice.findOne({ invoiceNumber: invoiceNumber.trim().toUpperCase() });
+        // Check if invoice number already exists (excluding deleted invoices)
+        const existingInvoice = await Invoice.findOne({ 
+            invoiceNumber: invoiceNumber.trim().toUpperCase(),
+            $or: [
+                { deleted: { $exists: false } },
+                { deleted: false }
+            ]
+        });
         if (existingInvoice) {
             return next(new AppError('An invoice with this number already exists', 400));
         }
