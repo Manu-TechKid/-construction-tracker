@@ -7,6 +7,43 @@ const mongoose = require('mongoose');
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
 
+// Debug: Check and fix invoice 5811 issue
+exports.debugInvoiceNumber = catchAsync(async (req, res, next) => {
+    const { invoiceNumber } = req.params;
+    
+    console.log('=== DEBUG: Checking invoice number ===');
+    console.log('Looking for invoice number:', invoiceNumber);
+    
+    // Check with deleted filter
+    const withDeletedFilter = await Invoice.findOne({ 
+        invoiceNumber: invoiceNumber.toUpperCase()
+    });
+    
+    console.log('With pre-find hook (should exclude deleted):', withDeletedFilter ? {
+        id: withDeletedFilter._id,
+        number: withDeletedFilter.invoiceNumber,
+        deleted: withDeletedFilter.deleted,
+        status: withDeletedFilter.status
+    } : 'NOT FOUND');
+    
+    // Check without any filter (raw query)
+    const allInvoices = await Invoice.collection.find({ 
+        invoiceNumber: invoiceNumber.toUpperCase()
+    }).toArray();
+    
+    console.log('All invoices with this number (raw query):', allInvoices.length);
+    allInvoices.forEach((inv, idx) => {
+        console.log(`  ${idx + 1}. ID: ${inv._id}, deleted: ${inv.deleted}, status: ${inv.status}`);
+    });
+    
+    res.status(200).json({
+        invoiceNumber,
+        withPreFindHook: withDeletedFilter,
+        allInvoices,
+        message: 'Debug info retrieved'
+    });
+});
+
 // Get all invoices
 exports.getAllInvoices = catchAsync(async (req, res, next) => {
   const {
@@ -260,15 +297,19 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
         const normalizedNumber = invoiceNumber.trim().toUpperCase();
         console.log('Checking for existing invoice with number:', normalizedNumber);
         
+        // Use .findOne() which will trigger the pre-find hook to exclude deleted invoices
         const existingInvoice = await Invoice.findOne({ 
-            invoiceNumber: normalizedNumber,
-            deleted: { $ne: true } // Only check non-deleted invoices
+            invoiceNumber: normalizedNumber
         });
         
         console.log('Existing invoice check result:', existingInvoice ? 'FOUND' : 'NOT FOUND');
-        
         if (existingInvoice) {
-            console.log('Invoice number conflict:', existingInvoice._id, existingInvoice.deleted);
+            console.log('Invoice number conflict - found invoice:', {
+                id: existingInvoice._id,
+                number: existingInvoice.invoiceNumber,
+                deleted: existingInvoice.deleted,
+                status: existingInvoice.status
+            });
             return next(new AppError(`An invoice with this invoiceNumber already exists`, 400));
         }
         invoiceData.invoiceNumber = normalizedNumber;
