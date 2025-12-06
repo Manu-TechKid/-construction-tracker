@@ -340,20 +340,16 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
 
     // Add manual invoice number if provided
     if (invoiceNumber && invoiceNumber.trim()) {
-        // Check if invoice number already exists (excluding deleted invoices)
+        // Check if invoice number already exists (excluding soft-deleted invoices)
         const normalizedNumber = invoiceNumber.trim().toUpperCase();
         console.log('Checking for existing invoice with number:', normalizedNumber);
-        
-        // Explicitly check for non-deleted invoices
-        // This bypasses any issues with pre-find hooks not applying
-        const existingInvoice = await Invoice.findOne({ 
+
+        // Only consider invoices that are not soft-deleted
+        const existingInvoice = await Invoice.findOne({
             invoiceNumber: normalizedNumber,
-            $or: [
-                { deleted: { $exists: false } },
-                { deleted: false }
-            ]
+            deleted: { $ne: true }
         });
-        
+
         console.log('Existing invoice check result:', existingInvoice ? 'FOUND' : 'NOT FOUND');
         if (existingInvoice) {
             console.log('Invoice number conflict - found active invoice:', {
@@ -362,7 +358,13 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
                 deleted: existingInvoice.deleted,
                 status: existingInvoice.status
             });
-            return next(new AppError(`An invoice with this invoiceNumber already exists`, 400));
+            return next(
+                new AppError(
+                    `An invoice with this invoiceNumber already exists (status: ${existingInvoice.status || 'unknown'}). ` +
+                    `Please delete or change the existing invoice before reusing this number.`,
+                    400
+                )
+            );
         }
         invoiceData.invoiceNumber = normalizedNumber;
     }
