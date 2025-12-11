@@ -217,7 +217,7 @@ const EditInvoice = () => {
     }).format(amount || 0);
   };
   
-  const availableWorkOrders = unbilledData?.data?.workOrders || [];
+  const availableWorkOrders = Array.isArray(unbilledData?.data) ? unbilledData.data : (unbilledData?.data?.workOrders || []);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>

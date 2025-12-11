@@ -736,6 +736,8 @@ exports.getUnbilledWorkOrders = catchAsync(async (req, res, next) => {
             }
         ]
     }).populate('building', 'name address')
+      .populate('workType', 'name')
+      .populate('workSubType', 'name')
       .sort('-createdAt');
 
     console.log('Found unbilled work orders:', workOrders.length);
