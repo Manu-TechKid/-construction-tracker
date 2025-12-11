@@ -230,6 +230,8 @@ exports.updateBuilding = catchAsync(async (req, res, next) => {
         delete updateData.geofenceRadius;
     }
     
+    console.log('Attempting to update building with sanitized data:', JSON.stringify(updateData, null, 2));
+
     try {
         const building = await Building.findByIdAndUpdate(
             req.params.id,
