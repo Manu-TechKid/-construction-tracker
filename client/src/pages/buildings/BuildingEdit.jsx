@@ -22,22 +22,31 @@ const BuildingEdit = () => {
       navigate(`/buildings/${id}`);
     } catch (error) {
       console.error('Failed to update building:', error);
+      console.error('Error data:', error?.data);
+      console.error('Error status:', error?.status);
+      
       const backendMessage = error?.data?.message || error?.message || 'Failed to update building';
-      const fieldErrors = error?.data?.fieldErrors;
-      const errorMessage = Array.isArray(fieldErrors) && fieldErrors.length > 0
-        ? fieldErrors.join('; ')
-        : backendMessage;
+      let errorMessage = backendMessage;
 
-      if (backendMessage === 'Something went very wrong!') {
+      // Handle validation errors from backend
+      if (error?.data?.message && error.data.message.includes('Validation error:')) {
+        errorMessage = error.data.message;
+      }
+
+      if (error?.status === 404) {
+        toast.error('❌ Building not found. It may have been deleted by another user.');
+      } else if (error?.status === 400) {
+        toast.error(`❌ ${errorMessage}`);
+      } else if (error?.status === 500) {
+        toast.error('❌ Server error while updating building. Please try again or contact support.');
+      } else if (backendMessage === 'Something went very wrong!') {
         toast.error('❌ Unexpected server error while updating building. Please try again or contact support.');
       } else if (errorMessage.includes('duplicate') || errorMessage.includes('already exists')) {
         toast.error('❌ A building with this name already exists. Please choose a different name.');
       } else if (errorMessage.includes('validation') || errorMessage.includes('required')) {
-        toast.error('❌ Please fill in all required fields correctly.');
+        toast.error(`❌ ${errorMessage}`);
       } else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
         toast.error('🌐 Network error. Please check your connection and try again.');
-      } else if (errorMessage.includes('not found') || errorMessage.includes('404')) {
-        toast.error('❌ Building not found. It may have been deleted by another user.');
       } else {
         toast.error(`❌ Failed to update building: ${errorMessage}`);
       }
