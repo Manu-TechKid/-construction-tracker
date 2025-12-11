@@ -487,8 +487,10 @@ exports.addWorkOrdersToInvoice = catchAsync(async (req, res, next) => {
     }
 
     // Fetch work orders with full details using proper billing status check
+    // Also ensure they belong to the same building as the invoice
     const workOrders = await WorkOrder.find({ 
         _id: { $in: workOrderIds },
+        building: invoice.building,
         $and: [
             {
                 $or: [
@@ -507,6 +509,8 @@ exports.addWorkOrdersToInvoice = catchAsync(async (req, res, next) => {
     }).populate('workType workSubType');
 
     console.log('Found work orders to add:', workOrders.length);
+    console.log('Invoice building:', invoice.building);
+    console.log('Requested work order IDs:', workOrderIds);
     
     if (workOrders.length === 0) {
         return next(new AppError('No unbilled work orders found to add', 400));

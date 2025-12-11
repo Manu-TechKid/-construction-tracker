@@ -414,11 +414,28 @@ exports.convertToInvoice = catchAsync(async (req, res, next) => {
     return next(new AppError('Only approved estimates can be converted to invoices', 400));
   }
 
-  const { Invoice } = require('../models/Invoice');
+  const { Invoice, InvoiceCounter } = require('../models/Invoice');
+
+  // Generate invoice number using the counter (same logic as createInvoice)
+  let invoiceNumber = null;
+  try {
+    const currentYear = new Date().getFullYear();
+    const counter = await InvoiceCounter.findOneAndUpdate(
+      { year: currentYear },
+      { $inc: { count: 1 } },
+      { new: true, upsert: true }
+    );
+    invoiceNumber = `${currentYear}-${String(counter.count).padStart(4, '0')}`;
+    console.log('Generated invoice number for estimate conversion:', invoiceNumber);
+  } catch (err) {
+    console.error('Error generating invoice number:', err);
+    // Fall back to letting the pre-save hook generate it
+  }
 
   const invoice = await Invoice.create({
     projectEstimate: projectEstimate._id,
     building: projectEstimate.building,
+    invoiceNumber,
     invoiceDate: new Date(),
     dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     notes: projectEstimate.notes,

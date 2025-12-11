@@ -198,11 +198,13 @@ exports.updateBuilding = catchAsync(async (req, res, next) => {
     // Process geofencing data if provided
     const updateData = { ...req.body };
 
-    // Normalize optional email fields: treat empty strings as undefined so
+    // Normalize optional email fields: remove empty strings entirely so
     // optional contacts don't fail regex validation when left blank
     ['serviceManagerEmail', 'maintenanceManagerEmail', 'thirdContactEmail'].forEach((field) => {
-        if (Object.prototype.hasOwnProperty.call(updateData, field) && updateData[field] === '') {
-            updateData[field] = undefined;
+        if (Object.prototype.hasOwnProperty.call(updateData, field)) {
+            if (updateData[field] === '' || updateData[field] === null) {
+                delete updateData[field]; // Remove the field entirely instead of setting to undefined
+            }
         }
     });
     
@@ -219,25 +221,34 @@ exports.updateBuilding = catchAsync(async (req, res, next) => {
         delete updateData.geofenceRadius;
     }
     
-    const building = await Building.findByIdAndUpdate(
-        req.params.id,
-        updateData,
-        {
-            new: true,
-            runValidators: true
+    try {
+        const building = await Building.findByIdAndUpdate(
+            req.params.id,
+            updateData,
+            {
+                new: true,
+                runValidators: true
+            }
+        );
+        
+        if (!building) {
+            return next(new AppError('No building found with that ID', 404));
         }
-    );
-    
-    if (!building) {
-        return next(new AppError('No building found with that ID', 404));
+        
+        res.status(200).json({
+            status: 'success',
+            data: {
+                building
+            }
+        });
+    } catch (error) {
+        console.error('Error updating building:', error);
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(err => err.message).join('; ');
+            return next(new AppError(`Validation error: ${messages}`, 400));
+        }
+        return next(new AppError('Failed to update building: ' + error.message, 500));
     }
-    
-    res.status(200).json({
-        status: 'success',
-        data: {
-            building
-        }
-    });
 });
 
 exports.deleteBuilding = catchAsync(async (req, res, next) => {
