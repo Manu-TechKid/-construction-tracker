@@ -198,12 +198,21 @@ exports.updateBuilding = catchAsync(async (req, res, next) => {
     // Process geofencing data if provided
     const updateData = { ...req.body };
 
-    // Normalize optional email fields: remove empty strings entirely so
+    console.log('Received update data for building:', JSON.stringify(updateData, null, 2));
+
+    // Normalize all optional email fields: remove empty strings entirely so
     // optional contacts don't fail regex validation when left blank
-    ['serviceManagerEmail', 'maintenanceManagerEmail', 'thirdContactEmail'].forEach((field) => {
+    const emailFields = [
+      'serviceManagerEmail',
+      'generalManagerEmail',
+      'maintenanceManagerEmail',
+      'thirdContactEmail'
+    ];
+
+    new Set(emailFields).forEach((field) => {
         if (Object.prototype.hasOwnProperty.call(updateData, field)) {
             if (updateData[field] === '' || updateData[field] === null) {
-                delete updateData[field]; // Remove the field entirely instead of setting to undefined
+                delete updateData[field]; // Remove the field entirely
             }
         }
     });
