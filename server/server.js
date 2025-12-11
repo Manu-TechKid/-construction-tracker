@@ -57,7 +57,7 @@ const limiter = rateLimit({
 app.use('/api', limiter);
 
 // Body parser, reading data from body into req.body
-app.use(express.json({ limit: '10kb' }));
+app.use(express.json({ limit: '50mb' }));
 
 // CORS - CRITICAL FIX for admin.servicesdsj.com
 const allowedOrigins = [
@@ -112,7 +112,7 @@ app.use(cors(corsOptions));
 
 // Handle preflight requests for all routes
 app.options('*', cors(corsOptions));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 
 // Data sanitization against NoSQL query injection
