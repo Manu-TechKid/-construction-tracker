@@ -170,11 +170,17 @@ exports.getAllInvoices = catchAsync(async (req, res, next) => {
     .sort('-createdAt');
 
   // Recalculate totals for all invoices to ensure consistency
-  invoices.forEach(invoice => {
+  for (const invoice of invoices) {
     if (invoice && typeof invoice.calculateTotals === 'function') {
+      const oldTotal = invoice.total;
       invoice.calculateTotals();
+      // If total changed, save it back to database
+      if (invoice.total !== oldTotal) {
+        console.log(`Invoice ${invoice.invoiceNumber}: Correcting total from ${oldTotal} to ${invoice.total}`);
+        await invoice.save();
+      }
     }
-  });
+  }
 
   // Auto-mark overdue invoices
   const now = new Date();
@@ -215,7 +221,13 @@ exports.getInvoice = catchAsync(async (req, res, next) => {
 
     // Recalculate totals to ensure consistency
     if (invoice && typeof invoice.calculateTotals === 'function') {
+        const oldTotal = invoice.total;
         invoice.calculateTotals();
+        // If total changed, save it back to database
+        if (invoice.total !== oldTotal) {
+            console.log(`Invoice ${invoice.invoiceNumber}: Correcting total from ${oldTotal} to ${invoice.total}`);
+            await invoice.save();
+        }
     }
 
     res.status(200).json({
