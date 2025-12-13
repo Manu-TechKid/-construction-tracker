@@ -80,7 +80,10 @@ const EditInvoice = () => {
   // Recalculate invoice total from work orders to ensure consistency
   if (invoice && invoice.workOrders && invoice.workOrders.length > 0) {
     const calculatedTotal = invoice.workOrders.reduce((sum, item) => {
-      return sum + (item.totalPrice || 0);
+      // Use the live work order price like InvoiceDetails does
+      const price = item.workOrder?.price !== undefined ? item.workOrder.price : (item.unitPrice || item.totalPrice || 0);
+      const quantity = item.quantity || 1;
+      return sum + (price * quantity);
     }, 0);
     // Only update if there's a discrepancy
     if (Math.abs(calculatedTotal - (invoice.total || 0)) > 0.01) {
