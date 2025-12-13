@@ -75,7 +75,20 @@ const EditInvoice = () => {
   const [addWorkOrders, { isLoading: isAdding }] = useAddWorkOrdersToInvoiceMutation();
   const [removeWorkOrders, { isLoading: isRemoving }] = useRemoveWorkOrdersFromInvoiceMutation();
   
-  const invoice = invoiceData?.data?.invoice;
+  let invoice = invoiceData?.data?.invoice;
+  
+  // Recalculate invoice total from work orders to ensure consistency
+  if (invoice && invoice.workOrders && invoice.workOrders.length > 0) {
+    const calculatedTotal = invoice.workOrders.reduce((sum, item) => {
+      return sum + (item.totalPrice || 0);
+    }, 0);
+    // Only update if there's a discrepancy
+    if (Math.abs(calculatedTotal - (invoice.total || 0)) > 0.01) {
+      console.log(`Invoice ${invoice.invoiceNumber}: Correcting total from ${invoice.total} to ${calculatedTotal}`);
+      invoice = { ...invoice, total: calculatedTotal };
+    }
+  }
+  
   const buildingId = invoice?.building?._id || invoice?.building;
   
   const { data: unbilledData } = useGetUnbilledWorkOrdersQuery(buildingId, {

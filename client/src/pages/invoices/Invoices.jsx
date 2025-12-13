@@ -139,8 +139,23 @@ const Invoices = () => {
   const [markAsPaid, { isLoading: isMarkingPaid }] = useMarkInvoiceAsPaidMutation();
   const [deleteInvoice, { isLoading: isDeleting }] = useDeleteInvoiceMutation();
 
-  const invoices = invoicesData?.data?.invoices || [];
+  let invoices = invoicesData?.data?.invoices || [];
   const buildings = buildingsData?.data?.buildings || [];
+
+  // Recalculate invoice totals from work orders to ensure consistency
+  invoices = invoices.map(invoice => {
+    if (invoice.workOrders && invoice.workOrders.length > 0) {
+      const calculatedTotal = invoice.workOrders.reduce((sum, item) => {
+        return sum + (item.totalPrice || 0);
+      }, 0);
+      // Only update if there's a discrepancy
+      if (Math.abs(calculatedTotal - (invoice.total || 0)) > 0.01) {
+        console.log(`Invoice ${invoice.invoiceNumber}: Correcting total from ${invoice.total} to ${calculatedTotal}`);
+        return { ...invoice, total: calculatedTotal };
+      }
+    }
+    return invoice;
+  });
 
   const handleMenuClick = (event, invoice) => {
     setAnchorEl(event.currentTarget);
