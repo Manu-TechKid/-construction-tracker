@@ -169,6 +169,13 @@ exports.getAllInvoices = catchAsync(async (req, res, next) => {
     .populate('updatedBy', 'name')
     .sort('-createdAt');
 
+  // Recalculate totals for all invoices to ensure consistency
+  invoices.forEach(invoice => {
+    if (invoice && typeof invoice.calculateTotals === 'function') {
+      invoice.calculateTotals();
+    }
+  });
+
   // Auto-mark overdue invoices
   const now = new Date();
   for (const invoice of invoices) {
@@ -204,6 +211,11 @@ exports.getInvoice = catchAsync(async (req, res, next) => {
 
     if (!invoice) {
         return next(new AppError('No invoice found with that ID', 404));
+    }
+
+    // Recalculate totals to ensure consistency
+    if (invoice && typeof invoice.calculateTotals === 'function') {
+        invoice.calculateTotals();
     }
 
     res.status(200).json({
