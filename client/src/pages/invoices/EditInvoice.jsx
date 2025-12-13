@@ -263,7 +263,9 @@ const EditInvoice = () => {
                     {(() => {
                       const workOrders = invoice.workOrders || [];
                       const calculatedTotal = workOrders.reduce((sum, item) => {
-                        return sum + (item.totalPrice || 0);
+                        const price = item.workOrder?.price !== undefined ? item.workOrder.price : (item.unitPrice || item.totalPrice || 0);
+                        const quantity = item.quantity || 1;
+                        return sum + (price * quantity);
                       }, 0);
                       return formatCurrency(calculatedTotal);
                     })()}
@@ -419,7 +421,9 @@ const EditInvoice = () => {
                 {(() => {
                   const workOrders = invoice.workOrders || [];
                   const calculatedTotal = workOrders.reduce((sum, item) => {
-                    return sum + (item.totalPrice || 0);
+                    const price = item.workOrder?.price !== undefined ? item.workOrder.price : (item.unitPrice || item.totalPrice || 0);
+                    const quantity = item.quantity || 1;
+                    return sum + (price * quantity);
                   }, 0);
                   return formatCurrency(calculatedTotal);
                 })()}
@@ -428,19 +432,21 @@ const EditInvoice = () => {
             <Divider sx={{ my: 1 }} />
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
               <Typography variant="h6">Invoice Total:</Typography>
-              <Typography variant="h6">
+              <Typography variant="body1" fontWeight="medium">
                 {(() => {
                   const workOrders = invoice.workOrders || [];
-                  const calculatedTotal = workOrders.reduce((sum, item) => {
-                    return sum + (item.totalPrice || 0);
+                  const total = workOrders.reduce((sum, item) => {
+                    const price = item.workOrder?.price !== undefined ? item.workOrder.price : (item.unitPrice || item.totalPrice || 0);
+                    const quantity = item.quantity || 1;
+                    return sum + (price * quantity);
                   }, 0);
-                  return formatCurrency(calculatedTotal);
+                  return formatCurrency(total);
                 })()}
               </Typography>
+              <Typography variant="body2" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
+                * Invoice shows actual work order prices with no additional fees or taxes
+              </Typography>
             </Box>
-            <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
-              * Invoice shows actual work order prices with no additional fees or taxes
-            </Typography>
           </CardContent>
         </Card>
 
