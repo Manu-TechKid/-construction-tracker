@@ -42,10 +42,10 @@ exports.getAllBuildings = catchAsync(async (req, res, next) => {
     // Execute query with pagination
     const buildings = await query.skip(skip).limit(limit);
     
-    // Format buildings with display name using service manager
+    // Format buildings with display name using general manager name
     const formattedBuildings = buildings.map(building => {
         const buildingObj = building.toObject();
-        const serviceManagerName = building.serviceManager || 'No Service Manager';
+        const serviceManagerName = building.generalManagerName || 'No Service Manager';
         buildingObj.displayName = `${building.name} - [${serviceManagerName}]`;
         return buildingObj;
     });

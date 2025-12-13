@@ -109,22 +109,26 @@ const Invoices = () => {
   }, [filtersLoaded, searchQuery, filterStatus, filterBuilding, monthFilter.startDate, monthFilter.endDate]);
 
   const invoiceQueryParams = useMemo(() => {
+    const trimmedSearch = searchQuery.trim();
+
+    // When searching by invoice number, ignore all other filters
+    if (trimmedSearch) {
+      return {
+        search: trimmedSearch
+      };
+    }
+
+    // When not searching, apply all filters normally
     const params = {
       status: filterStatus || undefined,
       buildingId: filterBuilding || undefined,
     };
 
-    const trimmedSearch = searchQuery.trim();
-
-    if (trimmedSearch) {
-      params.search = trimmedSearch;
-    } else {
-      if (monthFilter.startDate) {
-        params.invoiceDateStart = monthFilter.startDate.toISOString();
-      }
-      if (monthFilter.endDate) {
-        params.invoiceDateEnd = monthFilter.endDate.toISOString();
-      }
+    if (monthFilter.startDate) {
+      params.invoiceDateStart = monthFilter.startDate.toISOString();
+    }
+    if (monthFilter.endDate) {
+      params.invoiceDateEnd = monthFilter.endDate.toISOString();
     }
 
     return params;

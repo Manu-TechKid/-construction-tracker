@@ -247,9 +247,7 @@ const EditInvoice = () => {
                     {(() => {
                       const workOrders = invoice.workOrders || [];
                       const calculatedTotal = workOrders.reduce((sum, item) => {
-                        const price = item.workOrder?.price !== undefined ? item.workOrder.price : (item.unitPrice || 0);
-                        const quantity = item.quantity || 1;
-                        return sum + (price * quantity);
+                        return sum + (item.totalPrice || 0);
                       }, 0);
                       return formatCurrency(calculatedTotal);
                     })()}
@@ -405,9 +403,7 @@ const EditInvoice = () => {
                 {(() => {
                   const workOrders = invoice.workOrders || [];
                   const calculatedTotal = workOrders.reduce((sum, item) => {
-                    const price = item.workOrder?.price !== undefined ? item.workOrder.price : (item.unitPrice || 0);
-                    const quantity = item.quantity || 1;
-                    return sum + (price * quantity);
+                    return sum + (item.totalPrice || 0);
                   }, 0);
                   return formatCurrency(calculatedTotal);
                 })()}
@@ -420,9 +416,7 @@ const EditInvoice = () => {
                 {(() => {
                   const workOrders = invoice.workOrders || [];
                   const calculatedTotal = workOrders.reduce((sum, item) => {
-                    const price = item.workOrder?.price !== undefined ? item.workOrder.price : (item.unitPrice || 0);
-                    const quantity = item.quantity || 1;
-                    return sum + (price * quantity);
+                    return sum + (item.totalPrice || 0);
                   }, 0);
                   return formatCurrency(calculatedTotal);
                 })()}

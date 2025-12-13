@@ -108,9 +108,25 @@ exports.getAllInvoices = catchAsync(async (req, res, next) => {
   // Build filter object
   const filter = {};
 
-  // Search filter - search in invoice number
+  // Search filter - search in invoice number OR service manager name
   if (search) {
-    filter.invoiceNumber = { $regex: search, $options: 'i' };
+    const searchRegex = { $regex: search, $options: 'i' };
+    // First, try to find buildings with matching service manager name
+    const matchingBuildings = await require('../models/Building').find({
+      $or: [
+        { generalManagerName: searchRegex },
+        { maintenanceManagerName: searchRegex },
+        { thirdContactName: searchRegex }
+      ]
+    }).select('_id');
+    
+    const buildingIds = matchingBuildings.map(b => b._id);
+    
+    // Search by invoice number OR by service manager (through building)
+    filter.$or = [
+      { invoiceNumber: searchRegex },
+      { building: { $in: buildingIds } }
+    ];
   }
 
   // Status filter
@@ -147,10 +163,10 @@ exports.getAllInvoices = catchAsync(async (req, res, next) => {
   console.log('Invoice filter applied:', filter);
 
   const invoices = await Invoice.find(filter)
-    .populate('building', 'name address')
+    .populate('building', 'name address generalManagerName maintenanceManagerName')
     .populate('workOrders.workOrder', 'title description apartmentNumber status price')
-    .populate('createdBy', 'name') // <-- ADDED
-    .populate('updatedBy', 'name') // <-- ADDED
+    .populate('createdBy', 'name')
+    .populate('updatedBy', 'name')
     .sort('-createdAt');
 
   // Auto-mark overdue invoices
