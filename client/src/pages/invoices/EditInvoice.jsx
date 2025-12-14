@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -75,22 +75,26 @@ const EditInvoice = () => {
   const [addWorkOrders, { isLoading: isAdding }] = useAddWorkOrdersToInvoiceMutation();
   const [removeWorkOrders, { isLoading: isRemoving }] = useRemoveWorkOrdersFromInvoiceMutation();
   
-  let invoice = invoiceData?.data?.invoice;
-  
-  // Recalculate invoice total from work orders to ensure consistency
-  if (invoice && invoice.workOrders && invoice.workOrders.length > 0) {
-    const calculatedTotal = invoice.workOrders.reduce((sum, item) => {
-      // Use the live work order price like InvoiceDetails does
-      const price = item.workOrder?.price !== undefined ? item.workOrder.price : (item.unitPrice || item.totalPrice || 0);
-      const quantity = item.quantity || 1;
-      return sum + (price * quantity);
-    }, 0);
-    // Only update if there's a discrepancy
-    if (Math.abs(calculatedTotal - (invoice.total || 0)) > 0.01) {
-      console.log(`Invoice ${invoice.invoiceNumber}: Correcting total from ${invoice.total} to ${calculatedTotal}`);
-      invoice = { ...invoice, total: calculatedTotal };
+  const invoice = useMemo(() => {
+    const baseInvoice = invoiceData?.data?.invoice;
+    if (!baseInvoice) return baseInvoice;
+    
+    // Recalculate invoice total from work orders to ensure consistency
+    if (baseInvoice.workOrders && baseInvoice.workOrders.length > 0) {
+      const calculatedTotal = baseInvoice.workOrders.reduce((sum, item) => {
+        // Use the live work order price like InvoiceDetails does
+        const price = item.workOrder?.price !== undefined ? item.workOrder.price : (item.unitPrice || item.totalPrice || 0);
+        const quantity = item.quantity || 1;
+        return sum + (price * quantity);
+      }, 0);
+      // Only update if there's a discrepancy
+      if (Math.abs(calculatedTotal - (baseInvoice.total || 0)) > 0.01) {
+        console.log(`Invoice ${baseInvoice.invoiceNumber}: Correcting total from ${baseInvoice.total} to ${calculatedTotal}`);
+        return { ...baseInvoice, total: calculatedTotal };
+      }
     }
-  }
+    return baseInvoice;
+  }, [invoiceData?.data?.invoice]);
   
   const buildingId = invoice?.building?._id || invoice?.building;
   
