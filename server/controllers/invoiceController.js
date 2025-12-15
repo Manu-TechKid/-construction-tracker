@@ -111,53 +111,62 @@ exports.getAllInvoices = catchAsync(async (req, res, next) => {
   // Search filter - search in invoice number OR service manager name
   if (search) {
     const searchRegex = { $regex: search, $options: 'i' };
-    // First, try to find buildings with matching service manager name
-    const matchingBuildings = await require('../models/Building').find({
-      $or: [
-        { generalManagerName: searchRegex },
-        { maintenanceManagerName: searchRegex },
-        { thirdContactName: searchRegex }
-      ]
-    }).select('_id');
     
-    const buildingIds = matchingBuildings.map(b => b._id);
+    // Check if search looks like an invoice number (contains digits)
+    const isInvoiceNumberSearch = /\d/.test(search);
     
-    // Search by invoice number OR by service manager (through building)
-    filter.$or = [
-      { invoiceNumber: searchRegex },
-      { building: { $in: buildingIds } }
-    ];
-  }
+    if (isInvoiceNumberSearch) {
+      // If searching by invoice number, ONLY search by invoice number, ignore other filters
+      filter.invoiceNumber = searchRegex;
+    } else {
+      // If not an invoice number, search by service manager name
+      const matchingBuildings = await require('../models/Building').find({
+        $or: [
+          { generalManagerName: searchRegex },
+          { maintenanceManagerName: searchRegex },
+          { thirdContactName: searchRegex }
+        ]
+      }).select('_id');
+      
+      const buildingIds = matchingBuildings.map(b => b._id);
+      
+      // Search by service manager (through building)
+      if (buildingIds.length > 0) {
+        filter.building = { $in: buildingIds };
+      }
+    }
+  } else {
+    // Only apply other filters if NOT searching by invoice number
+    // Status filter
+    if (status) {
+      filter.status = status;
+    }
 
-  // Status filter
-  if (status) {
-    filter.status = status;
-  }
+    // Building filter
+    if (buildingId) {
+      filter.building = buildingId;
+    }
 
-  // Building filter
-  if (buildingId) {
-    filter.building = buildingId;
-  }
+    // Date filters - support both invoiceDate and general date ranges
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
 
-  // Date filters - support both invoiceDate and general date ranges
-  if (startDate || endDate) {
-    filter.createdAt = {};
-    if (startDate) filter.createdAt.$gte = new Date(startDate);
-    if (endDate) filter.createdAt.$lte = new Date(endDate);
-  }
+    // Invoice date filter (when invoice was issued/sent to client)
+    if (invoiceDateStart || invoiceDateEnd) {
+      filter.invoiceDate = {};
+      if (invoiceDateStart) filter.invoiceDate.$gte = new Date(invoiceDateStart);
+      if (invoiceDateEnd) filter.invoiceDate.$lte = new Date(invoiceDateEnd);
+    }
 
-  // Invoice date filter (when invoice was issued/sent to client)
-  if (invoiceDateStart || invoiceDateEnd) {
-    filter.invoiceDate = {};
-    if (invoiceDateStart) filter.invoiceDate.$gte = new Date(invoiceDateStart);
-    if (invoiceDateEnd) filter.invoiceDate.$lte = new Date(invoiceDateEnd);
-  }
-
-  // Due date filter
-  if (dueDateStart || dueDateEnd) {
-    filter.dueDate = {};
-    if (dueDateStart) filter.dueDate.$gte = new Date(dueDateStart);
-    if (dueDateEnd) filter.dueDate.$lte = new Date(dueDateEnd);
+    // Due date filter
+    if (dueDateStart || dueDateEnd) {
+      filter.dueDate = {};
+      if (dueDateStart) filter.dueDate.$gte = new Date(dueDateStart);
+      if (dueDateEnd) filter.dueDate.$lte = new Date(dueDateEnd);
+    }
   }
 
   console.log('Invoice filter applied:', filter);
