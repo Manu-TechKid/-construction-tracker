@@ -11,7 +11,7 @@ const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 
 exports.createWorkOrder = catchAsync(async (req, res, next) => {
-  const { title, description, building, scheduledDate } = req.body;
+  const { title, description, building, scheduledDate, workType, workSubType } = req.body;
 
   if (!title || !description || !building || !scheduledDate) {
     return next(new AppError('Please provide all required fields: title, description, building, and scheduledDate.', 400));
@@ -23,6 +23,60 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
   }
 
   const workOrderData = { ...req.body, createdBy: req.user._id };
+
+  // Auto-populate price and cost from ClientPricing if not provided
+  if ((!workOrderData.price || !workOrderData.cost) && workType && workSubType) {
+    try {
+      const ClientPricing = require('../models/ClientPricing');
+      const WorkSubType = require('../models/WorkSubType');
+      
+      // Get work sub-type details
+      const subType = await WorkSubType.findById(workSubType);
+      
+      if (subType) {
+        // Try to get pricing from ClientPricing for this building
+        const clientPricing = await ClientPricing.findOne({
+          building: building,
+          isActive: true,
+          'services.subcategory': subType.code,
+          'services.isActive': true
+        });
+
+        if (clientPricing) {
+          const service = clientPricing.services.find(s => 
+            s.subcategory === subType.code && s.isActive
+          );
+          
+          if (service) {
+            // Set price from client pricing
+            if (!workOrderData.price) {
+              workOrderData.price = service.pricing.basePrice || 0;
+            }
+            
+            // Calculate cost from client pricing cost structure
+            if (!workOrderData.cost) {
+              const totalCost = (service.cost.laborCost || 0) + 
+                               (service.cost.materialCost || 0) + 
+                               (service.cost.equipmentCost || 0);
+              const overhead = totalCost * ((service.cost.overheadPercentage || 0) / 100);
+              workOrderData.cost = totalCost + overhead;
+            }
+          }
+        }
+        
+        // Fallback to WorkSubType pricing if ClientPricing not found
+        if (!workOrderData.price && subType.price) {
+          workOrderData.price = subType.price;
+        }
+        if (!workOrderData.cost && subType.estimatedCost) {
+          workOrderData.cost = subType.estimatedCost;
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching pricing:', error);
+      // Continue with work order creation even if pricing fetch fails
+    }
+  }
 
   if (req.body.assignedTo && Array.isArray(req.body.assignedTo)) {
     workOrderData.assignedTo = req.body.assignedTo.map(workerId => ({ worker: workerId }));

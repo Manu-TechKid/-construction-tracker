@@ -43,8 +43,22 @@ const workOrderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'in_progress', 'on_hold', 'completed', 'cancelled'],
+    enum: ['pending', 'in_progress', 'on_hold', 'completed', 'cancelled', 'postponed'],
     default: 'pending'
+  },
+  postponedUntil: {
+    type: Date,
+    default: null
+  },
+  postponedReason: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Postponed reason cannot be longer than 500 characters']
+  },
+  cancellationReason: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Cancellation reason cannot be longer than 500 characters']
   },
   assignedTo: [{
     worker: {

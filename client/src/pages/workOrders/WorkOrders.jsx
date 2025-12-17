@@ -49,6 +49,7 @@ const getStatusChipColor = (status) => {
     case 'in_progress': return 'info';
     case 'on_hold': return 'warning';
     case 'cancelled': return 'error';
+    case 'postponed': return 'secondary';
     case 'pending':
     default: return 'default';
   }
