@@ -25,6 +25,7 @@ import {
   Fab,
   CircularProgress,
   Alert,
+  Autocomplete,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -66,21 +67,42 @@ const NotesSheet = () => {
   const [formData, setFormData] = useState({
     title: '',
     content: '',
-    type: 'visit',
+    type: 'Building Visit',
     building: '',
     visitDate: new Date(),
     estimateAmount: '',
     priority: 'medium',
+    color: 'default',
+    estimateStatus: 'not_applicable',
     workers: [],
     workersText: '',
   });
 
-  const noteTypes = [
-    { value: 'visit', label: 'Building Visit', color: 'primary' },
-    { value: 'estimate', label: 'Estimate', color: 'success' },
-    { value: 'inspection', label: 'Inspection', color: 'warning' },
-    { value: 'meeting', label: 'Meeting', color: 'info' },
-    { value: 'general', label: 'General Note', color: 'default' },
+  const noteTypesSuggestions = [
+    'Building Visit',
+    'Estimate',
+    'Inspection',
+    'Meeting',
+    'Building Service',
+    'General Note'
+  ];
+
+  const colors = [
+    { value: 'default', label: 'Default (Gray)', color: '#9e9e9e' },
+    { value: 'red', label: 'Urgent (Red)', color: '#f44336' },
+    { value: 'orange', label: 'High Priority (Orange)', color: '#ff9800' },
+    { value: 'yellow', label: 'Medium Priority (Yellow)', color: '#ffeb3b' },
+    { value: 'green', label: 'Low Priority (Green)', color: '#4caf50' },
+    { value: 'blue', label: 'Info (Blue)', color: '#2196f3' },
+    { value: 'purple', label: 'Review (Purple)', color: '#9c27b0' },
+    { value: 'pink', label: 'Follow-up (Pink)', color: '#e91e63' },
+  ];
+
+  const estimateStatuses = [
+    { value: 'not_applicable', label: 'Not Applicable' },
+    { value: 'pending', label: 'Pending Response' },
+    { value: 'accepted', label: 'Accepted' },
+    { value: 'rejected', label: 'Rejected' },
   ];
 
   const priorities = [
@@ -224,17 +246,22 @@ const NotesSheet = () => {
         building: typeof note.building === 'object' ? note.building?._id : note.building || '',
         workers: note.workers || [],
         workersText: (note.workers || []).join(', '),
+        color: note.color || 'default',
+        estimateStatus: note.estimateStatus || 'not_applicable',
+        estimateAmount: note.estimateAmount || '',
       });
     } else {
       setEditingNote(null);
       setFormData({
         title: '',
         content: '',
-        type: 'visit',
+        type: 'Building Visit',
         building: selectedBuilding?._id || '',
         visitDate: new Date(),
         estimateAmount: '',
         priority: 'medium',
+        color: 'default',
+        estimateStatus: 'not_applicable',
         workers: [],
         workersText: '',
       });
@@ -248,11 +275,13 @@ const NotesSheet = () => {
     setFormData({
       title: '',
       content: '',
-      type: 'visit',
+      type: 'Building Visit',
       building: '',
       visitDate: new Date(),
       estimateAmount: '',
       priority: 'medium',
+      color: 'default',
+      estimateStatus: 'not_applicable',
       workers: [],
       workersText: '',
     });
@@ -278,11 +307,13 @@ const NotesSheet = () => {
         : [];
 
       const noteData = {
-        title: formData.title.trim() || formData.content.trim().substring(0, 50) + (formData.content.trim().length > 50 ? '...' : ''), // Use title if provided, otherwise generate from content
+        title: formData.title.trim() || formData.content.trim().substring(0, 50) + (formData.content.trim().length > 50 ? '...' : ''),
         content: formData.content.trim(),
         building: formData.building,
-        type: formData.type === 'visit' ? 'visit' : formData.type || 'general', // Ensure 'visit' is handled
+        type: formData.type || 'General Note',
         priority: formData.priority || 'medium',
+        color: formData.color || 'default',
+        estimateStatus: formData.estimateStatus || 'not_applicable',
         status: 'active',
         visitDate: formData.visitDate,
         workers: workersArray,
@@ -347,10 +378,6 @@ const NotesSheet = () => {
     }
     const building = buildingOptions.find((b) => b._id === note.building);
     return building?.name || 'Unknown Building';
-  };
-
-  const getTypeConfig = (type) => {
-    return noteTypes.find(t => t.value === type) || noteTypes[0];
   };
 
   const getPriorityConfig = (priority) => {
@@ -549,14 +576,15 @@ const NotesSheet = () => {
 
                 <Grid container spacing={3}>
                   {group.notes.map((note) => {
-                    const typeConfig = getTypeConfig(note.type);
                     const priorityConfig = getPriorityConfig(note.priority);
                     const scheduledDate = note.visitDate ? new Date(note.visitDate) : null;
                     const createdDate = note.createdAt ? new Date(note.createdAt) : null;
+                    const noteColor = note.color || 'default';
+                    const colorConfig = colors.find(c => c.value === noteColor) || colors[0];
 
                     return (
                       <Grid item xs={12} md={6} lg={4} key={note._id || note.id}>
-                        <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderLeft: `4px solid ${colorConfig.color}` }}>
                           <CardContent sx={{ flexGrow: 1 }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
                               <Typography variant="h6" gutterBottom noWrap sx={{ flexGrow: 1 }}>
@@ -591,17 +619,25 @@ const NotesSheet = () => {
                             </Typography>
 
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
-                              <Box sx={{ display: 'flex', gap: 1 }}>
+                              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                 <Chip
-                                  label={typeConfig.label}
-                                  color={typeConfig.color}
+                                  label={note.type || 'General Note'}
+                                  color="primary"
                                   size="small"
+                                  variant="outlined"
                                 />
                                 <Chip
                                   label={priorityConfig.label}
                                   color={priorityConfig.color}
                                   size="small"
                                 />
+                                {note.estimateStatus && note.estimateStatus !== 'not_applicable' && (
+                                  <Chip
+                                    label={estimateStatuses.find(s => s.value === note.estimateStatus)?.label || note.estimateStatus}
+                                    color={note.estimateStatus === 'accepted' ? 'success' : note.estimateStatus === 'rejected' ? 'error' : 'warning'}
+                                    size="small"
+                                  />
+                                )}
                               </Box>
 
                               {hasPermission(['update:notes', 'delete:notes']) && (
@@ -705,20 +741,22 @@ const NotesSheet = () => {
               </Grid>
               
               <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Note Type</InputLabel>
-                  <Select
-                    value={formData.type}
-                    label="Note Type"
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  >
-                    {noteTypes.map((type) => (
-                      <MenuItem key={type.value} value={type.value}>
-                        {type.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <Autocomplete
+                  freeSolo
+                  options={noteTypesSuggestions}
+                  value={formData.type}
+                  onInputChange={(event, newValue) => {
+                    setFormData({ ...formData, type: newValue });
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Note Type"
+                      placeholder="Type or select..."
+                      helperText="Enter custom type or select from suggestions"
+                    />
+                  )}
+                />
               </Grid>
               
               <Grid item xs={12} sm={6}>
@@ -732,6 +770,43 @@ const NotesSheet = () => {
                     {priorities.map((priority) => (
                       <MenuItem key={priority.value} value={priority.value}>
                         {priority.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Color / Urgency</InputLabel>
+                  <Select
+                    value={formData.color}
+                    label="Color / Urgency"
+                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                  >
+                    {colors.map((color) => (
+                      <MenuItem key={color.value} value={color.value}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Box sx={{ width: 20, height: 20, bgcolor: color.color, borderRadius: 1 }} />
+                          {color.label}
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Estimate Status</InputLabel>
+                  <Select
+                    value={formData.estimateStatus}
+                    label="Estimate Status"
+                    onChange={(e) => setFormData({ ...formData, estimateStatus: e.target.value })}
+                  >
+                    {estimateStatuses.map((status) => (
+                      <MenuItem key={status.value} value={status.value}>
+                        {status.label}
                       </MenuItem>
                     ))}
                   </Select>
@@ -782,7 +857,7 @@ const NotesSheet = () => {
                 />
               </Grid>
               
-              {formData.type === 'estimate' && (
+              {formData.estimateStatus !== 'not_applicable' && (
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
@@ -791,6 +866,9 @@ const NotesSheet = () => {
                     value={formData.estimateAmount}
                     onChange={(e) => setFormData({ ...formData, estimateAmount: e.target.value })}
                     placeholder="0.00"
+                    InputProps={{
+                      startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>,
+                    }}
                   />
                 </Grid>
               )}
