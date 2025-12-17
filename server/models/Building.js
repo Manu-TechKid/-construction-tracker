@@ -49,11 +49,20 @@ const buildingSchema = new mongoose.Schema({
         enum: ['net_15', 'net_30', 'net_60', 'net_90'],
         default: 'net_30'
     },
+    // Service Manager Contact
+    serviceManagerName: {
+        type: String,
+        trim: true
+    },
     serviceManagerEmail: {
         type: String,
         trim: true,
         lowercase: true,
         match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
+    },
+    serviceManagerPhone: {
+        type: String,
+        trim: true
     },
     // General Manager / Community Manager Contact
     generalManagerName: {

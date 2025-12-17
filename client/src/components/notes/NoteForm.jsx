@@ -55,6 +55,9 @@ const NoteForm = ({ initialValues, onSubmit, onCancel, isEditing = false }) => {
       apartment: '',
       type: 'general',
       priority: 'medium',
+      color: 'default',
+      estimateStatus: 'not_applicable',
+      estimateAmount: '',
       tags: [],
       ...initialValues,
     },
@@ -85,12 +88,31 @@ const NoteForm = ({ initialValues, onSubmit, onCancel, isEditing = false }) => {
     },
   });
 
-  const noteTypes = [
-    { value: 'general', label: 'General' },
-    { value: 'maintenance', label: 'Maintenance' },
-    { value: 'issue', label: 'Issue' },
-    { value: 'reminder', label: 'Reminder' },
-    { value: 'inspection', label: 'Inspection' },
+  const noteTypesSuggestions = [
+    'General Note',
+    'Building Visit',
+    'Estimate',
+    'Inspection',
+    'Meeting',
+    'Building Service'
+  ];
+
+  const colors = [
+    { value: 'default', label: 'Default (Gray)', color: '#9e9e9e' },
+    { value: 'red', label: 'Urgent (Red)', color: '#f44336' },
+    { value: 'orange', label: 'High Priority (Orange)', color: '#ff9800' },
+    { value: 'yellow', label: 'Medium Priority (Yellow)', color: '#ffeb3b' },
+    { value: 'green', label: 'Low Priority (Green)', color: '#4caf50' },
+    { value: 'blue', label: 'Info (Blue)', color: '#2196f3' },
+    { value: 'purple', label: 'Review (Purple)', color: '#9c27b0' },
+    { value: 'pink', label: 'Follow-up (Pink)', color: '#e91e63' },
+  ];
+
+  const estimateStatuses = [
+    { value: 'not_applicable', label: 'Not Applicable' },
+    { value: 'pending', label: 'Pending Response' },
+    { value: 'accepted', label: 'Accepted' },
+    { value: 'rejected', label: 'Rejected' },
   ];
 
   const priorities = [
@@ -185,21 +207,23 @@ const NoteForm = ({ initialValues, onSubmit, onCancel, isEditing = false }) => {
             </Grid>
             
             <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Type</InputLabel>
-                <Select
-                  name="type"
-                  value={formik.values.type}
-                  onChange={formik.handleChange}
-                  label="Type"
-                >
-                  {noteTypes.map((type) => (
-                    <MenuItem key={type.value} value={type.value}>
-                      {type.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Autocomplete
+                freeSolo
+                options={noteTypesSuggestions}
+                value={formik.values.type}
+                onInputChange={(event, newValue) => {
+                  formik.setFieldValue('type', newValue);
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Note Type"
+                    placeholder="Type or select..."
+                    helperText="Enter custom type or select from suggestions"
+                    error={formik.touched.type && Boolean(formik.errors.type)}
+                  />
+                )}
+              />
             </Grid>
             
             <Grid item xs={12} md={6}>
@@ -219,6 +243,61 @@ const NoteForm = ({ initialValues, onSubmit, onCancel, isEditing = false }) => {
                 </Select>
               </FormControl>
             </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Color / Urgency</InputLabel>
+                <Select
+                  name="color"
+                  value={formik.values.color}
+                  onChange={formik.handleChange}
+                  label="Color / Urgency"
+                >
+                  {colors.map((color) => (
+                    <MenuItem key={color.value} value={color.value}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 20, height: 20, bgcolor: color.color, borderRadius: 1 }} />
+                        {color.label}
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Estimate Status</InputLabel>
+                <Select
+                  name="estimateStatus"
+                  value={formik.values.estimateStatus}
+                  onChange={formik.handleChange}
+                  label="Estimate Status"
+                >
+                  {estimateStatuses.map((status) => (
+                    <MenuItem key={status.value} value={status.value}>
+                      {status.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            {formik.values.estimateStatus !== 'not_applicable' && (
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  name="estimateAmount"
+                  label="Estimate Amount"
+                  type="number"
+                  value={formik.values.estimateAmount}
+                  onChange={formik.handleChange}
+                  InputProps={{
+                    startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>,
+                  }}
+                />
+              </Grid>
+            )}
           </Grid>
           
           <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>

@@ -45,7 +45,8 @@ exports.getAllBuildings = catchAsync(async (req, res, next) => {
     // Format buildings with display name - Service Manager name as primary
     const formattedBuildings = buildings.map(building => {
         const buildingObj = building.toObject();
-        const serviceManagerName = building.generalManagerName || building.maintenanceManagerName || 'No Service Manager';
+        // Priority: serviceManagerName > maintenanceManagerName > generalManagerName
+        const serviceManagerName = building.serviceManagerName || building.maintenanceManagerName || building.generalManagerName || 'No Service Manager';
         buildingObj.displayName = `[${serviceManagerName}] - ${building.name}`;
         return buildingObj;
     });

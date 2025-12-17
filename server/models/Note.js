@@ -22,13 +22,25 @@ const noteSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['general', 'maintenance', 'issue', 'reminder', 'inspection', 'visit'],
+    trim: true,
     default: 'general'
+    // Removed enum to allow free-text input
+    // Common values: 'general', 'building visit', 'estimate', 'inspection', 'meeting', 'building service'
   },
   priority: {
     type: String,
     enum: ['low', 'medium', 'high', 'urgent'],
     default: 'medium'
+  },
+  color: {
+    type: String,
+    enum: ['default', 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'],
+    default: 'default'
+  },
+  estimateStatus: {
+    type: String,
+    enum: ['pending', 'accepted', 'rejected', 'not_applicable'],
+    default: 'not_applicable'
   },
   status: {
     type: String,

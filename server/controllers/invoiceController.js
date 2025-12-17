@@ -122,8 +122,9 @@ exports.getAllInvoices = catchAsync(async (req, res, next) => {
       // If not an invoice number, search by service manager name
       const matchingBuildings = await require('../models/Building').find({
         $or: [
-          { generalManagerName: searchRegex },
+          { serviceManagerName: searchRegex },
           { maintenanceManagerName: searchRegex },
+          { generalManagerName: searchRegex },
           { thirdContactName: searchRegex }
         ]
       }).select('_id');
