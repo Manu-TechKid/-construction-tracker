@@ -14,7 +14,10 @@ import {
   Autocomplete,
   Chip,
   CircularProgress,
+  InputAdornment,
+  IconButton,
 } from '@mui/material';
+import { Palette as PaletteIcon } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useSearchBuildingsQuery, useCreateNoteMutation, useUpdateNoteMutation } from '../../features/notes/notesApiSlice';
@@ -42,7 +45,7 @@ const NoteForm = ({ initialValues, onSubmit, onCancel, isEditing = false }) => {
       otherwise: Yup.string()
     }),
     buildingName: Yup.string(),
-    type: Yup.string().required('Type is required'),
+    type: Yup.string(),
     priority: Yup.string().required('Priority is required'),
   });
 
@@ -53,9 +56,10 @@ const NoteForm = ({ initialValues, onSubmit, onCancel, isEditing = false }) => {
       building: '',
       buildingName: '',
       apartment: '',
-      type: 'general',
+      type: '',
       priority: 'medium',
-      color: 'default',
+      color: '#1976d2',
+      status: 'active',
       estimateStatus: 'not_applicable',
       estimateAmount: '',
       tags: [],
@@ -97,15 +101,24 @@ const NoteForm = ({ initialValues, onSubmit, onCancel, isEditing = false }) => {
     'Building Service'
   ];
 
-  const colors = [
-    { value: 'default', label: 'Default (Gray)', color: '#9e9e9e' },
-    { value: 'red', label: 'Urgent (Red)', color: '#f44336' },
-    { value: 'orange', label: 'High Priority (Orange)', color: '#ff9800' },
-    { value: 'yellow', label: 'Medium Priority (Yellow)', color: '#ffeb3b' },
-    { value: 'green', label: 'Low Priority (Green)', color: '#4caf50' },
-    { value: 'blue', label: 'Info (Blue)', color: '#2196f3' },
-    { value: 'purple', label: 'Review (Purple)', color: '#9c27b0' },
-    { value: 'pink', label: 'Follow-up (Pink)', color: '#e91e63' },
+  const predefinedColors = [
+    { label: 'Blue', color: '#1976d2' },
+    { label: 'Red', color: '#f44336' },
+    { label: 'Orange', color: '#ff9800' },
+    { label: 'Yellow', color: '#fdd835' },
+    { label: 'Green', color: '#4caf50' },
+    { label: 'Purple', color: '#9c27b0' },
+    { label: 'Pink', color: '#e91e63' },
+    { label: 'Teal', color: '#00bcd4' },
+    { label: 'Gray', color: '#9e9e9e' },
+  ];
+
+  const statuses = [
+    { value: 'active', label: 'Active' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'postponed', label: 'Postponed' },
+    { value: 'resolved', label: 'Resolved' },
+    { value: 'archived', label: 'Archived' },
   ];
 
   const estimateStatuses = [
@@ -212,14 +225,14 @@ const NoteForm = ({ initialValues, onSubmit, onCancel, isEditing = false }) => {
                 options={noteTypesSuggestions}
                 value={formik.values.type}
                 onInputChange={(event, newValue) => {
-                  formik.setFieldValue('type', newValue);
+                  formik.setFieldValue('type', newValue || '');
                 }}
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="Note Type"
-                    placeholder="Type or select..."
-                    helperText="Enter custom type or select from suggestions"
+                    label="Note Type (Optional)"
+                    placeholder="Type custom text or select..."
+                    helperText="Leave empty or enter custom type"
                     error={formik.touched.type && Boolean(formik.errors.type)}
                   />
                 )}
@@ -245,20 +258,56 @@ const NoteForm = ({ initialValues, onSubmit, onCancel, isEditing = false }) => {
             </Grid>
             
             <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                name="color"
+                label="Note Color"
+                type="color"
+                value={formik.values.color}
+                onChange={formik.handleChange}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <PaletteIcon />
+                    </InputAdornment>
+                  ),
+                }}
+                helperText="Choose a color for this note"
+              />
+              <Box sx={{ display: 'flex', gap: 0.5, mt: 1, flexWrap: 'wrap' }}>
+                {predefinedColors.map((presetColor) => (
+                  <IconButton
+                    key={presetColor.color}
+                    size="small"
+                    onClick={() => formik.setFieldValue('color', presetColor.color)}
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      bgcolor: presetColor.color,
+                      border: formik.values.color === presetColor.color ? '2px solid #000' : '1px solid #ddd',
+                      '&:hover': {
+                        bgcolor: presetColor.color,
+                        opacity: 0.8,
+                      },
+                    }}
+                    title={presetColor.label}
+                  />
+                ))}
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
               <FormControl fullWidth>
-                <InputLabel>Color / Urgency</InputLabel>
+                <InputLabel>Status</InputLabel>
                 <Select
-                  name="color"
-                  value={formik.values.color}
+                  name="status"
+                  value={formik.values.status}
                   onChange={formik.handleChange}
-                  label="Color / Urgency"
+                  label="Status"
                 >
-                  {colors.map((color) => (
-                    <MenuItem key={color.value} value={color.value}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 20, height: 20, bgcolor: color.color, borderRadius: 1 }} />
-                        {color.label}
-                      </Box>
+                  {statuses.map((status) => (
+                    <MenuItem key={status.value} value={status.value}>
+                      {status.label}
                     </MenuItem>
                   ))}
                 </Select>

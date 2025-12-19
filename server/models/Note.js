@@ -34,8 +34,9 @@ const noteSchema = new mongoose.Schema({
   },
   color: {
     type: String,
-    enum: ['default', 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'],
-    default: 'default'
+    default: '#1976d2',
+    trim: true
+    // Accepts hex color codes (e.g., #FF5733) or predefined colors
   },
   estimateStatus: {
     type: String,
@@ -44,7 +45,7 @@ const noteSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['active', 'resolved', 'archived', 'processed'],
+    enum: ['active', 'pending', 'postponed', 'resolved', 'archived', 'processed'],
     default: 'active'
   },
   visitDate: {

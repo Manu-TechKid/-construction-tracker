@@ -173,7 +173,7 @@ exports.getAllInvoices = catchAsync(async (req, res, next) => {
   console.log('Invoice filter applied:', filter);
 
   const invoices = await Invoice.find(filter)
-    .populate('building', 'name address generalManagerName maintenanceManagerName')
+    .populate('building', 'name address serviceManagerName serviceManagerEmail serviceManagerPhone generalManagerName generalManagerEmail generalManagerPhone maintenanceManagerName maintenanceManagerEmail maintenanceManagerPhone thirdContactName thirdContactEmail thirdContactPhone')
     .populate('workOrders.workOrder', 'title description apartmentNumber status price')
     .populate('createdBy', 'name')
     .populate('updatedBy', 'name')
