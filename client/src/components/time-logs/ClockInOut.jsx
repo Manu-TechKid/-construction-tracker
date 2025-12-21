@@ -69,12 +69,16 @@ const ClockInOut = () => {
     sigCanvas.current.clear();
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
+    if (sigCanvas.current.isEmpty()) {
+      toast.error('Please provide a signature.');
+      return;
+    }
     const signature = sigCanvas.current.getTrimmedCanvas().toDataURL('image/png');
     if (isClockedIn) {
-      handleClockOut(signature);
+      await handleClockOut(signature);
     } else {
-      handleClockIn(signature);
+      await handleClockIn(signature);
     }
     setDialogOpen(false);
   };
@@ -116,9 +120,11 @@ const ClockInOut = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button onClick={clearSignature}>Clear</Button>
-          <Button onClick={handleConfirm} variant="contained">Confirm</Button>
+          <Button onClick={() => setDialogOpen(false)} disabled={isLoading}>Cancel</Button>
+          <Button onClick={clearSignature} disabled={isLoading}>Clear</Button>
+          <Button onClick={handleConfirm} variant="contained" disabled={isLoading}>
+            {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Confirm'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
