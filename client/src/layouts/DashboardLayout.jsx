@@ -48,6 +48,7 @@ import { useAuth } from '../hooks/useAuth';
 import BuildingSelector from '../components/common/BuildingSelector';
 import MobileNavigation from '../components/layout/MobileNavigation';
 import NotificationComponent from '../components/Notifications/NotificationComponent';
+import ClockInOut from '../components/time-logs/ClockInOut';
 
 const drawerWidth = 240;
 
@@ -168,12 +169,21 @@ const DashboardLayout = () => {
     }
 
     // Time Management - for admins/managers
-    if (!isWorker && hasPermission(['view:costs', 'manage:users'])) {
+        // My Time Logs - for all users to see their own logs
+    items.push({
+      text: 'My Time Logs',
+      icon: <TimeIcon />,
+      path: '/my-time-logs',
+      permission: 'read:self' // Generic permission for authenticated users
+    });
+
+    // Time Logs - for admins/managers
+    if (!isWorker && hasPermission(['manage:users'])) {
       items.push({
-        text: 'Time Management',
-        icon: <TimeIcon />,
-        path: '/time-tracking-management',
-        permission: 'view:costs'
+        text: 'All Time Logs',
+        icon: <PeopleIcon />,
+        path: '/time-logs',
+        permission: 'manage:users'
       });
     }
 
@@ -391,6 +401,7 @@ const DashboardLayout = () => {
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <ClockInOut />
             <NotificationComponent />
             <Chip
               label={user?.role?.toUpperCase() || 'USER'}

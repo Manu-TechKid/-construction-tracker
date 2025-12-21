@@ -71,6 +71,8 @@ import ProjectEstimateDetails from './pages/project-estimates/ProjectEstimateDet
 import ProjectEstimatesNew from './pages/estimates/ProjectEstimates';
 import CustomerServicesPrices from './pages/pricing/CustomerServicesPrices';
 import Calls from './pages/calls/Calls';
+import TimeLogs from './pages/time-logs/TimeLogs';
+import MyTimeLogs from './pages/time-logs/MyTimeLogs';
 
 // Route Protection
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -380,6 +382,20 @@ const AppContent = () => {
                     <Calls />
                   </RoleBasedRoute>
                 }
+              />
+
+              {/* Time Logs */}
+              <Route 
+                path="time-logs" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['manage:users']}>
+                    <TimeLogs />
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="my-time-logs" 
+                element={<MyTimeLogs />} 
               />
 
               {/* Reminders */}
