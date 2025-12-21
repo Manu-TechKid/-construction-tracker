@@ -1,24 +1,43 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import React, { useContext, useEffect } from 'react';
+import { Slot, useRouter, useSegments } from 'expo-router';
+import { AuthProvider, AuthContext } from '../src/context/AuthContext';
+import { SyncProvider } from '../src/context/SyncContext';
+import { View, ActivityIndicator } from 'react-native';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+const InitialLayout = () => {
+  const authContext = useContext(AuthContext);
+  const segments = useSegments();
+  const router = useRouter();
 
-export const unstable_settings = {
-  anchor: '(tabs)',
+  useEffect(() => {
+    if (!authContext || authContext.loading) return;
+
+    const inTabsGroup = segments[0] === '(tabs)';
+
+    if (authContext.authState.authenticated && !inTabsGroup) {
+      router.replace('/(tabs)/home');
+    } else if (!authContext.authState.authenticated && inTabsGroup) {
+      router.replace('/login');
+    }
+  }, [authContext?.authState.authenticated, authContext?.loading, segments, router]);
+
+  if (!authContext || authContext.loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  return <Slot />;
 };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <AuthProvider>
+      <SyncProvider>
+        <InitialLayout />
+      </SyncProvider>
+    </AuthProvider>
   );
 }

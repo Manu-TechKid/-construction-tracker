@@ -1,11 +1,30 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import axios from 'axios';
 
-const AuthContext = createContext();
+interface User {
+  id: string;
+  email: string;
+  // Add other user properties here
+}
 
-const AuthProvider = ({ children }) => {
-  const [authState, setAuthState] = useState({ token: null, authenticated: false, user: null });
+interface AuthState {
+  token: string | null;
+  authenticated: boolean;
+  user: User | null;
+}
+
+interface AuthContextType {
+  authState: AuthState;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [authState, setAuthState] = useState<AuthState>({ token: null, authenticated: false, user: null });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -13,9 +32,13 @@ const AuthProvider = ({ children }) => {
       const token = await SecureStore.getItemAsync('token');
       const userString = await SecureStore.getItemAsync('user');
       if (token && userString) {
-        const user = JSON.parse(userString);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        setAuthState({ token, authenticated: true, user });
+        try {
+          const user = JSON.parse(userString);
+          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+          setAuthState({ token, authenticated: true, user });
+        } catch (e) {
+          console.error('Failed to parse user from storage', e);
+        }
       }
       setLoading(false);
     };

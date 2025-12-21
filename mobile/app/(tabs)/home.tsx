@@ -5,21 +5,26 @@ import * as ImagePicker from 'expo-image-picker';
 import Signature from 'react-native-signature-canvas';
 import axios from 'axios';
 import { AuthContext } from '../../src/context/AuthContext';
-import { SyncContext } from '../../src/context/SyncContext';
+import { SyncContext, QueuedRequest } from '../../src/context/SyncContext';
 
 const HomeScreen = () => {
-  const [location, setLocation] = useState(null);
-  const [errorMsg, setErrorMsg] = useState(null);
-  const [status, setStatus] = useState('checked-out');
-  const [loading, setLoading] = useState(true);
-  const [photo, setPhoto] = useState(null);
-  const [signature, setSignature] = useState(null);
-  const sigRef = useRef();
-    const { authState } = useContext(AuthContext);
-  const { isOffline, addToQueue } = useContext(SyncContext);
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [status, setStatus] = useState<'checked-in' | 'checked-out'>('checked-out');
+  const [loading, setLoading] = useState<boolean>(true);
+  const [photo, setPhoto] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [signature, setSignature] = useState<string | null>(null);
+  const sigRef = useRef<Signature>(null);
+  const authContext = useContext(AuthContext);
+  const syncContext = useContext(SyncContext);
 
   useEffect(() => {
     (async () => {
+      if (!authContext?.authState.authenticated) {
+        setLoading(false);
+        return;
+      }
+
       let { status: locationStatus } = await Location.requestForegroundPermissionsAsync();
       if (locationStatus !== 'granted') {
         setErrorMsg('Permission to access location was denied');
@@ -45,7 +50,7 @@ const HomeScreen = () => {
       }
       setLoading(false);
     })();
-  }, [authState.authenticated]);
+  }, [authContext?.authState.authenticated]);
 
   const takePhoto = async () => {
     let result = await ImagePicker.launchCameraAsync({
@@ -59,18 +64,23 @@ const HomeScreen = () => {
     }
   };
 
-  const handleSignature = (signature) => {
+  const handleSignature = (signature: string) => {
     setSignature(signature);
   };
 
   const handleClearSignature = () => {
-    sigRef.current.clearSignature();
+    sigRef.current?.clearSignature();
     setSignature(null);
   };
 
-    const submit = async (endpoint) => {
-    if (isOffline) {
-      const request = {
+  const submit = async (endpoint: 'checkin' | 'checkout') => {
+    if (!photo || !signature || !location) {
+      Alert.alert('Missing Information', 'Please take a photo and provide a signature.');
+      return;
+    }
+
+        if (syncContext?.isOffline) {
+      const request: QueuedRequest = {
         url: `https://construction-tracker-webapp.onrender.com/api/v1/checkins/${endpoint}`,
         method: 'post',
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -85,30 +95,27 @@ const HomeScreen = () => {
           },
         },
       };
-      addToQueue(request);
+      syncContext.addToQueue(request);
       const newStatus = endpoint === 'checkin' ? 'checked-in' : 'checked-out';
       setStatus(newStatus);
       setPhoto(null);
       setSignature(null);
-      sigRef.current.clearSignature();
+      sigRef.current?.clearSignature();
       Alert.alert('Offline', 'Your request has been queued and will be sent when you are back online.');
       return;
     }
-    if (!photo || !signature) {
-      Alert.alert('Missing Information', 'Please take a photo and provide a signature.');
-      return;
-    }
+
     setLoading(true);
     try {
       const formData = new FormData();
-      formData.append('latitude', location.coords.latitude);
-      formData.append('longitude', location.coords.longitude);
+      formData.append('latitude', String(location.coords.latitude));
+      formData.append('longitude', String(location.coords.longitude));
       formData.append('signature', signature);
       formData.append('photo', {
         uri: photo.uri,
         name: `photo_${Date.now()}.jpg`,
         type: 'image/jpeg',
-      });
+      } as any);
 
       await axios.post(`https://construction-tracker-webapp.onrender.com/api/v1/checkins/${endpoint}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -118,7 +125,7 @@ const HomeScreen = () => {
       setStatus(newStatus);
       setPhoto(null);
       setSignature(null);
-      sigRef.current.clearSignature();
+      sigRef.current?.clearSignature();
       Alert.alert('Success', `You have been ${newStatus}.`);
     } catch (error) {
       Alert.alert('Error', `Failed to ${endpoint}.`);
@@ -130,9 +137,9 @@ const HomeScreen = () => {
     return <ActivityIndicator size="large" style={{ flex: 1, justifyContent: 'center' }} />;
   }
 
-    return (
+  return (
     <View style={styles.container}>
-      {isOffline && <Text style={styles.offlineText}>You are currently offline. Queued requests will be sent later.</Text>}
+      {syncContext?.isOffline && <Text style={styles.offlineText}>You are currently offline. Queued requests will be sent later.</Text>}
       <Text style={styles.status}>Your current status is: {status}</Text>
 
       {photo && <Image source={{ uri: photo.uri }} style={styles.photo} />}

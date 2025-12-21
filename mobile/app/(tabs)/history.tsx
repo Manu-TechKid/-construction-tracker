@@ -3,10 +3,21 @@ import { View, Text, FlatList, StyleSheet, ActivityIndicator, Alert, Image } fro
 import axios from 'axios';
 import { AuthContext } from '../../src/context/AuthContext';
 
+interface CheckinRecord {
+  _id: string;
+  checkinTime: string;
+  checkoutTime?: string;
+  status: string;
+  checkinPhoto?: string;
+  checkinSignature?: string;
+  checkoutPhoto?: string;
+  checkoutSignature?: string;
+}
+
 const HistoryScreen = () => {
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const { authState } = useContext(AuthContext);
+  const [history, setHistory] = useState<CheckinRecord[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const authContext = useContext(AuthContext);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -19,16 +30,16 @@ const HistoryScreen = () => {
       setLoading(false);
     };
 
-    if (authState.authenticated) {
+    if (authContext?.authState.authenticated) {
       fetchHistory();
     }
-  }, [authState.authenticated]);
+  }, [authContext?.authState.authenticated]);
 
   if (loading) {
     return <ActivityIndicator size="large" style={{ flex: 1 }} />;
   }
 
-      const renderItem = ({ item }) => {
+        const renderItem = ({ item }: { item: CheckinRecord }) => {
     return (
       <View style={styles.itemContainer}>
         <Text>Check-in: {new Date(item.checkinTime).toLocaleString()}</Text>

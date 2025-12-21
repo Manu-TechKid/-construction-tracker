@@ -1,22 +1,28 @@
 import React, { useState, useContext } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
-import { AuthContext } from '../context/AuthContext';
+import { AuthContext } from '../src/context/AuthContext';
 
-const LoginScreen = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const { login } = useContext(AuthContext);
-  const [loading, setLoading] = useState(false);
+interface LoginScreenProps {}
+
+const LoginScreen: React.FC<LoginScreenProps> = () => {
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const authContext = useContext(AuthContext);
+  const [loading, setLoading] = useState<boolean>(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please enter both email and password.');
       return;
     }
+    if (!authContext) {
+      Alert.alert('Error', 'Auth context is not available');
+      return;
+    }
     setLoading(true);
     try {
-      await login(email, password);
-    } catch (error) {
+      await authContext.login(email, password);
+    } catch (error: any) {
       Alert.alert('Login Failed', error.message);
     }
     setLoading(false);
