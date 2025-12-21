@@ -11,6 +11,7 @@ const ClockInOut = () => {
   const [clockOut, { isLoading: isClockingOut }] = useClockOutMutation();
   const [location, setLocation] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isDialogLoading, setDialogLoading] = useState(false);
   const sigCanvas = useRef({});
 
   useEffect(() => {
@@ -36,6 +37,7 @@ const ClockInOut = () => {
       if (location) {
         payload.location = location;
       }
+      console.log('Clocking in with payload:', payload);
       await clockIn(payload).unwrap();
       toast.success('Successfully clocked in!');
       refetch();
@@ -50,6 +52,7 @@ const ClockInOut = () => {
       if (location) {
         payload.location = location;
       }
+      console.log('Clocking out with payload:', payload);
       await clockOut(payload).unwrap();
       toast.success('Successfully clocked out!');
       refetch();
@@ -63,24 +66,38 @@ const ClockInOut = () => {
   }
 
   const isClockedIn = statusData?.data?.status === 'clock-in';
-  const isLoading = isClockingIn || isClockingOut;
-
+  
   const clearSignature = () => {
     sigCanvas.current.clear();
   };
 
   const handleConfirm = async () => {
+    console.log('--- Confirm button clicked ---');
     if (sigCanvas.current.isEmpty()) {
+      console.log('Signature is empty');
       toast.error('Please provide a signature.');
       return;
     }
+
+    setDialogLoading(true);
     const signature = sigCanvas.current.getTrimmedCanvas().toDataURL('image/png');
-    if (isClockedIn) {
-      await handleClockOut(signature);
-    } else {
-      await handleClockIn(signature);
+    console.log('Signature captured');
+
+    try {
+      if (isClockedIn) {
+        console.log('Calling handleClockOut');
+        await handleClockOut(signature);
+      } else {
+        console.log('Calling handleClockIn');
+        await handleClockIn(signature);
+      }
+      setDialogOpen(false);
+    } catch (error) {
+      // Errors are already toasted in handleClockIn/Out
+      console.error('An error occurred during confirm:', error);
+    } finally {
+      setDialogLoading(false);
     }
-    setDialogOpen(false);
   };
 
   return (
@@ -95,9 +112,9 @@ const ClockInOut = () => {
       <Button
         variant="contained"
         size="small"
-        startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <AccessTime />}
+        startIcon={(isClockingIn || isClockingOut) ? <CircularProgress size={20} color="inherit" /> : <AccessTime />}
         onClick={() => setDialogOpen(true)}
-        disabled={isLoading}
+        disabled={isClockingIn || isClockingOut}
         sx={{
           backgroundColor: isClockedIn ? '#f44336' : '#4caf50',
           color: 'white',
@@ -108,7 +125,7 @@ const ClockInOut = () => {
       >
         {isClockedIn ? 'Clock Out' : 'Clock In'}
       </Button>
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
+      <Dialog open={dialogOpen} onClose={() => isDialogLoading ? null : setDialogOpen(false)}>
         <DialogTitle>Signature</DialogTitle>
         <DialogContent>
           <Box sx={{ border: '1px solid #ccc', borderRadius: '4px' }}>
@@ -120,10 +137,10 @@ const ClockInOut = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)} disabled={isLoading}>Cancel</Button>
-          <Button onClick={clearSignature} disabled={isLoading}>Clear</Button>
-          <Button onClick={handleConfirm} variant="contained" disabled={isLoading}>
-            {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Confirm'}
+          <Button onClick={() => setDialogOpen(false)} disabled={isDialogLoading}>Cancel</Button>
+          <Button onClick={clearSignature} disabled={isDialogLoading}>Clear</Button>
+          <Button onClick={handleConfirm} variant="contained" disabled={isDialogLoading}>
+            {isDialogLoading ? <CircularProgress size={24} color="inherit" /> : 'Confirm'}
           </Button>
         </DialogActions>
       </Dialog>
