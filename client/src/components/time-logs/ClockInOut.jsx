@@ -37,12 +37,12 @@ const ClockInOut = () => {
       if (location) {
         payload.location = location;
       }
-      console.log('Clocking in with payload:', payload);
       await clockIn(payload).unwrap();
       toast.success('Successfully clocked in!');
       refetch();
     } catch (err) {
       toast.error(err.data?.message || 'Failed to clock in');
+      throw err;
     }
   };
 
@@ -52,12 +52,12 @@ const ClockInOut = () => {
       if (location) {
         payload.location = location;
       }
-      console.log('Clocking out with payload:', payload);
       await clockOut(payload).unwrap();
       toast.success('Successfully clocked out!');
       refetch();
     } catch (err) {
       toast.error(err.data?.message || 'Failed to clock out');
+      throw err;
     }
   };
 
@@ -80,22 +80,38 @@ const ClockInOut = () => {
     }
 
     setDialogLoading(true);
-    const signature = sigCanvas.current.getTrimmedCanvas().toDataURL('image/png');
-    console.log('Signature captured');
+    console.log('Dialog loading state set to true');
 
     try {
+      let signature;
+      try {
+        console.log('Attempting to get signature from canvas...');
+        signature = sigCanvas.current.getTrimmedCanvas().toDataURL('image/png');
+        console.log('Signature captured successfully.');
+      } catch (error) {
+        console.error('Error getting signature from canvas:', error);
+        toast.error('Could not process signature. Please try again.');
+        setDialogLoading(false);
+        return;
+      }
+
       if (isClockedIn) {
         console.log('Calling handleClockOut');
         await handleClockOut(signature);
+        console.log('handleClockOut finished.');
       } else {
         console.log('Calling handleClockIn');
         await handleClockIn(signature);
+        console.log('handleClockIn finished.');
       }
+      
+      console.log('Clock in/out process finished. Closing dialog.');
       setDialogOpen(false);
+
     } catch (error) {
-      // Errors are already toasted in handleClockIn/Out
-      console.error('An error occurred during confirm:', error);
+      console.error('An error occurred during the confirm process:', error);
     } finally {
+      console.log('Resetting dialog loading state in finally block.');
       setDialogLoading(false);
     }
   };
