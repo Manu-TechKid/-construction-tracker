@@ -32,7 +32,11 @@ const ClockInOut = () => {
 
   const handleClockIn = async (signature) => {
     try {
-      await clockIn({ location, signature }).unwrap();
+      const payload = { signature };
+      if (location) {
+        payload.location = location;
+      }
+      await clockIn(payload).unwrap();
       toast.success('Successfully clocked in!');
       refetch();
     } catch (err) {
@@ -42,7 +46,11 @@ const ClockInOut = () => {
 
   const handleClockOut = async (signature) => {
     try {
-      await clockOut({ location, signature }).unwrap();
+      const payload = { signature };
+      if (location) {
+        payload.location = location;
+      }
+      await clockOut(payload).unwrap();
       toast.success('Successfully clocked out!');
       refetch();
     } catch (err) {
@@ -86,7 +94,13 @@ const ClockInOut = () => {
         startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <AccessTime />}
         onClick={() => setDialogOpen(true)}
         disabled={isLoading}
-        color={isClockedIn ? 'secondary' : 'primary'}
+        sx={{
+          backgroundColor: isClockedIn ? '#f44336' : '#4caf50',
+          color: 'white',
+          '&:hover': {
+            backgroundColor: isClockedIn ? '#d32f2f' : '#388e3c',
+          },
+        }}
       >
         {isClockedIn ? 'Clock Out' : 'Clock In'}
       </Button>
