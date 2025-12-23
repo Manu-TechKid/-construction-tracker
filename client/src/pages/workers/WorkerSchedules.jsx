@@ -20,7 +20,6 @@ import {
   Select,
   MenuItem,
   Container,
-  CircularProgress,
   Alert,
   Tabs,
   Tab,
@@ -33,20 +32,15 @@ import {
   TableRow,
   Divider,
   Tooltip,
-  Badge,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Person as PersonIcon,
   Schedule as ScheduleIcon,
-  Work as WorkIcon,
   CalendarToday as CalendarIcon,
   Event as EventIcon,
-  AccessTime as TimeIcon,
-  LocationOn as LocationIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Visibility as ViewIcon,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
@@ -61,7 +55,6 @@ import {
   eachDayOfInterval,
   isToday,
   isSameDay,
-  parseISO,
   isBefore,
   isAfter,
   startOfDay,
@@ -120,8 +113,7 @@ const validationSchema = Yup.object({
 });
 
 const WorkerSchedules = () => {
-  const navigate = useNavigate();
-  const { user, hasPermission } = useAuth();
+  const { hasPermission } = useAuth();
   
   // State management
   const [currentWeek, setCurrentWeek] = useState(new Date());
@@ -129,7 +121,6 @@ const WorkerSchedules = () => {
   const [tabValue, setTabValue] = useState(0);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(null);
-  const [viewMode, setViewMode] = useState('week'); // 'week' or 'month'
 
   // API queries with error handling
   const { data: workersData, isLoading: isLoadingWorkers, error: workersError } = useGetUsersQuery();
@@ -145,7 +136,7 @@ const WorkerSchedules = () => {
   // Mutations
   const [createSchedule, { isLoading: isCreating }] = useCreateScheduleMutation();
   const [updateSchedule, { isLoading: isUpdating }] = useUpdateScheduleMutation();
-  const [deleteSchedule, { isLoading: isDeleting }] = useDeleteScheduleMutation();
+  const [deleteSchedule] = useDeleteScheduleMutation();
 
   // Form handling
   const formik = useFormik({
@@ -493,13 +484,13 @@ const WorkerSchedules = () => {
       });
     }
     setOpenDialog(true);
-  }, [workers, buildings]);
+  }, [workers, buildings, formik]);
 
   const handleCloseDialog = useCallback(() => {
     setOpenDialog(false);
     setEditingSchedule(null);
     formik.resetForm();
-  }, []);
+  }, [formik]);
 
   const handleDeleteSchedule = useCallback(async (scheduleId, workerName, taskDescription) => {
     const confirmMessage = `Are you sure you want to delete this schedule?\n\nWorker: ${workerName}\nTask: ${taskDescription}\n\nThis action cannot be undone.`;

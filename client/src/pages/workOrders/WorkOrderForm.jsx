@@ -23,7 +23,6 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowBack as ArrowBackIcon, Save as SaveIcon } from '@mui/icons-material';
 import PhotoUpload from '../../components/common/PhotoUpload';
 import { useBuildingContext } from '../../contexts/BuildingContext';
 import { useGetBuildingsQuery, useGetBuildingQuery } from '../../features/buildings/buildingsApiSlice';
@@ -162,7 +161,7 @@ const WorkOrderForm = () => {
   
   // Setup data queries
   const { data: workTypesData, isLoading: isLoadingWorkTypes } = useGetWorkTypesQuery();
-  const { data: workSubTypesData, isLoading: isLoadingWorkSubTypes } = useGetWorkSubTypesQuery(
+  const { data: workSubTypesData } = useGetWorkSubTypesQuery(
     formik.values.workType && typeof formik.values.workType === 'object' 
       ? formik.values.workType._id 
       : formik.values.workType
@@ -190,8 +189,7 @@ const WorkOrderForm = () => {
       formik.setFieldValue('cost', 0);
     }
     previousBuildingRef.current = formik.values.building;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formik.values.building]);
+  }, [isEdit, formik.values.building, formik.setFieldValue]);
 
   const workTypes = useMemo(() => workTypesData?.data?.workTypes || workTypesData?.workTypes || [], [workTypesData]);
   const workSubTypes = useMemo(() => workSubTypesData?.data?.workSubTypes || workSubTypesData?.workSubTypes || [], [workSubTypesData]);
@@ -268,8 +266,7 @@ const WorkOrderForm = () => {
         formik.setFieldValue('cost', Number(totalCost.toFixed(2)));
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matchedPricingService]);
+  }, [matchedPricingService, formik.setFieldValue, formik.values.cost, formik.values.price]);
 
   // Auto-populate title, description, and price from System Setup WorkSubType
   useEffect(() => {
@@ -292,8 +289,7 @@ const WorkOrderForm = () => {
       formik.setFieldValue('price', selectedWorkSubType.price);
     }
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedWorkSubType]);
+  }, [selectedWorkSubType, formik.setFieldValue, formik.values.description, formik.values.title]);
 
   // Auto-populate title and description from Customer Pricing when available
   // This prefers the price sheet service definition over the generic work sub-type
@@ -312,8 +308,7 @@ const WorkOrderForm = () => {
     if ((!currentDescription || currentDescription === subTypeDescription) && matchedPricingService.description) {
       formik.setFieldValue('description', matchedPricingService.description);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matchedPricingService]);
+  }, [matchedPricingService, formik.setFieldValue, formik.values.description, formik.values.title, selectedWorkSubType]);
 
   useEffect(() => {
     if (isEdit && workOrderData?.data) {
@@ -347,7 +342,7 @@ const WorkOrderForm = () => {
       // Set the building from context for new work orders
       formik.setFieldValue('building', selectedBuilding._id);
     }
-  }, [isEdit, workOrderData, selectedBuilding]);
+  }, [isEdit, workOrderData, selectedBuilding, formik.setFieldValue, formik.setValues]);
 
   if (isLoadingWorkOrder || isLoadingBuildings || isLoadingUsers || isLoadingWorkTypes) {
     return (
@@ -694,7 +689,7 @@ const WorkOrderForm = () => {
           </Grid>
         </Grid>
         <Box mt={3} display="flex" justifyContent="flex-end">
-          <Button variant="contained" color="primary" type="submit" disabled={isCreating || isUpdating}>
+          <Button variant="contained" color="primary" type="submit" disabled={formik.isSubmitting || isCreating || isUpdating}>
             {isCreating || isUpdating ? <CircularProgress size={24} /> : (isEdit ? 'Save Changes' : 'Create Work Order')}
           </Button>
         </Box>

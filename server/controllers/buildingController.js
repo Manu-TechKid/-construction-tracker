@@ -8,7 +8,7 @@ const APIFeatures = require('../utils/apiFeatures');
 
 exports.getAllBuildings = catchAsync(async (req, res, next) => {
     // Build query
-    let query = Building.find().populate('administrator', 'name email');
+    let query = Building.find({ deleted: { $ne: true } }).populate('administrator', 'name email');
     
     // Search functionality
     if (req.query.search) {
@@ -71,7 +71,7 @@ exports.getAllBuildings = catchAsync(async (req, res, next) => {
 });
 
 exports.getBuilding = catchAsync(async (req, res, next) => {
-    const building = await Building.findById(req.params.id)
+    const building = await Building.findOne({ _id: req.params.id, deleted: { $ne: true } })
         .populate({
             path: 'reminders',
             select: '-__v',
@@ -95,7 +95,7 @@ exports.getBuilding = catchAsync(async (req, res, next) => {
 // Get all reminders for a specific building
 exports.getBuildingReminders = catchAsync(async (req, res, next) => {
     // 1) Check if building exists
-    const building = await Building.findById(req.params.id);
+    const building = await Building.findOne({ _id: req.params.id, deleted: { $ne: true } });
     if (!building) {
         return next(new AppError('No building found with that ID', 404));
     }
@@ -234,15 +234,15 @@ exports.updateBuilding = catchAsync(async (req, res, next) => {
     console.log('Attempting to update building with sanitized data:', JSON.stringify(updateData, null, 2));
 
     try {
-        const building = await Building.findByIdAndUpdate(
-            req.params.id,
+        const building = await Building.findOneAndUpdate(
+            { _id: req.params.id, deleted: { $ne: true } },
             updateData,
             {
                 new: true,
                 runValidators: true
             }
         );
-        
+
         if (!building) {
             return next(new AppError('No building found with that ID', 404));
         }
@@ -264,12 +264,17 @@ exports.updateBuilding = catchAsync(async (req, res, next) => {
 });
 
 exports.deleteBuilding = catchAsync(async (req, res, next) => {
-    const building = await Building.findByIdAndDelete(req.params.id);
-    
-    if (!building) {
+    const building = await Building.findById(req.params.id);
+
+    if (!building || building.deleted) {
         return next(new AppError('No building found with that ID', 404));
     }
-    
+
+    // Perform a soft delete
+    building.deleted = true;
+    building.deletedAt = new Date();
+    await building.save();
+
     res.status(204).json({
         status: 'success',
         data: null
@@ -278,7 +283,7 @@ exports.deleteBuilding = catchAsync(async (req, res, next) => {
 
 // Add apartment to building
 exports.addApartment = catchAsync(async (req, res, next) => {
-    const building = await Building.findById(req.params.id);
+    const building = await Building.findOne({ _id: req.params.id, deleted: { $ne: true } });
     
     if (!building) {
         return next(new AppError('No building found with that ID', 404));
@@ -322,7 +327,7 @@ exports.updateApartment = catchAsync(async (req, res, next) => {
     const buildingId = req.params.id;
     
     // First find the building
-    const building = await Building.findById(buildingId);
+    const building = await Building.findOne({ _id: buildingId, deleted: { $ne: true } });
     
     if (!building) {
         return next(new AppError('No building found with that ID', 404));
@@ -380,7 +385,7 @@ exports.deleteApartment = catchAsync(async (req, res, next) => {
     const { apartmentId } = req.params;
     const buildingId = req.params.id;
     
-    const building = await Building.findById(buildingId);
+    const building = await Building.findOne({ _id: buildingId, deleted: { $ne: true } });
     
     if (!building) {
         return next(new AppError('No building found with that ID', 404));
@@ -427,7 +432,7 @@ exports.uploadApartmentPhoto = catchAsync(async (req, res, next) => {
     const { id: buildingId, apartmentId } = req.params;
     const { caption = '', isPrimary = false } = req.body;
     
-    const building = await Building.findById(buildingId);
+    const building = await Building.findOne({ _id: buildingId, deleted: { $ne: true } });
     if (!building) {
         return next(new AppError('No building found with that ID', 404));
     }
@@ -474,7 +479,7 @@ exports.uploadApartmentPhoto = catchAsync(async (req, res, next) => {
 exports.setApartmentPrimaryPhoto = catchAsync(async (req, res, next) => {
     const { id: buildingId, apartmentId, photoId } = req.params;
     
-    const building = await Building.findById(buildingId);
+    const building = await Building.findOne({ _id: buildingId, deleted: { $ne: true } });
     if (!building) {
         return next(new AppError('No building found with that ID', 404));
     }
@@ -508,7 +513,7 @@ exports.setApartmentPrimaryPhoto = catchAsync(async (req, res, next) => {
 exports.deleteApartmentPhoto = catchAsync(async (req, res, next) => {
     const { id: buildingId, apartmentId, photoId } = req.params;
     
-    const building = await Building.findById(buildingId);
+    const building = await Building.findOne({ _id: buildingId, deleted: { $ne: true } });
     if (!building) {
         return next(new AppError('No building found with that ID', 404));
     }

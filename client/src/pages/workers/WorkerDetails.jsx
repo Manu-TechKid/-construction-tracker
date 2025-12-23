@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -12,36 +12,20 @@ import {
   IconButton,
   Chip,
   Avatar,
-  Divider,
   CircularProgress,
   Alert,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon,
   Person as PersonIcon,
   Phone as PhoneIcon,
   Email as EmailIcon,
-  Work as WorkIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
 } from '@mui/icons-material';
 import { useGetWorkersQuery } from '../../features/workers/workersApiSlice';
 import { useAuth } from '../../hooks/useAuth';
-import { toast } from 'react-toastify';
-
-const WORKER_SKILLS = [
-  'painting', 'carpentry', 'plumbing', 'electrical', 'cleaning',
-  'general_labor', 'hvac', 'flooring', 'roofing'
-];
 
 const WorkerDetails = () => {
   const { id } = useParams();

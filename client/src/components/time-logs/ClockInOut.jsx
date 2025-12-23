@@ -32,33 +32,23 @@ const ClockInOut = () => {
   }, []);
 
   const handleClockIn = async (signature) => {
-    try {
-      const payload = { signature };
-      if (location) {
-        payload.location = location;
-      }
-      await clockIn(payload).unwrap();
-      toast.success('Successfully clocked in!');
-      refetch();
-    } catch (err) {
-      toast.error(err.data?.message || 'Failed to clock in');
-      throw err;
+    const payload = { signature };
+    if (location) {
+      payload.location = location;
     }
+    await clockIn(payload).unwrap();
+    toast.success('Successfully clocked in!');
+    refetch();
   };
 
   const handleClockOut = async (signature) => {
-    try {
-      const payload = { signature };
-      if (location) {
-        payload.location = location;
-      }
-      await clockOut(payload).unwrap();
-      toast.success('Successfully clocked out!');
-      refetch();
-    } catch (err) {
-      toast.error(err.data?.message || 'Failed to clock out');
-      throw err;
+    const payload = { signature };
+    if (location) {
+      payload.location = location;
     }
+    await clockOut(payload).unwrap();
+    toast.success('Successfully clocked out!');
+    refetch();
   };
 
   if (isStatusLoading) {
@@ -72,46 +62,28 @@ const ClockInOut = () => {
   };
 
   const handleConfirm = async () => {
-    console.log('--- Confirm button clicked ---');
     if (sigCanvas.current.isEmpty()) {
-      console.log('Signature is empty');
       toast.error('Please provide a signature.');
       return;
     }
 
     setDialogLoading(true);
-    console.log('Dialog loading state set to true');
 
     try {
-      let signature;
-      try {
-        console.log('Attempting to get signature from canvas...');
-        signature = sigCanvas.current.getTrimmedCanvas().toDataURL('image/png');
-        console.log('Signature captured successfully.');
-      } catch (error) {
-        console.error('Error getting signature from canvas:', error);
-        toast.error('Could not process signature. Please try again.');
-        setDialogLoading(false);
-        return;
-      }
+      const signature = sigCanvas.current.getTrimmedCanvas().toDataURL('image/png');
 
       if (isClockedIn) {
-        console.log('Calling handleClockOut');
         await handleClockOut(signature);
-        console.log('handleClockOut finished.');
       } else {
-        console.log('Calling handleClockIn');
         await handleClockIn(signature);
-        console.log('handleClockIn finished.');
       }
       
-      console.log('Clock in/out process finished. Closing dialog.');
-      setDialogOpen(false);
-
-    } catch (error) {
-      console.error('An error occurred during the confirm process:', error);
+      setDialogOpen(false); // Close dialog only on success
+    } catch (err) {
+      // Errors are already toasted in handleClockIn/handleClockOut
+      console.error('Failed to clock in/out:', err);
+      toast.error(err.data?.message || 'An unexpected error occurred.');
     } finally {
-      console.log('Resetting dialog loading state in finally block.');
       setDialogLoading(false);
     }
   };

@@ -39,7 +39,6 @@ import { useUpdateWorkOrderMutation } from '../../features/workOrders/workOrders
 import { toast } from 'react-toastify';
 import { formatDate } from '../../utils/dateUtils';
 import EnhancedWorkerTimeTracker from '../../components/timeTracking/EnhancedWorkerTimeTracker';
-import WeeklyHoursSummary from '../../components/workers/WeeklyHoursSummary';
 import WorkerHoursSummary from '../../components/workers/WorkerHoursSummary';
 import EmploymentReferenceLetter from '../../components/workers/EmploymentReferenceLetter';
 import WorkLogList from '../../components/workLogs/WorkLogList';
@@ -76,13 +75,6 @@ const WorkerDashboard = () => {
   
   // Extract data with fallbacks
   const workOrders = assignmentsData?.data?.workOrders || [];
-  const stats = assignmentsData?.data?.stats || {
-    total: 0,
-    pending: 0,
-    inProgress: 0,
-    completed: 0,
-    completedToday: 0
-  };
   
   const pendingOrders = workOrders.filter(wo => wo.status === 'pending' || wo.status === 'in_progress');
   

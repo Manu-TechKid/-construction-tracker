@@ -11,7 +11,6 @@ import {
   IconButton,
   Chip,
   Avatar,
-  Divider,
   CircularProgress,
   Alert,
   Table,
@@ -36,7 +35,6 @@ import {
 import {
   ArrowBack as ArrowBackIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon,
   Person as PersonIcon,
   Phone as PhoneIcon,
   Email as EmailIcon,
@@ -44,7 +42,6 @@ import {
   Receipt as LetterIcon,
   Print as PrintIcon,
   AttachMoney as MoneyIcon,
-  CalendarToday as CalendarIcon,
   Assignment as TaskIcon
 } from '@mui/icons-material';
 import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
@@ -90,7 +87,7 @@ const WorkerManagement = () => {
   const { data: assignmentsData, isLoading: assignmentsLoading } = useGetWorkerAssignmentsQuery(id);
 
   const worker = workerData?.data?.user;
-  const timeEntries = timeData?.data?.timeEntries || [];
+  const timeEntries = React.useMemo(() => timeData?.data?.timeEntries || [], [timeData]);
   const assignments = assignmentsData?.data?.workOrders || [];
 
   // Calculate time statistics

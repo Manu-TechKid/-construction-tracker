@@ -15,12 +15,10 @@ import {
   TextField
 } from '@mui/material';
 import {
-  Assignment as AssignmentIcon,
   Apartment as BuildingIcon,
   People as PeopleIcon,
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
-  Error as ErrorIcon,
   Info as InfoIcon,
   AccessTime as TimeTrackingIcon
 } from '@mui/icons-material';
@@ -36,9 +34,10 @@ import BuildingStatus from '../../components/dashboard/BuildingStatus';
 import WorkerAvailability from '../../components/dashboard/WorkerAvailability';
 import WeeklyRevenue from '../../components/dashboard/WeeklyRevenue';
 import WeeklyProduction from '../../components/dashboard/WeeklyProduction';
+import WeeklyProductionByWorker from '../../components/dashboard/WeeklyProductionByWorker';
 import DashboardAlerts from '../../components/dashboard/DashboardAlerts';
 import PendingNotes from '../../components/dashboard/PendingNotes';
-import { formatDate, timeAgo } from '../../utils/dateUtils';
+import { formatDate } from '../../utils/dateUtils';
 import ResponsiveContainer from '../../components/layout/ResponsiveContainer';
 import NotificationTest from '../../components/Notifications/NotificationTest';
 
@@ -62,16 +61,13 @@ const Dashboard = () => {
   };
   
   // Fetch data
-  const { data: buildingsData, isLoading: isLoadingBuildings, error: buildingsError } = useGetBuildingsQuery({});
-  const { data: usersData, isLoading: isLoadingUsers, error: usersError } = useGetUsersQuery({ role: 'worker' });
-  const { data: workOrdersData, isLoading: isLoadingWorkOrders, error: workOrdersError } = useGetWorkOrdersQuery();
+  const { data: buildingsData, isLoading: isLoadingBuildings } = useGetBuildingsQuery({});
+  const { data: usersData } = useGetUsersQuery({ role: 'worker' });
+  const { data: workOrdersData } = useGetWorkOrdersQuery();
   
   // Fetch analytics data
   const { 
     data: analyticsData, 
-    isLoading: isLoadingAnalytics, 
-    isError: isAnalyticsError,
-    error: analyticsError,
     refetch: refetchAnalytics
   } = useGetDashboardStatsQuery(queryParams);
   
@@ -337,6 +333,15 @@ const Dashboard = () => {
           <Card elevation={3}>
             <CardContent sx={{ p: 0 }}>
               <WeeklyProduction />
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Weekly Production by Worker */}
+        <Grid item xs={12}>
+          <Card elevation={3}>
+            <CardContent sx={{ p: 0 }}>
+              <WeeklyProductionByWorker />
             </CardContent>
           </Card>
         </Grid>

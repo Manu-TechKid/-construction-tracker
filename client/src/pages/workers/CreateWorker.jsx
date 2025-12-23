@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Container, Box, Button, Typography, Paper } from '@mui/material';
+import { Container, Button, Typography, Paper } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useCreateWorkerMutation } from '../../features/workers/workersApiSlice';
 import WorkerForm from '../../components/workers/WorkerForm';

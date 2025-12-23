@@ -93,7 +93,8 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
 exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
   const { status, billingStatus, buildingId, workerId, startDate, endDate } = req.query;
     
-  const filter = {};
+  // Exclude soft-deleted work orders by default
+  const filter = { deleted: false };
   if (status) filter.status = status;
   if (billingStatus) filter.billingStatus = billingStatus;
   if (buildingId) filter.building = buildingId;
@@ -124,7 +125,7 @@ exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
 // @route   GET /api/v1/work-orders/:id
 // @access  Private
 exports.getWorkOrderById = catchAsync(async (req, res, next) => {
-  const workOrder = await WorkOrder.findById(req.params.id)
+  const workOrder = await WorkOrder.findOne({ _id: req.params.id, deleted: false })
     .populate('building', 'name address')
     .populate('workType', 'name code color')
     .populate('workSubType', 'name code price estimatedDuration estimatedCost')
@@ -142,7 +143,7 @@ exports.getWorkOrderById = catchAsync(async (req, res, next) => {
 // @route   PATCH /api/v1/work-orders/:id
 // @access  Private
 exports.updateWorkOrder = catchAsync(async (req, res, next) => {
-  let workOrder = await WorkOrder.findById(req.params.id);
+  let workOrder = await WorkOrder.findOne({ _id: req.params.id, deleted: false });
 
   if (!workOrder) {
     return next(new AppError('Work order not found', 404));
@@ -162,13 +163,13 @@ exports.updateWorkOrder = catchAsync(async (req, res, next) => {
   res.status(200).json({ success: true, data: workOrder });
 });
 
-// @desc    Delete a work order
+// @desc    Delete a work order (soft delete)
 // @route   DELETE /api/v1/work-orders/:id
 // @access  Private
 exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
   const workOrder = await WorkOrder.findById(req.params.id);
 
-  if (!workOrder) {
+  if (!workOrder || workOrder.deleted) {
     return next(new AppError('Work order not found', 404));
   }
 

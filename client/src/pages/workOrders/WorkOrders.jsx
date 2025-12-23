@@ -15,7 +15,6 @@ import {
   Menu,
   ListItemIcon,
   ListItemText,
-  Stack,
   InputAdornment,
 } from '@mui/material';
 import { 
@@ -29,7 +28,7 @@ import {
   FilterList as FilterIcon,
   Search as SearchIcon,
 } from '@mui/icons-material';
-import { DataGrid } from '@mui/x-data-grid';
+import { DataGrid, GridFooterContainer, GridPagination } from '@mui/x-data-grid';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -37,7 +36,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useGetWorkOrdersQuery, useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { useGetWorkTypesQuery, useGetWorkSubTypesQuery } from '../../features/setup/setupApiSlice';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, isWithinInterval, parseISO } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, isWithinInterval } from 'date-fns';
 import { toast } from 'react-toastify';
 import { loadFilters, saveFilters } from '../../utils/filterStorage';
 
@@ -225,17 +224,6 @@ const WorkOrders = () => {
     }
   }, [selectedWorkOrder, updateWorkOrder, handleStatusClose]);
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'pending': return <PendingIcon />;
-      case 'in_progress': return <InProgressIcon />;
-      case 'completed': return <CompletedIcon />;
-      case 'on_hold': return <OnHoldIcon />;
-      case 'cancelled': return <CancelledIcon />;
-      default: return <PendingIcon />;
-    }
-  };
-
   const statusOptions = [
     { value: 'pending', label: 'Pending', icon: <PendingIcon /> },
     { value: 'in_progress', label: 'In Progress', icon: <InProgressIcon /> },
@@ -244,7 +232,7 @@ const WorkOrders = () => {
     { value: 'cancelled', label: 'Cancelled', icon: <CancelledIcon /> },
   ];
 
-  const workOrders = workOrdersData?.data?.workOrders || [];
+  const workOrders = useMemo(() => workOrdersData?.data?.workOrders || [], [workOrdersData]);
   
   // Get apartments for selected building
   const selectedBuildingData = useMemo(() => {
@@ -263,6 +251,11 @@ const WorkOrders = () => {
         // Filter out invalid work orders
         if (!wo || typeof wo !== 'object' || !wo._id) {
           console.warn('Invalid work order found:', wo);
+          return false;
+        }
+
+        // Exclude soft-deleted work orders
+        if (wo.deleted) {
           return false;
         }
 
@@ -365,6 +358,12 @@ const WorkOrders = () => {
       }));
   }, [workOrders, filters]);
 
+  const { totalPrice, totalCost } = useMemo(() => {
+    const price = filteredWorkOrders.reduce((sum, wo) => sum + (Number(wo.price) || 0), 0);
+    const cost = filteredWorkOrders.reduce((sum, wo) => sum + (Number(wo.cost) || 0), 0);
+    return { totalPrice: price, totalCost: cost };
+  }, [filteredWorkOrders]);
+
   if (isLoading) {
     return <CircularProgress />;
   }
@@ -372,6 +371,23 @@ const WorkOrders = () => {
   if (error) {
     return <Alert severity="error">Error loading work orders.</Alert>;
   }
+
+
+  const CustomFooter = () => (
+    <GridFooterContainer>
+      <Box sx={{ flexGrow: 1, px: 2, py: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+        <Typography variant="subtitle2" fontWeight="bold" sx={{ mr: 3 }}>
+          Total Price: {`$${totalPrice.toFixed(2)}`}
+        </Typography>
+        {canViewCosts() && (
+          <Typography variant="subtitle2" fontWeight="bold">
+            Total Cost: {`$${totalCost.toFixed(2)}`}
+          </Typography>
+        )}
+      </Box>
+      <GridPagination />
+    </GridFooterContainer>
+  );
 
 
   const columns = [
@@ -619,12 +635,11 @@ const WorkOrders = () => {
           }
 
           // Clean the photo URL - remove any leading slashes or path prefixes
-          photoUrl = photoUrl.replace(/^.*[\\\/]/, '').replace(/^uploads[\\\/]photos[\\\/]/, '');
+          photoUrl = photoUrl.replace(/^.*[\/]/, '').replace(/^uploads[\/]photos[\/]/, '');
 
           // Fix double API path issue and ensure correct URL construction
           const baseUrl = process.env.REACT_APP_API_URL || window.location.origin;
           const cleanBaseUrl = baseUrl.replace(/\/api\/v1\/api\/v1/g, '/api/v1').replace(/\/+$/, '').replace('/api/v1', '');
-          const fullPhotoUrl = `${cleanBaseUrl}/uploads/photos/${photoUrl}`;
 
           return (
             <Box sx={{
@@ -651,7 +666,7 @@ const WorkOrders = () => {
                 }
 
                 // Clean the photo URL
-                currentPhotoUrl = currentPhotoUrl.replace(/^.*[\\\/]/, '').replace(/^uploads[\\\/]photos[\\\/]/, '');
+                currentPhotoUrl = currentPhotoUrl.replace(/^.*[\/]/, '').replace(/^uploads[\/]photos[\/]/, '');
                 const currentFullPhotoUrl = `${cleanBaseUrl}/uploads/photos/${currentPhotoUrl}`;
 
                 return (
@@ -1662,8 +1677,9 @@ const WorkOrders = () => {
               outline: 'none',
             },
           }}
-          components={{
-            NoRowsOverlay: () => (
+          slots={{
+            footer: CustomFooter,
+            noRowsOverlay: () => (
               <Box
                 display="flex"
                 flexDirection="column"
@@ -1681,7 +1697,7 @@ const WorkOrders = () => {
                 </Typography>
               </Box>
             ),
-            ErrorOverlay: () => (
+            errorOverlay: () => (
               <Box
                 display="flex"
                 flexDirection="column"

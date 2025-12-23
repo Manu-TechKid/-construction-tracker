@@ -7,7 +7,7 @@ const AppError = require('../utils/appError');
 exports.getAllNotes = catchAsync(async (req, res, next) => {
   const { building, status, type, priority } = req.query;
   
-  let filter = {};
+  let filter = { deleted: { $ne: true } };
   
   if (building) filter.building = building;
   if (status) filter.status = status;
@@ -31,7 +31,7 @@ exports.getAllNotes = catchAsync(async (req, res, next) => {
 
 // Get single note
 exports.getNote = catchAsync(async (req, res, next) => {
-  const note = await Note.findById(req.params.id)
+  const note = await Note.findOne({ _id: req.params.id, deleted: { $ne: true } })
     .populate('building', 'name address')
     .populate('createdBy', 'name email')
     .populate('assignedTo', 'name email')
@@ -114,8 +114,8 @@ exports.updateNote = catchAsync(async (req, res, next) => {
     updatedBy: req.user.id
   };
 
-  const note = await Note.findByIdAndUpdate(
-    req.params.id,
+  const note = await Note.findOneAndUpdate(
+    { _id: req.params.id, deleted: { $ne: true } },
     updateData,
     {
       new: true,
@@ -139,13 +139,17 @@ exports.updateNote = catchAsync(async (req, res, next) => {
   });
 });
 
-// Delete note
+// Delete note (soft delete)
 exports.deleteNote = catchAsync(async (req, res, next) => {
-  const note = await Note.findByIdAndDelete(req.params.id);
+  const note = await Note.findOne({ _id: req.params.id, deleted: { $ne: true } });
 
   if (!note) {
     return next(new AppError('No note found with that ID', 404));
   }
+
+  note.deleted = true;
+  note.deletedAt = new Date();
+  await note.save();
 
   res.status(204).json({
     status: 'success',
@@ -158,7 +162,7 @@ exports.getBuildingNotes = catchAsync(async (req, res, next) => {
   const { buildingId } = req.params;
   const { status, type } = req.query;
 
-  let filter = { building: buildingId };
+  let filter = { building: buildingId, deleted: { $ne: true } };
   if (status) filter.status = status;
   if (type) filter.type = type;
 

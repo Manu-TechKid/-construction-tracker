@@ -8,7 +8,7 @@ const catchAsync = require('../utils/catchAsync');
 exports.getAllUsers = catchAsync(async (req, res, next) => {
     const { role, status, approvalStatus } = req.query;
     
-    const filter = {};
+    const filter = { deleted: { $ne: true } };
     if (role) filter.role = role;
     if (status && role === 'worker') filter['workerProfile.status'] = status;
     if (approvalStatus && role === 'worker') filter['workerProfile.approvalStatus'] = approvalStatus;
@@ -32,7 +32,7 @@ exports.getAllUsers = catchAsync(async (req, res, next) => {
 exports.getAllWorkers = catchAsync(async (req, res, next) => {
     const { status, approvalStatus, skills } = req.query;
     
-    const filter = { role: 'worker' };
+    const filter = { role: 'worker', deleted: { $ne: true } };
     if (status) filter['workerProfile.status'] = status;
     if (approvalStatus) filter['workerProfile.approvalStatus'] = approvalStatus;
     if (skills) filter['workerProfile.skills'] = { $in: skills.split(',') };
@@ -67,7 +67,7 @@ exports.getAvailableWorkers = catchAsync(async (req, res, next) => {
 
 // Get single user
 exports.getUser = catchAsync(async (req, res, next) => {
-    const user = await User.findById(req.params.id)
+    const user = await User.findOne({ _id: req.params.id, deleted: { $ne: true } })
         .select('-password')
         .populate('workerProfile.createdBy', 'name email')
         .populate('workerProfile.approvedBy', 'name email');
@@ -175,7 +175,7 @@ exports.createWorker = catchAsync(async (req, res, next) => {
 
 // Update user
 exports.updateUser = catchAsync(async (req, res, next) => {
-    const user = await User.findById(req.params.id);
+    const user = await User.findOne({ _id: req.params.id, deleted: { $ne: true } });
     
     if (!user) {
         return next(new AppError('No user found with that ID', 404));
@@ -249,7 +249,7 @@ exports.updateWorkerApproval = catchAsync(async (req, res, next) => {
         return next(new AppError('Invalid approval status', 400));
     }
     
-    const worker = await User.findById(req.params.id);
+    const worker = await User.findOne({ _id: req.params.id, deleted: { $ne: true } });
     
     if (!worker || worker.role !== 'worker') {
         return next(new AppError('No worker found with that ID', 404));
@@ -301,7 +301,10 @@ exports.deleteUser = catchAsync(async (req, res, next) => {
             }
         }
         
-        await User.findByIdAndDelete(req.params.id);
+        // Perform a soft delete
+        user.deleted = true;
+        user.deletedAt = new Date();
+        await user.save();
         
         res.status(204).json({
             status: 'success',
@@ -374,7 +377,7 @@ exports.updateWorkerSkills = catchAsync(async (req, res, next) => {
         return next(new AppError('Skills must be an array', 400));
     }
     
-    const worker = await User.findById(req.params.id);
+    const worker = await User.findOne({ _id: req.params.id, deleted: { $ne: true } });
     
     if (!worker || worker.role !== 'worker') {
         return next(new AppError('No worker found with that ID', 404));
@@ -400,7 +403,7 @@ exports.updateWorkerStatus = catchAsync(async (req, res, next) => {
         return next(new AppError('Invalid status value', 400));
     }
     
-    const worker = await User.findById(req.params.id);
+    const worker = await User.findOne({ _id: req.params.id, deleted: { $ne: true } });
     
     if (!worker || worker.role !== 'worker') {
         return next(new AppError('No worker found with that ID', 404));
@@ -450,7 +453,7 @@ exports.updateMe = catchAsync(async (req, res, next) => {
   }
 
   // 3) Update user document
-  const updatedUser = await User.findByIdAndUpdate(req.user.id, filteredBody, {
+  const updatedUser = await User.findOneAndUpdate({ _id: req.user.id, deleted: { $ne: true } }, filteredBody, {
     new: true,
     runValidators: true,
   });
@@ -465,7 +468,7 @@ exports.updateMe = catchAsync(async (req, res, next) => {
 
 // Delete current user
 exports.deleteMe = catchAsync(async (req, res, next) => {
-  await User.findByIdAndUpdate(req.user.id, { isActive: false });
+  await User.findByIdAndUpdate(req.user.id, { deleted: true, deletedAt: new Date() });
 
   res.status(204).json({
     status: 'success',
@@ -498,7 +501,7 @@ exports.adminResetPassword = catchAsync(async (req, res, next) => {
     return next(new AppError('Password must be at least 8 characters long', 400));
   }
 
-  const user = await User.findById(userId);
+  const user = await User.findOne({ _id: userId, deleted: { $ne: true } });
   if (!user) {
     return next(new AppError('User not found', 404));
   }
