@@ -64,32 +64,25 @@ const MyTimeLogs = () => {
           <TableHead>
             <TableRow>
               <TableCell>Date</TableCell>
-              <TableCell>Time</TableCell>
-              <TableCell>Type</TableCell>
+              <TableCell>Clock In</TableCell>
+              <TableCell>Clock Out</TableCell>
+              <TableCell>Duration</TableCell>
               <TableCell>Notes</TableCell>
-              <TableCell>Signature</TableCell>
+              <TableCell>Signatures</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {timeLogs.map((log) => (
               <TableRow key={log._id}>
-                <TableCell>{format(new Date(log.timestamp), 'PPP')}</TableCell>
-                <TableCell>{format(new Date(log.timestamp), 'p')}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={log.type}
-                    color={log.type === 'clock-in' ? 'success' : 'default'}
-                    size="small"
-                  />
-                </TableCell>
+                <TableCell>{format(new Date(log.clockIn), 'PPP')}</TableCell>
+                <TableCell>{format(new Date(log.clockIn), 'p')}</TableCell>
+                <TableCell>{log.clockOut ? format(new Date(log.clockOut), 'p') : 'Active'}</TableCell>
+                <TableCell>{log.duration ? `${log.duration.toFixed(2)} hrs` : '-'}</TableCell>
                 <TableCell>{log.notes}</TableCell>
                 <TableCell>
-                  {log.signature ? (
-                    <img src={log.signature} alt="Signature" style={{ height: '40px', border: '1px solid #ccc' }} />
-                  ) : (
-                    'N/A'
-                  )}
+                  {log.clockInSignature && <img src={log.clockInSignature} alt="Clock-in Signature" style={{ height: '40px', border: '1px solid #ccc', marginRight: '5px' }} />}
+                  {log.clockOutSignature && <img src={log.clockOutSignature} alt="Clock-out Signature" style={{ height: '40px', border: '1px solid #ccc' }} />}
                 </TableCell>
                 <TableCell>
                   <Tooltip title="Edit">

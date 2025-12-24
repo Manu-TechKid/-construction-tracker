@@ -82,12 +82,61 @@ exports.getUserStatus = catchAsync(async (req, res, next) => {
 // @route   GET /api/v1/timelogs/my-logs
 // @access  Private
 exports.getMyTimeLogs = catchAsync(async (req, res, next) => {
-  const timeLogs = await TimeLog.find({ user: req.user._id }).sort('-timestamp');
+  const timeLogs = await TimeLog.find({ user: req.user._id }).populate('user', 'name').sort({ timestamp: 1 });
+
+  const pairedLogs = [];
+  let clockInLog = null;
+
+  for (const log of timeLogs) {
+    if (log.type === 'clock-in') {
+      if (clockInLog) {
+        // Handle dangling clock-in
+        pairedLogs.push({
+          _id: clockInLog._id,
+          user: clockInLog.user,
+          clockIn: clockInLog.timestamp,
+          clockOut: null,
+          clockInSignature: clockInLog.signature,
+          notes: clockInLog.notes,
+          duration: null,
+        });
+      }
+      clockInLog = log;
+    } else if (log.type === 'clock-out' && clockInLog) {
+      pairedLogs.push({
+        _id: clockInLog._id,
+        user: clockInLog.user,
+        clockIn: clockInLog.timestamp,
+        clockOut: log.timestamp,
+        clockInSignature: clockInLog.signature,
+        clockOutSignature: log.signature,
+        notes: [clockInLog.notes, log.notes].filter(Boolean).join('; '),
+        duration: (new Date(log.timestamp) - new Date(clockInLog.timestamp)) / 1000 / 60 / 60,
+      });
+      clockInLog = null;
+    }
+  }
+
+  if (clockInLog) {
+    // Handle last dangling clock-in
+    pairedLogs.push({
+      _id: clockInLog._id,
+      user: clockInLog.user,
+      clockIn: clockInLog.timestamp,
+      clockOut: null,
+      clockInSignature: clockInLog.signature,
+      notes: clockInLog.notes,
+      duration: null,
+    });
+  }
+
+  // Sort the paired logs by clock-in time, descending
+  pairedLogs.sort((a, b) => new Date(b.clockIn) - new Date(a.clockIn));
 
   res.status(200).json({
     status: 'success',
-    results: timeLogs.length,
-    data: { timeLogs },
+    results: pairedLogs.length,
+    data: { timeLogs: pairedLogs },
   });
 });
 
@@ -127,13 +176,11 @@ exports.updateTimeLog = catchAsync(async (req, res, next) => {
 });
 
 exports.deleteTimeLog = catchAsync(async (req, res, next) => {
-  const log = await TimeLog.findById(req.params.id);
+  const log = await TimeLog.findByIdAndDelete(req.params.id);
 
   if (!log) {
     return next(new AppError('No time log found with that ID', 404));
   }
-
-  await log.remove();
 
   res.status(204).json({
     status: 'success',
@@ -142,11 +189,73 @@ exports.deleteTimeLog = catchAsync(async (req, res, next) => {
 });
 
 exports.getAllTimeLogs = catchAsync(async (req, res, next) => {
-  const timeLogs = await TimeLog.find().populate('user', 'name').sort('-timestamp');
+  const timeLogs = await TimeLog.find().populate('user', 'name').sort({ user: 1, timestamp: 1 });
+
+  const pairedLogs = [];
+  const userLogs = {};
+
+  timeLogs.forEach(log => {
+    const userId = log.user._id.toString();
+    if (!userLogs[userId]) {
+      userLogs[userId] = [];
+    }
+    userLogs[userId].push(log);
+  });
+
+  for (const userId in userLogs) {
+    const logs = userLogs[userId];
+    let clockInLog = null;
+
+    for (const log of logs) {
+      if (log.type === 'clock-in') {
+        if (clockInLog) {
+          // Handle dangling clock-in
+          pairedLogs.push({
+            _id: clockInLog._id,
+            user: clockInLog.user,
+            clockIn: clockInLog.timestamp,
+            clockOut: null,
+            clockInSignature: clockInLog.signature,
+            notes: clockInLog.notes,
+            duration: null,
+          });
+        }
+        clockInLog = log;
+      } else if (log.type === 'clock-out' && clockInLog) {
+        pairedLogs.push({
+          _id: clockInLog._id,
+          user: clockInLog.user,
+          clockIn: clockInLog.timestamp,
+          clockOut: log.timestamp,
+          clockInSignature: clockInLog.signature,
+          clockOutSignature: log.signature,
+          notes: [clockInLog.notes, log.notes].filter(Boolean).join('; '),
+          duration: (new Date(log.timestamp) - new Date(clockInLog.timestamp)) / 1000 / 60 / 60,
+        });
+        clockInLog = null;
+      }
+    }
+
+    if (clockInLog) {
+      // Handle last dangling clock-in
+      pairedLogs.push({
+        _id: clockInLog._id,
+        user: clockInLog.user,
+        clockIn: clockInLog.timestamp,
+        clockOut: null,
+        clockInSignature: clockInLog.signature,
+        notes: clockInLog.notes,
+        duration: null,
+      });
+    }
+  }
+
+  // Sort the paired logs by clock-in time, descending
+  pairedLogs.sort((a, b) => new Date(b.clockIn) - new Date(a.clockIn));
 
   res.status(200).json({
     status: 'success',
-    results: timeLogs.length,
-    data: { timeLogs },
+    results: pairedLogs.length,
+    data: { timeLogs: pairedLogs },
   });
 });
