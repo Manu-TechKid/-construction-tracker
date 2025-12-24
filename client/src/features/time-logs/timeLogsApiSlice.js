@@ -32,6 +32,13 @@ export const timeLogsApiSlice = apiSlice.injectEndpoints({
             ]
           : [{ type: 'TimeLog', id: 'LIST' }],
     }),
+    deleteTimeLog: builder.mutation({
+      query: (id) => ({
+        url: `/time-logs/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: [{ type: 'TimeLog', id: 'LIST' }],
+    }),
     getAllTimeLogs: builder.query({
       query: () => '/time-logs',
       providesTags: (result) =>
@@ -51,4 +58,5 @@ export const {
   useGetUserTimeLogStatusQuery,
   useGetMyTimeLogsQuery,
   useGetAllTimeLogsQuery,
+  useDeleteTimeLogMutation,
 } = timeLogsApiSlice;

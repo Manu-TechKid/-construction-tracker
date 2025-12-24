@@ -1,10 +1,24 @@
 import React from 'react';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, CircularProgress, Alert, Chip } from '@mui/material';
-import { useGetAllTimeLogsQuery } from '../../features/time-logs/timeLogsApiSlice';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, CircularProgress, Alert, Chip, IconButton, Tooltip } from '@mui/material';
+import { Delete as DeleteIcon } from '@mui/icons-material';
+import { useGetAllTimeLogsQuery, useDeleteTimeLogMutation } from '../../features/time-logs/timeLogsApiSlice';
 import { format } from 'date-fns';
+import { toast } from 'react-toastify';
 
 const TimeLogs = () => {
   const { data: timeLogsData, isLoading, error } = useGetAllTimeLogsQuery();
+  const [deleteTimeLog] = useDeleteTimeLogMutation();
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this time log?')) {
+      try {
+        await deleteTimeLog(id).unwrap();
+        toast.success('Time log deleted successfully');
+      } catch (err) {
+        toast.error(err.data?.message || 'Failed to delete time log');
+      }
+    }
+  };
 
   if (isLoading) {
     return <CircularProgress />;
@@ -31,6 +45,7 @@ const TimeLogs = () => {
               <TableCell>Type</TableCell>
               <TableCell>Notes</TableCell>
               <TableCell>Signature</TableCell>
+              <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -53,6 +68,13 @@ const TimeLogs = () => {
                   ) : (
                     'N/A'
                   )}
+                </TableCell>
+                <TableCell>
+                  <Tooltip title="Delete">
+                    <IconButton onClick={() => handleDelete(log._id)} color="error">
+                      <DeleteIcon />
+                    </IconButton>
+                  </Tooltip>
                 </TableCell>
               </TableRow>
             ))}
