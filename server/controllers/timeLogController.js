@@ -94,6 +94,53 @@ exports.getMyTimeLogs = catchAsync(async (req, res, next) => {
 // @desc    Get all time logs (for admins/managers)
 // @route   GET /api/v1/timelogs
 // @access  Admin, Manager
+// @desc    Delete a time log (for admins/managers)
+// @route   DELETE /api/v1/timelogs/:id
+// @access  Admin, Manager
+// @desc    Update a time log (for admins/managers)
+// @route   PUT /api/v1/timelogs/:id
+// @access  Admin, Manager
+exports.updateTimeLog = catchAsync(async (req, res, next) => {
+  const { timestamp, notes } = req.body;
+
+  const log = await TimeLog.findById(req.params.id);
+
+  if (!log) {
+    return next(new AppError('No time log found with that ID', 404));
+  }
+
+  if (timestamp) {
+    log.timestamp = timestamp;
+  }
+  if (notes) {
+    log.notes = notes;
+  }
+
+  await log.save();
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      timeLog: log,
+    },
+  });
+});
+
+exports.deleteTimeLog = catchAsync(async (req, res, next) => {
+  const log = await TimeLog.findById(req.params.id);
+
+  if (!log) {
+    return next(new AppError('No time log found with that ID', 404));
+  }
+
+  await log.remove();
+
+  res.status(204).json({
+    status: 'success',
+    data: null,
+  });
+});
+
 exports.getAllTimeLogs = catchAsync(async (req, res, next) => {
   const timeLogs = await TimeLog.find().populate('user', 'name').sort('-timestamp');
 

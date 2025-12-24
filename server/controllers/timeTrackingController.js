@@ -93,11 +93,16 @@ exports.clockIn = catchAsync(async (req, res, next) => {
   // Check if worker is already clocked in
   const activeSession = await TimeSession.findOne({
     worker: actualWorkerId,
-    status: 'active'
+    status: { $in: ['active', 'paused'] }
   });
 
   if (activeSession) {
-    return next(new AppError('Worker is already clocked in', 400));
+    // If a session is stuck, clock it out automatically before starting a new one
+    activeSession.shiftEnd = new Date();
+    activeSession.clockOutTime = new Date();
+    activeSession.status = 'completed';
+    activeSession.notes = (activeSession.notes || '') + '\n[System] Automatically clocked out due to new session start.';
+    await activeSession.save();
   }
 
   // Simplified location validation - skip geofencing for now
