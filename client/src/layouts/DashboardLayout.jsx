@@ -177,6 +177,7 @@ const DashboardLayout = () => {
       permission: 'read:self' // Generic permission for authenticated users
     });
 
+
     // Time Logs - for admins/managers
     if (!isWorker && hasPermission(['manage:users'])) {
       items.push({
@@ -411,7 +412,7 @@ const DashboardLayout = () => {
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <ClockInOut />
+            {!isWorker && <ClockInOut />}
             <NotificationComponent />
             <Chip
               label={user?.role?.toUpperCase() || 'USER'}

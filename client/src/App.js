@@ -399,6 +399,7 @@ const AppContent = () => {
                 element={<MyTimeLogs />} 
               />
 
+
               {/* Reminders */}
               <Route 
                 path="reminders" 
