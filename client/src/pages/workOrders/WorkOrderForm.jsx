@@ -115,17 +115,14 @@ const WorkOrderForm = () => {
 
         console.log('Submitting work order with data:', formattedValues);
 
-        let workOrderId = id;
         if (isEdit) {
           await updateWorkOrder({ id, ...formattedValues }).unwrap();
         } else {
-          const newWorkOrder = await createWorkOrder(formattedValues).unwrap();
-          workOrderId = newWorkOrder.data._id;
+          await createWorkOrder(formattedValues).unwrap();
         }
 
         console.log(`Work order saved with ${photos?.length || 0} photos`);
 
-        // Show success message and redirect immediately
         const message = isEdit ? 'Work order updated successfully!' : 'Work order created successfully!';
         toast.success(message, {
           position: "top-right",
@@ -136,8 +133,6 @@ const WorkOrderForm = () => {
           draggable: true,
         });
         
-        // Immediate navigation without delay
-        // If returnTo is specified, go back to that page, otherwise go to work orders list
         navigate(returnTo || '/work-orders', { replace: true });
       } catch (error) {
         console.error('Failed to save work order:', error);
@@ -159,7 +154,6 @@ const WorkOrderForm = () => {
   const { data: selectedBuildingData } = useGetBuildingQuery(formik.values.building, { skip: !formik.values.building });
   const apartmentCount = selectedBuildingData?.data?.apartments?.length || 0;
   
-  // Setup data queries
   const { data: workTypesData, isLoading: isLoadingWorkTypes } = useGetWorkTypesQuery();
   const { data: workSubTypesData } = useGetWorkSubTypesQuery(
     formik.values.workType && typeof formik.values.workType === 'object' 
@@ -179,7 +173,6 @@ const WorkOrderForm = () => {
 
   const [createWorkOrder, { isLoading: isCreating }] = useCreateWorkOrderMutation();
   const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
-  // Photo functionality integrated below with PhotoUpload component
 
   const previousBuildingRef = useRef(formik.values.building);
 
@@ -189,7 +182,7 @@ const WorkOrderForm = () => {
       formik.setFieldValue('cost', 0);
     }
     previousBuildingRef.current = formik.values.building;
-  }, [isEdit, formik.values.building, formik.setFieldValue]);
+  }, [isEdit, formik]);
 
   const workTypes = useMemo(() => workTypesData?.data?.workTypes || workTypesData?.workTypes || [], [workTypesData]);
   const workSubTypes = useMemo(() => workSubTypesData?.data?.workSubTypes || workSubTypesData?.workSubTypes || [], [workSubTypesData]);
@@ -241,7 +234,6 @@ const WorkOrderForm = () => {
     );
   }, [buildingServices, selectedWorkSubType, selectedWorkType]);
 
-  // Auto-populate price and cost from Customer Pricing
   useEffect(() => {
     if (!matchedPricingService) return;
 
@@ -266,34 +258,27 @@ const WorkOrderForm = () => {
         formik.setFieldValue('cost', Number(totalCost.toFixed(2)));
       }
     }
-  }, [matchedPricingService, formik.setFieldValue, formik.values.cost, formik.values.price]);
+  }, [matchedPricingService, formik]);
 
-  // Auto-populate title, description, and price from System Setup WorkSubType
   useEffect(() => {
     if (!selectedWorkSubType) return;
 
-    // Auto-fill title if empty
     const currentTitle = formik.values.title?.trim() || '';
     if (!currentTitle && selectedWorkSubType.name) {
       formik.setFieldValue('title', selectedWorkSubType.name);
     }
 
-    // Auto-fill description if empty
     const currentDescription = formik.values.description?.trim() || '';
     if (!currentDescription && selectedWorkSubType.description) {
       formik.setFieldValue('description', selectedWorkSubType.description);
     }
 
-    // Auto-fill price from subtype if available
     if (selectedWorkSubType.price > 0) {
       formik.setFieldValue('price', selectedWorkSubType.price);
     }
 
-  }, [selectedWorkSubType, formik.setFieldValue, formik.values.description, formik.values.title]);
+  }, [selectedWorkSubType, formik]);
 
-  // Auto-populate title and description from Customer Pricing when available
-  // This prefers the price sheet service definition over the generic work sub-type
-  // but only overrides if the user hasn't customized the fields yet.
   useEffect(() => {
     if (!matchedPricingService) return;
 
@@ -308,14 +293,12 @@ const WorkOrderForm = () => {
     if ((!currentDescription || currentDescription === subTypeDescription) && matchedPricingService.description) {
       formik.setFieldValue('description', matchedPricingService.description);
     }
-  }, [matchedPricingService, formik.setFieldValue, formik.values.description, formik.values.title, selectedWorkSubType]);
+  }, [matchedPricingService, selectedWorkSubType, formik]);
 
   useEffect(() => {
     if (isEdit && workOrderData?.data) {
-      // Exclude fields that are not part of the form to avoid warnings
       const { _id, __v, createdAt, updatedAt, ...formData } = workOrderData.data;
       
-      // Ensure all form fields have proper values
       const safeFormData = {
         title: formData.title || '',
         description: formData.description || '',
@@ -326,23 +309,21 @@ const WorkOrderForm = () => {
         workSubType: formData.workSubType?._id || formData.workSubType || '',
         priority: formData.priority || 'medium',
         assignedTo: formData.assignedTo?.map(a => a.worker?._id || a.worker) || [],
-        price: formData.price || formData.estimatedCost || 0, // Map old estimatedCost to new price field
-        cost: formData.cost || formData.actualCost || 0, // Map old actualCost to new cost field
+        price: formData.price || formData.estimatedCost || 0, 
+        cost: formData.cost || formData.actualCost || 0, 
         scheduledDate: formData.scheduledDate ? new Date(formData.scheduledDate) : new Date(),
         status: formData.status || 'pending'
       };
       
       formik.setValues(safeFormData);
 
-      // Load existing photos for edit mode
       if (formData.photos && Array.isArray(formData.photos)) {
         setPhotos(formData.photos);
       }
     } else if (!isEdit && selectedBuilding) {
-      // Set the building from context for new work orders
       formik.setFieldValue('building', selectedBuilding._id);
     }
-  }, [isEdit, workOrderData, selectedBuilding, formik.setFieldValue, formik.setValues]);
+  }, [isEdit, workOrderData, selectedBuilding, formik]);
 
   if (isLoadingWorkOrder || isLoadingBuildings || isLoadingUsers || isLoadingWorkTypes) {
     return (

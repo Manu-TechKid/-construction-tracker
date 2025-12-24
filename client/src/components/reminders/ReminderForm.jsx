@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { toast } from 'react-toastify';
 import {
   Box,
   Button,
   Card,
   CardContent,
-  Container,
   FormControl,
   Grid,
   InputLabel,
@@ -33,8 +30,6 @@ import {
   DialogActions,
 } from '@mui/material';
 import {
-  ArrowBack as ArrowBackIcon,
-  Save as SaveIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
@@ -110,7 +105,7 @@ const ReminderForm = ({
         }
       }
     }
-  }, [apartmentId, buildingsData, buildingId]);
+  }, [apartmentId, buildingsData, buildingId, initialValues.apartment]);
   const [photos, setPhotos] = useState([]);
   const [noteText, setNoteText] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);

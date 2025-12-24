@@ -14,8 +14,7 @@ import {
   Select,
   MenuItem,
   Alert,
-  CircularProgress,
-  Divider
+  CircularProgress
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -26,7 +25,6 @@ import {
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
-import { useAuth } from '../../hooks/useAuth';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { useGetProjectEstimateQuery, useUpdateProjectEstimateMutation } from '../../features/estimates/projectEstimatesApiSlice';
 import LineItemEditor from '../../components/estimates/LineItemEditor';
@@ -34,7 +32,6 @@ import LineItemEditor from '../../components/estimates/LineItemEditor';
 const EditProjectEstimate = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   const { data: estimateData, isLoading: isLoadingEstimate } = useGetProjectEstimateQuery(id);
   const estimate = estimateData?.data?.projectEstimate;

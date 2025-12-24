@@ -34,12 +34,12 @@ import {
   Logout as LogoutIcon,
   Work as WorkIcon,
   Assignment as WorkLogIcon,
-  CheckCircle as ApprovalIcon,
   Search as SearchIcon,
   AccessTime as TimeIcon,
   Approval as ProjectApprovalIcon,
   AttachMoney as PricingIcon,
   Call as CallIcon,
+  Assessment as AssessmentIcon,
 } from '@mui/icons-material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
@@ -315,10 +315,20 @@ const DashboardLayout = () => {
       permission: 'read:all'
     });
 
-    // System Setup - Admin only
+    // Reports - for admins/managers
+    if (hasPermission(['view:costs', 'manage:users'])) {
+      items.push({
+        text: 'Payroll Report',
+        icon: <AssessmentIcon />,
+        path: '/reports/payroll',
+        permission: 'view:costs'
+      });
+    }
+
+    // Setup - for admins
     if (hasPermission(['manage:system'])) {
       items.push({
-        text: 'System Setup',
+        text: 'Setup',
         icon: <SettingsIcon />,
         path: '/setup',
         permission: 'manage:system'

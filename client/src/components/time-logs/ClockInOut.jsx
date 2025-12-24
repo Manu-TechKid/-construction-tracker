@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Button, Box, Typography, CircularProgress, Chip, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
+import { Button, Box, CircularProgress, Chip, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import { useGetUserTimeLogStatusQuery, useClockInMutation, useClockOutMutation } from '../../features/time-logs/timeLogsApiSlice';
 import SignatureCanvas from 'react-signature-canvas';
 import { toast } from 'react-toastify';

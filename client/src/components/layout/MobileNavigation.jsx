@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   BottomNavigation, 
   BottomNavigationAction, 
@@ -21,6 +21,7 @@ import {
   People as WorkerIcon,
   Menu as MenuIcon,
   AccessTime as TimeTrackingIcon,
+  Assessment as AssessmentIcon,
   Close as CloseIcon,
   Work as WorkIcon
 } from '@mui/icons-material';
@@ -119,6 +120,17 @@ const MobileNavigation = () => {
         value: 'timeTracking',
         icon: <TimeTrackingIcon />,
         path: '/time-tracking-management',
+        permission: 'view:costs'
+      });
+    }
+
+    // Reports - for admins/managers
+    if (hasPermission(['view:costs', 'manage:users'])) {
+      items.push({
+        label: 'Payroll Report',
+        value: 'payrollReport',
+        icon: <AssessmentIcon />,
+        path: '/reports/payroll',
         permission: 'view:costs'
       });
     }

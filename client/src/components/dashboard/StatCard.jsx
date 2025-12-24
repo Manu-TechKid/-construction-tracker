@@ -1,5 +1,4 @@
 import { Box, Typography, useTheme } from '@mui/material';
-import { styled } from '@mui/material/styles';
 
 const StatCard = ({ title, value, icon, color, subtitle, trend, trendColor, onClick }) => {
   const theme = useTheme();

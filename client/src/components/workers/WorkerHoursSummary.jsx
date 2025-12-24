@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -23,7 +23,6 @@ import {
 } from '@mui/material';
 import {
   Schedule as TimeIcon,
-  AttachMoney as MoneyIcon,
   Warning as WarningIcon,
   CheckCircle as ApprovedIcon,
   Pending as PendingIcon
@@ -46,7 +45,7 @@ const WorkerHoursSummary = () => {
     status: ''
   });
 
-  const fetchWorkerSessions = async () => {
+  const fetchWorkerSessions = useCallback(async () => {
     setLoading(true);
     try {
       const apiUrl = process.env.REACT_APP_API_URL || 'https://construction-tracker-webapp.onrender.com/api/v1';
@@ -104,13 +103,13 @@ const WorkerHoursSummary = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user.id, filters.startDate, filters.endDate, filters.status]);
 
   useEffect(() => {
     if (user?.id) {
       fetchWorkerSessions();
     }
-  }, [user?.id, filters.startDate, filters.endDate, filters.status]);
+  }, [user?.id, fetchWorkerSessions]);
 
   const getStatusColor = (session) => {
     if (session.isApproved) return 'success';
@@ -126,15 +125,6 @@ const WorkerHoursSummary = () => {
     return session.status;
   };
 
-  const formatDuration = (startTime, endTime) => {
-    if (!startTime || !endTime) return 'In Progress';
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    const diffMs = end - start;
-    const hours = Math.floor(diffMs / (1000 * 60 * 60));
-    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    return `${hours}h ${minutes}m`;
-  };
 
   return (
     <Box>

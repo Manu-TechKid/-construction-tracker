@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -13,7 +12,6 @@ import {
   Typography,
   Chip,
   IconButton,
-  Tooltip,
   CircularProgress,
   Table,
   TableBody,
@@ -43,7 +41,6 @@ import {
   Search as SearchIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Notifications as NotificationsIcon,
   Schedule as PendingIcon,
   PlayArrow as InProgressIcon,
   CheckCircle as CompletedIcon,
@@ -53,9 +50,8 @@ import {
 } from '@mui/icons-material';
 import { useGetRemindersQuery, useDeleteReminderMutation, useUpdateReminderMutation } from '../../features/reminders/remindersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
-import { selectCurrentUser } from '../../features/auth/authSlice';
 import { toast } from 'react-toastify';
-import { format, isAfter, isBefore, isToday } from 'date-fns';
+import { format, isAfter, isToday } from 'date-fns';
 
 const statusColors = {
   pending: 'warning',
@@ -82,7 +78,6 @@ const getStatusIcon = (status) => {
 
 const Reminders = () => {
   const navigate = useNavigate();
-  const currentUser = useSelector(selectCurrentUser);
   
   // State management
   const [page, setPage] = useState(0);
@@ -110,7 +105,7 @@ const Reminders = () => {
   const [deleteReminder, { isLoading: isDeleting }] = useDeleteReminderMutation();
   const [updateReminder] = useUpdateReminderMutation();
 
-  const reminders = remindersData?.data?.reminders || [];
+  const reminders = useMemo(() => remindersData?.data?.reminders || [], [remindersData]);
   const totalCount = remindersData?.data?.totalCount || 0;
   const buildings = buildingsData?.data?.buildings || [];
 

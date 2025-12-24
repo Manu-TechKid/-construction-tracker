@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Box,
   Button,
@@ -13,7 +13,6 @@ import {
   Paper,
   Typography,
   FormControl,
-  InputLabel,
   Select,
   MenuItem,
   Tooltip,
@@ -26,6 +25,7 @@ import {
   Save as SaveIcon,
   Cancel as CancelIcon
 } from '@mui/icons-material';
+
 import { format } from 'date-fns';
 
 const LineItemEditor = ({ lineItems = [], onChange, readOnly = false }) => {

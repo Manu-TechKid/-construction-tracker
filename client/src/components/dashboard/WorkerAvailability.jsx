@@ -1,5 +1,5 @@
 import { Box, Typography, Avatar, Paper, LinearProgress, useTheme } from '@mui/material';
-import { Person, CheckCircle, Warning, Error } from '@mui/icons-material';
+import { CheckCircle, Warning, Error } from '@mui/icons-material';
 
 const statusConfig = {
   available: {

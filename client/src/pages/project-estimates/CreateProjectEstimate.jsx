@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -14,30 +14,23 @@ import {
   Select,
   MenuItem,
   Alert,
-  CircularProgress,
-  Divider,
-  Chip,
-  Avatar
+  CircularProgress
 } from '@mui/material';
 import {
   Save as SaveIcon,
   ArrowBack as BackIcon,
   Business as BuildingIcon,
   AttachMoney as MoneyIcon,
-  CalendarToday as CalendarIcon,
-  PhotoCamera as PhotoIcon
+  CalendarToday as CalendarIcon
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
-import { useAuth } from '../../hooks/useAuth';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { useCreateProjectEstimateMutation } from '../../features/estimates/projectEstimatesApiSlice';
 import LineItemEditor from '../../components/estimates/LineItemEditor';
 
 const CreateProjectEstimate = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-
   const [formData, setFormData] = useState({
     title: '',
     description: '',

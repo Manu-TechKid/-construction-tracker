@@ -18,7 +18,6 @@ import {
   Tabs,
   Paper,
   Avatar,
-  IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -30,12 +29,9 @@ import {
   FilterList as FilterIcon,
   Refresh as RefreshIcon,
   Feedback as FeedbackIcon,
-  CheckCircle as ApproveIcon,
-  Cancel as RejectIcon,
-  Visibility as ViewIcon,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
 import { 
@@ -47,18 +43,8 @@ import { useGetUsersQuery } from '../../features/users/usersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import WorkLogList from '../../components/workLogs/WorkLogList';
 
-const getStatusColor = (status) => {
-  switch (status) {
-    case 'pending': return 'warning';
-    case 'reviewed': return 'info';
-    case 'approved': return 'success';
-    case 'needs_revision': return 'error';
-    default: return 'default';
-  }
-};
 
 const AdminWorkLogs = () => {
-  const { hasPermission } = useAuth();
   const [selectedTab, setSelectedTab] = useState(0);
   const [filters, setFilters] = useState({
     workerId: '',
@@ -73,6 +59,8 @@ const AdminWorkLogs = () => {
     feedback: '',
     status: 'reviewed'
   });
+
+  const { hasPermission } = useAuth();
 
   const [addAdminFeedback, { isLoading: isAddingFeedback }] = useAddAdminFeedbackMutation();
 

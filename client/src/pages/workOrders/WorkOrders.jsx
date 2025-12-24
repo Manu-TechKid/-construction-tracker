@@ -618,24 +618,6 @@ const WorkOrders = () => {
             return <Typography variant="body2" color="textSecondary">No photos</Typography>;
           }
 
-          const firstPhoto = photos[0];
-          let photoUrl = '';
-
-          // Handle different photo data structures
-          if (typeof firstPhoto === 'string') {
-            photoUrl = firstPhoto;
-          } else if (firstPhoto?.url) {
-            photoUrl = firstPhoto.url;
-          } else if (firstPhoto?.path) {
-            photoUrl = firstPhoto.path;
-          } else if (firstPhoto?.filename) {
-            photoUrl = firstPhoto.filename;
-          } else if (firstPhoto?.src) {
-            photoUrl = firstPhoto.src;
-          }
-
-          // Clean the photo URL - remove any leading slashes or path prefixes
-          photoUrl = photoUrl.replace(/^.*[\/]/, '').replace(/^uploads[\/]photos[\/]/, '');
 
           // Fix double API path issue and ensure correct URL construction
           const baseUrl = process.env.REACT_APP_API_URL || window.location.origin;
@@ -666,7 +648,7 @@ const WorkOrders = () => {
                 }
 
                 // Clean the photo URL
-                currentPhotoUrl = currentPhotoUrl.replace(/^.*[\/]/, '').replace(/^uploads[\/]photos[\/]/, '');
+                currentPhotoUrl = currentPhotoUrl.replace(/^.*[/]/, '').replace(/^uploads[/]photos[/]/, '');
                 const currentFullPhotoUrl = `${cleanBaseUrl}/uploads/photos/${currentPhotoUrl}`;
 
                 return (
@@ -1631,6 +1613,43 @@ const WorkOrders = () => {
           disableSelectionOnClick
           loading={isLoading}
           autoHeight={false}
+          slots={{
+            footer: CustomFooter,
+            noRowsOverlay: () => (
+              <Box
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                justifyContent="center"
+                minHeight="200px"
+              >
+                <Typography variant="h6" color="textSecondary">
+                  No work orders found
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  {filters.building || filters.status
+                    ? 'Try adjusting your filters'
+                    : 'Create your first work order to get started'}
+                </Typography>
+              </Box>
+            ),
+            errorOverlay: () => (
+              <Box
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                justifyContent="center"
+                minHeight="200px"
+              >
+                <Typography variant="h6" color="error">
+                  Error displaying work orders
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  There was an error rendering the work orders. Please refresh the page.
+                </Typography>
+              </Box>
+            ),
+          }}
           sx={{
             height: '100%',
             width: '100%',
@@ -1676,43 +1695,6 @@ const WorkOrders = () => {
             '& .MuiDataGrid-row:focus-within': {
               outline: 'none',
             },
-          }}
-          slots={{
-            footer: CustomFooter,
-            noRowsOverlay: () => (
-              <Box
-                display="flex"
-                flexDirection="column"
-                alignItems="center"
-                justifyContent="center"
-                minHeight="200px"
-              >
-                <Typography variant="h6" color="textSecondary">
-                  No work orders found
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  {filters.building || filters.status
-                    ? 'Try adjusting your filters'
-                    : 'Create your first work order to get started'}
-                </Typography>
-              </Box>
-            ),
-            errorOverlay: () => (
-              <Box
-                display="flex"
-                flexDirection="column"
-                alignItems="center"
-                justifyContent="center"
-                minHeight="200px"
-              >
-                <Typography variant="h6" color="error">
-                  Error displaying work orders
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  There was an error rendering the work orders. Please refresh the page.
-                </Typography>
-              </Box>
-            ),
           }}
           onError={(error) => {
             console.error('DataGrid error:', error);

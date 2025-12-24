@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Card,
@@ -66,10 +66,10 @@ const ProjectEstimates = () => {
   const { data: buildingsData } = useGetBuildingsQuery();
   const [deleteEstimate] = useDeleteProjectEstimateMutation();
   const [sendToClient, { isLoading: isSending }] = useSendToClientMutation();
-  const [convertToInvoice, { isLoading: isConverting }] = useConvertToInvoiceMutation();
+  const [convertToInvoice] = useConvertToInvoiceMutation();
 
   const estimates = estimatesData?.data?.projectEstimates || [];
-  const buildings = buildingsData?.data?.buildings || [];
+  const buildings = useMemo(() => buildingsData?.data?.buildings || [], [buildingsData]);
 
   const handleMenuOpen = (event, estimate) => {
     setAnchorEl(event.currentTarget);
@@ -134,7 +134,7 @@ const ProjectEstimates = () => {
     }
   };
 
-  const getBuildingContacts = () => {
+  const getBuildingContacts = React.useCallback(() => {
     if (!selectedEstimate) return [];
     const buildingId =
       typeof selectedEstimate.building === 'object'
@@ -168,7 +168,7 @@ const ProjectEstimates = () => {
     }
     
     return contacts;
-  };
+  }, [selectedEstimate, buildings]);
 
   // Auto-populate emails when dialog opens
   React.useEffect(() => {
@@ -180,7 +180,7 @@ const ProjectEstimates = () => {
     setSelectedEmails(availableEmails); // Select all by default
     setEmailSubject(`Project Estimate - ${selectedEstimate.title}`);
     setEmailMessage('Please find attached the project estimate for your review.');
-  }, [sendToClientDialog, selectedEstimate, buildings]);
+  }, [sendToClientDialog, selectedEstimate, getBuildingContacts]);
 
   const handleConvertToInvoice = async () => {
     try {

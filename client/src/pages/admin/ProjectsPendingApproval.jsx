@@ -6,7 +6,6 @@ import {
   Typography,
   Card,
   CardContent,
-  CardActions,
   Grid,
   Button,
   Chip,
@@ -16,10 +15,8 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  Divider,
   Alert,
   CircularProgress,
-  Paper,
   IconButton,
   Table,
   TableBody,
@@ -44,14 +41,11 @@ import {
   Assignment as AssignmentIcon,
   Add as AddIcon,
   PhotoCamera as PhotoIcon,
-  Business as BuildingIcon,
   Delete as DeleteIcon,
-  Transform as ConvertIcon,
   CalendarToday as CalendarIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'react-toastify';
-import { useAuth } from '../../hooks/useAuth';
 import {
   useGetPendingProjectApprovalsQuery,
   useApproveProjectEstimateMutation,
@@ -61,11 +55,9 @@ import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice
 
 const ProjectsPendingApproval = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   
   // State management
   const [selectedProject, setSelectedProject] = useState(null);
-  const [detailsDialog, setDetailsDialog] = useState(false);
   const [approvalDialog, setApprovalDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [filters, setFilters] = useState({
@@ -85,17 +77,6 @@ const ProjectsPendingApproval = () => {
   const buildings = buildingsData?.data?.buildings || [];
 
   // Helper functions
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'draft': return 'default';
-      case 'submitted': return 'info';
-      case 'pending': return 'warning';
-      case 'approved': return 'success';
-      case 'rejected': return 'error';
-      case 'converted': return 'primary';
-      default: return 'default';
-    }
-  };
 
   const getPriorityColor = (priority) => {
     switch (priority) {
@@ -142,7 +123,7 @@ const ProjectsPendingApproval = () => {
 
   const handleApproval = async (projectId, approved, reason = '') => {
     try {
-      const result = await approveProject({
+      await approveProject({
         id: projectId,
         approved,
         rejectionReason: reason
@@ -185,10 +166,6 @@ const ProjectsPendingApproval = () => {
 
   // Convert functionality moved to Project Estimates module to avoid conflicts
 
-  const handleViewDetails = (project) => {
-    setSelectedProject(project);
-    setDetailsDialog(true);
-  };
 
   // Statistics cards
   const StatCard = ({ title, value, icon, color = 'primary' }) => (
@@ -475,73 +452,6 @@ const ProjectsPendingApproval = () => {
             </CardContent>
           </Card>
 
-        {/* Project Details Dialog */}
-        <Dialog 
-          open={detailsDialog} 
-          onClose={() => setDetailsDialog(false)}
-          maxWidth="md"
-          fullWidth
-        >
-          <DialogTitle>Project Estimate Details</DialogTitle>
-          <DialogContent>
-            {selectedProject && (
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <Typography variant="h6">{selectedProject.title}</Typography>
-                  <Typography color="textSecondary">{selectedProject.description}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2">Building</Typography>
-                  <Typography>{getBuildingName(selectedProject)}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2">Apartment</Typography>
-                  <Typography>{selectedProject.apartmentNumber || 'N/A'}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2">Estimated Price</Typography>
-                  <Typography>${(selectedProject.estimatedPrice || 0).toFixed(2)}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2">Estimated Cost</Typography>
-                  <Typography>${(selectedProject.estimatedCost || 0).toFixed(2)}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2">Visit Date</Typography>
-                  <Typography>{format(parseISO(selectedProject.visitDate), 'MMM dd, yyyy')}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2">Target Year</Typography>
-                  <Typography>{selectedProject.targetYear}</Typography>
-                </Grid>
-                {selectedProject.notes && (
-                  <Grid item xs={12}>
-                    <Typography variant="subtitle2">Notes</Typography>
-                    <Typography>{selectedProject.notes}</Typography>
-                  </Grid>
-                )}
-                {selectedProject.photos && selectedProject.photos.length > 0 && (
-                  <Grid item xs={12}>
-                    <Typography variant="subtitle2">Photos ({selectedProject.photos.length})</Typography>
-                    <Box display="flex" gap={1} flexWrap="wrap" mt={1}>
-                      {selectedProject.photos.map((photo, index) => (
-                        <img 
-                          key={index}
-                          src={`${process.env.REACT_APP_API_URL}${photo.url}`}
-                          alt={photo.caption || `Photo ${index + 1}`}
-                          style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 4 }}
-                        />
-                      ))}
-                    </Box>
-                  </Grid>
-                )}
-              </Grid>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setDetailsDialog(false)}>Close</Button>
-          </DialogActions>
-        </Dialog>
 
         {/* Rejection Dialog */}
         <Dialog open={approvalDialog} onClose={() => setApprovalDialog(false)}>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -23,14 +23,12 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem,
-  Divider
+  MenuItem
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
   AttachMoney as PayrollIcon,
   Person as PersonIcon,
-  CalendarToday as CalendarIcon,
   Download as ExportIcon,
   Warning as WarningIcon
 } from '@mui/icons-material';
@@ -55,7 +53,7 @@ const PaymentReport = () => {
   const { data: usersData } = useGetUsersQuery({ role: 'worker' });
   const workers = usersData?.data?.users || [];
 
-  const fetchPaymentReport = async () => {
+  const fetchPaymentReport = useCallback(async () => {
     setLoading(true);
     try {
       const apiUrl = process.env.REACT_APP_API_URL || 'https://construction-tracker-webapp.onrender.com/api/v1';
@@ -90,11 +88,11 @@ const PaymentReport = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters.startDate, filters.endDate, filters.workerId]);
 
   useEffect(() => {
     fetchPaymentReport();
-  }, [filters.startDate, filters.endDate, filters.workerId]);
+  }, [fetchPaymentReport]);
 
   const handleExportCSV = () => {
     const csvData = [];

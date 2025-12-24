@@ -25,8 +25,6 @@ import {
   InputLabel,
   Select,
   Grid,
-  Alert,
-  Fab,
   Tooltip,
   Stack,
   CircularProgress,
@@ -34,7 +32,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { startOfMonth, endOfMonth, format, isWithinInterval } from 'date-fns';
+import { startOfMonth, endOfMonth, format } from 'date-fns';
 import {
   Add as AddIcon,
   MoreVert as MoreVertIcon,
@@ -94,7 +92,7 @@ const Invoices = () => {
     });
 
     setFiltersLoaded(true);
-  }, []);
+  }, [defaultMonthRange.endDate, defaultMonthRange.startDate]);
 
   useEffect(() => {
     if (!filtersLoaded) return;
@@ -139,26 +137,28 @@ const Invoices = () => {
   const [markAsPaid, { isLoading: isMarkingPaid }] = useMarkInvoiceAsPaidMutation();
   const [deleteInvoice, { isLoading: isDeleting }] = useDeleteInvoiceMutation();
 
-  let invoices = invoicesData?.data?.invoices || [];
-  const buildings = buildingsData?.data?.buildings || [];
-
-  // Recalculate invoice totals from work orders to ensure consistency
-  invoices = invoices.map(invoice => {
-    if (invoice.workOrders && invoice.workOrders.length > 0) {
-      const calculatedTotal = invoice.workOrders.reduce((sum, item) => {
-        // Use the live work order price like InvoiceDetails does
-        const price = item.workOrder?.price !== undefined ? item.workOrder.price : (item.unitPrice || item.totalPrice || 0);
-        const quantity = item.quantity || 1;
-        return sum + (price * quantity);
-      }, 0);
-      // Only update if there's a discrepancy
-      if (Math.abs(calculatedTotal - (invoice.total || 0)) > 0.01) {
-        console.log(`Invoice ${invoice.invoiceNumber}: Correcting total from ${invoice.total} to ${calculatedTotal}`);
-        return { ...invoice, total: calculatedTotal };
+  const invoices = useMemo(() => {
+    const rawInvoices = invoicesData?.data?.invoices || [];
+    // Recalculate invoice totals from work orders to ensure consistency
+    return rawInvoices.map(invoice => {
+      if (invoice.workOrders && invoice.workOrders.length > 0) {
+        const calculatedTotal = invoice.workOrders.reduce((sum, item) => {
+          // Use the live work order price like InvoiceDetails does
+          const price = item.workOrder?.price !== undefined ? item.workOrder.price : (item.unitPrice || item.totalPrice || 0);
+          const quantity = item.quantity || 1;
+          return sum + (price * quantity);
+        }, 0);
+        // Only update if there's a discrepancy
+        if (Math.abs(calculatedTotal - (invoice.total || 0)) > 0.01) {
+          console.log(`Invoice ${invoice.invoiceNumber}: Correcting total from ${invoice.total} to ${calculatedTotal}`);
+          return { ...invoice, total: calculatedTotal };
+        }
       }
-    }
-    return invoice;
-  });
+      return invoice;
+    });
+  }, [invoicesData?.data?.invoices]);
+
+  const buildings = buildingsData?.data?.buildings || [];
 
   const handleMenuClick = (event, invoice) => {
     setAnchorEl(event.currentTarget);

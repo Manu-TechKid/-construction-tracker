@@ -19,7 +19,7 @@ const Register = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [register, { isLoading, error }] = useRegisterMutation();
+  const [register, { isLoading }] = useRegisterMutation();
   const [formErrors, setFormErrors] = useState(null);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
 

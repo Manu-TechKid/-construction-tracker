@@ -33,8 +33,7 @@ const ForgotPassword = () => {
       try {
         setError('');
         setMessage('');
-        
-        const result = await forgotPassword(values).unwrap();
+        await forgotPassword(values).unwrap();
         setMessage('Password reset instructions have been sent to your email.');
       } catch (err) {
         setError(err?.data?.message || 'Failed to send reset email');

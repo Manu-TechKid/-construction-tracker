@@ -20,10 +20,6 @@ import {
   Paper,
   Tabs,
   Tab,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   TextField,
   FormControl,
   InputLabel,
@@ -45,19 +41,13 @@ import {
   Edit as EditIcon,
   Visibility as ViewIcon,
   Download as DownloadIcon,
-  AttachMoney as PayrollIcon,
-  Assignment as TaskIcon,
   CheckCircle as ActiveIcon,
-  Cancel as InactiveIcon,
   Add as AddIcon,
-  FilterList as FilterIcon,
   ExpandMore as ExpandMoreIcon,
-  Phone as PhoneIcon,
   Email as EmailIcon,
-  Work as WorkIcon,
   CalendarToday as CalendarIcon
 } from '@mui/icons-material';
-import { format, startOfWeek, endOfWeek } from 'date-fns';
+import { format } from 'date-fns';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
 import { useGetUsersQuery } from '../../features/users/usersApiSlice';
@@ -69,8 +59,6 @@ const AdminWorkerManagement = () => {
   
   // State management
   const [selectedTab, setSelectedTab] = useState(0);
-  const [selectedWorker, setSelectedWorker] = useState(null);
-  const [letterDialog, setLetterDialog] = useState(false);
   const [filters, setFilters] = useState({
     status: '',
     role: '',
@@ -79,12 +67,11 @@ const AdminWorkerManagement = () => {
   const [expandedWorker, setExpandedWorker] = useState(null);
 
   // API queries
-  const { data: usersData, isLoading, refetch } = useGetUsersQuery();
-  
-  const users = usersData?.data?.users || [];
+  const { data: usersData, isLoading } = useGetUsersQuery();
   
   // Filter workers (exclude admins and managers)
   const workers = useMemo(() => {
+    const users = usersData?.data?.users || [];
     return users.filter(user => 
       user.role === 'worker' || user.role === 'employee'
     ).filter(worker => {
@@ -94,7 +81,7 @@ const AdminWorkerManagement = () => {
         worker.email.toLowerCase().includes(filters.search.toLowerCase());
       return statusMatch && searchMatch;
     });
-  }, [users, filters]);
+  }, [usersData, filters]);
 
   // Generate employment letter
   const generateEmploymentLetter = (worker) => {

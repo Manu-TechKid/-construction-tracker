@@ -11,13 +11,9 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Alert,
   CircularProgress,
-  Chip,
   Paper,
-  Divider,
-  useTheme,
-  useMediaQuery
+  Divider
 } from '@mui/material';
 import {
   Description as LetterIcon,
@@ -30,7 +26,7 @@ import {
   Print as PrintIcon,
   Description as DescriptionIcon
 } from '@mui/icons-material';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
 import {
@@ -39,8 +35,6 @@ import {
 } from '../../features/employment/employmentApiSlice';
 
 const EmploymentReferenceLetter = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { user } = useAuth();
 
   // State

@@ -11,8 +11,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider, 
-  Grid, 
   IconButton, 
   Paper, 
   Tab, 
@@ -38,8 +36,6 @@ import {
   Edit as EditIcon,
   Apartment as BuildingIcon,
   Home as ApartmentIcon,
-  Work as WorkIcon,
-  People as PeopleIcon,
   Info as InfoIcon,
   LocationOn as LocationIcon,
   CalendarToday as CalendarIcon,
@@ -122,7 +118,6 @@ const BuildingInfoTab = ({ building }) => {
 
 const ApartmentsTab = ({ building }) => {
   const theme = useTheme();
-  const navigate = useNavigate();
   const { hasPermission } = useAuth();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedApartment, setSelectedApartment] = useState(null);
@@ -441,7 +436,6 @@ const ApartmentsTab = ({ building }) => {
 const BuildingDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const theme = useTheme();
   const { hasPermission } = useAuth();
   // Get apartment ID from URL if present
   const [apartmentId, setApartmentId] = useState(null);

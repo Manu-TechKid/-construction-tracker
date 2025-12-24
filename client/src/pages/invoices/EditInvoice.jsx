@@ -36,7 +36,6 @@ import {
   ArrowBack as ArrowBackIcon,
   Save as SaveIcon,
   Assignment as WorkOrderIcon,
-  AttachMoney as MoneyIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,

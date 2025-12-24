@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useGetBuildingsQuery } from '../features/buildings/buildingsApiSlice';
 
 const BuildingContext = createContext();
@@ -17,7 +17,7 @@ export const BuildingProvider = ({ children }) => {
   
   // Fetch buildings for dropdown
   const { data: buildingsData, isLoading } = useGetBuildingsQuery({});
-  const buildings = buildingsData?.data?.buildings || [];
+  const buildings = useMemo(() => buildingsData?.data?.buildings || [], [buildingsData]);
 
   // Load selected building from localStorage on mount
   useEffect(() => {

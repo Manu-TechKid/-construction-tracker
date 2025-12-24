@@ -42,7 +42,6 @@ import { toast } from 'react-toastify';
 
 import {
   useGetClientPricingListQuery,
-  useGetBuildingClientPricingQuery,
   useAddPricingServiceMutation,
   useUpdatePricingServiceMutation,
   useRemovePricingServiceMutation,
@@ -128,9 +127,9 @@ const CustomerServicesPrices = () => {
   const { data: workTypesData, isLoading: isLoadingWorkTypes } = useGetWorkTypesQuery();
   
   // Extract workTypes first to avoid initialization error
-  const workTypes = workTypesData?.data?.workTypes || [];
+  const workTypes = useMemo(() => workTypesData?.data?.workTypes || [], [workTypesData?.data?.workTypes]);
   
-  const { data: workSubTypesData, isLoading: isLoadingWorkSubTypes } = useGetWorkSubTypesQuery(
+  const { data: workSubTypesData } = useGetWorkSubTypesQuery(
     filters.category ? workTypes.find(wt => wt.code === filters.category)?._id : undefined
   );
   
@@ -147,7 +146,7 @@ const CustomerServicesPrices = () => {
   const [addPricingService, { isLoading: isAddingService }] = useAddPricingServiceMutation();
   const [updatePricingService, { isLoading: isUpdatingService }] = useUpdatePricingServiceMutation();
   const [removePricingService, { isLoading: isRemovingService }] = useRemovePricingServiceMutation();
-  const [createClientPricing, { isLoading: isCreatingPricing }] = useCreateClientPricingMutation();
+  const [createClientPricing] = useCreateClientPricingMutation();
 
   // Prepare data for DataGrid
   const rows = useMemo(() => {
@@ -189,7 +188,7 @@ const CustomerServicesPrices = () => {
   }, [pricingData]);
 
   const buildings = buildingsData?.data?.buildings || [];
-  const workSubTypes = workSubTypesData?.data?.workSubTypes || [];
+  const workSubTypes = useMemo(() => workSubTypesData?.data?.workSubTypes || [], [workSubTypesData?.data?.workSubTypes]);
 
   // Prepare categories for filter dropdown (use code for filtering)
   const serviceCategories = useMemo(() => {
@@ -204,14 +203,6 @@ const CustomerServicesPrices = () => {
     return categories;
   }, [workTypes]);
 
-  // Prepare categories for form dropdown (use _id for subcategory fetching)
-  const formCategories = useMemo(() => {
-    return workTypes.map(workType => ({
-      value: workType._id, // Use _id for subcategory fetching
-      label: workType.name,
-      code: workType.code
-    }));
-  }, [workTypes]);
 
   // Prepare subcategories for form dropdown
   const serviceSubCategories = useMemo(() => {

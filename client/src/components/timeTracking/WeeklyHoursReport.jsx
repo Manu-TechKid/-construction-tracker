@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -22,12 +22,10 @@ import {
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
-  Schedule as ScheduleIcon,
   Person as PersonIcon,
   CalendarToday as CalendarIcon,
   AttachMoney as PayrollIcon
 } from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from 'date-fns';
@@ -43,7 +41,7 @@ const WeeklyHoursReport = () => {
   const weekStart = startOfWeek(selectedWeek, { weekStartsOn: 1 }); // Monday
   const weekEnd = endOfWeek(selectedWeek, { weekStartsOn: 1 }); // Sunday
 
-  const fetchWeeklyHours = async () => {
+  const fetchWeeklyHours = useCallback(async () => {
     setLoading(true);
     try {
       const startDate = weekStart.toISOString();
@@ -88,11 +86,11 @@ const WeeklyHoursReport = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [weekStart, weekEnd]);
 
   useEffect(() => {
     fetchWeeklyHours();
-  }, [selectedWeek]);
+  }, [fetchWeeklyHours]);
 
   const handlePreviousWeek = () => {
     setSelectedWeek(subWeeks(selectedWeek, 1));

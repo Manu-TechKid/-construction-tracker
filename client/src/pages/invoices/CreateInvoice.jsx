@@ -26,8 +26,6 @@ import {
   TableHead,
   TableRow,
   Checkbox,
-  FormControlLabel,
-  Divider,
   CircularProgress,
   Chip,
   Stack,
@@ -140,7 +138,7 @@ const CreateInvoice = () => {
         }
       });
     }
-  }, [selectedBuildingId, workOrders.length, filters.workType, filters.status]); // Reduced dependencies
+  }, [selectedBuildingId, workOrders.length, filters.workType, filters.status, filters.endDate, filters.startDate, filters.workSubType, isLoadingWorkOrders, selectedWorkOrders.length, workOrdersError]);
 
   const [createInvoice, { isLoading: isCreating }] = useCreateInvoiceMutation();
 

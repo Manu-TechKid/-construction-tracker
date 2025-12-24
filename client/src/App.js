@@ -73,6 +73,7 @@ import CustomerServicesPrices from './pages/pricing/CustomerServicesPrices';
 import Calls from './pages/calls/Calls';
 import TimeLogs from './pages/time-logs/TimeLogs';
 import MyTimeLogs from './pages/time-logs/MyTimeLogs';
+import PayrollReport from './pages/reports/PayrollReport';
 
 // Route Protection
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -527,6 +528,16 @@ const AppContent = () => {
               {/* Profile and Settings - accessible to all */}
               <Route path="profile" element={<Profile />} />
               <Route path="settings" element={<Settings />} />
+
+              {/* Reports */}
+              <Route 
+                path="reports/payroll"
+                element={
+                  <RoleBasedRoute requiredPermissions={['view:costs', 'manage:users']}>
+                    <PayrollReport />
+                  </RoleBasedRoute>
+                }
+              />
             </Route>
 
             {/* Unauthorized page */}

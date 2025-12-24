@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -21,8 +21,7 @@ import {
   CircularProgress,
   Alert,
   Tabs,
-  Tab,
-  Divider
+  Tab
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -30,11 +29,9 @@ import {
   Delete as DeleteIcon,
   CheckCircle as ApproveIcon,
   Cancel as RejectIcon,
-  Transform as ConvertIcon,
   MoreVert as MoreVertIcon,
   Receipt as InvoiceIcon,
   Assignment as WorkOrderIcon,
-  Download as DownloadIcon,
   Visibility as PreviewIcon,
   Email as EmailIcon
 } from '@mui/icons-material';
@@ -75,12 +72,48 @@ const ProjectEstimateDetails = () => {
   const { data: buildingsData } = useGetBuildingsQuery();
   const [approveEstimate, { isLoading: isApproving }] = useApproveProjectEstimateMutation();
   const [deleteEstimate, { isLoading: isDeleting }] = useDeleteProjectEstimateMutation();
-  const [convertToWorkOrder, { isLoading: isConverting }] = useConvertToWorkOrderMutation();
-  const [convertToInvoice, { isLoading: isConvertingToInvoice }] = useConvertToInvoiceMutation();
-  const [sendToClient, { isLoading: isSending }] = useSendToClientMutation();
+  const [convertToWorkOrder] = useConvertToWorkOrderMutation();
+  const [convertToInvoice] = useConvertToInvoiceMutation();
+  const [sendToClient] = useSendToClientMutation();
 
   const estimate = estimateData?.data?.projectEstimate;
-  const buildings = buildingsData?.data?.buildings || [];
+  const buildings = useMemo(() => buildingsData?.data?.buildings || [], [buildingsData]);
+
+  const getBuildingContacts = React.useCallback(() => {
+    if (!estimate) return [];
+    const buildingId =
+      typeof estimate.building === 'object'
+        ? estimate.building._id
+        : estimate.building;
+    const building = buildings.find((b) => b._id === buildingId);
+    const contacts = [];
+    
+    if (building?.generalManagerEmail) {
+      contacts.push({
+        email: building.generalManagerEmail,
+        name: building.generalManagerName || 'General Manager',
+        role: 'General Manager'
+      });
+    }
+    
+    if (building?.maintenanceManagerEmail) {
+      contacts.push({
+        email: building.maintenanceManagerEmail,
+        name: building.maintenanceManagerName || 'Maintenance Manager',
+        role: 'Maintenance Manager'
+      });
+    }
+    
+    if (building?.thirdContactEmail) {
+      contacts.push({
+        email: building.thirdContactEmail,
+        name: building.thirdContactName || 'Contact',
+        role: building.thirdContactRole || 'Contact'
+      });
+    }
+    
+    return contacts;
+  }, [estimate, buildings]);
 
   // Auto-populate email from building contacts when dialog opens
   React.useEffect(() => {
@@ -92,7 +125,7 @@ const ProjectEstimateDetails = () => {
     setSelectedEmails(availableEmails); // Select all by default
     setEmailSubject(`Project Estimate - ${estimate.title}`);
     setEmailMessage('Please find attached the project estimate for your review.');
-  }, [sendToClientDialog, estimate, buildings]);
+  }, [sendToClientDialog, estimate, getBuildingContacts]);
   const [selectedTab, setSelectedTab] = useState(0);
 
   // Event handlers
@@ -198,41 +231,6 @@ const ProjectEstimateDetails = () => {
     }
   };
 
-  const getBuildingContacts = () => {
-    if (!estimate) return [];
-    const buildingId =
-      typeof estimate.building === 'object'
-        ? estimate.building._id
-        : estimate.building;
-    const building = buildings.find((b) => b._id === buildingId);
-    const contacts = [];
-    
-    if (building?.generalManagerEmail) {
-      contacts.push({
-        email: building.generalManagerEmail,
-        name: building.generalManagerName || 'General Manager',
-        role: 'General Manager'
-      });
-    }
-    
-    if (building?.maintenanceManagerEmail) {
-      contacts.push({
-        email: building.maintenanceManagerEmail,
-        name: building.maintenanceManagerName || 'Maintenance Manager',
-        role: 'Maintenance Manager'
-      });
-    }
-    
-    if (building?.thirdContactEmail) {
-      contacts.push({
-        email: building.thirdContactEmail,
-        name: building.thirdContactName || 'Contact',
-        role: building.thirdContactRole || 'Contact'
-      });
-    }
-    
-    return contacts;
-  };
 
   const getStatusColor = (status) => {
     switch (status) {

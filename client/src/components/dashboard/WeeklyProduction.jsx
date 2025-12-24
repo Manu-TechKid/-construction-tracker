@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Box,
   Card,
@@ -30,7 +30,7 @@ const WeeklyProduction = () => {
   const { data: workOrdersData, isLoading, error } = useGetWorkOrdersQuery();
   const { data: buildingsData } = useGetBuildingsQuery();
 
-  const workOrders = workOrdersData?.data?.workOrders || [];
+  const workOrders = useMemo(() => workOrdersData?.data?.workOrders || [], [workOrdersData]);
   const buildings = buildingsData?.data?.buildings || [];
 
   const weeklyProduction = useMemo(() => {

@@ -1,4 +1,4 @@
-import { Box, Typography, LinearProgress, Paper, useTheme } from '@mui/material';
+import { Box, Typography, LinearProgress, useTheme } from '@mui/material';
 import { CheckCircle, Warning, Error, Info } from '@mui/icons-material';
 import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 

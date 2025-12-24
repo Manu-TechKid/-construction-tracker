@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Box,
   Card,
@@ -17,7 +17,6 @@ import {
   Paper,
   CircularProgress,
   Alert,
-  Divider,
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -37,10 +36,9 @@ const WeeklyRevenue = () => {
     limit: 1000 // Get a large number to ensure we have all recent invoices
   });
 
-  const invoices = invoicesData?.data?.invoices || [];
-
   // Calculate weekly revenue data
   const weeklyData = useMemo(() => {
+    const invoices = invoicesData?.data?.invoices || [];
     if (!invoices.length) return [];
 
     const weeks = [];
@@ -120,7 +118,7 @@ const WeeklyRevenue = () => {
     }
 
     return weeks.reverse(); // Show oldest to newest
-  }, [invoices, selectedWeeks]);
+  }, [invoicesData, selectedWeeks]);
 
   // Calculate summary statistics
   const summaryStats = useMemo(() => {

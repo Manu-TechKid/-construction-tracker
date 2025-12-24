@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   Card,
   CardHeader,
@@ -34,13 +34,12 @@ const DashboardAlerts = () => {
     limit: 200,
   });
 
-  const reminders = remindersData?.data?.reminders || [];
-  const calls = callsData?.data?.callLogs || [];
+  const reminders = useMemo(() => remindersData?.data?.reminders || [], [remindersData]);
+  const calls = useMemo(() => callsData?.data?.callLogs || [], [callsData]);
 
-  const { overdueReminders, todayReminders, upcomingReminders } = useMemo(() => {
+  const { overdueReminders, todayReminders } = useMemo(() => {
     const overdue = [];
     const todayList = [];
-    const upcomingList = [];
 
     reminders.forEach((rem) => {
       if (!rem.dueDate) return;
@@ -50,15 +49,12 @@ const DashboardAlerts = () => {
         overdue.push(rem);
       } else if (isToday(due)) {
         todayList.push(rem);
-      } else {
-        upcomingList.push(rem);
       }
     });
 
     return {
       overdueReminders: overdue,
       todayReminders: todayList,
-      upcomingReminders: upcomingList,
     };
   }, [reminders, startToday]);
 
@@ -184,7 +180,7 @@ const DashboardAlerts = () => {
               )}
             </Box>
 
-            {(overdueReminders.length + todayReminders.length + upcomingReminders.length > 3 ||
+            {(overdueReminders.length + todayReminders.length > 3 ||
               pendingCalls.length > 3) && (
               <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                 View full details in Reminders and Calls pages.

@@ -4,7 +4,6 @@ import {
   Box,
   Button,
   Card,
-  CardContent,
   CardHeader,
   Chip,
   Divider,
@@ -15,7 +14,6 @@ import {
   ListItemSecondaryAction,
   ListItemText,
   Typography,
-  useTheme,
   CircularProgress,
   Paper,
 } from '@mui/material';
@@ -35,7 +33,6 @@ import { useGetRemindersQuery } from '../../features/reminders/remindersApiSlice
 import { useAuth } from '../../hooks/useAuth';
 
 const RemindersTab = ({ buildingId, apartmentId }) => {
-  const theme = useTheme();
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
   
@@ -54,7 +51,6 @@ const RemindersTab = ({ buildingId, apartmentId }) => {
   const reminders = remindersData?.data?.reminders || [];
   
   // Determine the context for creating new reminders
-  const reminderContext = apartmentId ? 'apartment' : 'building';
   
   // Handle create new reminder
   const handleCreateReminder = () => {

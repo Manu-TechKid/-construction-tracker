@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Box,
   Card,
@@ -29,10 +29,10 @@ const WeeklyProductionByWorker = () => {
   const { data: workOrdersData, isLoading: isLoadingWorkOrders, error: workOrdersError } = useGetWorkOrdersQuery();
   const { data: usersData, isLoading: isLoadingUsers, error: usersError } = useGetUsersQuery({ role: 'worker' });
 
-  const workOrders = workOrdersData?.data?.workOrders || [];
   const workers = usersData?.data?.users || [];
 
   const weeklyProduction = useMemo(() => {
+    const workOrders = workOrdersData?.data?.workOrders || [];
     if (!workOrders.length) return [];
 
     const weeks = [];
@@ -117,7 +117,7 @@ const WeeklyProductionByWorker = () => {
     }
 
     return weeks.reverse();
-  }, [workOrders, selectedWeeks, selectedWorker]);
+  }, [workOrdersData, selectedWeeks, selectedWorker]);
 
   const summary = useMemo(() => {
     if (!weeklyProduction.length) return null;

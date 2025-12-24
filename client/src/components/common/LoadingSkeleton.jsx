@@ -1,4 +1,3 @@
-import React from 'react';
 import { Skeleton, Box, Card, CardContent, Grid } from '@mui/material';
 
 export const TableSkeleton = ({ rows = 5, columns = 4 }) => (
@@ -97,9 +96,11 @@ export const FormSkeleton = () => (
   </Box>
 );
 
-export default {
+const LoadingSkeletons = {
   TableSkeleton,
   CardSkeleton,
   CalendarSkeleton,
   FormSkeleton,
 };
+
+export default LoadingSkeletons;

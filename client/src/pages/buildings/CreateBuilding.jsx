@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Container, Box, Button, Typography, Paper } from '@mui/material';
+import { Container, Button, Typography, Paper } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useCreateBuildingMutation } from '../../features/buildings/buildingsApiSlice';
 import BuildingForm from '../../components/buildings/BuildingForm';
@@ -20,7 +20,7 @@ const CreateBuilding = () => {
         administrator: user?._id || user?.id
       };
       
-      const result = await createBuilding(submitData).unwrap();
+      await createBuilding(submitData).unwrap();
       toast.success('🏢 Building created successfully! You can now add apartments and manage services.');
       navigate('/buildings');
     } catch (error) {

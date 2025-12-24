@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -32,7 +32,7 @@ const GlobalSearch = ({ open, onClose }) => {
   const { hasPermission } = useAuth();
 
   // Quick navigation items
-  const quickActions = [
+  const quickActions = useMemo(() => [
     {
       title: 'New Work Order',
       subtitle: 'Create a new work order',
@@ -97,7 +97,7 @@ const GlobalSearch = ({ open, onClose }) => {
       permission: 'read:setup',
       keywords: ['setup', 'configuration', 'settings', 'types', 'subtypes'],
     },
-  ].filter(item => hasPermission(item.permission));
+  ].filter(item => hasPermission(item.permission)), [hasPermission]);
 
   // Filter results based on query
   useEffect(() => {
@@ -116,7 +116,7 @@ const GlobalSearch = ({ open, onClose }) => {
     });
 
     setResults(filtered.slice(0, 8)); // Show top 8 results
-  }, [query]);
+  }, [query, quickActions]);
 
   const handleItemClick = (action) => {
     action();

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Card,
@@ -7,7 +7,6 @@ import {
   Button,
   Grid,
   Chip,
-  IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -23,8 +22,6 @@ import {
 } from '@mui/material';
 import {
   Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
   Event as EventIcon,
   Business as BuildingIcon,
 } from '@mui/icons-material';
@@ -49,7 +46,6 @@ const BuildingSchedule = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [openDialog, setOpenDialog] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -83,9 +79,9 @@ const BuildingSchedule = () => {
   const { data: workersData } = useGetWorkersQuery();
   const workers = workersData?.data?.users?.filter(user => user.role === 'worker') || [];
 
-  const [createSchedule, { isLoading: creating }] = useCreateScheduleMutation();
-  const [updateSchedule, { isLoading: updating }] = useUpdateScheduleMutation();
-  const [deleteSchedule, { isLoading: deleting }] = useDeleteScheduleMutation();
+  const [createSchedule] = useCreateScheduleMutation();
+  const [updateSchedule] = useUpdateScheduleMutation();
+  const [deleteSchedule] = useDeleteScheduleMutation();
 
   const schedules = schedulesData?.data?.schedules || [];
 
@@ -158,7 +154,6 @@ const BuildingSchedule = () => {
   const handleOpenDialog = (schedule = null, clickedDate = null) => {
     if (schedule) {
       setEditingSchedule(schedule);
-      setSelectedDate(new Date(schedule.startDate));
       setFormData({
         ...schedule,
         startDate: new Date(schedule.startDate),
@@ -167,7 +162,6 @@ const BuildingSchedule = () => {
     } else {
       setEditingSchedule(null);
       const defaultDate = clickedDate || new Date();
-      setSelectedDate(defaultDate);
       setFormData({
         title: '',
         description: '',
@@ -263,9 +257,6 @@ const BuildingSchedule = () => {
     return scheduleTypes.find(t => t.value === type) || scheduleTypes[0];
   };
 
-  const getStatusConfig = (status) => {
-    return statusTypes.find(s => s.value === status) || statusTypes[0];
-  };
 
   if (!hasPermission(['read:schedules', 'create:schedules'])) {
     return (
@@ -305,8 +296,6 @@ const BuildingSchedule = () => {
     );
   }
 
-  // Always show the calendar interface, even if no schedules exist
-  const showEmptyState = !schedules.length && !isLoading && !error;
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -345,7 +334,7 @@ const BuildingSchedule = () => {
             label="Select Month"
             value={currentDate}
             onChange={(newValue) => setCurrentDate(newValue)}
-            renderInput={(params) => <TextField {...params} />}
+            slotProps={{ textField: (params) => <TextField {...params} /> }}
           />
         </Box>
 

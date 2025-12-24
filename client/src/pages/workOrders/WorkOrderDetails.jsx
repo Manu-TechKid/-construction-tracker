@@ -1,4 +1,3 @@
-import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -15,6 +14,7 @@ import {
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useGetWorkOrderQuery, useDeleteWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
+import { useAuth } from '../../hooks/useAuth';
 import { format } from 'date-fns';
 
 const getPhotoUrl = (photo) => {
@@ -41,7 +41,7 @@ const getPhotoUrl = (photo) => {
 
     // Clean up the path and remove any duplicate segments
     let cleanPath = pathString
-      .replace(/^[\/\\]+/, '') // Remove leading slashes
+      .replace(/^[\\/]+/, '') // Remove leading slashes
       .replace(/\/+/g, '/') // Replace multiple slashes with single
       .replace(/^api\/v1\//i, '') // Remove any api/v1/ prefix
       .replace(/^uploads\//i, '') // Remove any uploads/ prefix
@@ -87,6 +87,7 @@ const WorkOrderDetails = () => {
   const navigate = useNavigate();
   const { data: workOrderData, isLoading, error } = useGetWorkOrderQuery(id);
   const [deleteWorkOrder, { isLoading: isDeleting }] = useDeleteWorkOrderMutation();
+  const { user } = useAuth();
 
   if (isLoading) {
     return (
@@ -184,7 +185,7 @@ const WorkOrderDetails = () => {
                               <Box sx={{ position: 'relative', p: 1 }}>
                                 <img
                                   src={photoUrl}
-                                  alt={`work order photo ${index + 1}`}
+                                  alt={`Work order ${index + 1}`}
                                   style={{
                                     width: '100%',
                                     height: 200,
@@ -299,16 +300,18 @@ const WorkOrderDetails = () => {
               >
                 Edit
               </Button>
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<DeleteIcon />}
-                onClick={handleDelete}
-                disabled={isDeleting}
-                fullWidth
-              >
-                {isDeleting ? 'Deleting...' : 'Delete'}
-              </Button>
+              {(user?.role === 'admin' || user?.role === 'manager') && (
+                <Button
+                  variant="outlined"
+                  color="error"
+                  startIcon={<DeleteIcon />}
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  fullWidth
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete'}
+                </Button>
+              )}
             </Box>
           </Paper>
         </Grid>

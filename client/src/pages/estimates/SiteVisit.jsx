@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -14,40 +14,16 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  IconButton,
-  Tooltip,
   Alert,
-  Breadcrumbs,
-  Link,
-  Fab
 } from '@mui/material';
 import {
   PhotoCamera,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Visibility as ViewIcon,
-  Add as AddIcon,
-  LocationOn as LocationIcon,
-  Schedule as TimeIcon,
-  Assignment as EstimateIcon,
-  Build as InspectionIcon,
-  TrendingUp as ProgressIcon,
-  ArrowBack,
-  Save,
-  Share
+  ArrowBack
 } from '@mui/icons-material';
-// import { toast } from 'react-toastify';
 import { useGetBuildingQuery } from '../../features/buildings/buildingsApiSlice';
 import { 
   useGetSitePhotosQuery,
   useCreateSitePhotoMutation,
-  useUpdateSitePhotoMutation,
   useDeleteSitePhotoMutation
 } from '../../features/photos/photosApiSlice';
 import PhotoAnnotator from '../../components/photos/PhotoAnnotator';
@@ -61,14 +37,10 @@ const SiteVisit = () => {
   const [visitType, setVisitType] = useState('estimate');
   const [showAnnotator, setShowAnnotator] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
-  const [visitNotes, setVisitNotes] = useState('');
-  const [showVisitDialog, setShowVisitDialog] = useState(false);
-  const [currentVisit, setCurrentVisit] = useState(null);
 
   const { 
     data: building, 
-    isLoading: buildingLoading,
-    error: buildingError 
+    isLoading: buildingLoading 
   } = useGetBuildingQuery(buildingId);
   
 
@@ -82,32 +54,7 @@ const SiteVisit = () => {
   });
 
   const [createSitePhoto] = useCreateSitePhotoMutation();
-  const [updateSitePhoto] = useUpdateSitePhotoMutation();
   const [deleteSitePhoto] = useDeleteSitePhotoMutation();
-
-  const visitTypes = [
-    { 
-      value: 'estimate', 
-      label: 'Estimate', 
-      icon: <EstimateIcon />,
-      color: 'primary',
-      description: 'Cost estimation and planning'
-    },
-    { 
-      value: 'inspection', 
-      label: 'Inspection', 
-      icon: <InspectionIcon />,
-      color: 'warning',
-      description: 'Quality control and compliance check'
-    },
-    { 
-      value: 'progress', 
-      label: 'Progress', 
-      icon: <ProgressIcon />,
-      color: 'success',
-      description: 'Work progress documentation'
-    }
-  ];
 
   const handlePhotoSave = async (photoData) => {
     try {
@@ -171,31 +118,8 @@ const SiteVisit = () => {
     }
   };
 
-  const handleStartNewVisit = () => {
-    setCurrentVisit({
-      buildingId,
-      type: visitType,
-      startTime: new Date().toISOString(),
-      notes: visitNotes,
-      photos: []
-    });
-    setShowVisitDialog(false);
-    setShowAnnotator(true);
-  };
 
-  const getPhotosByType = (type) => {
-    return sitePhotos.filter(photo => photo.mode === type);
-  };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   if (buildingLoading) {
     return <LoadingSpinner />;

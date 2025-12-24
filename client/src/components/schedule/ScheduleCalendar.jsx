@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { format, startOfWeek, addDays, isSameDay, parseISO } from 'date-fns';
+import React, { useState, useMemo } from 'react';
+import { format, startOfWeek, addDays, parseISO } from 'date-fns';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { 
@@ -7,8 +7,6 @@ import {
   Button, 
   Typography, 
   Paper, 
-  Tabs, 
-  Tab, 
   Dialog, 
   DialogTitle, 
   DialogContent, 
@@ -19,23 +17,16 @@ import {
   InputLabel,
   Select,
   Grid,
-  Chip,
-  IconButton,
-  Tooltip,
-  Divider
+  IconButton
 } from '@mui/material';
 import {
   Add as AddIcon,
-  Edit as EditIcon,
   Delete as DeleteIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
   LocationOn as LocationIcon,
-  Person as PersonIcon,
-  Work as WorkIcon,
   Schedule as ScheduleIcon
 } from '@mui/icons-material';
-import { useDispatch, useSelector } from 'react-redux';
 import { useSnackbar } from 'notistack';
 import { useGetWorkersQuery } from '../../features/workers/workersApiSlice';
 import { 
@@ -90,7 +81,7 @@ const ScheduleCalendar = () => {
   const [checkOutWorker] = useCheckOutWorkerMutation();
 
   // Format events for the calendar
-  const events = React.useMemo(() => {
+  const events = useMemo(() => {
     if (!scheduleData?.data) return [];
     
     return scheduleData.data.map(item => ({

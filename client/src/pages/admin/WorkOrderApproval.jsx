@@ -14,44 +14,35 @@ import {
   DialogActions,
   TextField,
   Alert,
-  CircularProgress,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
+  CircularProgress,
   Tabs,
   Tab,
   Badge,
   IconButton,
-  Tooltip,
-  useTheme,
-  useMediaQuery
+  Tooltip
 } from '@mui/material';
 import {
   CheckCircle as ApproveIcon,
   Cancel as RejectIcon,
   AttachMoney as MoneyIcon,
   Assignment as AssignmentIcon,
-  Business as BuildingIcon,
-  Person as PersonIcon,
   Refresh as RefreshIcon,
   Visibility as ViewIcon
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
-import { useAuth } from '../../hooks/useAuth';
 import {
   useGetWorkOrdersQuery,
   useUpdateWorkOrderMutation
 } from '../../features/workOrders/workOrdersApiSlice';
 
 const WorkOrderApproval = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const { user } = useAuth();
   
   // State management
   const [selectedTab, setSelectedTab] = useState(0);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -11,15 +11,8 @@ import {
   IconButton,
   InputAdornment,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Typography,
-  useTheme,
   Chip,
   Menu,
   MenuItem,
@@ -53,7 +46,6 @@ import { toast } from 'react-toastify';
 const Buildings = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const theme = useTheme();
   const { hasPermission } = useAuth();
   
   const [searchTerm, setSearchTerm] = useState('');

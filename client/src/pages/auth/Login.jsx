@@ -10,22 +10,18 @@ import {
   Alert,
   CircularProgress,
   Stack,
-  Divider,
   Link,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
 import { useLoginMutation } from '../../features/auth/authApiSlice';
-import { useDispatch } from 'react-redux';
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const dispatch = useDispatch();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [showPassword] = useState(false);
-  const [login, { isLoading, error }] = useLoginMutation();
+  const [login, { isLoading }] = useLoginMutation();
   const [formErrors, setFormErrors] = useState(null);
 
   // Get the 'from' location or default to '/dashboard'

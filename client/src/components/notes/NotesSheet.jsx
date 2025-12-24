@@ -13,11 +13,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-  Divider,
   FormControl,
   InputLabel,
   Select,
@@ -227,7 +222,6 @@ const NotesSheet = () => {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [filteredNotes, buildingOptions]);
 
-  const shouldGroupByBuilding = !filterBuilding && !selectedBuilding;
 
   const handleWeekNavigation = (direction) => {
     setFilterDay(null);
@@ -372,13 +366,6 @@ const NotesSheet = () => {
     }
   };
 
-  const getBuildingName = (note) => {
-    if (note.building && typeof note.building === 'object') {
-      return note.building.name || 'Unknown Building';
-    }
-    const building = buildingOptions.find((b) => b._id === note.building);
-    return building?.name || 'Unknown Building';
-  };
 
   const getPriorityConfig = (priority) => {
     return priorities.find(p => p.value === priority) || priorities[1];
@@ -835,7 +822,7 @@ const NotesSheet = () => {
                   label="Visit Date & Time"
                   value={formData.visitDate}
                   onChange={(newValue) => setFormData({ ...formData, visitDate: newValue })}
-                  renderInput={(params) => <TextField {...params} fullWidth />}
+                  slotProps={{ textField: (params) => <TextField {...params} fullWidth /> }}
                   disablePast={false}
                   disableFuture={false}
                   minDate={null}

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -18,7 +18,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Chip,
   Stack
 } from '@mui/material';
 import {
@@ -27,7 +26,6 @@ import {
   Timeline as LineIcon,
   CropFree as RectangleIcon,
   RadioButtonUnchecked as CircleIcon,
-  FormatShapes as ShapeIcon,
   TextFields as TextIcon,
   Straighten as MeasureIcon,
   ColorLens as ColorIcon,
@@ -84,54 +82,25 @@ const PhotoAnnotator = ({
 
   const units = ['ft', 'in', 'm', 'cm', 'mm'];
 
-  useEffect(() => {
-    if (photo && canvasRef.current) {
-      drawCanvas();
-    }
-  }, [photo, annotations, zoom, panOffset]);
+  const drawArrow = useCallback((ctx, fromX, fromY, toX, toY) => {
+    const headlen = 10;
+    const angle = Math.atan2(toY - fromY, toX - fromX);
+    
+    ctx.beginPath();
+    ctx.moveTo(toX, toY);
+    ctx.lineTo(
+      toX - headlen * Math.cos(angle - Math.PI / 6),
+      toY - headlen * Math.sin(angle - Math.PI / 6)
+    );
+    ctx.moveTo(toX, toY);
+    ctx.lineTo(
+      toX - headlen * Math.cos(angle + Math.PI / 6),
+      toY - headlen * Math.sin(angle + Math.PI / 6)
+    );
+    ctx.stroke();
+  }, []);
 
-  const drawCanvas = () => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-
-    // Set canvas size to match display size for crisp rendering
-    const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-
-    ctx.scale(dpr, dpr);
-
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    if (photo) {
-      const img = new Image();
-      img.onload = () => {
-        // Save context
-        ctx.save();
-
-        // Apply zoom and pan
-        ctx.scale(zoom, zoom);
-        ctx.translate(panOffset.x, panOffset.y);
-
-        // Draw image
-        ctx.drawImage(img, 0, 0, canvas.width / zoom / dpr, canvas.height / zoom / dpr);
-
-        // Draw annotations
-        annotations.forEach(annotation => {
-          drawAnnotation(ctx, annotation);
-        });
-
-        // Restore context
-        ctx.restore();
-      };
-      img.src = photo;
-    }
-  };
-
-  const drawAnnotation = (ctx, annotation) => {
+  const drawAnnotation = useCallback((ctx, annotation) => {
     ctx.strokeStyle = annotation.color;
     ctx.fillStyle = annotation.color;
     ctx.lineWidth = annotation.lineWidth;
@@ -238,26 +207,60 @@ const PhotoAnnotator = ({
         ctx.textAlign = 'center';
         ctx.fillText(`${annotation.value} ${annotation.unit}`, midX, midY + 5);
         break;
+      default:
+        break;
     }
-  };
+  }, [drawArrow]);
 
-  const drawArrow = (ctx, fromX, fromY, toX, toY) => {
-    const headlen = 10;
-    const angle = Math.atan2(toY - fromY, toX - fromX);
-    
-    ctx.beginPath();
-    ctx.moveTo(toX, toY);
-    ctx.lineTo(
-      toX - headlen * Math.cos(angle - Math.PI / 6),
-      toY - headlen * Math.sin(angle - Math.PI / 6)
-    );
-    ctx.moveTo(toX, toY);
-    ctx.lineTo(
-      toX - headlen * Math.cos(angle + Math.PI / 6),
-      toY - headlen * Math.sin(angle + Math.PI / 6)
-    );
-    ctx.stroke();
-  };
+  const drawCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    // Set canvas size to match display size for crisp rendering
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+
+    ctx.scale(dpr, dpr);
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (photo) {
+      const img = new Image();
+      img.onload = () => {
+        // Save context
+        ctx.save();
+
+        // Apply zoom and pan
+        ctx.scale(zoom, zoom);
+        ctx.translate(panOffset.x, panOffset.y);
+
+        // Draw image
+        ctx.drawImage(img, 0, 0, canvas.width / zoom / dpr, canvas.height / zoom / dpr);
+
+        // Draw annotations
+        annotations.forEach(annotation => {
+          drawAnnotation(ctx, annotation);
+        });
+
+        // Restore context
+        ctx.restore();
+      };
+      img.src = photo;
+    }
+  }, [photo, zoom, panOffset, annotations, drawAnnotation]);
+
+  useEffect(() => {
+    if (photo && canvasRef.current) {
+      drawCanvas();
+    }
+  }, [photo, annotations, zoom, panOffset, drawCanvas]);
+
+
 
   const handleCanvasMouseDown = (e) => {
     const canvas = canvasRef.current;

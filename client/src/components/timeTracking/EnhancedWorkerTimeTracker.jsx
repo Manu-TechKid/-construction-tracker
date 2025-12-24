@@ -5,14 +5,12 @@ import {
   Typography,
   Button,
   Card,
-  CardContent,
   Grid,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   TextField,
-  Chip,
   Alert,
   CircularProgress,
   IconButton,
@@ -22,38 +20,26 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   Tabs,
   Tab,
   Divider,
   useTheme,
   useMediaQuery,
-  ImageList,
-  ImageListItem,
-  ImageListItemBar
+  CardContent
 } from '@mui/material';
 import {
-  PlayArrow as PunchInIcon,
   PlayArrow as PlayArrowIcon,
-  Stop as PunchOutIcon,
-  AddCircle as NewShiftIcon,
-  List as ViewShiftsIcon,
   Coffee as BreakIcon,
   Edit as EditIcon,
   Close as CloseIcon,
   CheckCircle as CheckIcon,
-  Cancel as CancelIcon,
-  AccessTime as TimeIcon,
-  PhotoCamera as PhotoIcon,
-  Image as ImageIcon
+  PhotoCamera as PhotoIcon
 } from '@mui/icons-material';
 import { LocalizationProvider, DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { 
   format, 
-  differenceInHours, 
   differenceInMinutes, 
-  parseISO,
   startOfWeek,
   endOfWeek,
   startOfMonth,
@@ -70,9 +56,8 @@ import {
   useClockOutMutation,
   useStartBreakMutation,
   useEndBreakMutation,
-  useGetTimeSessionsQuery,
   useCreateShiftMutation,
-  useUpdateShiftMutation
+  useGetTimeSessionsQuery,
 } from '../../features/timeTracking/timeTrackingApiSlice';
 import BuildingSelector from '../common/BuildingSelector';
 import { useBuildingContext } from '../../contexts/BuildingContext';
@@ -85,12 +70,10 @@ const EnhancedWorkerTimeTracker = () => {
   const { selectedBuilding } = useBuildingContext();
 
   // State
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [elapsedTime, setElapsedTime] = useState(0);
   const [breakTime, setBreakTime] = useState(0);
   const [newShiftDialog, setNewShiftDialog] = useState(false);
   const [viewShiftsDialog, setViewShiftsDialog] = useState(false);
-  const [photoGalleryDialog, setPhotoGalleryDialog] = useState(false);
   const [uploadPhotoDialog, setUploadPhotoDialog] = useState(false);
   const [breakReason, setBreakReason] = useState('');
   const [shiftNotes, setShiftNotes] = useState('');
@@ -103,9 +86,6 @@ const EnhancedWorkerTimeTracker = () => {
   const [shiftEnd, setShiftEnd] = useState(null);
   const [breakMinutes, setBreakMinutes] = useState(0);
   
-  // Photo upload state
-  const [selectedFiles, setSelectedFiles] = useState([]);
-  const [photoNotes, setPhotoNotes] = useState('');
 
   // API calls
   const { data: statusData, refetch: refetchStatus } = useGetWorkerStatusQuery(user?.id, {
@@ -133,8 +113,6 @@ const EnhancedWorkerTimeTracker = () => {
   // Timer effect
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentTime(new Date());
-      
       // Run timer if session exists (active or paused)
       if ((isActive || isOnBreak) && activeSession?.shiftStart) {
         const start = new Date(activeSession.shiftStart);

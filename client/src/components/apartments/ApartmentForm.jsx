@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -328,10 +328,10 @@ const ApartmentForm = ({ open, onClose, buildingId, apartment = null }) => {
           <Button
             type="submit"
             variant="contained"
-            disabled={formik.isSubmitting || !formik.isValid}
-            startIcon={formik.isSubmitting ? <CircularProgress size={16} /> : null}
+            disabled={isAdding || isUpdating || !formik.isValid}
+            startIcon={(isAdding || isUpdating) ? <CircularProgress size={16} /> : null}
           >
-            {formik.isSubmitting 
+            {(isAdding || isUpdating) 
               ? (isEdit ? 'Updating...' : 'Adding...') 
               : (isEdit ? 'Update Apartment' : 'Add Apartment')
             }

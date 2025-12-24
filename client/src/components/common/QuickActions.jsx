@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   SpeedDial,
   SpeedDialAction,
@@ -62,7 +62,7 @@ const QuickActions = () => {
   };
 
   // Add keyboard shortcuts
-  React.useEffect(() => {
+  useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.ctrlKey && event.shiftKey) {
         switch (event.key.toLowerCase()) {

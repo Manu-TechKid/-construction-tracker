@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Card,
@@ -23,11 +23,9 @@ import {
   AccordionSummary,
   AccordionDetails,
   IconButton,
-  Tooltip,
   Alert,
   CircularProgress,
   InputAdornment,
-  Divider,
   Stack
 } from '@mui/material';
 import {
@@ -98,7 +96,6 @@ const ApartmentSearch = () => {
       // Handle new response format
       const searchData = response.data?.searchResults || response.data || [];
       const apartments = response.data?.apartments || [];
-      const summary = response.data?.summary || {};
       
       setSearchResults(searchData);
       

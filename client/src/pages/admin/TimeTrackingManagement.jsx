@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -12,7 +12,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   Chip,
   Button,
   TextField,
@@ -36,7 +35,6 @@ import {
 import {
   Schedule as TimeIcon,
   Person as PersonIcon,
-  Business as BuildingIcon,
   Assignment as TaskIcon,
   CheckCircle as ApproveIcon,
   Cancel as RejectIcon,
@@ -45,7 +43,6 @@ import {
   FilterList as FilterIcon,
   Refresh as RefreshIcon,
   AttachMoney as MoneyIcon,
-  Timeline as ProgressIcon,
   Delete as DeleteIcon,
   Assessment as StatsIcon,
   PhotoCamera as PhotoIcon,
@@ -54,8 +51,6 @@ import {
 } from '@mui/icons-material';
 import { format, parseISO, differenceInHours, differenceInMinutes } from 'date-fns';
 import { toast } from 'react-toastify';
-import { useAuth } from '../../hooks/useAuth';
-import TimeSessionDetails from '../../components/timeTracking/TimeSessionDetails';
 import WeeklyHoursReport from '../../components/timeTracking/WeeklyHoursReport';
 import PaymentReport from '../../components/timeTracking/PaymentReport';
 import {
@@ -69,10 +64,8 @@ import { useGetUsersQuery } from '../../features/users/usersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 
 const TimeTrackingManagement = () => {
-  const { user } = useAuth();
   
   // State
-  const [activeTab, setActiveTab] = useState(0);
   const [selectedTab, setSelectedTab] = useState(0);
   const [filters, setFilters] = useState({
     workerId: '',
@@ -82,8 +75,7 @@ const TimeTrackingManagement = () => {
     endDate: ''
   });
   const [selectedSession, setSelectedSession] = useState(null);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh] = useState(true);
   const [approvalDialog, setApprovalDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [correctionDialog, setCorrectionDialog] = useState(false);
@@ -92,12 +84,11 @@ const TimeTrackingManagement = () => {
   const [detailsDialog, setDetailsDialog] = useState(false);
   const [hourlyRateDialog, setHourlyRateDialog] = useState(false);
   const [workerRates, setWorkerRates] = useState([]);
-  const [paymentReportDialog, setPaymentReportDialog] = useState(false);
   
   // API calls
   const { data: sessionsData, isLoading: sessionsLoading, refetch: refetchSessions } = useGetTimeSessionsQuery(filters);
   const { data: pendingData, isLoading: pendingLoading, refetch: refetchPending } = useGetPendingApprovalsQuery();
-  const { data: statsData, isLoading: statsLoading } = useGetTimeStatsQuery(filters);
+  const { data: statsData } = useGetTimeStatsQuery(filters);
   const { data: usersData } = useGetUsersQuery({ role: 'worker' });
   const { data: buildingsData } = useGetBuildingsQuery();
   
@@ -105,7 +96,6 @@ const TimeTrackingManagement = () => {
   const [deleteTimeSession, { isLoading: isDeleting }] = useDeleteTimeSessionMutation();
   
   const sessions = sessionsData?.data?.sessions || [];
-  const pendingSessions = pendingData?.data?.sessions || [];
   const pendingApprovals = pendingData?.data?.sessions || [];
   const stats = statsData?.data?.stats || {};
   const workers = usersData?.data?.users || [];

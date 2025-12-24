@@ -1,4 +1,3 @@
-import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Box, Button, Typography, Paper, CircularProgress } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -17,7 +16,7 @@ const BuildingEdit = () => {
 
   const handleSubmit = async (formData) => {
     try {
-      const result = await updateBuilding({ id, ...formData }).unwrap();
+      await updateBuilding({ id, ...formData }).unwrap();
       toast.success('✅ Building updated successfully! All changes have been saved.');
       navigate(`/buildings/${id}`);
     } catch (error) {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { 
   List, 
   ListItem, 
@@ -18,19 +18,20 @@ import {
 import { timeAgo } from '../../utils/dateUtils';
 
 const RecentActivityList = ({ workOrders = [], timeSessions = [] }) => {
-  // Combine and sort activities by date
-  const activities = [
-    ...workOrders.map(wo => ({
-      ...wo,
-      type: 'workOrder',
-      date: new Date(wo.updatedAt || wo.createdAt)
-    })),
-    ...timeSessions.map(session => ({
-      ...session,
-      type: 'timeSession',
-      date: new Date(session.updatedAt || session.createdAt)
-    }))
-  ].sort((a, b) => b.date - a.date).slice(0, 10);
+  const activities = useMemo(() => {
+    return [
+      ...workOrders.map(wo => ({
+        ...wo,
+        type: 'workOrder',
+        date: new Date(wo.updatedAt || wo.createdAt)
+      })),
+      ...timeSessions.map(session => ({
+        ...session,
+        type: 'timeSession',
+        date: new Date(session.updatedAt || session.createdAt)
+      }))
+    ].sort((a, b) => b.date - a.date).slice(0, 10);
+  }, [workOrders, timeSessions]);
 
   if (activities.length === 0) {
     return (
@@ -50,7 +51,7 @@ const RecentActivityList = ({ workOrders = [], timeSessions = [] }) => {
         // Work Order Item
         if (isWorkOrder) {
           return (
-            <React.Fragment key={`activity-${index}`}>
+            <React.Fragment key={`${activity.type}-${activity._id}`}>
               {index > 0 && <Divider variant="inset" component="li" />}
               <ListItem alignItems="flex-start">
                 <ListItemIcon>
@@ -88,7 +89,7 @@ const RecentActivityList = ({ workOrders = [], timeSessions = [] }) => {
         
         // Time Session Item
         return (
-          <React.Fragment key={`activity-${index}`}>
+          <React.Fragment key={`${activity.type}-${activity._id}`}>
             {index > 0 && <Divider variant="inset" component="li" />}
             <ListItem alignItems="flex-start">
               <ListItemIcon>
