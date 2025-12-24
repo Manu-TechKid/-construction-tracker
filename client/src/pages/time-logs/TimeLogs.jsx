@@ -64,7 +64,8 @@ const TimeLogs = () => {
           <TableHead>
             <TableRow>
               <TableCell>User</TableCell>
-              <TableCell>Date</TableCell>
+              <TableCell>Clock In Date</TableCell>
+              <TableCell>Clock Out Date</TableCell>
               <TableCell>Clock In</TableCell>
               <TableCell>Clock Out</TableCell>
               <TableCell>Duration</TableCell>
@@ -78,6 +79,7 @@ const TimeLogs = () => {
               <TableRow key={log._id}>
                 <TableCell>{log.user?.name || 'N/A'}</TableCell>
                 <TableCell>{format(new Date(log.clockIn), 'PPP')}</TableCell>
+                <TableCell>{log.clockOut ? format(new Date(log.clockOut), 'PPP') : 'Active'}</TableCell>
                 <TableCell>{format(new Date(log.clockIn), 'p')}</TableCell>
                 <TableCell>{log.clockOut ? format(new Date(log.clockOut), 'p') : 'Active'}</TableCell>
                 <TableCell>{log.duration ? `${log.duration.toFixed(2)} hrs` : '-'}</TableCell>

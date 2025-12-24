@@ -140,12 +140,6 @@ exports.getMyTimeLogs = catchAsync(async (req, res, next) => {
   });
 });
 
-// @desc    Get all time logs (for admins/managers)
-// @route   GET /api/v1/timelogs
-// @access  Admin, Manager
-// @desc    Delete a time log (for admins/managers)
-// @route   DELETE /api/v1/timelogs/:id
-// @access  Admin, Manager
 // @desc    Update a time log (for admins/managers)
 // @route   PUT /api/v1/timelogs/:id
 // @access  Admin, Manager
@@ -175,12 +169,31 @@ exports.updateTimeLog = catchAsync(async (req, res, next) => {
   });
 });
 
+// @desc    Delete a time log (for admins/managers)
+// @route   DELETE /api/v1/timelogs/:id
+// @access  Admin, Manager
 exports.deleteTimeLog = catchAsync(async (req, res, next) => {
-  const log = await TimeLog.findByIdAndDelete(req.params.id);
+  const clockInLog = await TimeLog.findById(req.params.id);
 
-  if (!log) {
+  if (!clockInLog) {
     return next(new AppError('No time log found with that ID', 404));
   }
+
+  // If it's a clock-in log, find and delete the corresponding clock-out log
+  if (clockInLog.type === 'clock-in') {
+    const clockOutLog = await TimeLog.findOne({
+      user: clockInLog.user,
+      type: 'clock-out',
+      timestamp: { $gt: clockInLog.timestamp },
+    }).sort({ timestamp: 1 });
+
+    if (clockOutLog) {
+      await TimeLog.findByIdAndDelete(clockOutLog._id);
+    }
+  }
+
+  // Delete the primary log (the one with the ID passed in)
+  await TimeLog.findByIdAndDelete(req.params.id);
 
   res.status(204).json({
     status: 'success',
@@ -188,6 +201,9 @@ exports.deleteTimeLog = catchAsync(async (req, res, next) => {
   });
 });
 
+// @desc    Get all time logs (for admins/managers)
+// @route   GET /api/v1/timelogs
+// @access  Admin, Manager
 exports.getAllTimeLogs = catchAsync(async (req, res, next) => {
   const timeLogs = await TimeLog.find().populate('user', 'name').sort({ user: 1, timestamp: 1 });
 
