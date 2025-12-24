@@ -46,7 +46,7 @@ import { toast } from 'react-toastify';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 
-const ProjectEstimates = () => {
+const ProjectEstimatesNew = () => {
   const navigate = useNavigate();
   const [filterBuilding, setFilterBuilding] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -442,7 +442,7 @@ const ProjectEstimates = () => {
                   <TableCell colSpan={7} align="center">
                     <Box py={4}>
                       <Typography variant="h6" color="text.secondary" gutterBottom>
-                        No project estimates found
+                        No project estimates found for the selected filters.
                       </Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                         Create your first project estimate to get started
@@ -658,4 +658,4 @@ const ProjectEstimates = () => {
   );
 };
 
-export default ProjectEstimates;
+export default ProjectEstimatesNew;
