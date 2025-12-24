@@ -303,14 +303,10 @@ clientPricingSchema.methods.getPricingForService = function(category, subcategor
   );
   
   if (apartmentPricing) {
-    return {
-      ...service.toObject(),
-      pricing: {
-        ...service.pricing.toObject(),
-        basePrice: apartmentPricing.price,
-        additionalCosts: apartmentPricing.additionalCosts || []
-      }
-    };
+    const serviceObj = service.toObject();
+    serviceObj.pricing.basePrice = apartmentPricing.price;
+    serviceObj.pricing.additionalCosts = apartmentPricing.additionalCosts || [];
+    return serviceObj;
   }
   
   return service;

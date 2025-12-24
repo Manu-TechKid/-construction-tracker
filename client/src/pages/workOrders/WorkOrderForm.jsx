@@ -273,9 +273,6 @@ const WorkOrderForm = () => {
       formik.setFieldValue('description', selectedWorkSubType.description);
     }
 
-    if (selectedWorkSubType.price > 0) {
-      formik.setFieldValue('price', selectedWorkSubType.price);
-    }
 
   }, [selectedWorkSubType, formik]);
 
