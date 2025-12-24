@@ -178,6 +178,16 @@ const DashboardLayout = () => {
     });
 
 
+    // Time Management - for admins/managers
+    if (!isWorker && hasPermission(['view:costs', 'manage:users'])) {
+      items.push({
+        text: 'Time Management',
+        icon: <TimeIcon />,
+        path: '/time-tracking-management',
+        permission: 'view:costs'
+      });
+    }
+
     // Time Logs - for admins/managers
     if (!isWorker && hasPermission(['manage:users'])) {
       items.push({
