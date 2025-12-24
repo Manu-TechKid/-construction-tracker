@@ -209,9 +209,7 @@ const WorkOrderForm = () => {
     if (!selectedWorkSubType) return null;
 
     const categoryCandidates = [];
-    if (selectedWorkType?.code) categoryCandidates.push(String(selectedWorkType.code).toLowerCase());
     if (selectedWorkType?.name) categoryCandidates.push(String(selectedWorkType.name).toLowerCase());
-    if (selectedWorkType?._id) categoryCandidates.push(String(selectedWorkType._id).toLowerCase());
 
     const subcategoryCandidates = [];
     if (selectedWorkSubType.code) subcategoryCandidates.push(String(selectedWorkSubType.code).toLowerCase());
