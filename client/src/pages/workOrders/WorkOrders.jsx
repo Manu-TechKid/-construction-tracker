@@ -1005,13 +1005,38 @@ const WorkOrders = () => {
         </Button>
       </Box>
 
-      {/* ENHANCED FILTERS SECTION */}
       <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <Box sx={{ p: 3 }}>
+          <Grid container spacing={2} sx={{ mb: 2 }}>
+            <Grid item>
+              <Card>
+                <CardContent>
+                  <Typography variant="subtitle1" color="text.secondary">Total Price</Typography>
+                  <Typography variant="h5" fontWeight="bold" color="success.main">
+                    {`$${totalPrice.toFixed(2)}`}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            {canViewCosts() && (
+              <Grid item>
+                <Card>
+                  <CardContent>
+                    <Typography variant="subtitle1" color="text.secondary">Total Cost</Typography>
+                    <Typography variant="h5" fontWeight="bold" color="error.main">
+                      {`$${totalCost.toFixed(2)}`}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            )}
+          </Grid>
+        </Box>
+
         <Card sx={{
-          mb: 4,
-          boxShadow: '0 8px 32px rgba(25, 118, 210, 0.15)',
-          border: '2px solid #1976d2',
+          mb: 3,
           borderRadius: '16px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
           background: 'linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%)',
           overflow: 'visible'
         }}>

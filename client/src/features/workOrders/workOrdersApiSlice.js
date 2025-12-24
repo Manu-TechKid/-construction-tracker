@@ -49,7 +49,10 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
         url: `/work-orders/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: (result, error, id) => [{ type: 'WorkOrder', id: 'LIST' }],
+      invalidatesTags: (result, error, id) => [
+        { type: 'WorkOrder', id: 'LIST' },
+        { type: 'WorkOrder', id },
+      ],
     }),
   }),
 });

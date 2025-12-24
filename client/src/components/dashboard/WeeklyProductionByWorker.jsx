@@ -21,15 +21,19 @@ import { BarChart as BarChartIcon, Person as PersonIcon } from '@mui/icons-mater
 import { format, startOfWeek, endOfWeek, subWeeks, parseISO } from 'date-fns';
 import { useGetWorkOrdersQuery } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetUsersQuery } from '../../features/users/usersApiSlice';
+import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 
 const WeeklyProductionByWorker = () => {
   const [selectedWeeks, setSelectedWeeks] = useState(4);
   const [selectedWorker, setSelectedWorker] = useState('');
+  const [selectedBuilding, setSelectedBuilding] = useState('');
 
   const { data: workOrdersData, isLoading: isLoadingWorkOrders, error: workOrdersError } = useGetWorkOrdersQuery();
   const { data: usersData, isLoading: isLoadingUsers, error: usersError } = useGetUsersQuery({ role: 'worker' });
+  const { data: buildingsData, isLoading: isLoadingBuildings, error: buildingsError } = useGetBuildingsQuery();
 
   const workers = usersData?.data?.users || [];
+  const buildings = buildingsData?.data?.buildings || [];
 
   const weeklyProduction = useMemo(() => {
     const workOrders = workOrdersData?.data?.workOrders || [];
@@ -44,6 +48,7 @@ const WeeklyProductionByWorker = () => {
       const weekEnd = endOfWeek(referenceDate, { weekStartsOn: 1 });
 
       const weekWorkOrders = workOrders.filter((wo) => {
+        if (selectedBuilding && wo.building?._id !== selectedBuilding) return false;
         if (!wo || wo.status !== 'completed') return false;
 
         if (selectedWorker) {
@@ -117,7 +122,7 @@ const WeeklyProductionByWorker = () => {
     }
 
     return weeks.reverse();
-  }, [workOrdersData, selectedWeeks, selectedWorker]);
+  }, [workOrdersData, selectedWeeks, selectedWorker, selectedBuilding]);
 
   const summary = useMemo(() => {
     if (!weeklyProduction.length) return null;
@@ -166,6 +171,23 @@ const WeeklyProductionByWorker = () => {
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 2 }}>
+          <TextField
+            select
+            size="small"
+            label="Building"
+            value={selectedBuilding}
+            onChange={(e) => setSelectedBuilding(e.target.value)}
+            sx={{ minWidth: 180 }}
+            disabled={isLoadingBuildings}
+          >
+            <MenuItem value="">All Buildings</MenuItem>
+            {buildings.map((building) => (
+              <MenuItem key={building._id} value={building._id}>
+                {building.name}
+              </MenuItem>
+            ))}
+          </TextField>
+
           <TextField
             select
             size="small"
