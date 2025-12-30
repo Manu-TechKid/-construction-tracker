@@ -182,7 +182,7 @@ const WorkOrderForm = () => {
       formik.setFieldValue('cost', 0);
     }
     previousBuildingRef.current = formik.values.building;
-  }, [isEdit, formik]);
+  }, [isEdit, formik.values.building, formik.setFieldValue]);
 
   const workTypes = useMemo(() => workTypesData?.data?.workTypes || workTypesData?.workTypes || [], [workTypesData]);
   const workSubTypes = useMemo(() => workSubTypesData?.data?.workSubTypes || workSubTypesData?.workSubTypes || [], [workSubTypesData]);
@@ -233,62 +233,43 @@ const WorkOrderForm = () => {
   }, [buildingServices, selectedWorkSubType, selectedWorkType]);
 
   useEffect(() => {
-    if (!matchedPricingService) return;
-
-    const basePrice = matchedPricingService.calculatedPricing?.basePrice ?? matchedPricingService.pricing?.basePrice ?? 0;
-    if (basePrice > 0) {
-      const currentPrice = Number(formik.values.price) || 0;
-      if (currentPrice <= 0 || Math.abs(currentPrice - basePrice) > 0.009) {
+    if (!isEdit && matchedPricingService) {
+      const basePrice = matchedPricingService.calculatedPricing?.basePrice ?? matchedPricingService.pricing?.basePrice ?? 0;
+      if (basePrice > 0) {
         formik.setFieldValue('price', Number(basePrice.toFixed(2)));
       }
-    }
 
-    const laborCost = matchedPricingService.cost?.laborCost || 0;
-    const materialCost = matchedPricingService.cost?.materialCost || 0;
-    const equipmentCost = matchedPricingService.cost?.equipmentCost || 0;
-    const overheadPercentage = matchedPricingService.cost?.overheadPercentage || 0;
-    const baseCost = laborCost + materialCost + equipmentCost;
-    const totalCost = baseCost * (1 + overheadPercentage / 100);
+      const laborCost = matchedPricingService.cost?.laborCost || 0;
+      const materialCost = matchedPricingService.cost?.materialCost || 0;
+      const equipmentCost = matchedPricingService.cost?.equipmentCost || 0;
+      const overheadPercentage = matchedPricingService.cost?.overheadPercentage || 0;
+      const baseCost = laborCost + materialCost + equipmentCost;
+      const totalCost = baseCost * (1 + overheadPercentage / 100);
 
-    if (totalCost > 0) {
-      const currentCost = Number(formik.values.cost) || 0;
-      if (currentCost <= 0 || Math.abs(currentCost - totalCost) > 0.009) {
+      if (totalCost > 0) {
         formik.setFieldValue('cost', Number(totalCost.toFixed(2)));
       }
     }
-  }, [matchedPricingService, formik]);
+  }, [isEdit, matchedPricingService, formik.setFieldValue]);
+
 
   useEffect(() => {
-    if (!selectedWorkSubType) return;
+    if (isEdit) return; // Only auto-fill for new work orders
 
-    const currentTitle = formik.values.title?.trim() || '';
-    if (!currentTitle && selectedWorkSubType.name) {
-      formik.setFieldValue('title', selectedWorkSubType.name);
-    }
-
-    const currentDescription = formik.values.description?.trim() || '';
-    if (!currentDescription && selectedWorkSubType.description) {
-      formik.setFieldValue('description', selectedWorkSubType.description);
-    }
-
-
-  }, [selectedWorkSubType, formik]);
-
-  useEffect(() => {
-    if (!matchedPricingService) return;
-
-    const currentTitle = formik.values.title?.trim() || '';
     const subTypeTitle = selectedWorkSubType?.name?.trim() || '';
-    if ((!currentTitle || currentTitle === subTypeTitle) && matchedPricingService.name) {
-      formik.setFieldValue('title', matchedPricingService.name);
+    const subTypeDescription = selectedWorkSubType?.description?.trim() || '';
+
+    const newTitle = matchedPricingService?.name || subTypeTitle;
+    const newDescription = matchedPricingService?.description || subTypeDescription;
+
+    if (newTitle && !formik.values.title) {
+      formik.setFieldValue('title', newTitle);
     }
 
-    const currentDescription = formik.values.description?.trim() || '';
-    const subTypeDescription = selectedWorkSubType?.description?.trim() || '';
-    if ((!currentDescription || currentDescription === subTypeDescription) && matchedPricingService.description) {
-      formik.setFieldValue('description', matchedPricingService.description);
+    if (newDescription && !formik.values.description) {
+      formik.setFieldValue('description', newDescription);
     }
-  }, [matchedPricingService, selectedWorkSubType, formik]);
+  }, [isEdit, matchedPricingService, selectedWorkSubType, formik.setFieldValue, formik.values.title, formik.values.description]);
 
   useEffect(() => {
     if (isEdit && workOrderData?.data) {
@@ -318,7 +299,7 @@ const WorkOrderForm = () => {
     } else if (!isEdit && selectedBuilding) {
       formik.setFieldValue('building', selectedBuilding._id);
     }
-  }, [isEdit, workOrderData, selectedBuilding, formik]);
+  }, [isEdit, workOrderData, selectedBuilding, formik.setValues, formik.setFieldValue]);
 
   if (isLoadingWorkOrder || isLoadingBuildings || isLoadingUsers || isLoadingWorkTypes) {
     return (
