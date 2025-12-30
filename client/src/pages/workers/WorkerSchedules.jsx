@@ -337,31 +337,32 @@ const WorkerSchedules = () => {
     return workers.filter(worker => selectedWorkers.includes(worker._id));
   }, [workers, selectedWorkers]);
 
-  // Calculate weekly hours for each worker
-  const calculateWeeklyHours = useCallback((workerId) => {
-    if (!Array.isArray(schedules)) return 0;
-    
-    const weekStart = startOfWeek(currentWeek);
-    const weekEnd = endOfWeek(currentWeek);
-    
-    const workerSchedules = schedules.filter(schedule => {
-      const scheduleDate = new Date(schedule.date);
-      const workerMatch = typeof schedule.workerId === 'object' 
-        ? schedule.workerId?._id === workerId 
-        : schedule.workerId === workerId;
-      
-      return workerMatch && 
-             scheduleDate >= weekStart && 
-             scheduleDate <= weekEnd;
+  const weeklyHoursByWorker = useMemo(() => {
+    const hoursMap = new Map();
+    if (!Array.isArray(schedules)) return hoursMap;
+
+    schedules.forEach(schedule => {
+      const workerId = typeof schedule.workerId === 'object' 
+        ? schedule.workerId?._id 
+        : schedule.workerId;
+
+      if (!workerId) return;
+
+      try {
+        const start = new Date(schedule.startTime);
+        const end = new Date(schedule.endTime);
+        if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) return;
+
+        const hours = (end - start) / (1000 * 60 * 60);
+        const currentHours = hoursMap.get(workerId) || 0;
+        hoursMap.set(workerId, currentHours + hours);
+      } catch (error) {
+        console.warn('Could not calculate hours for schedule:', schedule, error);
+      }
     });
 
-    return workerSchedules.reduce((total, schedule) => {
-      const start = new Date(schedule.startTime);
-      const end = new Date(schedule.endTime);
-      const hours = (end - start) / (1000 * 60 * 60); // Convert to hours
-      return total + hours;
-    }, 0);
-  }, [schedules, currentWeek]);
+    return hoursMap;
+  }, [schedules]);
 
   const getSchedulesForDay = (date, workerId) => {
     if (!Array.isArray(schedules)) {
@@ -696,7 +697,7 @@ const WorkerSchedules = () => {
                         })()}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        Weekly Hours: {calculateWeeklyHours(worker._id).toFixed(1)}h
+                        Weekly Hours: {(weeklyHoursByWorker.get(worker._id) || 0).toFixed(1)}h
                       </Typography>
                     </Box>
                     <Chip 
@@ -893,8 +894,23 @@ const WorkerSchedules = () => {
         {/* Add/Edit Schedule Dialog */}
         <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
           <form onSubmit={formik.handleSubmit}>
-            <DialogTitle>
-              {editingSchedule ? 'Edit Schedule' : 'Add New Schedule'}
+            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {editingSchedule ? 'Edit Schedule' : 'Create Schedule'}
+              {editingSchedule && hasPermission('schedules:delete') && (
+                <Tooltip title="Delete Schedule">
+                  <IconButton 
+                    edge="end" 
+                    color="error" 
+                    onClick={() => handleDeleteSchedule(
+                      editingSchedule._id, 
+                      getWorkerName(editingSchedule.workerId),
+                      editingSchedule.task
+                    )}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Tooltip>
+              )}
             </DialogTitle>
             <DialogContent>
               <Grid container spacing={2} sx={{ mt: 1 }}>
