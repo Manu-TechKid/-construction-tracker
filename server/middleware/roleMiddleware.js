@@ -80,7 +80,8 @@ const ROLE_HIERARCHY = {
   'worker': 1,
   'supervisor': 2,
   'manager': 3,
-  'admin': 4
+  'admin': 4,
+  'superuser': 5 // Superuser has the highest level of permissions
 };
 
 const hasPermission = (userRole, requiredRole) => {
@@ -98,14 +99,11 @@ const restrictToRoles = (...roles) => {
     
     // Check if user has any of the required roles
     const hasRequiredRole = roles.some(role => {
-      // If admin, always allow
-      if (req.user.role === 'admin') return true;
-      // If manager, allow if required role is manager or below
-      if (req.user.role === 'manager' && hasPermission('manager', role)) return true;
-      // If supervisor, allow if required role is supervisor or below
-      if (req.user.role === 'supervisor' && hasPermission('supervisor', role)) return true;
-      // Exact role match
-      return req.user.role === role;
+      // Superuser and admin have all permissions
+      if (req.user.role === 'superuser' || req.user.role === 'admin') return true;
+      
+      // Check based on hierarchy
+      return hasPermission(req.user.role, role);
     });
     
     if (!hasRequiredRole) {

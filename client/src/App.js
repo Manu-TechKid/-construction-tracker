@@ -74,6 +74,7 @@ import Calls from './pages/calls/Calls';
 import TimeLogs from './pages/time-logs/TimeLogs';
 import MyTimeLogs from './pages/time-logs/MyTimeLogs';
 import PayrollReport from './pages/reports/PayrollReport';
+import ActivityLog from './pages/admin/ActivityLog';
 
 // Route Protection
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -536,6 +537,16 @@ const AppContent = () => {
                 element={
                   <RoleBasedRoute requiredPermissions={['view:costs', 'manage:users']}>
                     <PayrollReport />
+                  </RoleBasedRoute>
+                }
+              />
+
+              {/* Activity Log - Superuser Only */}
+              <Route 
+                path="activity-log"
+                element={
+                  <RoleBasedRoute requiredPermissions={['is:superuser']}>
+                    <ActivityLog />
                   </RoleBasedRoute>
                 }
               />

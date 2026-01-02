@@ -24,7 +24,7 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['admin', 'manager', 'supervisor', 'worker', 'pending'],
+        enum: ['superuser', 'admin', 'manager', 'supervisor', 'worker', 'pending'],
         default: 'pending'
     },
     phone: {

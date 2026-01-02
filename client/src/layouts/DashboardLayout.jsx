@@ -346,6 +346,16 @@ const DashboardLayout = () => {
       });
     }
 
+    // Activity Log - Superuser only
+    if (user?.role === 'superuser') {
+      items.push({
+        text: 'Activity Log',
+        icon: <AssessmentIcon />,
+        path: '/activity-log',
+        permission: 'is:superuser'
+      });
+    }
+
     return items;
   };
 

@@ -236,7 +236,16 @@ const Invoices = () => {
         toast.success('Invoice PDF downloaded successfully');
       } else {
         // Handle different error cases
-        const errorData = await response.json().catch(() => ({}));
+        let errorData = { message: 'Failed to generate PDF. Please try again.' };
+        try {
+          const text = await response.text();
+          // Try to parse as JSON, but fall back to text if it fails
+          errorData = JSON.parse(text);
+        } catch (e) {
+          // If JSON parsing fails, the text itself might be the error message
+          errorData.message = await response.text();
+        }
+
         if (response.status === 401) {
           toast.error('Authentication failed. Please log in again.');
         } else if (response.status === 400) {

@@ -10,6 +10,7 @@ const {
 const { uploadWorkOrderPhotos, deleteWorkOrderPhoto } = require('../controllers/photoController');
 const { protect, restrictTo } = require('../controllers/authController');
 const { restrictToRoles, hidePricesFromWorkers } = require('../middleware/roleMiddleware');
+const logActivity = require('../middleware/activityLogger');
 const upload = require('../middleware/upload');
 
 // All routes are protected
@@ -41,13 +42,13 @@ router.get('/my-assignments', async (req, res) => {
 });
 
 router.route('/')
-  .post(restrictTo('admin', 'manager', 'supervisor'), createWorkOrder)
+  .post(restrictTo('admin', 'manager', 'supervisor'), logActivity('WorkOrder', 'create'), createWorkOrder)
   .get(restrictTo('admin', 'manager', 'supervisor'), getAllWorkOrders);
 
 router.route('/:id')
   .get(restrictTo('admin', 'manager', 'supervisor'), getWorkOrderById)
-  .patch(restrictTo('admin', 'manager', 'supervisor'), updateWorkOrder)
-  .delete(restrictTo('admin', 'manager'), deleteWorkOrder);
+  .patch(restrictTo('admin', 'manager', 'supervisor'), logActivity('WorkOrder', 'update'), updateWorkOrder)
+  .delete(restrictTo('admin', 'manager'), logActivity('WorkOrder', 'delete'), deleteWorkOrder);
 
 // Photo upload routes - restricted to non-workers
 router.post('/:id/photos', restrictTo('admin', 'manager', 'supervisor'), upload.array('photos', 5), uploadWorkOrderPhotos);

@@ -3,6 +3,7 @@ const buildingController = require('../controllers/buildingController');
 const authController = require('../controllers/authController');
 const { uploadSingle, uploadMultiple } = require('../utils/multer');
 const { hidePricesFromWorkers } = require('../middleware/roleMiddleware');
+const logActivity = require('../middleware/activityLogger');
 
 const router = express.Router();
 
@@ -16,7 +17,7 @@ router.use(hidePricesFromWorkers);
 router
   .route('/')
   .get(buildingController.getAllBuildings)
-  .post(buildingController.createBuilding);
+  .post(logActivity('Building', 'create'), buildingController.createBuilding);
 
 // Routes for specific building
 router
@@ -24,10 +25,12 @@ router
   .get(buildingController.getBuilding)
   .patch(
     authController.restrictTo('admin', 'manager'),
+    logActivity('Building', 'update'),
     buildingController.updateBuilding
   )
   .delete(
     authController.restrictTo('admin'),
+    logActivity('Building', 'delete'),
     buildingController.deleteBuilding
   );
 
@@ -43,6 +46,7 @@ router
   .route('/:id/apartments')
   .post(
     authController.restrictTo('admin', 'manager'),
+    logActivity('Apartment', 'create'),
     buildingController.addApartment
   );
 
@@ -50,10 +54,12 @@ router
   .route('/:id/apartments/:apartmentId')
   .patch(
     authController.restrictTo('admin', 'manager'),
+    logActivity('Apartment', 'update'),
     buildingController.updateApartment
   )
   .delete(
     authController.restrictTo('admin'),
+    logActivity('Apartment', 'delete'),
     buildingController.deleteApartment
   );
 

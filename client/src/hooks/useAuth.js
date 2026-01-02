@@ -53,11 +53,17 @@ export const useAuth = () => {
     _id: rawUser._id || rawUser.id  // Ensure _id field exists
   } : null;
 
+  const isSuperuser = user?.role === 'superuser';
+  const isAdmin = user?.role === 'admin';
+  const isManager = user?.role === 'manager';
+  const isSupervisor = user?.role === 'supervisor';
+  const isWorker = user?.role === 'worker';
+
   const hasPermission = (requiredPermissions) => {
     if (!user || !user.role) return false;
     
-    // Admin has all permissions
-    if (user.role === 'admin') return true;
+    // Superuser and Admin have all permissions
+    if (isSuperuser || isAdmin) return true;
     
     const userPermissions = ROLE_PERMISSIONS[user.role] || [];
     
@@ -92,16 +98,16 @@ export const useAuth = () => {
 
   return {
     user,
-    isAuthenticated: !!user,
+    isSuperuser,
+    isAdmin,
+    isManager,
+    isSupervisor,
+    isWorker,
     hasPermission,
-    canAccessWorkerDashboard,
     canAccessMainDashboard,
+    canAccessWorkerDashboard,
     canViewCosts,
     canManageUsers,
-    canAssignWorkers,
-    isAdmin: user?.role === 'admin',
-    isManager: user?.role === 'manager',
-    isSupervisor: user?.role === 'supervisor',
-    isWorker: user?.role === 'worker'
+    canAssignWorkers
   };
 };

@@ -154,11 +154,14 @@ const WorkerSchedules = () => {
         console.log('Form values before processing:', values);
         
         // Validate time overlap with existing schedules
-        const existingSchedules = schedules.filter(s => 
-          s._id !== editingSchedule?._id && 
-          s.workerId === values.workerId &&
-          format(new Date(s.date), 'yyyy-MM-dd') === format(values.date, 'yyyy-MM-dd')
-        );
+        const existingSchedules = schedules.filter(s => {
+          const scheduleWorkerId = typeof s.workerId === 'object' && s.workerId !== null ? s.workerId._id : s.workerId;
+          return (
+            s._id !== editingSchedule?._id &&
+            scheduleWorkerId === values.workerId &&
+            isSameDay(new Date(s.date), values.date)
+          );
+        });
 
         const hasOverlap = existingSchedules.some(schedule => {
           const existingStart = new Date(schedule.startTime);

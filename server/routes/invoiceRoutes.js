@@ -2,6 +2,7 @@ const express = require('express');
 const invoiceController = require('../controllers/invoiceController');
 const authController = require('../controllers/authController');
 const { restrictToRoles } = require('../middleware/roleMiddleware');
+const logActivity = require('../middleware/activityLogger');
 
 const router = express.Router();
 
@@ -27,16 +28,16 @@ router.use(restrictToRoles('supervisor', 'manager', 'admin'));
 router
   .route('/')
   .get(invoiceController.getAllInvoices)
-  .post(invoiceController.createInvoice);
+  .post(logActivity('Invoice', 'create'), invoiceController.createInvoice);
 
 router
   .route('/:id')
   .get(invoiceController.getInvoice)
-  .patch(invoiceController.updateInvoice)
-  .delete(restrictToRoles('admin', 'manager'), invoiceController.deleteInvoice);
+  .patch(logActivity('Invoice', 'update'), invoiceController.updateInvoice)
+  .delete(restrictToRoles('admin', 'manager'), logActivity('Invoice', 'delete'), invoiceController.deleteInvoice);
 
 // Enhanced invoice management
-router.post('/from-estimate/:estimateId', invoiceController.createFromEstimate);
+router.post('/from-estimate/:estimateId', logActivity('Invoice', 'create'), invoiceController.createFromEstimate);
 router.patch('/:id/send', invoiceController.sendInvoice);
 router.patch('/:id/accept', invoiceController.acceptInvoice);
 router.patch('/:id/calculate-totals', invoiceController['calculateTotals']);
@@ -44,7 +45,7 @@ router.get('/:id/pdf', invoiceController.generatePDF);
 router.post('/:id/email', invoiceController.emailInvoice);
 
 // Payment management (admin/manager only)
-router.patch('/:id/mark-paid', restrictToRoles('admin', 'manager'), invoiceController.markAsPaid);
+router.patch('/:id/mark-paid', restrictToRoles('admin', 'manager'), logActivity('Invoice', 'paid'), invoiceController.markAsPaid);
 router.patch('/:id/update-payment', restrictToRoles('admin', 'manager'), invoiceController.updatePayment);
 
 // Work order management in invoices (NEW - allows editing invoices)
