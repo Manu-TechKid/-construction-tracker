@@ -188,7 +188,9 @@ exports.getCleaningWorkOrdersForWeek = catchAsync(async (req, res, next) => {
   // Find the 'Cleaning Services' work type by its name
   const cleaningWorkType = await WorkType.findOne({ name: 'Cleaning Services' });
 
+  // Diagnostic logging
   if (!cleaningWorkType) {
+    console.error('Could not find WorkType with name "Cleaning Services"');
     return res.status(200).json({
       success: true,
       count: 0,

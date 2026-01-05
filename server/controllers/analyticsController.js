@@ -55,7 +55,12 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
   // Use the pre-calculated totalHours field from TimeSession schema and
   // derive geofence violations from clock-in/clock-out geofence flags.
   const timeTrackingStats = await TimeSession.aggregate([
-    { $match: { ...timeDateFilter } },
+    { 
+      $match: { 
+        ...timeDateFilter,
+        status: { $in: ['completed', 'approved'] } 
+      }
+    },
     {
       $group: {
         _id: null,

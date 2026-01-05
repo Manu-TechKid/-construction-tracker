@@ -10,7 +10,9 @@ exports.getAllNotes = catchAsync(async (req, res, next) => {
   let filter = { deleted: { $ne: true } };
   
   if (building) filter.building = building;
-  if (status) filter.status = status;
+  if (status) {
+    filter.status = { $in: status.split(',') };
+  }
   if (type) filter.type = type;
   if (priority) filter.priority = priority;
 
