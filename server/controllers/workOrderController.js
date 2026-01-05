@@ -185,7 +185,8 @@ exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
 // @route   GET /api/v1/work-orders/cleaning-for-week
 // @access  Private
 exports.getCleaningWorkOrdersForWeek = catchAsync(async (req, res, next) => {
-  const cleaningWorkType = await WorkType.findOne({ code: 'cleaning' });
+  // Find the 'Cleaning Services' work type by its name
+  const cleaningWorkType = await WorkType.findOne({ name: 'Cleaning Services' });
 
   if (!cleaningWorkType) {
     return res.status(200).json({

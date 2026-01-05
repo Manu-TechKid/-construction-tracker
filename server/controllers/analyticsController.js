@@ -13,14 +13,20 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
   // Get date range filters from query params
   const { startDate, endDate } = req.query;
   const dateFilter = {};
+  const timeDateFilter = {}; // Separate filter for time-based models
   
   if (startDate) {
-    dateFilter.createdAt = { $gte: new Date(startDate) };
+    const start = new Date(startDate);
+    dateFilter.createdAt = { $gte: start };
+    timeDateFilter.clockInTime = { $gte: start };
   }
   
   if (endDate) {
+    const end = new Date(endDate);
     if (!dateFilter.createdAt) dateFilter.createdAt = {};
-    dateFilter.createdAt.$lte = new Date(endDate);
+    if (!timeDateFilter.clockInTime) timeDateFilter.clockInTime = {};
+    dateFilter.createdAt.$lte = end;
+    timeDateFilter.clockInTime.$lte = end;
   }
 
   // Get building stats
@@ -49,7 +55,7 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
   // Use the pre-calculated totalHours field from TimeSession schema and
   // derive geofence violations from clock-in/clock-out geofence flags.
   const timeTrackingStats = await TimeSession.aggregate([
-    { $match: { ...dateFilter } },
+    { $match: { ...timeDateFilter } },
     {
       $group: {
         _id: null,

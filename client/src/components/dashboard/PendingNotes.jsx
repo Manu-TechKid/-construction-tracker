@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -30,7 +30,13 @@ const PendingNotes = () => {
     limit: 10 
   });
 
-  const notes = notesData?.data?.notes || [];
+  const [notes, setNotes] = useState([]);
+
+  useEffect(() => {
+    if (notesData?.data?.notes) {
+      setNotes(notesData.data.notes);
+    }
+  }, [notesData]);
   const pendingNotes = notes.filter(note => note.status === 'pending');
   const postponedNotes = notes.filter(note => note.status === 'postponed');
 
