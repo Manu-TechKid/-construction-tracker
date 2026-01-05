@@ -5,7 +5,8 @@ const {
   getAllWorkOrders,
   getWorkOrderById,
   updateWorkOrder,
-  deleteWorkOrder
+  deleteWorkOrder,
+  getCleaningWorkOrdersForWeek
 } = require('../controllers/workOrderController');
 const { uploadWorkOrderPhotos, deleteWorkOrderPhoto } = require('../controllers/photoController');
 const { protect, restrictTo } = require('../controllers/authController');
@@ -53,5 +54,8 @@ router.route('/:id')
 // Photo upload routes - restricted to non-workers
 router.post('/:id/photos', restrictTo('admin', 'manager', 'supervisor'), upload.array('photos', 5), uploadWorkOrderPhotos);
 router.delete('/:id/photos/:photoId', restrictTo('admin', 'manager', 'supervisor'), deleteWorkOrderPhoto);
+
+// Dashboard-specific route for cleaning services
+router.get('/cleaning-for-week', getCleaningWorkOrdersForWeek);
 
 module.exports = router;

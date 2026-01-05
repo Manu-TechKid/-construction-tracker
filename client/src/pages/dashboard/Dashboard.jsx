@@ -27,7 +27,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { useGetUsersQuery } from '../../features/users/usersApiSlice';
-import { useGetWorkOrdersQuery } from '../../features/workOrders/workOrdersApiSlice';
+import { useGetWorkOrdersQuery, useGetCleaningWorkOrdersForWeekQuery } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetDashboardStatsQuery } from '../../features/analytics/analyticsApiSlice';
 import StatCard from '../../components/dashboard/StatCard';
 import BuildingStatus from '../../components/dashboard/BuildingStatus';
@@ -37,6 +37,8 @@ import WeeklyProduction from '../../components/dashboard/WeeklyProduction';
 import WeeklyProductionByWorker from '../../components/dashboard/WeeklyProductionByWorker';
 import DashboardAlerts from '../../components/dashboard/DashboardAlerts';
 import PendingNotes from '../../components/dashboard/PendingNotes';
+import CleaningServicesCard from '../../components/dashboard/CleaningServicesCard';
+import CleaningServicesModal from '../../components/dashboard/CleaningServicesModal';
 import { formatDate } from '../../utils/dateUtils';
 import ResponsiveContainer from '../../components/layout/ResponsiveContainer';
 import NotificationTest from '../../components/Notifications/NotificationTest';
@@ -44,6 +46,7 @@ import NotificationTest from '../../components/Notifications/NotificationTest';
 const Dashboard = () => {
   const theme = useTheme();
   const navigate = useNavigate();
+  const [isCleaningModalOpen, setIsCleaningModalOpen] = useState(false);
   const [dateRange, setDateRange] = useState({
     startDate: null,
     endDate: null
@@ -64,6 +67,7 @@ const Dashboard = () => {
   const { data: buildingsData, isLoading: isLoadingBuildings } = useGetBuildingsQuery({});
   const { data: usersData } = useGetUsersQuery({ role: 'worker' });
   const { data: workOrdersData } = useGetWorkOrdersQuery();
+  const { data: cleaningData } = useGetCleaningWorkOrdersForWeekQuery();
   
   // Fetch analytics data
   const { 
@@ -92,6 +96,9 @@ const Dashboard = () => {
   const handleApplyFilters = () => {
     refetchAnalytics();
   };
+
+  const handleOpenCleaningModal = () => setIsCleaningModalOpen(true);
+  const handleCloseCleaningModal = () => setIsCleaningModalOpen(false);
   
   const [stats, setStats] = useState({
     totalBuildings: 0,
@@ -306,6 +313,9 @@ const Dashboard = () => {
             onClick={() => navigate('/time-tracking')}
           />
         </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <CleaningServicesCard onClick={handleOpenCleaningModal} />
+        </Grid>
       </Grid>
 
       <Grid container spacing={3}>
@@ -382,6 +392,11 @@ const Dashboard = () => {
         </Grid>
       </Grid>
         </ResponsiveContainer>
+      <CleaningServicesModal 
+        open={isCleaningModalOpen} 
+        handleClose={handleCloseCleaningModal} 
+        workOrders={cleaningData?.data?.workOrders} 
+      />
     </Box>
   );
 };

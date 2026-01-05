@@ -180,3 +180,45 @@ exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
 
   res.status(204).json({ success: true, data: null });
 });
+
+// @desc    Get cleaning work orders for the current week
+// @route   GET /api/v1/work-orders/cleaning-for-week
+// @access  Private
+exports.getCleaningWorkOrdersForWeek = catchAsync(async (req, res, next) => {
+  const cleaningWorkType = await WorkType.findOne({ code: 'cleaning' });
+
+  if (!cleaningWorkType) {
+    return res.status(200).json({
+      success: true,
+      count: 0,
+      data: { workOrders: [] },
+    });
+  }
+
+  const now = new Date();
+  const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(endOfWeek.getDate() + 6);
+  endOfWeek.setHours(23, 59, 59, 999);
+
+  const workOrders = await WorkOrder.find({
+    workType: cleaningWorkType._id,
+    scheduledDate: {
+      $gte: startOfWeek,
+      $lte: endOfWeek,
+    },
+    deleted: false,
+  })
+    .populate('building', 'name')
+    .populate('workSubType', 'name')
+    .populate('assignedTo.worker', 'name')
+    .sort({ scheduledDate: 1 });
+
+  res.status(200).json({
+    success: true,
+    count: workOrders.length,
+    data: { workOrders },
+  });
+});

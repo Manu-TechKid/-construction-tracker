@@ -54,6 +54,17 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
         { type: 'WorkOrder', id },
       ],
     }),
+
+    getCleaningWorkOrdersForWeek: builder.query({
+      query: () => 'work-orders/cleaning-for-week',
+      providesTags: (result) =>
+        result?.data?.workOrders
+          ? [
+              ...result.data.workOrders.map(({ _id }) => ({ type: 'WorkOrder', id: _id })),
+              { type: 'WorkOrder', id: 'CLEANING_LIST' },
+            ]
+          : [{ type: 'WorkOrder', id: 'CLEANING_LIST' }],
+    }),
   }),
 });
 
@@ -63,4 +74,5 @@ export const {
   useCreateWorkOrderMutation,
   useUpdateWorkOrderMutation,
   useDeleteWorkOrderMutation,
+  useGetCleaningWorkOrdersForWeekQuery,
 } = workOrdersApiSlice;
