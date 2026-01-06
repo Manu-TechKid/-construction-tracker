@@ -1,6 +1,7 @@
 const Building = require('../models/Building');
 const WorkOrder = require('../models/WorkOrder');
 const TimeSession = require('../models/TimeSession');
+const TimeLog = require('../models/TimeLog');
 const User = require('../models/User');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
@@ -14,19 +15,23 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
   const { startDate, endDate } = req.query;
   const dateFilter = {};
   const timeDateFilter = {}; // Separate filter for time-based models
+  const timeLogDateFilter = {};
   
   if (startDate) {
     const start = new Date(startDate);
     dateFilter.createdAt = { $gte: start };
     timeDateFilter.clockInTime = { $gte: start };
+    timeLogDateFilter.timestamp = { $gte: start };
   }
   
   if (endDate) {
     const end = new Date(endDate);
     if (!dateFilter.createdAt) dateFilter.createdAt = {};
     if (!timeDateFilter.clockInTime) timeDateFilter.clockInTime = {};
+    if (!timeLogDateFilter.timestamp) timeLogDateFilter.timestamp = {};
     dateFilter.createdAt.$lte = end;
     timeDateFilter.clockInTime.$lte = end;
+    timeLogDateFilter.timestamp.$lte = end;
   }
 
   // Get building stats
@@ -87,6 +92,39 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
     }
   ]);
 
+  // Use TimeSession when available; otherwise fall back to TimeLog (older clock-in/out flow)
+  const timeSessionAgg = timeTrackingStats[0] || null;
+  const timeSessionHours = timeSessionAgg?.totalHours || 0;
+  let timeLogHours = 0;
+
+  if (timeSessionHours <= 0) {
+    const timeLogs = await TimeLog.find(timeLogDateFilter)
+      .select('user type timestamp')
+      .sort({ user: 1, timestamp: 1 })
+      .lean();
+
+    const lastClockInByUser = new Map();
+    for (const log of timeLogs) {
+      const userId = String(log.user);
+      if (log.type === 'clock-in') {
+        lastClockInByUser.set(userId, log.timestamp);
+        continue;
+      }
+      if (log.type === 'clock-out') {
+        const clockInTs = lastClockInByUser.get(userId);
+        if (clockInTs) {
+          const diffMs = new Date(log.timestamp) - new Date(clockInTs);
+          if (diffMs > 0) timeLogHours += diffMs / 3600000;
+          lastClockInByUser.delete(userId);
+        }
+      }
+    }
+
+    timeLogHours = Math.round(timeLogHours * 100) / 100;
+  }
+
+  const totalHoursToReport = timeSessionHours > 0 ? timeSessionHours : timeLogHours;
+
   // Get worker stats
   const workerStats = await User.aggregate([
     { $match: { role: "worker" } },
@@ -144,14 +182,10 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
         total: workOrderStats.reduce((sum, stat) => sum + stat.count, 0),
         byStatus: formattedWorkOrderStats
       },
-      timeTracking: timeTrackingStats.length > 0 ? {
-        totalSessions: timeTrackingStats[0].totalSessions,
-        totalHours: Math.round(timeTrackingStats[0].totalHours * 100) / 100,
-        geofenceViolations: timeTrackingStats[0].geofenceViolations
-      } : {
-        totalSessions: 0,
-        totalHours: 0,
-        geofenceViolations: 0
+      timeTracking: {
+        totalSessions: timeSessionAgg?.totalSessions || 0,
+        totalHours: Math.round((totalHoursToReport || 0) * 100) / 100,
+        geofenceViolations: timeSessionAgg?.geofenceViolations || 0
       },
       workers: {
         total: workerStats.reduce((sum, stat) => sum + stat.count, 0),

@@ -46,6 +46,9 @@ router.route('/')
   .post(restrictTo('admin', 'manager', 'supervisor'), logActivity('WorkOrder', 'create'), createWorkOrder)
   .get(restrictTo('admin', 'manager', 'supervisor'), getAllWorkOrders);
 
+// Dashboard-specific route for cleaning services
+router.get('/cleaning-for-week', getCleaningWorkOrdersForWeek);
+
 router.route('/:id')
   .get(restrictTo('admin', 'manager', 'supervisor'), getWorkOrderById)
   .patch(restrictTo('admin', 'manager', 'supervisor'), logActivity('WorkOrder', 'update'), updateWorkOrder)
@@ -54,8 +57,5 @@ router.route('/:id')
 // Photo upload routes - restricted to non-workers
 router.post('/:id/photos', restrictTo('admin', 'manager', 'supervisor'), upload.array('photos', 5), uploadWorkOrderPhotos);
 router.delete('/:id/photos/:photoId', restrictTo('admin', 'manager', 'supervisor'), deleteWorkOrderPhoto);
-
-// Dashboard-specific route for cleaning services
-router.get('/cleaning-for-week', getCleaningWorkOrdersForWeek);
 
 module.exports = router;

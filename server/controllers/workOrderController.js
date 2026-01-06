@@ -186,7 +186,9 @@ exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
 // @access  Private
 exports.getCleaningWorkOrdersForWeek = catchAsync(async (req, res, next) => {
   // Find the 'Cleaning Services' work type by its name
-  const cleaningWorkType = await WorkType.findOne({ name: 'Cleaning Services' });
+  const cleaningWorkType = await WorkType.findOne({
+    $or: [{ code: 'cleaning' }, { name: 'Cleaning Services' }, { name: /cleaning/i }],
+  });
 
   // Diagnostic logging
   if (!cleaningWorkType) {
