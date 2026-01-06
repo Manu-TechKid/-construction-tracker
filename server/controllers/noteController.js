@@ -16,6 +16,9 @@ exports.getAllNotes = catchAsync(async (req, res, next) => {
   if (type) filter.type = type;
   if (priority) filter.priority = priority;
 
+  console.log(`[getAllNotes] - Query Params: ${JSON.stringify(req.query)}`);
+  console.log(`[getAllNotes] - Final Filter: ${JSON.stringify(filter)}`);
+
   const notes = await Note.find(filter)
     .populate('building', 'name address')
     .populate('createdBy', 'name email')

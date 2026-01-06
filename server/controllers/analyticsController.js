@@ -125,6 +125,10 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
 
   const totalHoursToReport = timeSessionHours > 0 ? timeSessionHours : timeLogHours;
 
+  console.log(`[getDashboardStats] - TimeSession Hours: ${timeSessionHours}`);
+  console.log(`[getDashboardStats] - TimeLog Fallback Hours: ${timeLogHours}`);
+  console.log(`[getDashboardStats] - Total Hours to Report: ${totalHoursToReport}`);
+
   // Get worker stats
   const workerStats = await User.aggregate([
     { $match: { role: "worker" } },
