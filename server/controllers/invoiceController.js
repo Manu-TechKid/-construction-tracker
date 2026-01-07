@@ -1896,3 +1896,153 @@ exports.getAgingReport = catchAsync(async (req, res, next) => {
         }
     });
 });
+
+// @desc    Generate PDF for an invoice
+// @route   GET /api/v1/invoices/:id/pdf
+// @access  Private
+exports.generatePDF = catchAsync(async (req, res, next) => {
+  const invoice = await Invoice.findById(req.params.id)
+    .populate('building', 'name address city state zipCode')
+    .populate('workOrders.workOrder', 'title description');
+
+  if (!invoice) {
+    return next(new AppError('Invoice not found', 404));
+  }
+
+  const pdf = require('html-pdf');
+  const path = require('path');
+
+  // Create HTML content for the PDF
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Invoice #${invoice.invoiceNumber}</title>
+        <meta charset="utf-8">
+        <style>
+          body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 12px;
+            color: #333;
+          }
+          .container {
+            width: 100%;
+            padding: 30px;
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 40px;
+          }
+          .company-details h1 {
+            margin: 0;
+            font-size: 24px;
+          }
+          .invoice-details {
+            text-align: right;
+          }
+          .invoice-details h2 {
+            font-size: 28px;
+            margin: 0;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+          }
+          th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+          }
+          th {
+            background-color: #f2f2f2;
+          }
+          .totals {
+            margin-top: 20px;
+            float: right;
+            width: 250px;
+          }
+          .totals table {
+            width: 100%;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="company-details">
+              <h1>DSJ Construction & Services LLC</h1>
+              <p>651 Pullman Pl<br>McLean, VA 22102</p>
+            </div>
+            <div class="invoice-details">
+              <h2>INVOICE</h2>
+              <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
+              <p><strong>Date:</strong> ${new Date(invoice.invoiceDate).toLocaleDateString()}</p>
+              <p><strong>Due Date:</strong> ${new Date(invoice.dueDate).toLocaleDateString()}</p>
+            </div>
+          </div>
+
+          <div>
+            <h3>Bill To:</h3>
+            <p>${invoice.building.name}<br>${invoice.building.address}</p>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(invoice.lineItems.length > 0 ? invoice.lineItems : invoice.workOrders).map(item => `
+                <tr>
+                  <td>${item.description}</td>
+                  <td>${item.quantity}</td>
+                  <td>$${item.unitPrice.toFixed(2)}</td>
+                  <td>$${item.totalPrice.toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div class="totals">
+            <table>
+              <tr>
+                <td><strong>Subtotal:</strong></td>
+                <td>$${invoice.subtotal.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td><strong>Tax:</strong></td>
+                <td>$${invoice.tax.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td><strong>Total:</strong></td>
+                <td><strong>$${invoice.total.toFixed(2)}</strong></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const options = {
+    format: 'Letter',
+    border: { top: '0.5in', right: '0.5in', bottom: '0.5in', left: '0.5in' }
+  };
+
+  pdf.create(htmlContent, options).toStream((err, stream) => {
+    if (err) {
+        console.error('PDF generation error:', err);
+        return next(new AppError('Could not generate PDF. ' + err.message, 500));
+    }
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=invoice-${invoice.invoiceNumber}.pdf`);
+    stream.pipe(res);
+  });
+});

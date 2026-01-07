@@ -202,65 +202,57 @@ const Invoices = () => {
   };
 
   const handleDownloadPDF = async (invoice) => {
-    try {
+    handleMenuClose();
+    const downloadPromise = async () => {
       const token = localStorage.getItem('token');
       const apiUrl = process.env.REACT_APP_API_URL || 'https://construction-tracker-webapp.onrender.com/api/v1';
-      
+
       if (!token) {
-        toast.error('Authentication token not found. Please log in again.');
-        handleMenuClose();
-        return;
+        throw new Error('Authentication token not found. Please log in again.');
       }
-      
-      // First try to fetch with proper headers to check if PDF generation works
+
       const response = await fetch(`${apiUrl}/invoices/${invoice._id}/pdf`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
         },
       });
 
-      if (response.ok) {
-        // If successful, create blob and download
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Invoice-${invoice.invoiceNumber || invoice._id}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        
-        toast.success('Invoice PDF downloaded successfully');
-      } else {
-        // Handle different error cases
-        let errorData = { message: 'Failed to generate PDF. Please try again.' };
+      if (!response.ok) {
+        let errorMsg = 'Failed to generate PDF.';
         try {
-          const text = await response.text();
-          // Try to parse as JSON, but fall back to text if it fails
-          errorData = JSON.parse(text);
+          const errorData = await response.json();
+          errorMsg = errorData.message || `Server error: ${response.status}`;
         } catch (e) {
-          // If JSON parsing fails, the text itself might be the error message
-          errorData.message = await response.text();
+          errorMsg = `Server responded with status: ${response.status}`;
         }
+        throw new Error(errorMsg);
+      }
 
-        if (response.status === 401) {
-          toast.error('Authentication failed. Please log in again.');
-        } else if (response.status === 400) {
-          toast.error(errorData.message || 'Invoice has no billable items. Please add line items first.');
-        } else {
-          toast.error(errorData.message || 'Failed to generate PDF. Please try again.');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Invoice-${invoice.invoiceNumber || invoice._id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    };
+
+    toast.promise(
+      downloadPromise(),
+      {
+        pending: 'Generating your PDF...',
+        success: 'PDF downloaded successfully!',
+        error: {
+          render({data}){
+            // data is the error thrown from the promise
+            return data.message || 'An unknown error occurred.';
+          }
         }
       }
-      
-      handleMenuClose();
-    } catch (error) {
-      console.error('Error downloading PDF:', error);
-      toast.error('Network error. Please check your connection and try again.');
-      handleMenuClose();
-    }
+    );
   };
 
   const handleEmailInvoice = async (invoice) => {
