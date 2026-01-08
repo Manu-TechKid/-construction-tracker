@@ -29,7 +29,6 @@ import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice
 import { useGetUsersQuery } from '../../features/users/usersApiSlice';
 import { useGetWorkOrdersQuery, useGetCleaningWorkOrdersForWeekQuery } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetDashboardStatsQuery } from '../../features/analytics/analyticsApiSlice';
-import { useGetCurrentUserQuery } from '../../features/auth/authApiSlice';
 import StatCard from '../../components/dashboard/StatCard';
 import BuildingStatus from '../../components/dashboard/BuildingStatus';
 import WorkerAvailability from '../../components/dashboard/WorkerAvailability';
@@ -70,7 +69,6 @@ const Dashboard = () => {
   const { data: usersData } = useGetUsersQuery({ role: 'worker' });
   const { data: workOrdersData } = useGetWorkOrdersQuery();
   const { data: cleaningData } = useGetCleaningWorkOrdersForWeekQuery();
-  const { data: currentUserData } = useGetCurrentUserQuery();
   
   // Fetch analytics data
   const { 
