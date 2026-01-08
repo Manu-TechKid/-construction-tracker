@@ -1896,8 +1896,7 @@ exports.getAgingReport = catchAsync(async (req, res, next) => {
         }
     });
 });
-// @route   GET /api/v1/invoices/:id/pdf
-// @access  Private
+
 exports.generatePDF = catchAsync(async (req, res, next) => {
   const invoice = await Invoice.findById(req.params.id)
     .populate('building', 'name address city state zipCode')
@@ -1915,234 +1914,81 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
   const path = require('path');
 
   // Create HTML content for the PDF
+  const building = invoice.building || {}; // Default to empty object if building is not populated
   const htmlContent = `
     <!DOCTYPE html>
     <html>
-      <head>
-        <title>Invoice - ${invoice.invoiceNumber}</title>
-        <meta charset="utf-8">
+    <head>
         <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            font-size: 11px;
-            line-height: 1.4;
-            color: #333;
-            background-color: #fff;
-            padding: 30px;
-          }
-          .invoice-container {
-            max-width: 850px;
-            margin: 0 auto;
-          }
-          .header {
-            display: table;
-            width: 100%;
-            margin-bottom: 30px;
-          }
-          .header-left {
-            display: table-cell;
-            width: 70%;
-            vertical-align: top;
-          }
-          .header-right {
-            display: table-cell;
-            width: 30%;
-            text-align: right;
-            vertical-align: top;
-          }
-          .company-name {
-            font-size: 11px;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 4px;
-          }
-          .company-info {
-            font-size: 9px;
-            color: #666;
-            line-height: 1.5;
-          }
-          .logo-img {
-            width: 80px;
-            height: 80px;
-            object-fit: contain;
-          }
-          .invoice-title {
-            font-size: 24px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 20px;
-            text-align: right;
-          }
-          .info-section {
-            display: table;
-            width: 100%;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #1976d2;
-          }
-          .bill-to {
-            display: table-cell;
-            width: 50%;
-          }
-          .invoice-data {
-            display: table-cell;
-            width: 50%;
-            text-align: right;
-          }
-          .info-row {
-            display: table;
-            width: 100%;
-            margin-bottom: 8px;
-          }
-          .info-label {
-            display: table-cell;
-            font-size: 9px;
-            color: #666;
-            width: 100px;
-          }
-          .info-value {
-            display: table-cell;
-            font-size: 10px;
-            font-weight: 600;
-            color: #333;
-          }
-          .line-items-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-            border: 1px solid #e0e0e0;
-          }
-          .line-items-table thead {
-            background-color: #2C3E50;
-          }
-          .line-items-table th {
-            color: #ffffff;
-            font-size: 10px;
-            font-weight: 600;
-            padding: 12px 10px;
-            text-align: left;
-          }
-          .line-items-table th:last-child, .line-items-table td:last-child {
-            text-align: right;
-          }
-          .line-items-table td {
-            font-size: 9px;
-            padding: 12px 10px;
-            border-bottom: 1px solid #e0e0e0;
-          }
-          .totals-section {
-            width: 280px;
-            margin-left: auto;
-            margin-top: 20px;
-          }
-          .totals-row {
-            display: table;
-            width: 100%;
-            margin-bottom: 8px;
-          }
-          .totals-label {
-            display: table-cell;
-            font-size: 10px;
-            color: #666;
-          }
-          .totals-value {
-            display: table-cell;
-            font-size: 10px;
-            font-weight: bold;
-            color: #333;
-            text-align: right;
-          }
-          .totals-final {
-            border-top: 2px solid #2C3E50;
-            padding-top: 10px;
-            margin-top: 5px;
-          }
-          .totals-final .totals-label, .totals-final .totals-value {
-            font-size: 14px;
-            font-weight: 600;
-            color: #2e7d32;
-          }
+            body { font-family: Arial, sans-serif; color: #333; }
+            .container { padding: 20px; }
+            .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+            .header img { max-width: 150px; }
+            .header .company-details { text-align: right; }
+            .details { display: flex; justify-content: space-between; margin-top: 20px; }
+            .details .customer-details, .details .invoice-details { width: 48%; }
+            h1, h2, h3 { color: #222; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            .total { text-align: right; margin-top: 20px; }
+            .footer { text-align: center; margin-top: 30px; font-size: 0.8em; color: #777; }
         </style>
-      </head>
-      <body>
-        <div class="invoice-container">
-          <div class="header">
-            <div class="header-left">
-              <div class="company-name">DSJ Construction & Services LLC</div>
-              <div class="company-info">
-                651 Pullman Pl<br>
-                McLean, VA 22102<br>
-                Phone: (555) 123-4567<br>
-                Email: info@dsjconstruction.com
-              </div>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <img src="https://construction-tracker-backend.onrender.com/dsj-logo.png" alt="Company Logo">
+                <div class="company-details">
+                    <h3>DSJ SERVICES</h3>
+                    <p>123 Main Street<br>Anytown, USA 12345</p>
+                </div>
             </div>
-            <div class="header-right">
-              <img src="https://res.cloudinary.com/dwqxiigpd/image/upload/v1756186310/dsj-logo_mb3npa.jpg" alt="DSJ Logo" class="logo-img"/>
+            <h1>Invoice</h1>
+            <div class="details">
+                <div class="customer-details">
+                    <h2>Bill To:</h2>
+                    <p>
+                        ${building.name || 'N/A'}<br>
+                        ${building.address || ''}, ${building.city || ''}, ${building.state || ''} ${building.zipCode || ''}
+                    </p>
+                </div>
+                <div class="invoice-details">
+                    <p><strong>Invoice Number:</strong> ${invoice.invoiceNumber}</p>
+                    <p><strong>Invoice Date:</strong> ${new Date(invoice.invoiceDate).toLocaleDateString()}</p>
+                    <p><strong>Due Date:</strong> ${new Date(invoice.dueDate).toLocaleDateString()}</p>
+                </div>
             </div>
-          </div>
-
-          <div class="invoice-title">INVOICE</div>
-
-          <div class="info-section">
-            <div class="bill-to">
-              <div class="info-label" style="font-weight: bold; color: #333;">Bill To:</div>
-              <div class="info-value">${invoice.building?.name || 'N/A'}<br>${invoice.building?.address || ''}</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Quantity</th>
+                        <th>Unit Price</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${(invoice.lineItems || []).map(item => `
+                        <tr>
+                            <td>${item.description || ''}</td>
+                            <td>${item.quantity || 0}</td>
+                            <td>$${(item.unitPrice || 0).toFixed(2)}</td>
+                            <td>$${(item.totalPrice || 0).toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            <div class="total">
+                <h3>Subtotal: $${(invoice.subtotal || 0).toFixed(2)}</h3>
+                <h3>Tax: $${(invoice.tax || 0).toFixed(2)}</h3>
+                <h2>Total: $${(invoice.total || 0).toFixed(2)}</h2>
             </div>
-            <div class="invoice-data">
-              <div class="info-row">
-                <div class="info-label">Invoice #:</div>
-                <div class="info-value">${invoice.invoiceNumber}</div>
-              </div>
-              <div class="info-row">
-                <div class="info-label">Invoice Date:</div>
-                <div class="info-value">${new Date(invoice.invoiceDate).toLocaleDateString('en-US')}</div>
-              </div>
-              <div class="info-row">
-                <div class="info-label">Due Date:</div>
-                <div class="info-value">${new Date(invoice.dueDate).toLocaleDateString('en-US')}</div>
-              </div>
+            <div class="footer">
+                <p>Thank you for your business!</p>
             </div>
-          </div>
-
-          <table class="line-items-table">
-            <thead>
-              <tr>
-                <th style="width: 50%;">Description</th>
-                <th>Quantity</th>
-                <th>Unit Price</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${(invoice.lineItems.length > 0 ? invoice.lineItems : invoice.workOrders).map(item => `
-                <tr>
-                  <td>${item.description || 'N/A'}</td>
-                  <td>${item.quantity || 1}</td>
-                  <td>$${(item.unitPrice || 0).toFixed(2)}</td>
-                  <td>$${(item.totalPrice || 0).toFixed(2)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-
-          <div class="totals-section">
-            <div class="totals-row">
-              <div class="totals-label">Subtotal:</div>
-              <div class="totals-value">$${(invoice.subtotal || 0).toFixed(2)}</div>
-            </div>
-            <div class="totals-row">
-              <div class="totals-label">Tax:</div>
-              <div class="totals-value">$${(invoice.tax || 0).toFixed(2)}</div>
-            </div>
-            <div class="totals-row totals-final">
-              <div class="totals-label">Total:</div>
-              <div class="totals-value">$${(invoice.total || 0).toFixed(2)}</div>
-            </div>
-          </div>
-
         </div>
-      </body>
+    </body>
     </html>
   `;
 
@@ -2153,7 +1999,6 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
 
   pdf.create(htmlContent, options).toStream((err, stream) => {
     if (err) {
-        console.error('PDF generation error:', err);
         return next(new AppError('Could not generate PDF. ' + err.message, 500));
     }
     res.setHeader('Content-Type', 'application/pdf');

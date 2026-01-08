@@ -282,10 +282,14 @@ exports.clockOut = catchAsync(async (req, res, next) => {
   }
 
   // Calculate total hours
-  if (activeSession.shiftStart && activeSession.shiftEnd) {
+  console.log(`[Clock-Out] Calculating total hours for session: ${activeSession._id}`);
+  console.log(`[Clock-Out] Shift Start: ${activeSession.shiftStart}, Shift End: ${activeSession.shiftEnd}`);
+  if ((activeSession.shiftStart || activeSession.clockInTime) && activeSession.shiftEnd) {
+    const startTime = activeSession.shiftStart || activeSession.clockInTime;
     const durationMs = activeSession.shiftEnd - activeSession.shiftStart;
     const totalHours = durationMs / (1000 * 60 * 60);
     activeSession.totalHours = Math.round(totalHours * 100) / 100;
+    console.log(`[Clock-Out] Duration (ms): ${durationMs}, Total Hours: ${activeSession.totalHours}`);
 
     // Calculate paid hours (total hours - unpaid breaks)
     const unpaidBreakHours = (activeSession.unpaidBreakTime || 0) / 60;

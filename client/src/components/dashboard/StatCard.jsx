@@ -65,7 +65,7 @@ const StatCard = ({ title, value, icon, color, subtitle, trend, trendColor, onCl
             mb: 0.5,
           }}
         >
-          {value}
+          {title === 'Time Tracking' && value === '0 hrs' ? 'No hours logged' : value}
         </Typography>
 
         {(subtitle || trend) && (

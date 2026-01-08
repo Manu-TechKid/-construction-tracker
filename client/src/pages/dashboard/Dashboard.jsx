@@ -37,7 +37,7 @@ import WeeklyProduction from '../../components/dashboard/WeeklyProduction';
 import WeeklyProductionByWorker from '../../components/dashboard/WeeklyProductionByWorker';
 import DashboardAlerts from '../../components/dashboard/DashboardAlerts';
 import PendingNotes from '../../components/dashboard/PendingNotes';
-import CleaningServicesCard from '../../components/dashboard/CleaningServicesCard';
+import DetailedCleaningCard from '../../components/dashboard/DetailedCleaningCard';
 import CleaningServicesModal from '../../components/dashboard/CleaningServicesModal';
 import { formatDate } from '../../utils/dateUtils';
 import ResponsiveContainer from '../../components/layout/ResponsiveContainer';
@@ -75,6 +75,11 @@ const Dashboard = () => {
     refetch: refetchAnalytics
   } = useGetDashboardStatsQuery(queryParams);
   
+  useEffect(() => {
+    console.log('Dashboard Analytics Data:', analyticsData);
+    console.log('Dashboard Cleaning Data:', cleaningData);
+  }, [analyticsData, cleaningData]);
+
   // Handle date filter changes
   const handleDateChange = (field, value) => {
     setDateRange(prev => ({
@@ -313,8 +318,8 @@ const Dashboard = () => {
             onClick={() => navigate('/time-tracking')}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
-          <CleaningServicesCard onClick={handleOpenCleaningModal} />
+        <Grid item xs={12} md={6} lg={4}>
+          <DetailedCleaningCard />
         </Grid>
       </Grid>
 

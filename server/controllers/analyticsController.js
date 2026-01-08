@@ -72,7 +72,7 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
         totalSessions: { $sum: 1 },
         // Sum effective hours (falls back to 0 when missing)
         totalHours: {
-          $sum: { $ifNull: ["$totalHours", 0] }
+          $sum: { $ifNull: ["$totalHours", { $divide: [{ $subtract: ["$clockOutTime", "$clockInTime"] }, 3600000] }] }
         },
         geofenceViolations: {
           $sum: {
@@ -93,6 +93,7 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
   ]);
 
   // Use TimeSession when available; otherwise fall back to TimeLog (older clock-in/out flow)
+  console.log('[Time Tracking Card] Raw aggregation result:', JSON.stringify(timeTrackingStats, null, 2));
   const timeSessionAgg = timeTrackingStats[0] || null;
   const timeSessionHours = timeSessionAgg?.totalHours || 0;
   let timeLogHours = 0;

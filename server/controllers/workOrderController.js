@@ -186,53 +186,47 @@ exports.deleteWorkOrder = catchAsync(async (req, res, next) => {
 // @route   GET /api/v1/work-orders/cleaning-for-week
 // @access  Private
 exports.getCleaningWorkOrdersForWeek = catchAsync(async (req, res, next) => {
-  // Find the 'Cleaning Services' work type by its name
-  const cleaningWorkType = await WorkType.findOne({
-    $or: [{ code: 'cleaning' }, { name: 'Cleaning Services' }, { name: /cleaning/i }],
-  });
+  const cleaningWorkType = await WorkType.findOne({ name: { $regex: /cleaning/i } });
 
-  // Diagnostic logging
-  console.log('[Cleaning Card] Searching for "Cleaning Services" WorkType...');
   if (!cleaningWorkType) {
-    console.error('[Cleaning Card] CRITICAL: Could not find WorkType with name or code matching "Cleaning".');
-    // Also check if any work types exist at all
-    const anyWorkType = await WorkType.findOne();
-    if (!anyWorkType) {
-      console.error('[Cleaning Card] No work types found in the database at all.');
-    } else {
-      const allTypes = await WorkType.find().select('name code').lean();
-      console.log('[Cleaning Card] All available work types:', allTypes);
-    }
     return res.status(200).json({
       success: true,
-      count: 0,
-      data: { workOrders: [] },
+      data: { pending: [], completed: [], totalCompletedPrice: 0, count: 0 },
       message: 'Cleaning work type not found'
     });
   }
-  console.log(`[Cleaning Card] Found WorkType. ID: ${cleaningWorkType._id}, Name: ${cleaningWorkType.name}`);
 
-  console.log(`[getCleaningWorkOrdersForWeek] - Cleaning WorkType ID: ${cleaningWorkType._id}`);
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // Sunday = 0, Saturday = 6
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - dayOfWeek);
+  startDate.setHours(0, 0, 0, 0);
 
-  const query = {
+  const endDate = new Date(startDate);
+  endDate.setDate(startDate.getDate() + 6);
+  endDate.setHours(23, 59, 59, 999);
+
+  const workOrders = await WorkOrder.find({
     workType: cleaningWorkType._id,
-    status: { $in: ['pending', 'in_progress'] },
+    scheduledDate: { $gte: startDate, $lte: endDate },
     deleted: false,
-  };
+  })
+  .populate('building', 'name address')
+  .select('building status price scheduledDate')
+  .sort({ scheduledDate: 1 });
 
-  console.log('[Cleaning Card] Executing query:', JSON.stringify(query));
+  const pendingJobs = workOrders.filter(wo => wo.status === 'pending' || wo.status === 'in_progress');
+  const completedJobs = workOrders.filter(wo => wo.status === 'completed');
 
-  const workOrders = await WorkOrder.find(query)
-    .populate('building', 'name')
-    .populate('workSubType', 'name')
-    .populate('assignedTo.worker', 'name')
-    .sort({ scheduledDate: 1 });
-
-  console.log(`[Cleaning Card] Query finished. Found ${workOrders.length} work orders.`);
+  const totalCompletedPrice = completedJobs.reduce((sum, job) => sum + (job.price || 0), 0);
 
   res.status(200).json({
     success: true,
-    count: workOrders.length,
-    data: { workOrders },
+    data: {
+      pending: pendingJobs,
+      completed: completedJobs,
+      totalCompletedPrice,
+      count: workOrders.length,
+    },
   });
 });
