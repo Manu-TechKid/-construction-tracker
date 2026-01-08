@@ -9,7 +9,6 @@ export const formatDate = (date, format = 'medium') => {
   
   const d = typeof date === 'string' ? new Date(date) : date;
   
-  // Check if the date is valid
   if (isNaN(d.getTime())) return 'Invalid Date';
   
   const options = {};
@@ -57,6 +56,26 @@ export const formatDate = (date, format = 'medium') => {
   }
   
   return d.toLocaleDateString('en-US', options);
+};
+
+/**
+ * Safely format a date, with a fallback for errors.
+ * @param {Date|string} date - The date to format
+ * @param {string} format - The format to use
+ * @param {string} fallback - The string to return on error
+ * @returns {string} Formatted date string or fallback
+ */
+export const safeFormatDate = (date, format = 'medium', fallback = 'Invalid Date') => {
+  try {
+    const formattedDate = formatDate(date, format);
+    if (formattedDate === 'Invalid Date' && date) {
+      return fallback;
+    }
+    return formattedDate;
+  } catch (error) {
+    console.error('Error formatting date:', date, error);
+    return fallback;
+  }
 };
 
 /**
@@ -177,6 +196,7 @@ export const timeAgo = getTimeAgo; // Alias for backward compatibility
 
 const dateUtils = {
   formatDate,
+  safeFormatDate,
   getTimeAgo,
   timeAgo: getTimeAgo,
   formatDuration,

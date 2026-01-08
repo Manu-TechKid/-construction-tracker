@@ -40,7 +40,7 @@ import PendingNotes from '../../components/dashboard/PendingNotes';
 import DetailedCleaningCard from '../../components/dashboard/DetailedCleaningCard';
 import DetailedCleaningJobsView from '../../components/dashboard/DetailedCleaningJobsView';
 import CleaningServicesModal from '../../components/dashboard/CleaningServicesModal';
-import { formatDate } from '../../utils/dateUtils';
+import { safeFormatDate } from '../../utils/dateUtils';
 import ResponsiveContainer from '../../components/layout/ResponsiveContainer';
 import NotificationTest from '../../components/Notifications/NotificationTest';
 
@@ -225,7 +225,7 @@ const Dashboard = () => {
           Dashboard
         </Typography>
       <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-        {formatDate(new Date(), 'full')}
+        {safeFormatDate(new Date(), 'full')}
       </Typography>
       
       {/* Date Filters */}
