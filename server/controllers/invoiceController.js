@@ -128,59 +128,58 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
     <head>
         <meta charset="UTF-8">
         <style>
-            body { font-family: Arial, sans-serif; color: #333; font-size: 12px; }
-            .invoice-box { max-width: 800px; margin: auto; padding: 30px; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0, 0, 0, 0.15); }
-            .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 20px; border-bottom: 2px solid #00529B; }
-            .header-logo { flex: 1; }
-            .header-logo img { width: 150px; height: auto; }
-            .header-info { flex: 1; text-align: right; }
-            .header-info h1 { font-size: 36px; color: #00529B; margin: 0 0 10px 0; }
-            .header-info p { margin: 0; line-height: 1.6; }
-            .details-section { display: flex; justify-content: space-between; margin-top: 30px; margin-bottom: 40px; }
-            .client-details, .invoice-details { flex: 1; }
-            .client-details h2 { font-size: 14px; color: #00529B; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-            .invoice-details { text-align: right; }
-            .invoice-details p { margin: 5px 0; }
-            .work-items-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            .work-items-table th, .work-items-table td { padding: 12px; border-bottom: 1px solid #ddd; }
-            .work-items-table th { background-color: #f2f2f2; text-align: left; font-weight: bold; }
-            .work-items-table td { text-align: left; }
-            .work-items-table .amount { text-align: right; }
-            .totals-section { display: flex; justify-content: flex-end; margin-top: 30px; }
-            .totals-table { width: 40%; }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #333; font-size: 11px; line-height: 1.6; }
+            .invoice-box { width: 100%; max-width: 800px; margin: auto; padding: 30px; }
+            table { width: 100%; border-collapse: collapse; }
+            .header-table, .details-table { margin-bottom: 30px; }
+            .header-table td { vertical-align: top; }
+            .logo { width: 150px; }
+            .company-info { text-align: right; }
+            .company-info h1 { font-size: 32px; color: #00529B; margin: 0; }
+            .bill-to h2 { font-size: 14px; color: #00529B; margin-bottom: 5px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+            .invoice-meta { text-align: right; }
+            .invoice-meta p { margin: 2px 0; }
+            .items-table { margin-top: 20px; }
+            .items-table th { background-color: #f2f2f2; text-align: left; font-weight: bold; padding: 10px; border-bottom: 1px solid #ddd; }
+            .items-table td { padding: 10px; border-bottom: 1px solid #ddd; }
+            .items-table .description { width: 75%; }
+            .items-table .amount { text-align: right; }
+            .totals-table { float: right; width: 45%; margin-top: 20px; }
             .totals-table td { padding: 8px; }
-            .totals-table td:first-child { text-align: right; font-weight: bold; }
-            .totals-table td:last-child { text-align: right; }
-            .totals-table .total-row td { border-top: 2px solid #333; font-size: 14px; font-weight: bold; }
-            .footer { text-align: center; margin-top: 50px; padding-top: 20px; border-top: 1px solid #eee; font-size: 10px; color: #777; }
+            .totals-table .label { text-align: right; font-weight: bold; }
+            .totals-table .value { text-align: right; }
+            .totals-table .total-row td { border-top: 2px solid #333; font-weight: bold; font-size: 13px; }
+            .footer { text-align: center; margin-top: 80px; padding-top: 15px; border-top: 1px solid #eee; font-size: 10px; color: #777; }
         </style>
     </head>
     <body>
         <div class="invoice-box">
-            <div class="header">
-                <div class="header-logo">
-                    <img src="${logoUrl}" alt="DSJ Logo">
-                </div>
-                <div class="header-info">
-                    <h1>INVOICE</h1>
-                    <p>DSJ Construction Inc.<br>123 Construction Ave.<br>New York, NY 10001</p>
-                </div>
-            </div>
-            <div class="details-section">
-                <div class="client-details">
-                    <h2>BILL TO:</h2>
-                    <p>${invoice.building.name}<br>${invoice.building.address || ''}<br>${invoice.building.city || ''}, ${invoice.building.state || ''} ${invoice.building.zipCode || ''}</p>
-                </div>
-                <div class="invoice-details">
-                    <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
-                    <p><strong>Invoice Date:</strong> ${new Date(invoice.invoiceDate).toLocaleDateString()}</p>
-                    <p><strong>Due Date:</strong> ${new Date(invoice.dueDate).toLocaleDateString()}</p>
-                </div>
-            </div>
-            <table class="work-items-table">
+            <table class="header-table">
+                <tr>
+                    <td><img src="${logoUrl}" alt="DSJ Logo" class="logo"></td>
+                    <td class="company-info">
+                        <h1>INVOICE</h1>
+                        <p>DSJ Construction Inc.<br>123 Construction Ave.<br>New York, NY 10001</p>
+                    </td>
+                </tr>
+            </table>
+            <table class="details-table">
+                <tr>
+                    <td class="bill-to">
+                        <h2>BILL TO:</h2>
+                        <p>${invoice.building.name}<br>${invoice.building.address || ''}<br>${invoice.building.city || ''}, ${invoice.building.state || ''} ${invoice.building.zipCode || ''}</p>
+                    </td>
+                    <td class="invoice-meta">
+                        <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
+                        <p><strong>Invoice Date:</strong> ${new Date(invoice.invoiceDate).toLocaleDateString()}</p>
+                        <p><strong>Due Date:</strong> ${new Date(invoice.dueDate).toLocaleDateString()}</p>
+                    </td>
+                </tr>
+            </table>
+            <table class="items-table">
                 <thead>
                     <tr>
-                        <th>Description</th>
+                        <th class="description">Description</th>
                         <th class="amount">Amount</th>
                     </tr>
                 </thead>
@@ -193,22 +192,21 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
                     `).join('')}
                 </tbody>
             </table>
-            <div class="totals-section">
-                <table class="totals-table">
-                    <tr>
-                        <td>Subtotal:</td>
-                        <td>$${(invoice.subtotal || 0).toFixed(2)}</td>
-                    </tr>
-                    <tr>
-                        <td>Tax:</td>
-                        <td>$${(invoice.tax || 0).toFixed(2)}</td>
-                    </tr>
-                    <tr class="total-row">
-                        <td>Total:</td>
-                        <td>$${(invoice.total || 0).toFixed(2)}</td>
-                    </tr>
-                </table>
-            </div>
+            <table class="totals-table">
+                <tr>
+                    <td class="label">Subtotal:</td>
+                    <td class="value">$${(invoice.subtotal || 0).toFixed(2)}</td>
+                </tr>
+                <tr>
+                    <td class="label">Tax:</td>
+                    <td class="value">$${(invoice.tax || 0).toFixed(2)}</td>
+                </tr>
+                <tr class="total-row">
+                    <td class="label">Total:</td>
+                    <td class="value">$${(invoice.total || 0).toFixed(2)}</td>
+                </tr>
+            </table>
+            <div style="clear: both;"></div>
             <div class="footer">
                 <p>Thank you for your business!</p>
             </div>
