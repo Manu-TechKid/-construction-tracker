@@ -128,30 +128,39 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
     <head>
         <meta charset="UTF-8">
         <style>
-            body { font-family: Arial, sans-serif; color: #333; font-size: 10px; margin: 0; padding: 0; }
-            .container { padding: 40px; }
-            .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; }
-            .header img { width: 150px; height: auto; }
-            .header-info { text-align: right; }
-            .details-section { display: flex; justify-content: space-between; margin-bottom: 30px; }
-            h1, h2 { color: #00529B; }
-            h1 { font-size: 28px; margin: 0; }
-            h2 { font-size: 14px; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 0; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; word-wrap: break-word; }
-            th { background-color: #f2f2f2; }
-            .totals { float: right; width: 40%; margin-top: 20px; }
-            .totals table td:first-child { text-align: right; font-weight: bold; }
-            .totals table td:last-child { text-align: right; }
-            .footer { text-align: center; margin-top: 40px; padding-top: 10px; border-top: 1px solid #eee; font-size: 9px; color: #777; position: absolute; bottom: 40px; left: 40px; right: 40px; }
-            .address { white-space: pre-line; }
-            .clearfix::after { content: ""; clear: both; display: table; }
+            body { font-family: Arial, sans-serif; color: #333; font-size: 12px; }
+            .invoice-box { max-width: 800px; margin: auto; padding: 30px; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0, 0, 0, 0.15); }
+            .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 20px; border-bottom: 2px solid #00529B; }
+            .header-logo { flex: 1; }
+            .header-logo img { width: 150px; height: auto; }
+            .header-info { flex: 1; text-align: right; }
+            .header-info h1 { font-size: 36px; color: #00529B; margin: 0 0 10px 0; }
+            .header-info p { margin: 0; line-height: 1.6; }
+            .details-section { display: flex; justify-content: space-between; margin-top: 30px; margin-bottom: 40px; }
+            .client-details, .invoice-details { flex: 1; }
+            .client-details h2 { font-size: 14px; color: #00529B; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+            .invoice-details { text-align: right; }
+            .invoice-details p { margin: 5px 0; }
+            .work-items-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            .work-items-table th, .work-items-table td { padding: 12px; border-bottom: 1px solid #ddd; }
+            .work-items-table th { background-color: #f2f2f2; text-align: left; font-weight: bold; }
+            .work-items-table td { text-align: left; }
+            .work-items-table .amount { text-align: right; }
+            .totals-section { display: flex; justify-content: flex-end; margin-top: 30px; }
+            .totals-table { width: 40%; }
+            .totals-table td { padding: 8px; }
+            .totals-table td:first-child { text-align: right; font-weight: bold; }
+            .totals-table td:last-child { text-align: right; }
+            .totals-table .total-row td { border-top: 2px solid #333; font-size: 14px; font-weight: bold; }
+            .footer { text-align: center; margin-top: 50px; padding-top: 20px; border-top: 1px solid #eee; font-size: 10px; color: #777; }
         </style>
     </head>
     <body>
-        <div class="container">
+        <div class="invoice-box">
             <div class="header">
-                <img src="${logoUrl}" alt="DSJ Logo">
+                <div class="header-logo">
+                    <img src="${logoUrl}" alt="DSJ Logo">
+                </div>
                 <div class="header-info">
                     <h1>INVOICE</h1>
                     <p>DSJ Construction Inc.<br>123 Construction Ave.<br>New York, NY 10001</p>
@@ -160,33 +169,32 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
             <div class="details-section">
                 <div class="client-details">
                     <h2>BILL TO:</h2>
-                    <p class="address">${invoice.building.name}<br>${invoice.building.address || ''}<br>${invoice.building.city || ''}, ${invoice.building.state || ''} ${invoice.building.zipCode || ''}</p>
+                    <p>${invoice.building.name}<br>${invoice.building.address || ''}<br>${invoice.building.city || ''}, ${invoice.building.state || ''} ${invoice.building.zipCode || ''}</p>
                 </div>
-                <div class="invoice-details" style="text-align: right;">
+                <div class="invoice-details">
                     <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
                     <p><strong>Invoice Date:</strong> ${new Date(invoice.invoiceDate).toLocaleDateString()}</p>
                     <p><strong>Due Date:</strong> ${new Date(invoice.dueDate).toLocaleDateString()}</p>
                 </div>
             </div>
-            <h2>Work Items</h2>
-            <table>
+            <table class="work-items-table">
                 <thead>
                     <tr>
-                        <th style="width: 75%;">Description</th>
-                        <th>Amount</th>
+                        <th>Description</th>
+                        <th class="amount">Amount</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${invoice.workOrders.map(item => `
                         <tr>
                             <td>${item.workOrder ? item.workOrder.title : (item.description || 'Work Order Item')}</td>
-                            <td>$${(item.totalPrice || 0).toFixed(2)}</td>
+                            <td class="amount">$${(item.totalPrice || 0).toFixed(2)}</td>
                         </tr>
                     `).join('')}
                 </tbody>
             </table>
-            <div class="totals">
-                <table>
+            <div class="totals-section">
+                <table class="totals-table">
                     <tr>
                         <td>Subtotal:</td>
                         <td>$${(invoice.subtotal || 0).toFixed(2)}</td>
@@ -195,13 +203,12 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
                         <td>Tax:</td>
                         <td>$${(invoice.tax || 0).toFixed(2)}</td>
                     </tr>
-                    <tr>
-                        <td><strong>Total:</strong></td>
-                        <td><strong>$${(invoice.total || 0).toFixed(2)}</strong></td>
+                    <tr class="total-row">
+                        <td>Total:</td>
+                        <td>$${(invoice.total || 0).toFixed(2)}</td>
                     </tr>
                 </table>
             </div>
-            <div class="clearfix"></div>
             <div class="footer">
                 <p>Thank you for your business!</p>
             </div>
