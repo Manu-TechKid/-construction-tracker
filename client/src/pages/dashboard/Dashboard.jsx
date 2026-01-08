@@ -325,11 +325,10 @@ const Dashboard = () => {
           <DetailedCleaningCard />
         </Grid>
 
-        {currentUserData?.data?.role === 'admin' && (
-          <Grid item xs={12}>
-            <DetailedCleaningJobsView />
-          </Grid>
-        )}
+        {/* Detailed Cleaning Jobs View */}
+        <Grid item xs={12}>
+          <DetailedCleaningJobsView />
+        </Grid>
       </Grid>
 
       <Grid container spacing={3}>

@@ -134,7 +134,8 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
             .header-table, .details-table { margin-bottom: 30px; }
             .header-table td { vertical-align: top; }
             .logo { width: 150px; }
-            .company-info { text-align: right; }
+            .company-info { text-align: right; word-wrap: break-word; }
+            .bill-to p { word-wrap: break-word; }
             .company-info h1 { font-size: 32px; color: #00529B; margin: 0; }
             .bill-to h2 { font-size: 14px; color: #00529B; margin-bottom: 5px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
             .invoice-meta { text-align: right; }
