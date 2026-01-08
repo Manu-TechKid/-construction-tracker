@@ -1896,15 +1896,17 @@ exports.getAgingReport = catchAsync(async (req, res, next) => {
         }
     });
 });
-
-// @desc    Generate PDF for an invoice
 // @route   GET /api/v1/invoices/:id/pdf
 // @access  Private
 exports.generatePDF = catchAsync(async (req, res, next) => {
   const invoice = await Invoice.findById(req.params.id)
     .populate('building', 'name address city state zipCode')
-    .populate('workOrders.workOrder', 'title description');
-
+    .populate({ 
+      path: 'lineItems.workOrder',
+      select: 'title description apartmentNumber'
+    })
+    .populate('createdBy', 'name email');
+  
   if (!invoice) {
     return next(new AppError('Invoice not found', 404));
   }
@@ -1917,82 +1919,196 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
     <!DOCTYPE html>
     <html>
       <head>
-        <title>Invoice #${invoice.invoiceNumber}</title>
+        <title>Invoice - ${invoice.invoiceNumber}</title>
         <meta charset="utf-8">
         <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
           body {
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            font-size: 12px;
+            font-size: 11px;
+            line-height: 1.4;
             color: #333;
-          }
-          .container {
-            width: 100%;
+            background-color: #fff;
             padding: 30px;
           }
+          .invoice-container {
+            max-width: 850px;
+            margin: 0 auto;
+          }
           .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 40px;
+            display: table;
+            width: 100%;
+            margin-bottom: 30px;
           }
-          .company-details h1 {
-            margin: 0;
+          .header-left {
+            display: table-cell;
+            width: 70%;
+            vertical-align: top;
+          }
+          .header-right {
+            display: table-cell;
+            width: 30%;
+            text-align: right;
+            vertical-align: top;
+          }
+          .company-name {
+            font-size: 11px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+          }
+          .company-info {
+            font-size: 9px;
+            color: #666;
+            line-height: 1.5;
+          }
+          .logo-img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+          }
+          .invoice-title {
             font-size: 24px;
-          }
-          .invoice-details {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
             text-align: right;
           }
-          .invoice-details h2 {
-            font-size: 28px;
-            margin: 0;
+          .info-section {
+            display: table;
+            width: 100%;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #1976d2;
           }
-          table {
+          .bill-to {
+            display: table-cell;
+            width: 50%;
+          }
+          .invoice-data {
+            display: table-cell;
+            width: 50%;
+            text-align: right;
+          }
+          .info-row {
+            display: table;
+            width: 100%;
+            margin-bottom: 8px;
+          }
+          .info-label {
+            display: table-cell;
+            font-size: 9px;
+            color: #666;
+            width: 100px;
+          }
+          .info-value {
+            display: table-cell;
+            font-size: 10px;
+            font-weight: 600;
+            color: #333;
+          }
+          .line-items-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            margin: 20px 0;
+            border: 1px solid #e0e0e0;
           }
-          th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
+          .line-items-table thead {
+            background-color: #2C3E50;
+          }
+          .line-items-table th {
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 12px 10px;
             text-align: left;
           }
-          th {
-            background-color: #f2f2f2;
+          .line-items-table th:last-child, .line-items-table td:last-child {
+            text-align: right;
           }
-          .totals {
+          .line-items-table td {
+            font-size: 9px;
+            padding: 12px 10px;
+            border-bottom: 1px solid #e0e0e0;
+          }
+          .totals-section {
+            width: 280px;
+            margin-left: auto;
             margin-top: 20px;
-            float: right;
-            width: 250px;
           }
-          .totals table {
+          .totals-row {
+            display: table;
             width: 100%;
+            margin-bottom: 8px;
+          }
+          .totals-label {
+            display: table-cell;
+            font-size: 10px;
+            color: #666;
+          }
+          .totals-value {
+            display: table-cell;
+            font-size: 10px;
+            font-weight: bold;
+            color: #333;
+            text-align: right;
+          }
+          .totals-final {
+            border-top: 2px solid #2C3E50;
+            padding-top: 10px;
+            margin-top: 5px;
+          }
+          .totals-final .totals-label, .totals-final .totals-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #2e7d32;
           }
         </style>
       </head>
       <body>
-        <div class="container">
+        <div class="invoice-container">
           <div class="header">
-            <div class="company-details">
-              <h1>DSJ Construction & Services LLC</h1>
-              <p>651 Pullman Pl<br>McLean, VA 22102</p>
+            <div class="header-left">
+              <div class="company-name">DSJ Construction & Services LLC</div>
+              <div class="company-info">
+                651 Pullman Pl<br>
+                McLean, VA 22102<br>
+                Phone: (555) 123-4567<br>
+                Email: info@dsjconstruction.com
+              </div>
             </div>
-            <div class="invoice-details">
-              <h2>INVOICE</h2>
-              <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
-              <p><strong>Date:</strong> ${new Date(invoice.invoiceDate).toLocaleDateString()}</p>
-              <p><strong>Due Date:</strong> ${new Date(invoice.dueDate).toLocaleDateString()}</p>
+            <div class="header-right">
+              <img src="https://res.cloudinary.com/dwqxiigpd/image/upload/v1756186310/dsj-logo_mb3npa.jpg" alt="DSJ Logo" class="logo-img"/>
             </div>
           </div>
 
-          <div>
-            <h3>Bill To:</h3>
-            <p>${invoice.building.name}<br>${invoice.building.address}</p>
+          <div class="invoice-title">INVOICE</div>
+
+          <div class="info-section">
+            <div class="bill-to">
+              <div class="info-label" style="font-weight: bold; color: #333;">Bill To:</div>
+              <div class="info-value">${invoice.building?.name || 'N/A'}<br>${invoice.building?.address || ''}</div>
+            </div>
+            <div class="invoice-data">
+              <div class="info-row">
+                <div class="info-label">Invoice #:</div>
+                <div class="info-value">${invoice.invoiceNumber}</div>
+              </div>
+              <div class="info-row">
+                <div class="info-label">Invoice Date:</div>
+                <div class="info-value">${new Date(invoice.invoiceDate).toLocaleDateString('en-US')}</div>
+              </div>
+              <div class="info-row">
+                <div class="info-label">Due Date:</div>
+                <div class="info-value">${new Date(invoice.dueDate).toLocaleDateString('en-US')}</div>
+              </div>
+            </div>
           </div>
 
-          <table>
+          <table class="line-items-table">
             <thead>
               <tr>
-                <th>Description</th>
+                <th style="width: 50%;">Description</th>
                 <th>Quantity</th>
                 <th>Unit Price</th>
                 <th>Total</th>
@@ -2001,31 +2117,30 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
             <tbody>
               ${(invoice.lineItems.length > 0 ? invoice.lineItems : invoice.workOrders).map(item => `
                 <tr>
-                  <td>${item.description}</td>
-                  <td>${item.quantity}</td>
-                  <td>$${item.unitPrice.toFixed(2)}</td>
-                  <td>$${item.totalPrice.toFixed(2)}</td>
+                  <td>${item.description || 'N/A'}</td>
+                  <td>${item.quantity || 1}</td>
+                  <td>$${(item.unitPrice || 0).toFixed(2)}</td>
+                  <td>$${(item.totalPrice || 0).toFixed(2)}</td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
 
-          <div class="totals">
-            <table>
-              <tr>
-                <td><strong>Subtotal:</strong></td>
-                <td>$${invoice.subtotal.toFixed(2)}</td>
-              </tr>
-              <tr>
-                <td><strong>Tax:</strong></td>
-                <td>$${invoice.tax.toFixed(2)}</td>
-              </tr>
-              <tr>
-                <td><strong>Total:</strong></td>
-                <td><strong>$${invoice.total.toFixed(2)}</strong></td>
-              </tr>
-            </table>
+          <div class="totals-section">
+            <div class="totals-row">
+              <div class="totals-label">Subtotal:</div>
+              <div class="totals-value">$${(invoice.subtotal || 0).toFixed(2)}</div>
+            </div>
+            <div class="totals-row">
+              <div class="totals-label">Tax:</div>
+              <div class="totals-value">$${(invoice.tax || 0).toFixed(2)}</div>
+            </div>
+            <div class="totals-row totals-final">
+              <div class="totals-label">Total:</div>
+              <div class="totals-value">$${(invoice.total || 0).toFixed(2)}</div>
+            </div>
           </div>
+
         </div>
       </body>
     </html>

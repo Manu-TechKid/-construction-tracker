@@ -6,6 +6,7 @@ const logActivity = require('../middleware/activityLogger');
 
 const router = express.Router();
 
+
 // Protect all routes after this middleware
 router.use(authController.protect);
 

@@ -8,7 +8,7 @@
     },
     "scripts": {
         "start": "node server.js",
-        "dev": "nodemon server.js",
+        "dev": "cross-env MONGO_URI=\"mongodb+srv://construction_admin:YQVjoW3YhYWkfmul@cluster0.0ewapuy.mongodb.net/construction_tracker?retryWrites=true&w=majority&appName=Cluster0\" nodemon server.js",
         "test": "cross-env NODE_ENV=test jest --detectOpenHandles --forceExit",
         "test:watch": "cross-env NODE_ENV=test jest --watch --detectOpenHandles --forceExit",
         "test:coverage": "cross-env NODE_ENV=test jest --coverage --detectOpenHandles --forceExit",
@@ -26,6 +26,7 @@
         "cookie-parser": "^1.4.6",
         "cors": "^2.8.5",
         "express": "^4.18.2",
+        "express-async-handler": "^1.2.0",
         "express-mongo-sanitize": "^2.2.0",
         "express-rate-limit": "^6.7.0",
         "express-validator": "^6.14.2",
@@ -39,13 +40,11 @@
         "nodemailer": "^6.9.5",
         "sharp": "^0.32.6",
         "socket.io": "^4.8.1",
-        "xss-clean": "^0.1.1",
-        "express-async-handler": "^1.2.0"
+        "xss-clean": "^0.1.1"
     },
     "devDependencies": {
         "axios": "^1.11.0",
         "cross-env": "^7.0.3",
-        "dotenv": "^17.2.2",
         "jest": "^29.7.0",
         "mongodb-memory-server": "^10.2.0",
         "nodemon": "^2.0.22",

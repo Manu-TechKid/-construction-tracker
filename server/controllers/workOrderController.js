@@ -10,6 +10,7 @@ const WorkSubType = require('../models/WorkSubType');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 
+
 exports.createWorkOrder = catchAsync(async (req, res, next) => {
   const { title, description, building, scheduledDate, workType, workSubType } = req.body;
 
@@ -191,26 +192,43 @@ exports.getCleaningWorkOrdersForWeek = catchAsync(async (req, res, next) => {
   });
 
   // Diagnostic logging
+  console.log('[Cleaning Card] Searching for "Cleaning Services" WorkType...');
   if (!cleaningWorkType) {
-    console.error('Could not find WorkType with name "Cleaning Services"');
+    console.error('[Cleaning Card] CRITICAL: Could not find WorkType with name or code matching "Cleaning".');
+    // Also check if any work types exist at all
+    const anyWorkType = await WorkType.findOne();
+    if (!anyWorkType) {
+      console.error('[Cleaning Card] No work types found in the database at all.');
+    } else {
+      const allTypes = await WorkType.find().select('name code').lean();
+      console.log('[Cleaning Card] All available work types:', allTypes);
+    }
     return res.status(200).json({
       success: true,
       count: 0,
       data: { workOrders: [] },
+      message: 'Cleaning work type not found'
     });
   }
+  console.log(`[Cleaning Card] Found WorkType. ID: ${cleaningWorkType._id}, Name: ${cleaningWorkType.name}`);
 
   console.log(`[getCleaningWorkOrdersForWeek] - Cleaning WorkType ID: ${cleaningWorkType._id}`);
 
-  const workOrders = await WorkOrder.find({
+  const query = {
     workType: cleaningWorkType._id,
     status: { $in: ['pending', 'in_progress'] },
     deleted: false,
-  })
+  };
+
+  console.log('[Cleaning Card] Executing query:', JSON.stringify(query));
+
+  const workOrders = await WorkOrder.find(query)
     .populate('building', 'name')
     .populate('workSubType', 'name')
     .populate('assignedTo.worker', 'name')
     .sort({ scheduledDate: 1 });
+
+  console.log(`[Cleaning Card] Query finished. Found ${workOrders.length} work orders.`);
 
   res.status(200).json({
     success: true,
