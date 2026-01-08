@@ -160,9 +160,9 @@ const Dashboard = () => {
     }
     
     // Handle analytics data
-    if (analyticsData && analyticsData.data) {
-      const totalTimeHours = analyticsData.data.timeTracking?.totalHours || 0;
-      const geofenceViolations = analyticsData.data.timeTracking?.geofenceViolations || 0;
+    if (analyticsData && analyticsData.data && analyticsData.data.timeTracking) {
+      const totalTimeHours = analyticsData.data.timeTracking.totalHours || 0;
+      const geofenceViolations = analyticsData.data.timeTracking.geofenceViolations || 0;
       
       setStats(prevStats => ({
         ...prevStats,
