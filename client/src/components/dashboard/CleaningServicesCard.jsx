@@ -6,7 +6,7 @@ import { useGetCleaningWorkOrdersForWeekQuery } from '../../features/workOrders/
 const CleaningServicesCard = ({ onClick }) => {
   const { data, isLoading, isError } = useGetCleaningWorkOrdersForWeekQuery();
 
-  const pendingCount = data?.data?.workOrders?.filter(wo => wo.status === 'pending').length || 0;
+  const pendingCount = data?.count || 0;
 
   return (
     <Card sx={{ display: 'flex', alignItems: 'center', p: 2, cursor: 'pointer' }} onClick={onClick}>
@@ -22,7 +22,7 @@ const CleaningServicesCard = ({ onClick }) => {
         ) : (
           <Typography variant="h4">{pendingCount}</Typography>
         )}
-        <Typography variant="subtitle2" color="text.secondary">Pending for the week</Typography>
+        <Typography variant="subtitle2" color="text.secondary">Outstanding Jobs</Typography>
       </Box>
     </Card>
   );

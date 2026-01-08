@@ -200,23 +200,11 @@ exports.getCleaningWorkOrdersForWeek = catchAsync(async (req, res, next) => {
     });
   }
 
-  const now = new Date();
-  const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
-  startOfWeek.setHours(0, 0, 0, 0);
-
-  const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(endOfWeek.getDate() + 6);
-  endOfWeek.setHours(23, 59, 59, 999);
-
-  console.log(`[getCleaningWorkOrdersForWeek] - Start of Week: ${startOfWeek.toISOString()}, End of Week: ${endOfWeek.toISOString()}`);
   console.log(`[getCleaningWorkOrdersForWeek] - Cleaning WorkType ID: ${cleaningWorkType._id}`);
 
   const workOrders = await WorkOrder.find({
     workType: cleaningWorkType._id,
-    scheduledDate: {
-      $gte: startOfWeek,
-      $lte: endOfWeek,
-    },
+    status: { $in: ['pending', 'in_progress'] },
     deleted: false,
   })
     .populate('building', 'name')
