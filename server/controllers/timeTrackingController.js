@@ -281,6 +281,23 @@ exports.clockOut = catchAsync(async (req, res, next) => {
     activeSession.notes = activeSession.notes ? `${activeSession.notes}\n\nClock-out notes: ${notes}` : notes;
   }
 
+  // Calculate total hours
+  if (activeSession.shiftStart && activeSession.shiftEnd) {
+    const durationMs = activeSession.shiftEnd - activeSession.shiftStart;
+    const totalHours = durationMs / (1000 * 60 * 60);
+    activeSession.totalHours = Math.round(totalHours * 100) / 100;
+
+    // Calculate paid hours (total hours - unpaid breaks)
+    const unpaidBreakHours = (activeSession.unpaidBreakTime || 0) / 60;
+    const totalPaidHours = totalHours - unpaidBreakHours;
+    activeSession.totalPaidHours = Math.round(totalPaidHours * 100) / 100;
+    
+    // Calculate payment if hourly rate is set
+    if (activeSession.hourlyRate > 0) {
+      activeSession.calculatedPay = Math.round(activeSession.totalPaidHours * activeSession.hourlyRate * 100) / 100;
+    }
+  }
+
   await activeSession.save();
 
   // Populate worker details
