@@ -119,7 +119,33 @@ const restrictToRoles = (...roles) => {
   };
 };
 
+const restrictToUser = (userId) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        status: 'fail',
+        message: 'You are not logged in'
+      });
+    }
+
+    // Allow admins and superusers to access the route
+    if (req.user.role === 'admin' || req.user.role === 'superuser') {
+      return next();
+    }
+
+    if (req.user.id !== userId) {
+      return res.status(403).json({
+        status: 'fail',
+        message: 'You do not have permission to access this resource.'
+      });
+    }
+
+    next();
+  };
+};
+
 module.exports = {
   hidePricesFromWorkers,
-  restrictToRoles
+  restrictToRoles,
+  restrictToUser
 };

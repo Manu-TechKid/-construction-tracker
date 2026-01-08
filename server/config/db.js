@@ -3,7 +3,7 @@ const colors = require('colors');
 
 const connectDB = async () => {
   // Use default local MongoDB for development if MONGO_URI is not set
-  const mongoUri = 'mongodb+srv://construction_admin:YQVjoW3YhYWkfmul@cluster0.0ewapuy.mongodb.net/construction_tracker';
+  const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/construction-tracker';
   
   console.log('MongoDB URI:', mongoUri.replace(/\/\/.*@/, '//***:***@')); // Hide credentials in logs
   

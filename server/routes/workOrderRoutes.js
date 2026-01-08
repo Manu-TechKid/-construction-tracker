@@ -6,11 +6,12 @@ const {
   getWorkOrderById,
   updateWorkOrder,
   deleteWorkOrder,
-  getCleaningWorkOrdersForWeek
+  getCleaningWorkOrdersForWeek,
+  getDetailedCleaningJobs
 } = require('../controllers/workOrderController');
 const { uploadWorkOrderPhotos, deleteWorkOrderPhoto } = require('../controllers/photoController');
 const { protect, restrictTo } = require('../controllers/authController');
-const { restrictToRoles, hidePricesFromWorkers } = require('../middleware/roleMiddleware');
+const { restrictToRoles, hidePricesFromWorkers, restrictToUser } = require('../middleware/roleMiddleware');
 const logActivity = require('../middleware/activityLogger');
 const upload = require('../middleware/upload');
 
@@ -48,6 +49,9 @@ router.route('/')
 
 // Dashboard-specific route for cleaning services
 router.get('/cleaning-for-week', getCleaningWorkOrdersForWeek);
+
+// Route for Sandra Chavez's detailed cleaning view
+router.get('/cleaning-detailed', restrictToUser('68bf27ae9a8e467d6e7b4487'), getDetailedCleaningJobs);
 
 router.route('/:id')
   .get(restrictTo('admin', 'manager', 'supervisor'), getWorkOrderById)

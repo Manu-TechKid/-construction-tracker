@@ -93,11 +93,8 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
   ]);
 
   // Use TimeSession when available; otherwise fall back to TimeLog (older clock-in/out flow)
-  console.log('[Time Tracking Card] Raw aggregation result:', JSON.stringify(timeTrackingStats, null, 2));
   const timeSessionAgg = timeTrackingStats[0] || null;
-  console.log('[Analytics Debug] timeSessionAgg:', JSON.stringify(timeSessionAgg));
   const timeSessionHours = timeSessionAgg?.totalHours || 0;
-  console.log('[Analytics Debug] timeSessionHours from aggregation:', timeSessionHours);
   let timeLogHours = 0;
 
   if (timeSessionHours <= 0) {

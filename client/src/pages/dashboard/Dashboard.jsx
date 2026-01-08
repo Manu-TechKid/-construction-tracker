@@ -29,6 +29,7 @@ import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice
 import { useGetUsersQuery } from '../../features/users/usersApiSlice';
 import { useGetWorkOrdersQuery, useGetCleaningWorkOrdersForWeekQuery } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetDashboardStatsQuery } from '../../features/analytics/analyticsApiSlice';
+import { useGetCurrentUserQuery } from '../../features/auth/authApiSlice';
 import StatCard from '../../components/dashboard/StatCard';
 import BuildingStatus from '../../components/dashboard/BuildingStatus';
 import WorkerAvailability from '../../components/dashboard/WorkerAvailability';
@@ -38,6 +39,7 @@ import WeeklyProductionByWorker from '../../components/dashboard/WeeklyProductio
 import DashboardAlerts from '../../components/dashboard/DashboardAlerts';
 import PendingNotes from '../../components/dashboard/PendingNotes';
 import DetailedCleaningCard from '../../components/dashboard/DetailedCleaningCard';
+import DetailedCleaningJobsView from '../../components/dashboard/DetailedCleaningJobsView';
 import CleaningServicesModal from '../../components/dashboard/CleaningServicesModal';
 import { formatDate } from '../../utils/dateUtils';
 import ResponsiveContainer from '../../components/layout/ResponsiveContainer';
@@ -68,6 +70,7 @@ const Dashboard = () => {
   const { data: usersData } = useGetUsersQuery({ role: 'worker' });
   const { data: workOrdersData } = useGetWorkOrdersQuery();
   const { data: cleaningData } = useGetCleaningWorkOrdersForWeekQuery();
+  const { data: currentUserData } = useGetCurrentUserQuery();
   
   // Fetch analytics data
   const { 
@@ -321,6 +324,13 @@ const Dashboard = () => {
         <Grid item xs={12} md={6} lg={4}>
           <DetailedCleaningCard />
         </Grid>
+
+        {/* Detailed Cleaning Jobs View for Sandra Chavez */}
+        {currentUserData?.data?._id === '68bf27ae9a8e467d6e7b4487' && (
+          <Grid item xs={12}>
+            <DetailedCleaningJobsView />
+          </Grid>
+        )}
       </Grid>
 
       <Grid container spacing={3}>

@@ -230,3 +230,44 @@ exports.getCleaningWorkOrdersForWeek = catchAsync(async (req, res, next) => {
     },
   });
 });
+
+// @desc    Get detailed cleaning jobs for Sandra's view
+// @route   GET /api/v1/work-orders/cleaning-detailed
+// @access  Private (restricted to specific user)
+exports.getDetailedCleaningJobs = catchAsync(async (req, res, next) => {
+  const cleaningWorkType = await WorkType.findOne({ name: { $regex: /cleaning/i } });
+
+  if (!cleaningWorkType) {
+    return res.status(200).json({
+      success: true,
+      data: [],
+      message: 'Cleaning work type not found'
+    });
+  }
+
+  const workOrders = await WorkOrder.find({
+    workType: cleaningWorkType._id,
+    deleted: false,
+  })
+  .populate('building', 'name address')
+  .populate('assignedTo.worker', 'name')
+  .select('building description scheduledDate apartmentNumber assignedTo billingStatus price')
+  .sort({ scheduledDate: -1 });
+
+  const detailedJobs = workOrders.map(wo => ({
+    _id: wo._id,
+    date: wo.scheduledDate,
+    building: wo.building?.name || 'N/A',
+    unit: wo.apartmentNumber || 'N/A',
+    description: wo.description,
+    worker: wo.assignedTo.map(a => a.worker?.name).join(', ') || 'Unassigned',
+    paymentStatus: wo.billingStatus === 'paid' ? 'Paid' : 'Not Paid',
+    price: wo.price || 0
+  }));
+
+  res.status(200).json({
+    success: true,
+    data: detailedJobs,
+    count: detailedJobs.length,
+  });
+});
