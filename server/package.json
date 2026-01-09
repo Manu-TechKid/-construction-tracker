@@ -15,6 +15,7 @@
         "migrate:fix-invoice-dates": "node scripts/fixInvoiceDates.js",
         "migrate:repair-invoices": "node scripts/repairInvoices.js",
         "build": "echo \"Server build complete\"",
+        "postinstall": "npm run build:client",
         "build:client": "cd ../client && npm install --legacy-peer-deps && npm run build"
     },
     "dependencies": {
