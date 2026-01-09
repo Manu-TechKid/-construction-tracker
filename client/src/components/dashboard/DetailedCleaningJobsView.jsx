@@ -19,6 +19,7 @@ import {
 } from '@mui/material';
 import { safeFormatDate } from '../../utils/dateUtils';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { TextField } from '@mui/material';
 
 const DetailedCleaningJobsView = ({ filters }) => {
   const { data: detailedJobsData, isLoading, error } = useGetDetailedCleaningJobsQuery(filters);
