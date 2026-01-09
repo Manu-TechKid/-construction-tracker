@@ -70,8 +70,8 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
       query: (params = {}) => {
         const searchParams = new URLSearchParams();
         if (params.buildingId) searchParams.append('buildingId', params.buildingId);
-        if (params.startDate) searchParams.append('startDate', params.startDate);
-        if (params.endDate) searchParams.append('endDate', params.endDate);
+        if (params.startDate) searchParams.append('startDate', new Date(params.startDate).toISOString());
+        if (params.endDate) searchParams.append('endDate', new Date(params.endDate).toISOString());
         return `work-orders/cleaning-detailed?${searchParams.toString()}`;
       },
       providesTags: (result) =>
