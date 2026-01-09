@@ -230,69 +230,6 @@ app.get('/api/v1', (req, res) => {
   });
 });
 
-// Serve client build in production
-if (process.env.NODE_ENV === 'production') {
-  const clientBuildPath = path.resolve(__dirname, '../client/build');
-  console.log('Looking for client build at:', clientBuildPath);
-  console.log('Client build exists:', fs.existsSync(clientBuildPath));
-
-  if (fs.existsSync(clientBuildPath)) {
-    // Serve static files from the React app with proper headers
-    app.use(express.static(clientBuildPath, {
-      maxAge: '1d',
-      setHeaders: (res, path) => {
-        if (path.endsWith('.html')) {
-          res.setHeader('Cache-Control', 'no-cache');
-        }
-      }
-    }));
-
-    // Handle React routing, return all requests to React app (but only for non-API routes)
-    app.get('*', (req, res, next) => {
-      // Skip API routes
-      if (req.path.startsWith('/api/')) {
-        return next();
-      }
-
-      console.log('Serving React app for path:', req.path);
-      res.sendFile(path.join(clientBuildPath, 'index.html'), (err) => {
-        if (err) {
-          console.error('Error serving index.html:', err);
-          res.status(500).send('Error loading application');
-        }
-      });
-    });
-  } else {
-    console.log('Client build not found at:', clientBuildPath);
-
-    // Serve a basic HTML page indicating the frontend is not available
-    app.get('*', (req, res, next) => {
-      if (req.path.startsWith('/api/')) {
-        return next();
-      }
-
-      res.send(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Construction Tracker</title>
-            <style>
-              body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
-              .error { color: #d32f2f; }
-              .info { color: #1976d2; margin-top: 20px; }
-            </style>
-          </head>
-          <body>
-            <h1>Construction Tracker API</h1>
-            <p class="error">Frontend build not found. Running in API-only mode.</p>
-            <p class="info">API is available at <a href="/api/v1">/api/v1</a></p>
-            <p class="info">Health check: <a href="/api/v1/health">/api/v1/health</a></p>
-          </body>
-        </html>
-      `);
-    });
-  }
-}
 
 // Handle 404 for API routes only
 // Health check endpoint for Render
