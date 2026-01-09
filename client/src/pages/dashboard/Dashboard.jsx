@@ -65,15 +65,17 @@ const Dashboard = () => {
   };
   
   // Fetch data
-  const { data: buildingsData, isLoading: isLoadingBuildings } = useGetBuildingsQuery({});
-  const { data: usersData } = useGetUsersQuery({ role: 'worker' });
-  const { data: workOrdersData } = useGetWorkOrdersQuery();
+  const { data: buildingsData, isLoading: isLoadingBuildings, isUninitialized: isUninitializedBuildings } = useGetBuildingsQuery({});
+  const { data: usersData, isLoading: isLoadingUsers, isUninitialized: isUninitializedUsers } = useGetUsersQuery({ role: 'worker' });
+  const { data: workOrdersData, isLoading: isLoadingWorkOrders, isUninitialized: isUninitializedWorkOrders } = useGetWorkOrdersQuery();
   const { data: cleaningData } = useGetCleaningWorkOrdersForWeekQuery();
   
   // Fetch analytics data
   const { 
     data: analyticsData, 
-    refetch: refetchAnalytics
+    refetch: refetchAnalytics,
+    isLoading: isLoadingAnalytics,
+    isUninitialized: isUninitializedAnalytics
   } = useGetDashboardStatsQuery(queryParams);
   
   useEffect(() => {
@@ -201,8 +203,12 @@ const Dashboard = () => {
     };
   }) || [];
 
-  // Only show loading if buildings are loading (core data)
-  const isLoading = isLoadingBuildings;
+  // Show loading indicator until all critical data queries are initialized and complete
+  const isLoading = 
+    isLoadingBuildings || isUninitializedBuildings ||
+    isLoadingUsers || isUninitializedUsers ||
+    isLoadingWorkOrders || isUninitializedWorkOrders ||
+    isLoadingAnalytics || isUninitializedAnalytics;
 
   if (isLoading) {
     return (
