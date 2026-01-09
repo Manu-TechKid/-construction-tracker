@@ -76,6 +76,7 @@ import MyTimeLogs from './pages/time-logs/MyTimeLogs';
 import PayrollReport from './pages/reports/PayrollReport';
 import ActivityLog from './pages/admin/ActivityLog';
 import GeneralCleaningPage from './pages/cleaning/GeneralCleaningPage';
+import WorkContactsPage from './pages/workContacts/WorkContactsPage';
 
 // Route Protection
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -173,6 +174,16 @@ const AppContent = () => {
                 element={
                   <RoleBasedRoute requiredPermissions={['read:all']}>
                     <GeneralCleaningPage />
+                  </RoleBasedRoute>
+                } 
+              />
+
+              {/* Work Contacts */}
+              <Route 
+                path="work-contacts" 
+                element={
+                  <RoleBasedRoute requiredPermissions={['read:all']}>
+                    <WorkContactsPage />
                   </RoleBasedRoute>
                 } 
               />

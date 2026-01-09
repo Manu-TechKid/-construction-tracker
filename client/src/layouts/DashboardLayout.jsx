@@ -129,6 +129,16 @@ const DashboardLayout = () => {
       });
     }
 
+    // Work Contacts
+    if (hasPermission(['read:all'])) { // Adjust permissions as needed
+      items.push({
+        text: 'Work Contacts',
+        icon: <PeopleIcon />,
+        path: '/work-contacts',
+        permission: 'read:all'
+      });
+    }
+
     // Buildings
     if (hasPermission(['read:buildings'])) {
       items.push({
