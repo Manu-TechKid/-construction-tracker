@@ -50,8 +50,8 @@ router.route('/')
 // Dashboard-specific route for cleaning services
 router.get('/cleaning-for-week', getCleaningWorkOrdersForWeek);
 
-// Route for detailed cleaning view
-router.get('/cleaning-detailed', getDetailedCleaningJobs);
+// Route for detailed cleaning view (visible to all non-workers)
+router.get('/cleaning-detailed', restrictTo('admin', 'manager', 'supervisor'), getDetailedCleaningJobs);
 
 router.route('/:id')
   .get(restrictTo('admin', 'manager', 'supervisor'), getWorkOrderById)

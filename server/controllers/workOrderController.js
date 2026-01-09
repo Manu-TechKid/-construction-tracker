@@ -231,9 +231,9 @@ exports.getCleaningWorkOrdersForWeek = catchAsync(async (req, res, next) => {
   });
 });
 
-// @desc    Get detailed cleaning jobs for Sandra's view
+// @desc    Get detailed cleaning jobs for dashboard (visible to all non-workers)
 // @route   GET /api/v1/work-orders/cleaning-detailed
-// @access  Private (restricted to specific user)
+// @access  Private (admin, manager, supervisor)
 exports.getDetailedCleaningJobs = catchAsync(async (req, res, next) => {
   const cleaningWorkType = await WorkType.findOne({ name: { $regex: /cleaning/i } });
 
