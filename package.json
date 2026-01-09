@@ -12,6 +12,8 @@
     "client": "cd client && npm start",
     "render-build": "npm install && npm install --prefix server && npm install --prefix client --legacy-peer-deps && npm run build --prefix client",
     "test": "cd server && npm test",
+    "postinstall": "npm install --prefix client --legacy-peer-deps && npm run build --prefix client",
+    "heroku-postbuild": "cd client && npm install && npm run build",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\""
   },
