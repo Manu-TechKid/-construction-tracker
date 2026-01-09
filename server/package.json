@@ -7,7 +7,7 @@
         "node": ">=18.0.0"
     },
     "scripts": {
-        "start": "node server.js",
+        "start": "npm run build:client && node server.js",
         "dev": "cross-env MONGO_URI=\"mongodb+srv://construction_admin:YQVjoW3YhYWkfmul@cluster0.0ewapuy.mongodb.net/construction_tracker?retryWrites=true&w=majority&appName=Cluster0\" nodemon server.js",
         "test": "cross-env NODE_ENV=test jest --detectOpenHandles --forceExit",
         "test:watch": "cross-env NODE_ENV=test jest --watch --detectOpenHandles --forceExit",
@@ -15,7 +15,6 @@
         "migrate:fix-invoice-dates": "node scripts/fixInvoiceDates.js",
         "migrate:repair-invoices": "node scripts/repairInvoices.js",
         "build": "echo \"Server build complete\"",
-        "postinstall": "npm run build:client",
         "build:client": "cd ../client && npm install --legacy-peer-deps && npm run build"
     },
     "dependencies": {
