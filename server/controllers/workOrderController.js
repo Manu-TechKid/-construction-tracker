@@ -235,6 +235,7 @@ exports.getCleaningWorkOrdersForWeek = catchAsync(async (req, res, next) => {
 // @route   GET /api/v1/work-orders/cleaning-detailed
 // @access  Private (admin, manager, supervisor)
 exports.getDetailedCleaningJobs = catchAsync(async (req, res, next) => {
+  const { buildingId, startDate, endDate } = req.query;
   const cleaningWorkType = await WorkType.findOne({ name: { $regex: /cleaning/i } });
 
   if (!cleaningWorkType) {
@@ -245,21 +246,29 @@ exports.getDetailedCleaningJobs = catchAsync(async (req, res, next) => {
     });
   }
 
-  const workOrders = await WorkOrder.find({
+  const filter = {
     workType: cleaningWorkType._id,
     deleted: false,
-  })
-  .populate('building', 'name address')
-  .populate('assignedTo.worker', 'name')
-  .select('building description scheduledDate apartmentNumber assignedTo billingStatus price status')
-  .sort({ scheduledDate: -1 });
+  };
+
+  if (buildingId) filter.building = buildingId;
+  if (startDate) filter.scheduledDate = { ...filter.scheduledDate, $gte: new Date(startDate) };
+  if (endDate) filter.scheduledDate = { ...filter.scheduledDate, $lte: new Date(endDate) };
+
+  const workOrders = await WorkOrder.find(filter)
+    .populate('building', 'name')
+    .populate('workSubType', 'name')
+    .populate('assignedTo.worker', 'name')
+    .select('building workSubType scheduledDate serviceDate apartmentNumber assignedTo billingStatus price status')
+    .sort({ scheduledDate: -1 });
 
   const detailedJobs = workOrders.map(wo => ({
     _id: wo._id,
     date: wo.scheduledDate,
+    serviceDate: wo.serviceDate,
     building: wo.building?.name || 'N/A',
     unit: wo.apartmentNumber || 'N/A',
-    description: wo.description,
+    subcategory: wo.workSubType?.name || 'N/A',
     worker: wo.assignedTo.map(a => a.worker?.name).join(', ') || 'Unassigned',
     paymentStatus: wo.billingStatus === 'paid' ? 'Paid' : 'Not Paid',
     price: wo.price || 0,

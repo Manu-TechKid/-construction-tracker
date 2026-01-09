@@ -19,10 +19,10 @@ const workContactSchema = new mongoose.Schema({
     trim: true,
     lowercase: true
   },
-  expertise: {
+  expertise: [{
     type: String,
     trim: true
-  },
+  }],
   responded: {
     type: Boolean,
     default: false

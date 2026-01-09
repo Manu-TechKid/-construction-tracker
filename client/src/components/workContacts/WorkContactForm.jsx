@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Box, Typography, TextField, Button, Checkbox, FormControlLabel, CircularProgress, Radio, RadioGroup, FormControl, FormLabel } from '@mui/material';
+import { Modal, Box, Typography, TextField, Button, Checkbox, FormControlLabel, CircularProgress, Radio, RadioGroup, FormControl, FormLabel, Select, MenuItem, InputLabel, Chip, OutlinedInput } from '@mui/material';
 import { useCreateWorkContactMutation, useUpdateWorkContactMutation } from '../../features/workContacts/workContactsApiSlice';
 
 const style = {
@@ -20,7 +20,7 @@ const WorkContactForm = ({ open, handleClose, contact }) => {
     phone: '',
     city: '',
     email: '',
-    expertise: '',
+    expertise: [],
     responded: false,
     observations: '',
     rating: 'unrated',
@@ -38,7 +38,7 @@ const WorkContactForm = ({ open, handleClose, contact }) => {
         phone: '',
         city: '',
         email: '',
-        expertise: '',
+        expertise: [],
         responded: false,
         observations: '',
         rating: 'unrated',
@@ -75,7 +75,30 @@ const WorkContactForm = ({ open, handleClose, contact }) => {
         <TextField margin="normal" fullWidth label="Phone" name="phone" value={formData.phone} onChange={handleChange} />
         <TextField margin="normal" fullWidth label="City" name="city" value={formData.city} onChange={handleChange} />
         <TextField margin="normal" fullWidth label="Email" name="email" type="email" value={formData.email} onChange={handleChange} />
-        <TextField margin="normal" fullWidth label="Expertise" name="expertise" value={formData.expertise} onChange={handleChange} />
+        <FormControl fullWidth margin="normal">
+          <InputLabel id="expertise-select-label">Skills</InputLabel>
+          <Select
+            labelId="expertise-select-label"
+            multiple
+            value={formData.expertise}
+            onChange={handleChange}
+            name="expertise"
+            input={<OutlinedInput id="select-multiple-chip" label="Skills" />}
+            renderValue={(selected) => (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {selected.map((value) => (
+                  <Chip key={value} label={value} />
+                ))}
+              </Box>
+            )}
+          >
+            {['Painting', 'Drywall Finishing', 'Drywall Installation', 'Plumbing', 'Electrical', 'Carpentry', 'General Contractor'].map((skill) => (
+              <MenuItem key={skill} value={skill}>
+                {skill}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
         <TextField margin="normal" fullWidth label="Observations" name="observations" multiline rows={3} value={formData.observations} onChange={handleChange} />
         <FormControlLabel
           control={<Checkbox checked={formData.responded} onChange={handleChange} name="responded" />}

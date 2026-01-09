@@ -3,9 +3,12 @@ const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 
 exports.getAllWorkContacts = catchAsync(async (req, res, next) => {
-  let filter = {};
+  const filter = {};
   if (req.query.expertise) {
-    filter.expertise = { $regex: req.query.expertise, $options: 'i' };
+    const expertiseArray = req.query.expertise.split(',').map(skill => skill.trim());
+    if (expertiseArray.length > 0) {
+      filter.expertise = { $in: expertiseArray };
+    }
   }
 
   const contacts = await WorkContact.find(filter);

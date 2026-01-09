@@ -75,6 +75,10 @@ const workOrderSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+  serviceDate: {
+    type: Date,
+    default: null
+  },
   estimatedCost: {
     type: Number,
     min: [0, 'Estimated cost cannot be negative'],

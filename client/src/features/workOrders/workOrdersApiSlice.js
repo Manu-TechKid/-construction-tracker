@@ -67,7 +67,13 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
     }),
 
     getDetailedCleaningJobs: builder.query({
-      query: () => 'work-orders/cleaning-detailed',
+      query: (params = {}) => {
+        const searchParams = new URLSearchParams();
+        if (params.buildingId) searchParams.append('buildingId', params.buildingId);
+        if (params.startDate) searchParams.append('startDate', params.startDate);
+        if (params.endDate) searchParams.append('endDate', params.endDate);
+        return `work-orders/cleaning-detailed?${searchParams.toString()}`;
+      },
       providesTags: (result) =>
         result?.data
           ? [

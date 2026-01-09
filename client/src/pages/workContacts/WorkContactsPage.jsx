@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Typography, Button, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress, Alert, IconButton, TextField } from '@mui/material';
+import { Box, Typography, Button, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress, Alert, IconButton, TextField, Chip } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useGetWorkContactsQuery, useDeleteWorkContactMutation } from '../../features/workContacts/workContactsApiSlice';
 import WorkContactForm from '../../components/workContacts/WorkContactForm';
@@ -84,7 +84,13 @@ const WorkContactsPage = () => {
                 <TableCell>{contact.phone}</TableCell>
                 <TableCell>{contact.email}</TableCell>
                 <TableCell>{contact.city}</TableCell>
-                <TableCell>{contact.expertise}</TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {(contact.expertise || []).map((skill) => (
+                      <Chip key={skill} label={skill} size="small" />
+                    ))}
+                  </Box>
+                </TableCell>
                 <TableCell>{contact.responded ? 'Yes' : 'No'}</TableCell>
                 <TableCell>{contact.rating === 'good' ? 'X' : ''}</TableCell>
                 <TableCell>{contact.rating === 'bad' ? 'X' : ''}</TableCell>

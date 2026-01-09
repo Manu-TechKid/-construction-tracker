@@ -18,19 +18,23 @@ import {
   FormControl
 } from '@mui/material';
 import { safeFormatDate } from '../../utils/dateUtils';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 
-const DetailedCleaningJobsView = () => {
-  const { data: detailedJobsData, isLoading, error } = useGetDetailedCleaningJobsQuery();
+const DetailedCleaningJobsView = ({ filters }) => {
+  const { data: detailedJobsData, isLoading, error } = useGetDetailedCleaningJobsQuery(filters);
   const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
   const [statuses, setStatuses] = useState({});
+  const [serviceDates, setServiceDates] = useState({});
 
   useEffect(() => {
     if (detailedJobsData?.data) {
-      const initialStatuses = detailedJobsData.data.reduce((acc, job) => {
-        acc[job._id] = job.status;
+      const initialData = detailedJobsData.data.reduce((acc, job) => {
+        acc.statuses[job._id] = job.status;
+        acc.serviceDates[job._id] = job.serviceDate ? new Date(job.serviceDate) : null;
         return acc;
-      }, {});
-      setStatuses(initialStatuses);
+      }, { statuses: {}, serviceDates: {} });
+      setStatuses(initialData.statuses);
+      setServiceDates(initialData.serviceDates);
     }
   }, [detailedJobsData]);
 
@@ -38,14 +42,22 @@ const DetailedCleaningJobsView = () => {
     setStatuses(prev => ({ ...prev, [jobId]: newStatus }));
   };
 
-  const handleSaveStatus = async (jobId) => {
-    const newStatus = statuses[jobId];
+  const handleServiceDateChange = (jobId, newDate) => {
+    setServiceDates(prev => ({ ...prev, [jobId]: newDate }));
+  };
+
+  const handleSave = async (jobId) => {
+    const payload = {
+      id: jobId,
+      status: statuses[jobId],
+      serviceDate: serviceDates[jobId],
+    };
     try {
-      await updateWorkOrder({ id: jobId, status: newStatus }).unwrap();
+      await updateWorkOrder(payload).unwrap();
       // Optionally, show a success message
     } catch (err) {
       // Optionally, show an error message
-      console.error('Failed to update status:', err);
+      console.error('Failed to update job:', err);
     }
   };
 
@@ -65,10 +77,11 @@ const DetailedCleaningJobsView = () => {
       <Table sx={{ minWidth: 650 }} aria-label="detailed cleaning jobs table">
         <TableHead>
           <TableRow>
-            <TableCell>Date</TableCell>
+            <TableCell>Scheduled Date</TableCell>
+            <TableCell>Service Date</TableCell>
             <TableCell>Building</TableCell>
             <TableCell>Unit/Apt</TableCell>
-            <TableCell>Description</TableCell>
+            <TableCell>Subcategory</TableCell>
             <TableCell>Worker</TableCell>
             <TableCell>Status</TableCell>
             <TableCell>Payment Status</TableCell>
@@ -80,9 +93,16 @@ const DetailedCleaningJobsView = () => {
           {jobs.map((job) => (
             <TableRow key={job._id}>
               <TableCell>{safeFormatDate(job.date)}</TableCell>
+              <TableCell>
+                <DatePicker
+                  value={serviceDates[job._id]}
+                  onChange={(newValue) => handleServiceDateChange(job._id, newValue)}
+                  renderInput={(params) => <TextField {...params} size="small" />}
+                />
+              </TableCell>
               <TableCell>{job.building}</TableCell>
               <TableCell>{job.unit}</TableCell>
-              <TableCell>{job.description}</TableCell>
+              <TableCell>{job.subcategory}</TableCell>
               <TableCell>{job.worker}</TableCell>
               <TableCell>
                 <FormControl size="small" fullWidth>
@@ -108,7 +128,7 @@ const DetailedCleaningJobsView = () => {
                 <Button
                   variant="contained"
                   size="small"
-                  onClick={() => handleSaveStatus(job._id)}
+                  onClick={() => handleSave(job._id)}
                   disabled={isUpdating}
                 >
                   {isUpdating ? <CircularProgress size={20} /> : 'Save'}
