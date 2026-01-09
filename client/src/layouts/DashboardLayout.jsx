@@ -40,6 +40,7 @@ import {
   AttachMoney as PricingIcon,
   Call as CallIcon,
   Assessment as AssessmentIcon,
+  CleaningServices as CleaningServicesIcon,
 } from '@mui/icons-material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
@@ -115,6 +116,16 @@ const DashboardLayout = () => {
         icon: <DashboardIcon />,
         path: '/dashboard',
         permission: 'read:all'
+      });
+    }
+
+    // General Cleaning - for Sandra and Admins
+    if (user?.name === 'Sandra Chavez' || hasPermission(['read:all'])) {
+      items.push({
+        text: 'General Cleaning',
+        icon: <CleaningServicesIcon />,
+        path: '/general-cleaning',
+        permission: 'read:all' // Custom logic check handles visibility
       });
     }
 

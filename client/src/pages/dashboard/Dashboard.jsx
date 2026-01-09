@@ -39,7 +39,6 @@ import WeeklyProductionByWorker from '../../components/dashboard/WeeklyProductio
 import DashboardAlerts from '../../components/dashboard/DashboardAlerts';
 import PendingNotes from '../../components/dashboard/PendingNotes';
 import DetailedCleaningCard from '../../components/dashboard/DetailedCleaningCard';
-import DetailedCleaningJobsView from '../../components/dashboard/DetailedCleaningJobsView';
 import CleaningServicesModal from '../../components/dashboard/CleaningServicesModal';
 import { safeFormatDate } from '../../utils/dateUtils';
 import ResponsiveContainer from '../../components/layout/ResponsiveContainer';
@@ -318,11 +317,6 @@ const Dashboard = () => {
         </Grid>
         <Grid item xs={12} md={6} lg={4}>
           <DetailedCleaningCard />
-        </Grid>
-
-        {/* Detailed Cleaning Jobs View */}
-        <Grid item xs={12}>
-          <DetailedCleaningJobsView />
         </Grid>
       </Grid>
 
