@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Box, Typography, Button, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress, Alert, IconButton } from '@mui/material';
+import { Box, Typography, Button, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress, Alert, IconButton, TextField } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useGetWorkContactsQuery, useDeleteWorkContactMutation } from '../../features/workContacts/workContactsApiSlice';
 import WorkContactForm from '../../components/workContacts/WorkContactForm';
 
 const WorkContactsPage = () => {
-  const { data: workContactsData, isLoading, error } = useGetWorkContactsQuery();
+  const [filter, setFilter] = useState('');
+  const { data: workContactsData, isLoading, error } = useGetWorkContactsQuery({ expertise: filter });
   const [deleteWorkContact] = useDeleteWorkContactMutation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState(null);
@@ -50,17 +51,29 @@ const WorkContactsPage = () => {
           Add New Contact
         </Button>
       </Box>
+      <Box sx={{ mb: 2 }}>
+        <TextField 
+          label="Filter by Skills/Expertise"
+          variant="outlined"
+          fullWidth
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        />
+      </Box>
       <TableContainer component={Paper}>
         <Table sx={{ minWidth: 650 }} aria-label="work contacts table">
           <TableHead>
             <TableRow>
               <TableCell>Name</TableCell>
               <TableCell>Phone</TableCell>
-              <TableCell>City</TableCell>
               <TableCell>Email</TableCell>
-              <TableCell>Expertise</TableCell>
-              <TableCell>Responded</TableCell>
-              <TableCell>Observations</TableCell>
+              <TableCell>City</TableCell>
+              <TableCell>Skills</TableCell>
+              <TableCell>Called</TableCell>
+              <TableCell>GW</TableCell>
+              <TableCell>BW</TableCell>
+              <TableCell>RW</TableCell>
+              <TableCell>Obs</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -69,10 +82,13 @@ const WorkContactsPage = () => {
               <TableRow key={contact._id}>
                 <TableCell>{contact.name}</TableCell>
                 <TableCell>{contact.phone}</TableCell>
-                <TableCell>{contact.city}</TableCell>
                 <TableCell>{contact.email}</TableCell>
+                <TableCell>{contact.city}</TableCell>
                 <TableCell>{contact.expertise}</TableCell>
                 <TableCell>{contact.responded ? 'Yes' : 'No'}</TableCell>
+                <TableCell>{contact.rating === 'good' ? 'X' : ''}</TableCell>
+                <TableCell>{contact.rating === 'bad' ? 'X' : ''}</TableCell>
+                <TableCell>{contact.rating === 'regular' ? 'X' : ''}</TableCell>
                 <TableCell>{contact.observations}</TableCell>
                 <TableCell>
                   <IconButton onClick={() => handleOpenModal(contact)}><EditIcon /></IconButton>

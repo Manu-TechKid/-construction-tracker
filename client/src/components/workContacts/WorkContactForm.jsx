@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Box, Typography, TextField, Button, Checkbox, FormControlLabel, CircularProgress } from '@mui/material';
+import { Modal, Box, Typography, TextField, Button, Checkbox, FormControlLabel, CircularProgress, Radio, RadioGroup, FormControl, FormLabel } from '@mui/material';
 import { useCreateWorkContactMutation, useUpdateWorkContactMutation } from '../../features/workContacts/workContactsApiSlice';
 
 const style = {
@@ -23,6 +23,7 @@ const WorkContactForm = ({ open, handleClose, contact }) => {
     expertise: '',
     responded: false,
     observations: '',
+    rating: 'unrated',
   });
 
   const [createWorkContact, { isLoading: isCreating }] = useCreateWorkContactMutation();
@@ -40,6 +41,7 @@ const WorkContactForm = ({ open, handleClose, contact }) => {
         expertise: '',
         responded: false,
         observations: '',
+        rating: 'unrated',
       });
     }
   }, [contact]);
@@ -77,8 +79,16 @@ const WorkContactForm = ({ open, handleClose, contact }) => {
         <TextField margin="normal" fullWidth label="Observations" name="observations" multiline rows={3} value={formData.observations} onChange={handleChange} />
         <FormControlLabel
           control={<Checkbox checked={formData.responded} onChange={handleChange} name="responded" />}
-          label="Responded"
+          label="He/She was called"
         />
+        <FormControl component="fieldset" margin="normal">
+          <FormLabel component="legend">Worker Rating</FormLabel>
+          <RadioGroup row name="rating" value={formData.rating} onChange={handleChange}>
+            <FormControlLabel value="good" control={<Radio />} label="GW" />
+            <FormControlLabel value="bad" control={<Radio />} label="BW" />
+            <FormControlLabel value="regular" control={<Radio />} label="RW" />
+          </RadioGroup>
+        </FormControl>
         <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
           <Button onClick={handleClose} sx={{ mr: 1 }}>Cancel</Button>
           <Button type="submit" variant="contained" disabled={isCreating || isUpdating}>

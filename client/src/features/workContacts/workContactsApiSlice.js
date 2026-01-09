@@ -3,7 +3,13 @@ import { apiSlice } from '../../app/api/apiSlice';
 export const workContactsApiSlice = apiSlice.injectEndpoints({
   endpoints: builder => ({
     getWorkContacts: builder.query({
-      query: () => '/work-contacts',
+      query: (params = {}) => {
+        const searchParams = new URLSearchParams();
+        if (params.expertise) {
+          searchParams.append('expertise', params.expertise);
+        }
+        return `/work-contacts?${searchParams.toString()}`;
+      },
       providesTags: (result) => 
         result ? [...result.data.map(({ _id }) => ({ type: 'WorkContact', id: _id })), { type: 'WorkContact', id: 'LIST' }] : [{ type: 'WorkContact', id: 'LIST' }],
     }),

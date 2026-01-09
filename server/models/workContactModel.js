@@ -27,6 +27,11 @@ const workContactSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  rating: {
+    type: String,
+    enum: ['good', 'bad', 'regular', 'unrated'],
+    default: 'unrated'
+  },
   observations: {
     type: String,
     trim: true

@@ -3,7 +3,12 @@ const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 
 exports.getAllWorkContacts = catchAsync(async (req, res, next) => {
-  const contacts = await WorkContact.find();
+  let filter = {};
+  if (req.query.expertise) {
+    filter.expertise = { $regex: req.query.expertise, $options: 'i' };
+  }
+
+  const contacts = await WorkContact.find(filter);
   res.status(200).json({
     status: 'success',
     results: contacts.length,
