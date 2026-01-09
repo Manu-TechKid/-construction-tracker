@@ -1,43 +1,34 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { apiSlice } from '../../app/api/apiSlice';
 
-export const analyticsApiSlice = createApi({
-  reducerPath: 'analyticsApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: process.env.REACT_APP_API_URL || 'https://construction-tracker-webapp.onrender.com/api/v1',
-    prepareHeaders: (headers, { getState }) => {
-      const token = getState().auth.token;
-      if (token) {
-        headers.set('authorization', `Bearer ${token}`);
-      }
-      return headers;
-    },
-  }),
+export const analyticsApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getDashboardStats: builder.query({
-      query: (params) => ({
-        url: '/analytics/dashboard',
-        params,
-        // Don't automatically refetch on error
-        refetchOnMountOrArgChange: false,
-      }),
-      // Return empty data instead of error
-      transformErrorResponse: () => ({
-        stats: {},
-        error: 'Failed to load dashboard data'
-      }),
-      // Keep previous data on error
-      keepUnusedDataFor: 60, // 1 minute
+      query: (params = {}) => {
+        const cleanParams = {};
+        Object.keys(params || {}).forEach((key) => {
+          const value = params[key];
+          if (value !== undefined && value !== null && value !== '') {
+            cleanParams[key] = value;
+          }
+        });
+
+        return {
+          url: '/analytics/dashboard',
+          params: cleanParams,
+        };
+      },
+      keepUnusedDataFor: 60,
     }),
     getTimeTrackingAnalytics: builder.query({
-      query: (params) => ({
+      query: (params = {}) => ({
         url: '/analytics/time-tracking',
-        params
+        params,
       }),
     }),
     getWorkOrderAnalytics: builder.query({
-      query: (params) => ({
+      query: (params = {}) => ({
         url: '/analytics/work-orders',
-        params
+        params,
       }),
     }),
   }),

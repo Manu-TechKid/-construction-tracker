@@ -13,7 +13,7 @@ import {
   CircularProgress,
   Alert
 } from '@mui/material';
-import { formatDate } from '../../utils/dateUtils';
+import { safeFormatDate } from '../../utils/dateUtils';
 
 const DetailedCleaningJobsView = () => {
   const { data: detailedJobsData, isLoading, error } = useGetDetailedCleaningJobsQuery();
@@ -26,7 +26,7 @@ const DetailedCleaningJobsView = () => {
     return <Alert severity="error">Error loading detailed cleaning jobs.</Alert>;
   }
 
-  const jobs = detailedJobsData?.data || [];
+  const jobs = Array.isArray(detailedJobsData?.data) ? detailedJobsData.data : [];
 
   return (
     <TableContainer component={Paper} sx={{ mt: 4 }}>
@@ -46,7 +46,7 @@ const DetailedCleaningJobsView = () => {
         <TableBody>
           {jobs.map((job) => (
             <TableRow key={job._id}>
-              <TableCell>{formatDate(job.date)}</TableCell>
+              <TableCell>{safeFormatDate(job.date)}</TableCell>
               <TableCell>{job.building}</TableCell>
               <TableCell>{job.unit}</TableCell>
               <TableCell>{job.description}</TableCell>
@@ -58,7 +58,7 @@ const DetailedCleaningJobsView = () => {
                   size="small" 
                 />
               </TableCell>
-              <TableCell align="right">{`$${job.price.toFixed(2)}`}</TableCell>
+              <TableCell align="right">{`$${Number(job.price || 0).toFixed(2)}`}</TableCell>
             </TableRow>
           ))}
         </TableBody>

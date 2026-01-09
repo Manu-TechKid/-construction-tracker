@@ -65,6 +65,17 @@ export const workOrdersApiSlice = apiSlice.injectEndpoints({
             ]
           : [{ type: 'WorkOrder', id: 'CLEANING_LIST' }],
     }),
+
+    getDetailedCleaningJobs: builder.query({
+      query: () => 'work-orders/cleaning-detailed',
+      providesTags: (result) =>
+        result?.data
+          ? [
+              ...(result.data || []).map(({ _id }) => ({ type: 'WorkOrder', id: _id })),
+              { type: 'WorkOrder', id: 'CLEANING_DETAILED' },
+            ]
+          : [{ type: 'WorkOrder', id: 'CLEANING_DETAILED' }],
+    }),
   }),
 });
 

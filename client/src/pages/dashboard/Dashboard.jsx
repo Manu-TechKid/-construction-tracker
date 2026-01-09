@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -12,7 +12,8 @@ import {
   LinearProgress,
   useTheme,
   Button,
-  TextField
+  TextField,
+  Alert
 } from '@mui/material';
 import {
   Apartment as BuildingIcon,
@@ -54,28 +55,31 @@ const Dashboard = () => {
   });
   
   // Format date for API query
-  const formatDateForQuery = (date) => {
+  const formatDateForQuery = useCallback((date) => {
     return date ? date.toISOString() : undefined;
-  };
+  }, []);
 
   // Prepare query params
-  const queryParams = {
-    startDate: formatDateForQuery(dateRange.startDate),
-    endDate: formatDateForQuery(dateRange.endDate)
-  };
+  const queryParams = useMemo(() => {
+    return {
+      startDate: formatDateForQuery(dateRange.startDate),
+      endDate: formatDateForQuery(dateRange.endDate)
+    };
+  }, [dateRange.startDate, dateRange.endDate, formatDateForQuery]);
+
+  const usersQueryParams = useMemo(() => ({ role: 'worker' }), []);
   
   // Fetch data
-  const { data: buildingsData, isLoading: isLoadingBuildings, isUninitialized: isUninitializedBuildings } = useGetBuildingsQuery({});
-  const { data: usersData, isLoading: isLoadingUsers, isUninitialized: isUninitializedUsers } = useGetUsersQuery({ role: 'worker' });
-  const { data: workOrdersData, isLoading: isLoadingWorkOrders, isUninitialized: isUninitializedWorkOrders } = useGetWorkOrdersQuery();
+  const { data: buildingsData, isLoading: isLoadingBuildings, error: buildingsError } = useGetBuildingsQuery();
+  const { data: usersData, isLoading: isLoadingUsers, error: usersError } = useGetUsersQuery(usersQueryParams);
+  const { data: workOrdersData, isLoading: isLoadingWorkOrders, error: workOrdersError } = useGetWorkOrdersQuery();
   const { data: cleaningData } = useGetCleaningWorkOrdersForWeekQuery();
   
   // Fetch analytics data
   const { 
     data: analyticsData, 
     refetch: refetchAnalytics,
-    isLoading: isLoadingAnalytics,
-    isUninitialized: isUninitializedAnalytics
+    isLoading: isLoadingAnalytics
   } = useGetDashboardStatsQuery(queryParams);
   
   useEffect(() => {
@@ -203,26 +207,7 @@ const Dashboard = () => {
     };
   }) || [];
 
-  // Show loading indicator until all critical data queries are initialized and complete
-  const isLoading = 
-    isLoadingBuildings || isUninitializedBuildings ||
-    isLoadingUsers || isUninitializedUsers ||
-    isLoadingWorkOrders || isUninitializedWorkOrders ||
-    isLoadingAnalytics || isUninitializedAnalytics;
-
-  if (isLoading) {
-    return (
-      <Box sx={{ width: '100%', p: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Dashboard
-        </Typography>
-        <LinearProgress />
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-          Loading dashboard data...
-        </Typography>
-      </Box>
-    );
-  }
+  const isLoading = isLoadingBuildings || isLoadingUsers || isLoadingWorkOrders;
 
   return (
     <Box sx={{ flexGrow: 1 }}>
@@ -230,6 +215,12 @@ const Dashboard = () => {
         <Typography variant="h4" component="h1" gutterBottom>
           Dashboard
         </Typography>
+      {(isLoading || isLoadingAnalytics) && <LinearProgress />}
+      {(buildingsError || usersError || workOrdersError) && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          Some dashboard data failed to load. You can continue using the page.
+        </Alert>
+      )}
       <Typography variant="subtitle1" color="text.secondary" gutterBottom>
         {safeFormatDate(new Date(), 'full')}
       </Typography>
