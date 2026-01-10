@@ -61,6 +61,7 @@ import TimeTrackingManagement from './pages/admin/TimeTrackingManagement';
 import AdminWorkerManagement from './pages/admin/AdminWorkerManagement';
 import AdminWorkLogs from './pages/admin/AdminWorkLogs';
 import Setup from './pages/admin/Setup';
+import CategoryManagementPage from './pages/setup/CategoryManagementPage';
 import SiteVisit from './pages/estimates/SiteVisit';
 import ApartmentSearch from './pages/search/ApartmentSearch';
 import WorkerSchedules from './pages/workers/WorkerSchedules';
@@ -545,6 +546,14 @@ const AppContent = () => {
                       element={
                         <RoleBasedRoute requiredPermissions={['manage:system']}>
                           <Setup />
+                        </RoleBasedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="setup/categories" 
+                      element={
+                        <RoleBasedRoute requiredPermissions={['manage:system']}>
+                          <CategoryManagementPage />
                         </RoleBasedRoute>
                       } 
                     />
