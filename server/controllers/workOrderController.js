@@ -259,7 +259,7 @@ exports.getDetailedCleaningJobs = catchAsync(async (req, res, next) => {
     .populate('building', 'name')
     .populate('workSubType', 'name')
     .populate('assignedTo.worker', 'name')
-    .select('building workSubType scheduledDate serviceDate apartmentNumber assignedTo billingStatus price status')
+    .select('building workSubType scheduledDate serviceDate apartmentNumber description assignedTo billingStatus price status')
     .sort({ scheduledDate: -1 });
 
   const detailedJobs = workOrders.map(wo => ({
@@ -272,7 +272,8 @@ exports.getDetailedCleaningJobs = catchAsync(async (req, res, next) => {
     worker: wo.assignedTo.map(a => a.worker?.name).join(', ') || 'Unassigned',
     paymentStatus: wo.billingStatus === 'paid' ? 'Paid' : 'Not Paid',
     price: wo.price || 0,
-    status: wo.status
+    status: wo.status,
+    description: wo.description || 'N/A'
   }));
 
   res.status(200).json({

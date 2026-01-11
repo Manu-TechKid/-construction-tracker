@@ -22,7 +22,17 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TextField } from '@mui/material';
 
 const DetailedCleaningJobsView = ({ filters }) => {
-  const { data: detailedJobsData, isLoading, error } = useGetDetailedCleaningJobsQuery(filters);
+  const { buildingId, startDate, endDate } = filters || {};
+
+  const queryParams = {
+    buildingId: buildingId || undefined,
+    startDate: startDate ? startDate.toISOString() : undefined,
+    endDate: endDate ? endDate.toISOString() : undefined,
+  };
+
+  const { data: detailedJobsData, isLoading, error } = useGetDetailedCleaningJobsQuery(queryParams, {
+    skip: !filters, // Optionally skip if no filters are provided
+  });
   const [updateWorkOrder, { isLoading: isUpdating }] = useUpdateWorkOrderMutation();
   const [statuses, setStatuses] = useState({});
   const [serviceDates, setServiceDates] = useState({});
