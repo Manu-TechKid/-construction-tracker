@@ -7,17 +7,17 @@ const logActivity = require('../middleware/activityLogger');
 
 const router = express.Router();
 
-// Protect all routes after this middleware
+// Public route to get all buildings
+router.route('/').get(buildingController.getAllBuildings);
+
+// Protect all subsequent routes
 router.use(authController.protect);
 
 // Hide prices from workers on all routes
 router.use(hidePricesFromWorkers);
 
-// Routes for buildings
-router
-  .route('/')
-  .get(buildingController.getAllBuildings)
-  .post(logActivity('Building', 'create'), buildingController.createBuilding);
+// Protected route to create a building
+router.route('/').post(logActivity('Building', 'create'), buildingController.createBuilding);
 
 // Routes for specific building
 router

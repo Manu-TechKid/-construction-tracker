@@ -246,5 +246,8 @@ timeSessionSchema.index({ building: 1, clockInTime: -1 });
 timeSessionSchema.index({ workOrder: 1 });
 timeSessionSchema.index({ status: 1 });
 timeSessionSchema.index({ isApproved: 1 });
+timeSessionSchema.index({ worker: 1, building: 1, clockInTime: -1 });
 
-module.exports = mongoose.model('TimeSession', timeSessionSchema);
+const TimeSession = mongoose.model('TimeSession', timeSessionSchema);
+
+module.exports = TimeSession;

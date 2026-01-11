@@ -34,62 +34,62 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
     timeLogDateFilter.timestamp.$lte = end;
   }
 
-  // Get building stats
-  const buildingStats = await Building.aggregate([
-    { $match: dateFilter },
-    { 
-      $group: {
-        _id: "$status",
-        count: { $sum: 1 }
-      }
-    }
-  ]);
-
-  // Get work order stats
-  const workOrderStats = await WorkOrder.aggregate([
-    { $match: { ...dateFilter } },
-    {
-      $group: {
-        _id: "$status",
-        count: { $sum: 1 }
-      }
-    }
-  ]);
-
-  // Get time tracking stats
-  // Use the pre-calculated totalHours field from TimeSession schema and
-  // derive geofence violations from clock-in/clock-out geofence flags.
-  const timeTrackingStats = await TimeSession.aggregate([
-    { 
-      $match: { 
-        ...timeDateFilter,
-        status: { $in: ['completed', 'approved'] } 
-      }
-    },
-    {
-      $group: {
-        _id: null,
-        totalSessions: { $sum: 1 },
-        // Sum effective hours (falls back to 0 when missing)
-        totalHours: {
-          $sum: { $ifNull: ["$totalHours", { $divide: [{ $subtract: ["$clockOutTime", "$clockInTime"] }, 3600000] }] }
-        },
-        geofenceViolations: {
-          $sum: {
-            $cond: [
-              {
-                $or: [
-                  { $eq: ["$location.clockOut.geofenceValidated", false] },
-                  { $eq: ["$location.clockIn.geofenceValidated", false] }
-                ]
-              },
-              1,
-              0
-            ]
+  const [buildingStats, workOrderStats, timeTrackingStats, workerStats, recentActivity] = await Promise.all([
+    Building.aggregate([
+      { $match: dateFilter },
+      { $group: { _id: "$status", count: { $sum: 1 } } }
+    ]),
+    WorkOrder.aggregate([
+      { $match: { ...dateFilter } },
+      { $group: { _id: "$status", count: { $sum: 1 } } }
+    ]),
+    TimeSession.aggregate([
+      { 
+        $match: { 
+          ...timeDateFilter,
+          status: { $in: ['completed', 'approved'] } 
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalSessions: { $sum: 1 },
+          totalHours: {
+            $sum: { $ifNull: ["$totalHours", { $divide: [{ $subtract: ["$clockOutTime", "$clockInTime"] }, 3600000] }] }
+          },
+          geofenceViolations: {
+            $sum: {
+              $cond: [
+                {
+                  $or: [
+                    { $eq: ["$location.clockOut.geofenceValidated", false] },
+                    { $eq: ["$location.clockIn.geofenceValidated", false] }
+                  ]
+                },
+                1,
+                0
+              ]
+            }
           }
         }
       }
-    }
+    ]),
+    User.aggregate([
+      { $match: { role: "worker" } },
+      { $group: { _id: "$status", count: { $sum: 1 } } }
+    ]),
+    Promise.all([
+      WorkOrder.find()
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .populate('building', 'name')
+        .populate('assignedTo', 'name'),
+      TimeSession.find()
+        .sort({ clockInTime: -1 })
+        .limit(5)
+        .populate('worker', 'name')
+        .populate('building', 'name')
+    ])
   ]);
 
   // Use TimeSession when available; otherwise fall back to TimeLog (older clock-in/out flow)
@@ -128,34 +128,6 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
   console.log(`[getDashboardStats] - TimeSession Hours: ${timeSessionHours}`);
   console.log(`[getDashboardStats] - TimeLog Fallback Hours: ${timeLogHours}`);
   console.log(`[getDashboardStats] - Total Hours to Report: ${totalHoursToReport}`);
-
-  // Get worker stats
-  const workerStats = await User.aggregate([
-    { $match: { role: "worker" } },
-    {
-      $group: {
-        _id: "$status",
-        count: { $sum: 1 }
-      }
-    }
-  ]);
-
-  // Get recent activity
-  const recentActivity = await Promise.all([
-    // Recent work orders
-    WorkOrder.find()
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .populate('building', 'name')
-      .populate('assignedTo', 'name'),
-    
-    // Recent time sessions
-    TimeSession.find()
-      .sort({ clockInTime: -1 })
-      .limit(5)
-      .populate('worker', 'name')
-      .populate('building', 'name')
-  ]);
 
   // Format building stats
   const formattedBuildingStats = buildingStats.reduce((acc, stat) => {

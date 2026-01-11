@@ -155,6 +155,9 @@ const workOrderSchema = new mongoose.Schema({
   timestamps: true,
 });
 
+workOrderSchema.index({ building: 1, status: 1, createdAt: -1 });
+workOrderSchema.index({ assignedTo: 1 });
+
 const WorkOrder = mongoose.model('WorkOrder', workOrderSchema);
 
 module.exports = WorkOrder;

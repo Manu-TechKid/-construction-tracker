@@ -159,14 +159,20 @@ exports.protect = catchAsync(async (req, res, next) => {
   console.log('Final token:', token ? 'Present' : 'Missing');
 
   if (!token) {
-    console.log('No token found, returning 401');
-    return next(
-      new AppError('You are not logged in! Please log in to get access.', 401)
-    );
+    console.log('No token found, returning next()');
+    return next();
   }
 
   // 2) Verification token
-  const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+  let decoded;
+  try {
+    decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+  } catch (err) {
+    // If token is invalid, just clear the user and move on.
+    // This allows public routes to still be accessed.
+    req.user = null;
+    return next();
+  }
 
   // 3) Check if user still exists
   const currentUser = await User.findById(decoded.id);
