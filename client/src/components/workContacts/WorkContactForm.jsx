@@ -35,7 +35,7 @@ const WorkContactForm = ({ open, handleClose, contact }) => {
     if (contact) {
       setFormData({
         ...contact,
-        expertise: contact.expertise.map(skill => skill._id),
+        expertise: (contact.expertise || []).map(skill => skill._id),
       });
     } else {
       setFormData({

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Box, Typography, TextField, Button, CircularProgress } from '@mui/material';
 import { useCreateSkillMutation, useUpdateSkillMutation } from '../../features/skills/skillsApiSlice';
-import { MuiColorInput } from 'mui-color-input';
+import { SketchPicker } from 'react-color';
 
 const style = {
   position: 'absolute',
@@ -60,14 +60,9 @@ const SkillForm = ({ open, handleClose, skill }) => {
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-        <MuiColorInput
-          margin="normal"
-          required
-          fullWidth
-          label="Color"
-          value={color}
-          onChange={(color) => setColor(color)}
-          format="hex"
+        <SketchPicker
+          color={color}
+          onChangeComplete={(color) => setColor(color.hex)}
         />
         <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
           <Button onClick={handleClose} sx={{ mr: 1 }}>Cancel</Button>

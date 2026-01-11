@@ -4,7 +4,13 @@ export const skillsApiSlice = apiSlice.injectEndpoints({
   endpoints: builder => ({
     getSkills: builder.query({
       query: () => '/skills',
-      providesTags: ['Skill'],
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.data.skills.map(({ _id }) => ({ type: 'Skill', id: _id })),
+              { type: 'Skill', id: 'LIST' },
+            ]
+          : [{ type: 'Skill', id: 'LIST' }],
     }),
     createSkill: builder.mutation({
       query: newSkill => ({
@@ -12,7 +18,7 @@ export const skillsApiSlice = apiSlice.injectEndpoints({
         method: 'POST',
         body: newSkill,
       }),
-      invalidatesTags: ['Skill'],
+      invalidatesTags: [{ type: 'Skill', id: 'LIST' }],
     }),
     updateSkill: builder.mutation({
       query: ({ id, ...updatedSkill }) => ({
@@ -20,14 +26,14 @@ export const skillsApiSlice = apiSlice.injectEndpoints({
         method: 'PATCH',
         body: updatedSkill,
       }),
-      invalidatesTags: ['Skill'],
+      invalidatesTags: (result, error, { id }) => [{ type: 'Skill', id }, { type: 'Skill', id: 'LIST' }],
     }),
     deleteSkill: builder.mutation({
       query: (id) => ({
         url: `/skills/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Skill'],
+      invalidatesTags: (result, error, id) => [{ type: 'Skill', id }, { type: 'Skill', id: 'LIST' }],
     }),
   }),
 });

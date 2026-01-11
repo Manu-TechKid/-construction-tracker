@@ -10,8 +10,14 @@ export const workContactsApiSlice = apiSlice.injectEndpoints({
         }
         return `/work-contacts?${searchParams.toString()}`;
       },
-      providesTags: (result) => 
-        result ? [...result.data.map(({ _id }) => ({ type: 'WorkContact', id: _id })), { type: 'WorkContact', id: 'LIST' }] : [{ type: 'WorkContact', id: 'LIST' }],
+      providesTags: (result, error, arg) =>
+        result
+          ? [
+              ...result.data.map(({ _id }) => ({ type: 'WorkContact', id: _id })),
+              { type: 'WorkContact', id: 'LIST' },
+              { type: 'Skill', id: 'LIST' }, // Ensure it's linked to skills
+            ]
+          : [{ type: 'WorkContact', id: 'LIST' }, { type: 'Skill', id: 'LIST' }],
     }),
     getWorkContact: builder.query({
       query: (id) => `/work-contacts/${id}`,
