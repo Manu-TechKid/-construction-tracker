@@ -125,54 +125,19 @@ const Dashboard = () => {
 
   // Process data
   useEffect(() => {
-    // Handle buildings data
-    if (buildingsData?.data) {
-      const buildings = buildingsData.data.buildings || [];
-      setStats(prevStats => ({
-        ...prevStats,
-        totalBuildings: buildings.length
-      }));
-    }
-
-    // Handle workers data
-    if (usersData?.data) {
-      const workers = usersData.data.users || [];
-      const availableWorkers = workers.filter(worker =>
-        worker.workerProfile?.status === 'available'
-      );
-
-      setStats(prevStats => ({
-        ...prevStats,
-        totalWorkers: workers.length,
-        availableWorkers: availableWorkers.length
-      }));
-    }
-
-    // Handle work orders data
-    if (workOrdersData?.data?.workOrders) {
-      const workOrders = Array.isArray(workOrdersData.data.workOrders) ? workOrdersData.data.workOrders : [];
-      const pendingOrders = workOrders.filter(order => order.status === 'pending');
-      const completedOrders = workOrders.filter(order => order.status === 'completed');
-      const inProgressOrders = workOrders.filter(order => order.status === 'in_progress');
-
-      setStats(prevStats => ({
-        ...prevStats,
-        totalWorkOrders: workOrders.length,
-        pendingWorkOrders: pendingOrders.length,
-        completedWorkOrders: completedOrders.length,
-        inProgressWorkOrders: inProgressOrders.length
-      }));
-    }
-    
     // Handle analytics data
-    if (analyticsData && analyticsData.data && analyticsData.data.timeTracking) {
-      const totalTimeHours = analyticsData.data.timeTracking.totalHours || 0;
-      const geofenceViolations = analyticsData.data.timeTracking.geofenceViolations || 0;
-      
+    if (analyticsData?.data) {
+      const { buildings, workOrders, timeTracking, workers } = analyticsData.data;
+
       setStats(prevStats => ({
         ...prevStats,
-        totalTimeHours,
-        geofenceViolations
+        totalBuildings: buildings?.total || 0,
+        totalWorkers: workers?.total || 0,
+        pendingWorkOrders: workOrders?.byStatus?.pending || 0,
+        inProgressWorkOrders: workOrders?.byStatus?.in_progress || 0,
+        completedWorkOrders: workOrders?.byStatus?.completed || 0,
+        totalTimeHours: timeTracking?.totalHours || 0,
+        geofenceViolations: timeTracking?.geofenceViolations || 0,
       }));
     }
   }, [buildingsData, usersData, workOrdersData, analyticsData]);
