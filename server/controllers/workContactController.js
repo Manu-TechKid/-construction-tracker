@@ -7,7 +7,8 @@ exports.getAllWorkContacts = catchAsync(async (req, res, next) => {
   if (req.query.expertise) {
     const expertiseArray = req.query.expertise.split(',').map(skill => skill.trim());
     if (expertiseArray.length > 0) {
-      filter.expertise = { $in: expertiseArray };
+      const regexArray = expertiseArray.map(skill => new RegExp(skill, 'i'));
+      filter.expertise = { $in: regexArray };
     }
   }
 

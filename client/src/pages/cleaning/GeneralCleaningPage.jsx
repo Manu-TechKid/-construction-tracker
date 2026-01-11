@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Typography, Paper, Grid, TextField } from '@mui/material';
+import { Box, Typography, Paper, Grid, TextField, Button } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import BuildingSelector from '../../components/common/BuildingSelector';
 import DetailedCleaningJobsView from '../../components/dashboard/DetailedCleaningJobsView';
@@ -13,6 +13,14 @@ const GeneralCleaningPage = () => {
 
   const handleFilterChange = (filterName, value) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));
+  };
+
+  const handleResetFilters = () => {
+    setFilters({
+      buildingId: '',
+      startDate: null,
+      endDate: null,
+    });
   };
 
   return (
@@ -43,6 +51,9 @@ const GeneralCleaningPage = () => {
               onChange={(newValue) => handleFilterChange('endDate', newValue)}
               renderInput={(params) => <TextField {...params} fullWidth />}
             />
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <Button variant="outlined" onClick={handleResetFilters} fullWidth>Reset Filters</Button>
           </Grid>
         </Grid>
       </Paper>
