@@ -77,6 +77,7 @@ import PayrollReport from './pages/reports/PayrollReport';
 import ActivityLog from './pages/admin/ActivityLog';
 import GeneralCleaningPage from './pages/cleaning/GeneralCleaningPage';
 import WorkContactsPage from './pages/workContacts/WorkContactsPage';
+import SkillsManagementPage from './pages/settings/SkillsManagementPage';
 
 // Route Protection
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -552,6 +553,14 @@ const AppContent = () => {
                     {/* Profile and Settings - accessible to all */}
                     <Route path="profile" element={<Profile />} />
                     <Route path="settings" element={<Settings />} />
+                    <Route 
+                      path="settings/skills" 
+                      element={
+                        <RoleBasedRoute requiredPermissions={['manage:system']}>
+                          <SkillsManagementPage />
+                        </RoleBasedRoute>
+                      } 
+                    />
 
                     {/* Reports */}
                     <Route 

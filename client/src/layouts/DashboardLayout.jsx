@@ -365,6 +365,12 @@ const DashboardLayout = () => {
         path: '/setup',
         permission: 'manage:system'
       });
+      items.push({
+        text: 'Skills Management',
+        icon: <WorkIcon />,
+        path: '/settings/skills',
+        permission: 'manage:system'
+      });
     }
 
     // Activity Log - Superuser only

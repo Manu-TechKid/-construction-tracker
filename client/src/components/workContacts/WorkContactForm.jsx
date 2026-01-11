@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Box, Typography, TextField, Button, Checkbox, FormControlLabel, CircularProgress, Radio, RadioGroup, FormControl, FormLabel, Select, MenuItem, InputLabel, Chip, OutlinedInput } from '@mui/material';
 import { useCreateWorkContactMutation, useUpdateWorkContactMutation } from '../../features/workContacts/workContactsApiSlice';
-import { useGetSkillsQuery, useCreateSkillMutation } from '../../features/skills/skillsApiSlice';
-import { MuiColorInput } from 'mui-color-input';
+import { useGetSkillsQuery } from '../../features/skills/skillsApiSlice';
 
 const style = {
   position: 'absolute',
@@ -27,13 +26,10 @@ const WorkContactForm = ({ open, handleClose, contact }) => {
     observations: '',
     rating: 'unrated',
   });
-  const [newSkill, setNewSkill] = useState('');
-  const [newSkillColor, setNewSkillColor] = useState('#FFFFFF');
 
   const [createWorkContact, { isLoading: isCreating }] = useCreateWorkContactMutation();
   const [updateWorkContact, { isLoading: isUpdating }] = useUpdateWorkContactMutation();
   const { data: skillsData } = useGetSkillsQuery();
-  const [createSkill] = useCreateSkillMutation();
 
   useEffect(() => {
     if (contact) {
@@ -108,31 +104,6 @@ const WorkContactForm = ({ open, handleClose, contact }) => {
               </MenuItem>
             ))}
           </Select>
-          <TextField
-            margin="normal"
-            fullWidth
-            label="Add New Skill"
-            value={newSkill}
-            onChange={(e) => setNewSkill(e.target.value)}
-          />
-          <MuiColorInput
-            value={newSkillColor}
-            onChange={(color) => setNewSkillColor(color)}
-            format="hex"
-            fullWidth
-          />
-          <Button
-            onClick={async () => {
-              if (newSkill) {
-                await createSkill({ name: newSkill, color: newSkillColor });
-                setNewSkill('');
-                setNewSkillColor('#FFFFFF');
-              }
-            }}
-            sx={{ mt: 1 }}
-          >
-            Add Skill
-          </Button>
         </FormControl>
         <TextField margin="normal" fullWidth label="Observations" name="observations" multiline rows={3} value={formData.observations} onChange={handleChange} />
         <FormControlLabel
