@@ -1,4 +1,5 @@
 const WorkContact = require('../models/workContactModel');
+const Skill = require('../models/skillModel');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 
@@ -8,11 +9,13 @@ exports.getAllWorkContacts = catchAsync(async (req, res, next) => {
     const expertiseArray = req.query.expertise.split(',').map(skill => skill.trim());
     if (expertiseArray.length > 0) {
       const regexArray = expertiseArray.map(skill => new RegExp(skill, 'i'));
-      filter.expertise = { $in: regexArray };
+      const matchedSkills = await Skill.find({ name: { $in: regexArray } }).select('_id');
+      const skillIds = matchedSkills.map(skill => skill._id);
+      filter.expertise = { $in: skillIds };
     }
   }
 
-  const contacts = await WorkContact.find(filter);
+  const contacts = await WorkContact.find(filter).populate('expertise');
   res.status(200).json({
     status: 'success',
     results: contacts.length,
@@ -21,7 +24,7 @@ exports.getAllWorkContacts = catchAsync(async (req, res, next) => {
 });
 
 exports.getWorkContact = catchAsync(async (req, res, next) => {
-  const contact = await WorkContact.findById(req.params.id);
+  const contact = await WorkContact.findById(req.params.id).populate('expertise');
   if (!contact) {
     return next(new AppError('No work contact found with that ID', 404));
   }

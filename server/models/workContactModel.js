@@ -20,8 +20,8 @@ const workContactSchema = new mongoose.Schema({
     lowercase: true
   },
   expertise: [{
-    type: String,
-    trim: true
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Skill',
   }],
   responded: {
     type: Boolean,

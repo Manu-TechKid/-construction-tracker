@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { Box, Typography, Button, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress, Alert, IconButton, TextField, Chip } from '@mui/material';
+import { Box, Typography, Button, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress, Alert, IconButton, Chip, FormControl, InputLabel, Select, MenuItem, OutlinedInput } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useGetWorkContactsQuery, useDeleteWorkContactMutation } from '../../features/workContacts/workContactsApiSlice';
+import { useGetSkillsQuery } from '../../features/skills/skillsApiSlice';
 import WorkContactForm from '../../components/workContacts/WorkContactForm';
 
 const WorkContactsPage = () => {
-  const [filter, setFilter] = useState('');
-  const { data: workContactsData, isLoading, error } = useGetWorkContactsQuery({ expertise: filter });
+  const [skillFilter, setSkillFilter] = useState([]);
+  const { data: workContactsData, isLoading, error } = useGetWorkContactsQuery({ expertise: skillFilter.join(',') });
+  const { data: skillsData } = useGetSkillsQuery();
   const [deleteWorkContact] = useDeleteWorkContactMutation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState(null);
@@ -52,13 +54,29 @@ const WorkContactsPage = () => {
         </Button>
       </Box>
       <Box sx={{ mb: 2 }}>
-        <TextField 
-          label="Filter by Skills/Expertise"
-          variant="outlined"
-          fullWidth
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
+        <FormControl fullWidth>
+          <InputLabel id="skill-filter-label">Filter by Skills/Expertise</InputLabel>
+          <Select
+            labelId="skill-filter-label"
+            multiple
+            value={skillFilter}
+            onChange={(e) => setSkillFilter(e.target.value)}
+            input={<OutlinedInput label="Filter by Skills/Expertise" />}
+            renderValue={(selected) => (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {selected.map((value) => (
+                  <Chip key={value} label={value} />
+                ))}
+              </Box>
+            )}
+          >
+            {skillsData?.data?.skills.map((skill) => (
+              <MenuItem key={skill._id} value={skill.name}>
+                {skill.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
       </Box>
       <TableContainer component={Paper}>
         <Table sx={{ minWidth: 650 }} aria-label="work contacts table">
@@ -87,7 +105,7 @@ const WorkContactsPage = () => {
                 <TableCell>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                     {(contact.expertise || []).map((skill) => (
-                      <Chip key={skill} label={skill} size="small" />
+                      <Chip key={skill._id} label={skill.name} sx={{ backgroundColor: skill.color, color: 'white' }} size="small" />
                     ))}
                   </Box>
                 </TableCell>

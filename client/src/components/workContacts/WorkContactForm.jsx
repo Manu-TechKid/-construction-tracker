@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Box, Typography, TextField, Button, Checkbox, FormControlLabel, CircularProgress, Radio, RadioGroup, FormControl, FormLabel, Select, MenuItem, InputLabel, Chip, OutlinedInput } from '@mui/material';
 import { useCreateWorkContactMutation, useUpdateWorkContactMutation } from '../../features/workContacts/workContactsApiSlice';
+import { useGetSkillsQuery, useCreateSkillMutation } from '../../features/skills/skillsApiSlice';
+import { MuiColorInput } from 'mui-color-input';
 
 const style = {
   position: 'absolute',
@@ -25,13 +27,20 @@ const WorkContactForm = ({ open, handleClose, contact }) => {
     observations: '',
     rating: 'unrated',
   });
+  const [newSkill, setNewSkill] = useState('');
+  const [newSkillColor, setNewSkillColor] = useState('#FFFFFF');
 
   const [createWorkContact, { isLoading: isCreating }] = useCreateWorkContactMutation();
   const [updateWorkContact, { isLoading: isUpdating }] = useUpdateWorkContactMutation();
+  const { data: skillsData } = useGetSkillsQuery();
+  const [createSkill] = useCreateSkillMutation();
 
   useEffect(() => {
     if (contact) {
-      setFormData(contact);
+      setFormData({
+        ...contact,
+        expertise: contact.expertise.map(skill => skill._id),
+      });
     } else {
       setFormData({
         name: '',
@@ -86,18 +95,44 @@ const WorkContactForm = ({ open, handleClose, contact }) => {
             input={<OutlinedInput id="select-multiple-chip" label="Skills" />}
             renderValue={(selected) => (
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                {selected.map((value) => (
-                  <Chip key={value} label={value} />
-                ))}
+                {selected.map((value) => {
+                  const skill = skillsData?.data.skills.find(s => s._id === value);
+                  return <Chip key={value} label={skill?.name} sx={{ backgroundColor: skill?.color, color: '#fff' }} />;
+                })}
               </Box>
             )}
           >
-            {['Painting', 'Drywall Finishing', 'Drywall Installation', 'Plumbing', 'Electrical', 'Carpentry', 'General Contractor'].map((skill) => (
-              <MenuItem key={skill} value={skill}>
-                {skill}
+            {skillsData?.data.skills.map((skill) => (
+              <MenuItem key={skill._id} value={skill._id}>
+                {skill.name}
               </MenuItem>
             ))}
           </Select>
+          <TextField
+            margin="normal"
+            fullWidth
+            label="Add New Skill"
+            value={newSkill}
+            onChange={(e) => setNewSkill(e.target.value)}
+          />
+          <MuiColorInput
+            value={newSkillColor}
+            onChange={(color) => setNewSkillColor(color)}
+            format="hex"
+            fullWidth
+          />
+          <Button
+            onClick={async () => {
+              if (newSkill) {
+                await createSkill({ name: newSkill, color: newSkillColor });
+                setNewSkill('');
+                setNewSkillColor('#FFFFFF');
+              }
+            }}
+            sx={{ mt: 1 }}
+          >
+            Add Skill
+          </Button>
         </FormControl>
         <TextField margin="normal" fullWidth label="Observations" name="observations" multiline rows={3} value={formData.observations} onChange={handleChange} />
         <FormControlLabel
