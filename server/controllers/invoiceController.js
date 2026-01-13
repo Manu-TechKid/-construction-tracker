@@ -1,6 +1,6 @@
-const { Invoice } = require('../models/Invoice');
-const WorkOrder = require('../models/WorkOrder');
-const InvoiceCounter = require('../models/InvoiceCounter');
+const { Invoice } = require('../models/invoiceModel');
+const WorkOrder = require('../models/workOrderModel');
+const InvoiceCounter = require('../models/invoiceCounterModel');
 const mongoose = require('mongoose');
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
@@ -12,7 +12,32 @@ const notImplemented = (req, res, next) => {
 };
 
 exports.getUnbilledWorkOrders = notImplemented;
-exports.getFilteredWorkOrders = notImplemented;
+exports.getFilteredWorkOrders = catchAsync(async (req, res, next) => {
+  const { buildingId, startDate, endDate } = req.query;
+
+  if (!buildingId || !startDate || !endDate) {
+    return next(new AppError('Please provide a building, start date, and end date.', 400));
+  }
+
+  const workOrders = await WorkOrder.find({
+    building: new mongoose.Types.ObjectId(buildingId),
+    date: {
+      $gte: new Date(startDate),
+      $lte: new Date(endDate),
+    },
+    invoice: { $exists: false }, // Only get work orders not yet invoiced
+    status: 'completed',
+  }).populate('work_type');
+
+  res.status(200).json({
+    status: 'success',
+    results: workOrders.length,
+    data: {
+      workOrders,
+    },
+  });
+});
+
 exports.debugInvoiceNumber = notImplemented;
 exports.forceDeleteDraftInvoice = notImplemented;
 exports.getMyInvoices = notImplemented;
