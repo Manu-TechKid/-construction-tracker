@@ -118,7 +118,7 @@ const CreateInvoice = () => {
     }
   );
 
-  const workOrders = filteredWorkOrdersData?.data || [];
+  const workOrders = filteredWorkOrdersData?.data?.workOrders || [];
 
   // Debug logging - only run when major changes occur (less frequently)
   useEffect(() => {
