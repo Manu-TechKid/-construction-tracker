@@ -1,6 +1,6 @@
-const { Invoice } = require('../models/invoiceModel');
-const WorkOrder = require('../models/workOrderModel');
-const InvoiceCounter = require('../models/invoiceCounterModel');
+const { Invoice } = require('../models/Invoice');
+const WorkOrder = require('../models/WorkOrder');
+const InvoiceCounter = require('../models/InvoiceCounter');
 const mongoose = require('mongoose');
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
