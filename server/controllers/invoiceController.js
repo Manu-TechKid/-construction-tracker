@@ -22,6 +22,10 @@ exports.getFilteredWorkOrders = catchAsync(async (req, res, next) => {
     return next(new AppError('Please provide a building, start date, and end date.', 400));
   }
 
+  if (!mongoose.Types.ObjectId.isValid(buildingId)) {
+    return next(new AppError('Invalid building ID', 400));
+  }
+
   const dateRange = {
     $gte: new Date(startDate),
     $lte: new Date(endDate),
@@ -46,54 +50,67 @@ exports.getFilteredWorkOrders = catchAsync(async (req, res, next) => {
     ? { status }
     : { status: { $in: ['completed', 'in_progress', 'pending'] } };
 
-  const findQuery = {
-    building: buildingObjectId,
-    $and: [
-      dateClause,
-      invoiceClause,
-      // Avoid soft-deleted records just in case
-      { deleted: { $ne: true } },
-    ],
-    ...statusClause,
-  };
+  try {
+    const findQuery = {
+      building: buildingObjectId,
+      $and: [
+        dateClause,
+        invoiceClause,
+        // Avoid soft-deleted records just in case
+        { deleted: { $ne: true } },
+      ],
+      ...statusClause,
+    };
 
-  const [totalForBuilding, totalDateMatches, totalUnbilled, totalDateAndUnbilled] =
-    await Promise.all([
-      WorkOrder.countDocuments({ building: buildingObjectId }),
-      WorkOrder.countDocuments({ building: buildingObjectId, ...dateClause }),
-      WorkOrder.countDocuments({ building: buildingObjectId, ...invoiceClause }),
-      WorkOrder.countDocuments({ building: buildingObjectId, $and: [dateClause, invoiceClause] }),
-    ]);
+    const [totalForBuilding, totalDateMatches, totalUnbilled, totalDateAndUnbilled] =
+      await Promise.all([
+        WorkOrder.countDocuments({ building: buildingObjectId }),
+        WorkOrder.countDocuments({ building: buildingObjectId, ...dateClause }),
+        WorkOrder.countDocuments({ building: buildingObjectId, ...invoiceClause }),
+        WorkOrder.countDocuments({
+          building: buildingObjectId,
+          $and: [dateClause, invoiceClause],
+        }),
+      ]);
 
-  console.log('--- Preliminary Counts ---');
-  console.log(
-    JSON.stringify(
-      {
-        totalForBuilding,
-        totalDateMatches,
-        totalUnbilled,
-        totalDateAndUnbilled,
+    console.log('--- Preliminary Counts ---');
+    console.log(
+      JSON.stringify(
+        {
+          totalForBuilding,
+          totalDateMatches,
+          totalUnbilled,
+          totalDateAndUnbilled,
+        },
+        null,
+        2
+      )
+    );
+
+    console.log('--- Executing Database Query ---');
+    console.log('Find Query:', JSON.stringify(findQuery, null, 2));
+
+    const workOrders = await WorkOrder.find(findQuery)
+      .setOptions({ strictPopulate: false })
+      .populate([
+        { path: 'workType', select: 'name' },
+        { path: 'workSubType', select: 'name' },
+      ]);
+
+    console.log(`--- Query Result ---`);
+    console.log(`Found ${workOrders.length} work orders.`);
+
+    res.status(200).json({
+      status: 'success',
+      results: workOrders.length,
+      data: {
+        workOrders,
       },
-      null,
-      2
-    )
-  );
-
-  console.log('--- Executing Database Query ---');
-  console.log('Find Query:', JSON.stringify(findQuery, null, 2));
-
-  const workOrders = await WorkOrder.find(findQuery).populate('work_type');
-
-  console.log(`--- Query Result ---`);
-  console.log(`Found ${workOrders.length} work orders.`);
-
-  res.status(200).json({
-    status: 'success',
-    results: workOrders.length,
-    data: {
-      workOrders,
-    },
-  });
+    });
+  } catch (err) {
+    console.error('Error in getFilteredWorkOrders:', err);
+    return next(err);
+  }
 });
 
 exports.debugInvoiceNumber = notImplemented;
