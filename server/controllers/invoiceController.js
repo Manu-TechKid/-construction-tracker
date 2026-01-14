@@ -21,7 +21,7 @@ exports.getFilteredWorkOrders = catchAsync(async (req, res, next) => {
 
   const findQuery = {
     building: new mongoose.Types.ObjectId(buildingId),
-    date: {
+    serviceDate: {
       $gte: new Date(startDate),
       $lte: new Date(endDate),
     },
