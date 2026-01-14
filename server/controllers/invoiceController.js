@@ -27,24 +27,57 @@ exports.getFilteredWorkOrders = catchAsync(async (req, res, next) => {
     $lte: new Date(endDate),
   };
 
-  const findQuery = {
-    building: new mongoose.Types.ObjectId(buildingId),
-    // Accept work orders whose service date OR scheduled date fall in range.
+  const buildingObjectId = new mongoose.Types.ObjectId(buildingId);
+
+  const dateClause = {
     $or: [
       { serviceDate: dateRange },
       { scheduledDate: dateRange },
       // Legacy field support in case some docs still use "date"
       { date: dateRange },
     ],
-    invoice: { $exists: false }, // Only get work orders not yet invoiced
   };
 
-  if (status) {
-    findQuery.status = status;
-  } else {
-    // If no status is provided, find work orders that are billable
-    findQuery.status = { $in: ['completed', 'in_progress'] };
-  }
+  const invoiceClause = {
+    $or: [{ invoice: { $exists: false } }, { invoice: null }],
+  };
+
+  const statusClause = status
+    ? { status }
+    : { status: { $in: ['completed', 'in_progress', 'pending'] } };
+
+  const findQuery = {
+    building: buildingObjectId,
+    $and: [
+      dateClause,
+      invoiceClause,
+      // Avoid soft-deleted records just in case
+      { deleted: { $ne: true } },
+    ],
+    ...statusClause,
+  };
+
+  const [totalForBuilding, totalDateMatches, totalUnbilled, totalDateAndUnbilled] =
+    await Promise.all([
+      WorkOrder.countDocuments({ building: buildingObjectId }),
+      WorkOrder.countDocuments({ building: buildingObjectId, ...dateClause }),
+      WorkOrder.countDocuments({ building: buildingObjectId, ...invoiceClause }),
+      WorkOrder.countDocuments({ building: buildingObjectId, $and: [dateClause, invoiceClause] }),
+    ]);
+
+  console.log('--- Preliminary Counts ---');
+  console.log(
+    JSON.stringify(
+      {
+        totalForBuilding,
+        totalDateMatches,
+        totalUnbilled,
+        totalDateAndUnbilled,
+      },
+      null,
+      2
+    )
+  );
 
   console.log('--- Executing Database Query ---');
   console.log('Find Query:', JSON.stringify(findQuery, null, 2));
