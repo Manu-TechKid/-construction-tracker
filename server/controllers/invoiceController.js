@@ -179,13 +179,80 @@ exports.getInvoice = catchAsync(async (req, res, next) => {
 
 // Create invoice
 exports.createInvoice = catchAsync(async (req, res, next) => {
-    const { buildingId, workOrderIds } = req.body;
-    if (!buildingId || !workOrderIds || workOrderIds.length === 0) {
-        return next(new AppError('Building and work orders are required', 400));
+  const {
+    building,
+    invoiceDate,
+    dueDate,
+    workOrders: selectedWorkOrders,
+    notes,
+  } = req.body;
+
+  if (!building || !selectedWorkOrders || selectedWorkOrders.length === 0) {
+    return next(
+      new AppError('Building and at least one work order are required.', 400)
+    );
+  }
+
+  // --- 1. Generate Invoice Number ---
+  const counter = await InvoiceCounter.findOneAndUpdate(
+    { name: 'invoiceNumber' },
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  );
+  const invoiceNumber = `INV-${String(counter.seq).padStart(6, '0')}`;
+
+  // --- 2. Calculate Totals ---
+  const workOrderDetails = await WorkOrder.find({
+    _id: { $in: selectedWorkOrders.map(wo => wo.id) },
+  });
+
+  let subtotal = 0;
+  const workOrderItems = workOrderDetails.map(wo => {
+    const price = wo.price || wo.estimatedCost || 0;
+    subtotal += price;
+    return {
+      workOrder: wo._id,
+      description: wo.title,
+      totalPrice: price,
+    };
+  });
+
+  const taxRate = 0.0; // Assuming no tax for now
+  const tax = subtotal * taxRate;
+  const total = subtotal + tax;
+
+  // --- 3. Create Invoice ---
+  const newInvoice = await Invoice.create({
+    invoiceNumber,
+    building,
+    invoiceDate: invoiceDate ? new Date(invoiceDate) : new Date(),
+    dueDate: dueDate ? new Date(dueDate) : new Date(),
+    workOrders: workOrderItems,
+    subtotal,
+    tax,
+    total,
+    notes,
+    status: 'draft',
+    createdBy: req.user.id,
+  });
+
+  // --- 4. Update Work Orders ---
+  await WorkOrder.updateMany(
+    { _id: { $in: workOrderDetails.map(wo => wo._id) } },
+    {
+      $set: {
+        invoice: newInvoice._id,
+        billingStatus: 'invoiced',
+      },
     }
-    // This is a simplified version. A full implementation would calculate totals, etc.
-    const invoice = await Invoice.create(req.body);
-    res.status(201).json({ status: 'success', data: { invoice } });
+  );
+
+  res.status(201).json({
+    status: 'success',
+    data: {
+      invoice: newInvoice,
+    },
+  });
 });
 
 // Update invoice
