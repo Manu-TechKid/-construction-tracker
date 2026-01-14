@@ -187,6 +187,9 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
     notes,
   } = req.body;
 
+  console.log('--- CREATE INVOICE ---');
+  console.log('Received work orders:', JSON.stringify(selectedWorkOrders, null, 2));
+
   if (!building || !selectedWorkOrders || selectedWorkOrders.length === 0) {
     return next(
       new AppError('Building and at least one work order are required.', 400)
