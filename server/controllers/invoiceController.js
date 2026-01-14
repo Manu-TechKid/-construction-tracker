@@ -13,6 +13,9 @@ const notImplemented = (req, res, next) => {
 
 exports.getUnbilledWorkOrders = notImplemented;
 exports.getFilteredWorkOrders = catchAsync(async (req, res, next) => {
+  console.log('--- Received Filter Request ---');
+  console.log('Query Params:', req.query);
+
   const { buildingId, startDate, endDate, status } = req.query;
 
   if (!buildingId || !startDate || !endDate) {
@@ -35,7 +38,13 @@ exports.getFilteredWorkOrders = catchAsync(async (req, res, next) => {
     findQuery.status = { $in: ['completed', 'in_progress'] };
   }
 
+  console.log('--- Executing Database Query ---');
+  console.log('Find Query:', JSON.stringify(findQuery, null, 2));
+
   const workOrders = await WorkOrder.find(findQuery).populate('work_type');
+
+  console.log(`--- Query Result ---`);
+  console.log(`Found ${workOrders.length} work orders.`);
 
   res.status(200).json({
     status: 'success',
