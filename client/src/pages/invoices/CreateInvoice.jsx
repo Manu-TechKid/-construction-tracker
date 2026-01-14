@@ -181,13 +181,12 @@ const CreateInvoice = () => {
         }
 
         const invoiceData = {
-          buildingId: values.buildingId,
-          workOrderIds: values.workOrderIds,
+          building: values.buildingId, // Correct field name
+          workOrders: selectedWorkOrders, // Send the array of objects
           invoiceDate: values.invoiceDate,
           dueDate: values.dueDate,
           notes: values.notes,
-          invoiceNumber: values.invoiceNumber?.trim() || undefined,
-          totalAmount: calculateTotal()
+          invoiceNumber: values.invoiceNumber?.trim() || undefined
         };
 
         console.log('Invoice data being sent to API:', invoiceData);
