@@ -197,12 +197,13 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
   }
 
   // --- 1. Generate Invoice Number ---
+  const currentYear = new Date().getFullYear();
   const counter = await InvoiceCounter.findOneAndUpdate(
-    { _id: 'invoiceNumber' },
-    { $inc: { seq: 1 } },
+    { year: currentYear },
+    { $inc: { count: 1 } },
     { new: true, upsert: true }
   );
-  const invoiceNumber = `INV-${String(counter.seq).padStart(6, '0')}`;
+  const invoiceNumber = `${currentYear}-${String(counter.count).padStart(4, '0')}`;
 
   // --- 2. Calculate Totals ---
   const workOrderDetails = await WorkOrder.find({
