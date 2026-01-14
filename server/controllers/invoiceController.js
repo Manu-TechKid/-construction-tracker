@@ -198,7 +198,7 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
 
   // --- 1. Generate Invoice Number ---
   const counter = await InvoiceCounter.findOneAndUpdate(
-    { name: 'invoiceNumber' },
+    { _id: 'invoiceNumber' },
     { $inc: { seq: 1 } },
     { new: true, upsert: true }
   );
