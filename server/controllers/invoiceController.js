@@ -22,12 +22,20 @@ exports.getFilteredWorkOrders = catchAsync(async (req, res, next) => {
     return next(new AppError('Please provide a building, start date, and end date.', 400));
   }
 
+  const dateRange = {
+    $gte: new Date(startDate),
+    $lte: new Date(endDate),
+  };
+
   const findQuery = {
     building: new mongoose.Types.ObjectId(buildingId),
-    serviceDate: {
-      $gte: new Date(startDate),
-      $lte: new Date(endDate),
-    },
+    // Accept work orders whose service date OR scheduled date fall in range.
+    $or: [
+      { serviceDate: dateRange },
+      { scheduledDate: dateRange },
+      // Legacy field support in case some docs still use "date"
+      { date: dateRange },
+    ],
     invoice: { $exists: false }, // Only get work orders not yet invoiced
   };
 
