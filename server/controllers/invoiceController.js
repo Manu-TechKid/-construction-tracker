@@ -203,7 +203,7 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
 
   // --- 2. Calculate Totals ---
   const workOrderDetails = await WorkOrder.find({
-    _id: { $in: selectedWorkOrders.map(wo => wo.id) },
+    _id: { $in: selectedWorkOrders.map(wo => wo._id) },
   });
 
   let subtotal = 0;
