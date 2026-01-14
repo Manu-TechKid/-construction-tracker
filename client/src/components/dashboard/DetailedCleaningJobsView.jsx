@@ -93,7 +93,6 @@ const DetailedCleaningJobsView = ({ filters }) => {
             <TableCell>Building</TableCell>
             <TableCell>Unit/Apt</TableCell>
             <TableCell>Subcategory</TableCell>
-            <TableCell>Description</TableCell>
             <TableCell>Worker</TableCell>
             <TableCell>Status</TableCell>
             <TableCell>Payment Status</TableCell>
@@ -115,7 +114,6 @@ const DetailedCleaningJobsView = ({ filters }) => {
               <TableCell>{job.building}</TableCell>
               <TableCell>{job.unit}</TableCell>
               <TableCell>{job.subcategory}</TableCell>
-              <TableCell>{job.description}</TableCell>
               <TableCell>{job.worker}</TableCell>
               <TableCell>
                 <FormControl size="small" fullWidth>

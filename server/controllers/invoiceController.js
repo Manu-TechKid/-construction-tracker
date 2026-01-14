@@ -13,21 +13,29 @@ const notImplemented = (req, res, next) => {
 
 exports.getUnbilledWorkOrders = notImplemented;
 exports.getFilteredWorkOrders = catchAsync(async (req, res, next) => {
-  const { buildingId, startDate, endDate } = req.query;
+  const { buildingId, startDate, endDate, status } = req.query;
 
   if (!buildingId || !startDate || !endDate) {
     return next(new AppError('Please provide a building, start date, and end date.', 400));
   }
 
-  const workOrders = await WorkOrder.find({
+  const findQuery = {
     building: new mongoose.Types.ObjectId(buildingId),
     date: {
       $gte: new Date(startDate),
       $lte: new Date(endDate),
     },
     invoice: { $exists: false }, // Only get work orders not yet invoiced
-    status: 'completed',
-  }).populate('work_type');
+  };
+
+  if (status) {
+    findQuery.status = status;
+  } else {
+    // If no status is provided, find work orders that are billable
+    findQuery.status = { $in: ['completed', 'in_progress'] };
+  }
+
+  const workOrders = await WorkOrder.find(findQuery).populate('work_type');
 
   res.status(200).json({
     status: 'success',
@@ -60,13 +68,34 @@ exports.getClientSummaryReport = notImplemented;
 
 // Get all invoices
 exports.getAllInvoices = catchAsync(async (req, res, next) => {
+  const { search, status, buildingId, invoiceDateStart, invoiceDateEnd } = req.query;
+
   const filter = {};
-  // A more robust implementation would handle query params for filtering
+
+  if (search) {
+    filter.invoiceNumber = { $regex: search, $options: 'i' };
+  } else {
+    if (status) {
+      filter.status = status;
+    }
+    if (buildingId) {
+      filter.building = buildingId;
+    }
+    if (invoiceDateStart && invoiceDateEnd) {
+      filter.invoiceDate = {
+        $gte: new Date(invoiceDateStart),
+        $lte: new Date(invoiceDateEnd),
+      };
+    }
+  }
+
   const invoices = await Invoice.find(filter)
     .populate('building', 'name address')
-    .populate('workOrders.workOrder', 'title description price')
+    .populate('workOrders.workOrder', 'title description price workType')
     .populate('createdBy', 'name')
+    .populate('updatedBy', 'name')
     .sort('-createdAt');
+
   res.status(200).json({ status: 'success', results: invoices.length, data: { invoices } });
 });
 
