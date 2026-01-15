@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useCreateCleaningJobMutation } from '../../features/cleaning/cleaningJobsApiSlice';
 import { Button, TextField, Grid, Paper, Typography } from '@mui/material';
+import BuildingSelector from '../common/BuildingSelector';
 
 const CreateCleaningJobForm = () => {
   const [createCleaningJob, { isLoading }] = useCreateCleaningJobMutation();
   const [formData, setFormData] = useState({
     serviceDate: '',
-    building: '',
+    buildingId: '',
     unit: '',
     subcategory: '',
     worker: '',
@@ -32,7 +33,12 @@ const CreateCleaningJobForm = () => {
       <form onSubmit={handleSubmit}>
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6} md={3}><TextField name="serviceDate" label="Service Date" type="date" fullWidth InputLabelProps={{ shrink: true }} onChange={handleChange} /></Grid>
-          <Grid item xs={12} sm={6} md={3}><TextField name="building" label="Building" fullWidth onChange={handleChange} /></Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <BuildingSelector
+              value={formData.buildingId}
+              onChange={(e) => setFormData({ ...formData, buildingId: e.target.value })}
+            />
+          </Grid>
           <Grid item xs={12} sm={6} md={3}><TextField name="unit" label="Unit/Apt" fullWidth onChange={handleChange} /></Grid>
           <Grid item xs={12} sm={6} md={3}><TextField name="subcategory" label="Subcategory" fullWidth onChange={handleChange} /></Grid>
           <Grid item xs={12} sm={6} md={3}><TextField name="worker" label="Worker" fullWidth onChange={handleChange} /></Grid>

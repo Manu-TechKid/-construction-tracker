@@ -4,11 +4,22 @@ export const cleaningJobsApiSlice = apiSlice.injectEndpoints({
   endpoints: builder => ({
     getCleaningJobs: builder.query({
       query: (params = {}) => {
+        const normalizeQueryValue = (value) => {
+          if (value === undefined || value === null) return null;
+          if (value === '') return null;
+          if (value === 'null' || value === 'undefined') return null;
+
+          if (value instanceof Date) return value.toISOString();
+          if (typeof value === 'object' && typeof value.toISOString === 'function') return value.toISOString();
+          if (typeof value === 'object' && value?.$d instanceof Date) return value.$d.toISOString();
+
+          return String(value);
+        };
+
         const searchParams = new URLSearchParams();
         Object.keys(params).forEach(key => {
-          if (params[key] !== undefined && params[key] !== '') {
-            searchParams.append(key, params[key]);
-          }
+          const normalizedValue = normalizeQueryValue(params[key]);
+          if (normalizedValue !== null) searchParams.append(key, normalizedValue);
         });
         return `/cleaning-jobs?${searchParams.toString()}`;
       },

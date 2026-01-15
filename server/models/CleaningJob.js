@@ -9,7 +9,8 @@ const cleaningJobSchema = new mongoose.Schema({
     type: Date,
   },
   building: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Building',
     required: true,
   },
   unit: {

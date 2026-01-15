@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useGetCleaningJobsQuery, useUpdateCleaningJobMutation, useDeleteCleaningJobMutation } from '../../features/cleaning/cleaningJobsApiSlice';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, CircularProgress, Alert, Button, TextField, Select, MenuItem, FormControl } from '@mui/material';
 import { safeFormatDate } from '../../utils/dateUtils';
+import BuildingSelector from '../common/BuildingSelector';
 
 const CleaningJobsList = ({ filters }) => {
   const { data: cleaningJobsData, isLoading, error } = useGetCleaningJobsQuery(filters);
@@ -17,8 +18,16 @@ const CleaningJobsList = ({ filters }) => {
   const jobs = cleaningJobsData?.data?.cleaningJobs || [];
 
   const handleEdit = (job) => {
+    const buildingId = job?.building?._id
+      ? String(job.building._id)
+      : (typeof job.building === 'string' ? job.building : '');
+
     setEditMode(job._id);
-    setEditData(job);
+    setEditData({
+      ...job,
+      buildingId,
+      serviceDate: job?.serviceDate ? String(job.serviceDate).slice(0, 10) : '',
+    });
   };
 
   const handleCancel = () => {
@@ -27,7 +36,19 @@ const CleaningJobsList = ({ filters }) => {
   };
 
   const handleSave = async (id) => {
-    await updateCleaningJob({ id, ...editData });
+    const payload = {
+      serviceDate: editData.serviceDate,
+      buildingId: editData.buildingId,
+      unit: editData.unit,
+      subcategory: editData.subcategory,
+      worker: editData.worker,
+      status: editData.status,
+      cost: editData.cost,
+      price: editData.price,
+      observations: editData.observations,
+    };
+
+    await updateCleaningJob({ id, ...payload });
     setEditMode(null);
   };
 
@@ -61,7 +82,12 @@ const CleaningJobsList = ({ filters }) => {
                 <>
                   <TableCell>{safeFormatDate(job.date)}</TableCell>
                   <TableCell><TextField name="serviceDate" value={editData.serviceDate} onChange={handleChange} type="date" InputLabelProps={{ shrink: true }} /></TableCell>
-                  <TableCell><TextField name="building" value={editData.building} onChange={handleChange} /></TableCell>
+                  <TableCell>
+                    <BuildingSelector
+                      value={editData.buildingId || ''}
+                      onChange={(e) => setEditData({ ...editData, buildingId: e.target.value })}
+                    />
+                  </TableCell>
                   <TableCell><TextField name="unit" value={editData.unit} onChange={handleChange} /></TableCell>
                   <TableCell><TextField name="subcategory" value={editData.subcategory} onChange={handleChange} /></TableCell>
                   <TableCell><TextField name="worker" value={editData.worker} onChange={handleChange} /></TableCell>
@@ -87,7 +113,7 @@ const CleaningJobsList = ({ filters }) => {
                 <>
                   <TableCell>{safeFormatDate(job.date)}</TableCell>
                   <TableCell>{safeFormatDate(job.serviceDate)}</TableCell>
-                  <TableCell>{job.building}</TableCell>
+                  <TableCell>{job?.building?.name || ''}</TableCell>
                   <TableCell>{job.unit}</TableCell>
                   <TableCell>{job.subcategory}</TableCell>
                   <TableCell>{job.worker}</TableCell>
