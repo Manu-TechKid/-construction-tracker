@@ -185,10 +185,12 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
     dueDate,
     workOrders: selectedWorkOrders,
     notes,
+    invoiceNumber: manualInvoiceNumber, // Capture manual invoice number
   } = req.body;
 
   console.log('--- CREATE INVOICE ---');
   console.log('Received work orders:', JSON.stringify(selectedWorkOrders, null, 2));
+  console.log('Manual Invoice Number:', manualInvoiceNumber);
 
   if (!building || !selectedWorkOrders || selectedWorkOrders.length === 0) {
     return next(
@@ -196,14 +198,25 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
     );
   }
 
-  // --- 1. Generate Invoice Number ---
-  const currentYear = new Date().getFullYear();
-  const counter = await InvoiceCounter.findOneAndUpdate(
-    { year: currentYear },
-    { $inc: { count: 1 } },
-    { new: true, upsert: true }
-  );
-  const invoiceNumber = `${currentYear}-${String(counter.count).padStart(4, '0')}`;
+  let invoiceNumber;
+
+  // --- 1. Use manual invoice number or generate a new one ---
+  if (manualInvoiceNumber && manualInvoiceNumber.trim() !== '') {
+    invoiceNumber = manualInvoiceNumber.trim();
+    // Check if this invoice number already exists to prevent duplicates
+    const existingInvoice = await Invoice.findOne({ invoiceNumber });
+    if (existingInvoice) {
+      return next(new AppError('An invoice with this number already exists.', 409));
+    }
+  } else {
+    const currentYear = new Date().getFullYear();
+    const counter = await InvoiceCounter.findOneAndUpdate(
+      { year: currentYear },
+      { $inc: { count: 1 } },
+      { new: true, upsert: true }
+    );
+    invoiceNumber = `${currentYear}-${String(counter.count).padStart(4, '0')}`;
+  }
 
   // --- 2. Calculate Totals ---
   const workOrderDetails = await WorkOrder.find({
