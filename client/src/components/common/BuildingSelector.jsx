@@ -16,7 +16,9 @@ const BuildingSelector = ({
   size = 'medium', 
   showLabel = true,
   fullWidth = true,
-  sx = {} 
+  sx = {},
+  value,
+  onChange,
 }) => {
   const {
     selectedBuilding,
@@ -26,8 +28,31 @@ const BuildingSelector = ({
     clearBuildingSelection,
   } = useBuildingContext();
 
+  const isControlled = value !== undefined || typeof onChange === 'function';
+  const selectedValue = isControlled
+    ? (value || 'all')
+    : (selectedBuilding?._id || 'all');
+  const selectedBuildingForDisplay = isControlled
+    ? buildings.find(b => b._id === selectedValue)
+    : selectedBuilding;
+
   const handleChange = (event) => {
     const buildingId = event.target.value;
+
+    if (typeof onChange === 'function') {
+      if (buildingId === 'all') {
+        onChange({
+          ...event,
+          target: {
+            ...event.target,
+            value: '',
+          },
+        });
+      } else {
+        onChange(event);
+      }
+    }
+
     if (buildingId === 'all') {
       clearBuildingSelection();
     } else {
@@ -38,6 +63,17 @@ const BuildingSelector = ({
 
   const handleClearSelection = (event) => {
     event.stopPropagation();
+
+    if (typeof onChange === 'function') {
+      onChange({
+        ...event,
+        target: {
+          ...event.target,
+          value: '',
+        },
+      });
+    }
+
     clearBuildingSelection();
   };
 
@@ -51,7 +87,7 @@ const BuildingSelector = ({
         )}
         <Select
           labelId="building-selector-label"
-          value={selectedBuilding?._id || 'all'}
+          value={selectedValue}
           onChange={handleChange}
           label={showLabel ? "Select Building" : undefined}
           disabled={isLoading}
@@ -79,11 +115,11 @@ const BuildingSelector = ({
         </Select>
       </FormControl>
 
-      {selectedBuilding && (
-        <Tooltip title={`Clear selection: ${selectedBuilding.name}`}>
+      {selectedBuildingForDisplay && (
+        <Tooltip title={`Clear selection: ${selectedBuildingForDisplay.name}`}>
           <Chip
             icon={<BuildingIcon />}
-            label={selectedBuilding.name}
+            label={selectedBuildingForDisplay.name}
             onDelete={handleClearSelection}
             deleteIcon={<ClearIcon />}
             variant="outlined"

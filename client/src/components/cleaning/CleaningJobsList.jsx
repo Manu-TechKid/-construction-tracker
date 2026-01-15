@@ -11,6 +11,8 @@ const CleaningJobsList = ({ filters }) => {
 
   const [editMode, setEditMode] = useState(null);
   const [editData, setEditData] = useState({});
+  const [actionError, setActionError] = useState('');
+  const [actionSuccess, setActionSuccess] = useState('');
 
   if (isLoading) return <CircularProgress />;
   if (error) return <Alert severity="error">Error loading cleaning jobs.</Alert>;
@@ -33,9 +35,14 @@ const CleaningJobsList = ({ filters }) => {
   const handleCancel = () => {
     setEditMode(null);
     setEditData({});
+    setActionError('');
+    setActionSuccess('');
   };
 
   const handleSave = async (id) => {
+    setActionError('');
+    setActionSuccess('');
+
     const payload = {
       serviceDate: editData.serviceDate,
       buildingId: editData.buildingId,
@@ -48,8 +55,14 @@ const CleaningJobsList = ({ filters }) => {
       observations: editData.observations,
     };
 
-    await updateCleaningJob({ id, ...payload });
-    setEditMode(null);
+    try {
+      await updateCleaningJob({ id, ...payload }).unwrap();
+      setActionSuccess('Cleaning job updated.');
+      setEditMode(null);
+    } catch (err) {
+      const msg = err?.data?.message || err?.error || 'Failed to update cleaning job.';
+      setActionError(msg);
+    }
   };
 
   const handleChange = (e) => {
@@ -59,6 +72,9 @@ const CleaningJobsList = ({ filters }) => {
   return (
     <TableContainer component={Paper}>
       <Typography variant="h6" sx={{ p: 2 }}>Cleaning Jobs</Typography>
+
+      {actionError ? <Alert severity="error" sx={{ mx: 2, mb: 2 }}>{actionError}</Alert> : null}
+      {actionSuccess ? <Alert severity="success" sx={{ mx: 2, mb: 2 }}>{actionSuccess}</Alert> : null}
       <Table>
         <TableHead>
           <TableRow>
@@ -123,7 +139,22 @@ const CleaningJobsList = ({ filters }) => {
                   <TableCell>{job.observations}</TableCell>
                   <TableCell>
                     <Button onClick={() => handleEdit(job)}>Edit</Button>
-                    <Button onClick={() => deleteCleaningJob(job._id)}>Delete</Button>
+                    <Button
+                      onClick={async () => {
+                        setActionError('');
+                        setActionSuccess('');
+                        if (!window.confirm('Delete this cleaning job?')) return;
+                        try {
+                          await deleteCleaningJob(job._id).unwrap();
+                          setActionSuccess('Cleaning job deleted.');
+                        } catch (err) {
+                          const msg = err?.data?.message || err?.error || 'Failed to delete cleaning job.';
+                          setActionError(msg);
+                        }
+                      }}
+                    >
+                      Delete
+                    </Button>
                   </TableCell>
                 </>
               )}

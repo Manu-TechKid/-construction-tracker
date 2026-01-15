@@ -7,6 +7,7 @@ export const cleaningJobsApiSlice = apiSlice.injectEndpoints({
         const normalizeQueryValue = (value) => {
           if (value === undefined || value === null) return null;
           if (value === '') return null;
+          if (value === 'all') return null;
           if (value === 'null' || value === 'undefined') return null;
 
           if (value instanceof Date) return value.toISOString();

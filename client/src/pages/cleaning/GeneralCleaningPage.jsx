@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, Typography, Paper, Grid, TextField, Button } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import BuildingSelector from '../../components/common/BuildingSelector';
 import CleaningJobsList from '../../components/cleaning/CleaningJobsList';
 import CreateCleaningJobForm from '../../components/cleaning/CreateCleaningJobForm';
+import { useBuildingContext } from '../../contexts/BuildingContext';
 
 const GeneralCleaningPage = () => {
+  const { selectedBuilding } = useBuildingContext();
   const [filters, setFilters] = useState({
     buildingId: '',
     startDate: null,
@@ -13,6 +15,12 @@ const GeneralCleaningPage = () => {
   });
 
   const [weekAnchorDate, setWeekAnchorDate] = useState(() => new Date());
+
+  useEffect(() => {
+    if (!filters.buildingId && selectedBuilding?._id) {
+      setFilters(prev => ({ ...prev, buildingId: selectedBuilding._id }));
+    }
+  }, [selectedBuilding, filters.buildingId]);
 
   const toDate = (value) => {
     if (!value) return null;

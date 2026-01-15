@@ -10,7 +10,7 @@ exports.getAllCleaningJobs = catchAsync(async (req, res, next) => {
   const filter = {};
 
   const normalizedBuilding = (building || buildingId);
-  if (normalizedBuilding && normalizedBuilding !== 'null' && normalizedBuilding !== 'undefined') {
+  if (normalizedBuilding && normalizedBuilding !== 'all' && normalizedBuilding !== 'null' && normalizedBuilding !== 'undefined') {
     if (!mongoose.Types.ObjectId.isValid(normalizedBuilding)) {
       return next(new AppError('Invalid building id.', 400));
     }
@@ -77,6 +77,8 @@ exports.createCleaningJob = catchAsync(async (req, res, next) => {
   const payload = { ...req.body };
   if (payload.buildingId && !payload.building) payload.building = payload.buildingId;
 
+  if (payload.building === 'all') payload.building = undefined;
+
   if (!payload.building) {
     return next(new AppError('Building is required.', 400));
   }
@@ -98,6 +100,8 @@ exports.createCleaningJob = catchAsync(async (req, res, next) => {
 exports.updateCleaningJob = catchAsync(async (req, res, next) => {
   const payload = { ...req.body };
   if (payload.buildingId && !payload.building) payload.building = payload.buildingId;
+
+  if (payload.building === 'all') payload.building = undefined;
 
   if (payload.building && !mongoose.Types.ObjectId.isValid(payload.building)) {
     return next(new AppError('Invalid building id.', 400));
