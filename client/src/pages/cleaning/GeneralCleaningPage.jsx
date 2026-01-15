@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Box, Typography, Paper, Grid, TextField, Button } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import BuildingSelector from '../../components/common/BuildingSelector';
-import DetailedCleaningJobsView from '../../components/dashboard/DetailedCleaningJobsView';
+import CleaningJobsList from '../../components/cleaning/CleaningJobsList';
+import CreateCleaningJobForm from '../../components/cleaning/CreateCleaningJobForm';
 
 const GeneralCleaningPage = () => {
   const [filters, setFilters] = useState({
@@ -58,7 +59,8 @@ const GeneralCleaningPage = () => {
         </Grid>
       </Paper>
       <Paper sx={{ p: 2 }}>
-        <DetailedCleaningJobsView filters={filters} />
+        <CreateCleaningJobForm />
+        <CleaningJobsList filters={filters} />
       </Paper>
     </Box>
   );
