@@ -39,6 +39,12 @@ const GeneralCleaningPage = () => {
     return Number.isNaN(d.getTime()) ? null : d;
   };
 
+  const fieldSx = {
+    '& .MuiInputBase-input': { fontSize: 16, py: 1.25 },
+    '& .MuiInputLabel-root': { fontSize: 14 },
+    '& .MuiSelect-select': { fontSize: 16, py: 1.25 },
+  };
+
   const startOfWeek = (date) => {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
@@ -103,14 +109,17 @@ const GeneralCleaningPage = () => {
             <BuildingSelector 
               value={filters.buildingId}
               onChange={(e) => handleFilterChange('buildingId', e.target.value)}
+              size="medium"
+              sx={{ minWidth: 260 }}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={4}>
-            <FormControl fullWidth>
+            <FormControl fullWidth size="medium">
               <Select
                 value={filters.paymentStatus}
                 onChange={(e) => handleFilterChange('paymentStatus', e.target.value)}
                 displayEmpty
+                sx={fieldSx}
               >
                 <MenuItem value="">All Payments</MenuItem>
                 <MenuItem value="pending">Pending Payment</MenuItem>
@@ -119,11 +128,12 @@ const GeneralCleaningPage = () => {
             </FormControl>
           </Grid>
           <Grid item xs={12} sm={6} md={4}>
-            <FormControl fullWidth>
+            <FormControl fullWidth size="medium">
               <Select
                 value={filters.status}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
                 displayEmpty
+                sx={fieldSx}
               >
                 <MenuItem value="">All Status</MenuItem>
                 <MenuItem value="pending">Pending</MenuItem>
@@ -145,7 +155,7 @@ const GeneralCleaningPage = () => {
                 handleFilterChange('subcategory', newInputValue || '');
               }}
               renderInput={(params) => (
-                <TextField {...params} label="Subcategory" fullWidth />
+                <TextField {...params} label="Subcategory" fullWidth size="medium" sx={fieldSx} />
               )}
             />
           </Grid>
@@ -155,6 +165,8 @@ const GeneralCleaningPage = () => {
               value={filters.observations}
               onChange={(e) => handleFilterChange('observations', e.target.value)}
               fullWidth
+              size="medium"
+              sx={fieldSx}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={4}>
@@ -193,7 +205,7 @@ const GeneralCleaningPage = () => {
               label="Start Date"
               value={filters.startDate}
               onChange={(newValue) => handleFilterChange('startDate', newValue)}
-              renderInput={(params) => <TextField {...params} fullWidth />}
+              renderInput={(params) => <TextField {...params} fullWidth size="medium" sx={fieldSx} />}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={4}>
@@ -201,7 +213,7 @@ const GeneralCleaningPage = () => {
               label="End Date"
               value={filters.endDate}
               onChange={(newValue) => handleFilterChange('endDate', newValue)}
-              renderInput={(params) => <TextField {...params} fullWidth />}
+              renderInput={(params) => <TextField {...params} fullWidth size="medium" sx={fieldSx} />}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={4}>

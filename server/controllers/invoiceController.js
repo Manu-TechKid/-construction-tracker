@@ -554,30 +554,31 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
         <meta charset="UTF-8">
         <style>
             * { box-sizing: border-box; }
+            @page { size: Letter; margin: 0.6in; }
             html, body { width: 100%; }
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #111; font-size: 10px; line-height: 1.4; }
+            body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #111; font-size: 10px; line-height: 1.4; }
             table { width: 100%; border-collapse: collapse; }
 
             /* Prevent cut-off by never using a fixed width larger than the page */
-            .invoice-box { width: 100%; margin: 0 auto; }
+            .invoice-box { width: 100%; max-width: 7.2in; margin: 0 auto; }
 
-            .header { display: table; width: 100%; margin-bottom: 14px; }
+            .header { display: table; width: 100%; table-layout: fixed; margin-bottom: 14px; }
             .header-left { display: table-cell; vertical-align: top; }
-            .header-right { display: table-cell; vertical-align: top; text-align: right; }
+            .header-right { display: table-cell; width: 90px; vertical-align: top; text-align: right; }
             .company-name { font-weight: 700; font-size: 12px; }
             .muted { color: #5f6b7a; }
             .logo { width: 72px; height: 72px; object-fit: contain; }
 
-            .title-row { display: table; width: 100%; margin: 6px 0 10px; }
-            .title { display: table-cell; font-size: 20px; font-weight: 800; color: #0b4aa2; letter-spacing: 0.5px; }
-            .invoice-no { display: table-cell; text-align: right; font-size: 12px; font-weight: 700; }
+            .title-row { display: table; width: 100%; table-layout: fixed; margin: 6px 0 10px; }
+            .title { display: table-cell; width: 70%; font-size: 20px; font-weight: 800; color: #0b4aa2; letter-spacing: 0.5px; }
+            .invoice-no { display: table-cell; width: 30%; text-align: right; font-size: 12px; font-weight: 700; white-space: nowrap; }
 
             .meta { display: table; width: 100%; margin-bottom: 10px; }
             .billto { display: table-cell; width: 55%; vertical-align: top; }
             .billto h2 { font-size: 10px; margin: 0 0 4px; color: #0b4aa2; letter-spacing: 0.4px; }
             .billto p { margin: 0; }
             .payboxes { display: table-cell; width: 45%; vertical-align: top; text-align: right; }
-            .box { display: inline-block; min-width: 110px; padding: 8px 10px; margin-left: 6px; border-radius: 3px; text-align: center; }
+            .box { display: block; width: 140px; padding: 8px 10px; margin: 0 0 6px auto; border-radius: 3px; text-align: center; }
             .box.light { background: #e8f2ff; color: #1b2b3a; }
             .box.dark { background: #0b4aa2; color: #fff; }
             .box .label { font-size: 8px; opacity: 0.85; }
@@ -687,7 +688,7 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
 
   const options = {
     format: 'Letter',
-    border: { top: '0.5in', right: '0.5in', bottom: '0.5in', left: '0.5in' }
+    border: { top: '0.6in', right: '0.6in', bottom: '0.6in', left: '0.6in' }
   };
 
   pdf.create(htmlContent, options).toBuffer((err, buffer) => {

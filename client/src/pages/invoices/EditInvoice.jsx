@@ -97,7 +97,11 @@ const EditInvoice = () => {
   
   const buildingId = invoice?.building?._id || invoice?.building;
   
-  const { data: unbilledData } = useGetUnbilledWorkOrdersQuery(buildingId, {
+  const {
+    data: unbilledData,
+    isLoading: isLoadingUnbilled,
+    error: unbilledError,
+  } = useGetUnbilledWorkOrdersQuery(buildingId, {
     skip: !buildingId || !addDialogOpen
   });
 
@@ -120,8 +124,7 @@ const EditInvoice = () => {
 
         await updateInvoice({ id, ...updateData }).unwrap();
         toast.success('Invoice updated successfully!');
-        // Navigate to invoices list to avoid detail page initialization errors
-        setTimeout(() => navigate('/invoices'), 500);
+        refetch();
       } catch (error) {
         console.error('Failed to update invoice:', error);
         const errorMessage = error?.data?.message || error?.message || 'Failed to update invoice';
@@ -317,23 +320,27 @@ const EditInvoice = () => {
         </Card>
 
         {/* Work Orders Details */}
-        {invoice.workOrders && invoice.workOrders.length > 0 && (
-          <Card sx={{ mb: 3 }}>
-            <CardHeader
-              title="Work Orders in This Invoice"
-              avatar={<WorkOrderIcon />}
-              action={
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={() => setAddDialogOpen(true)}
-                  disabled={isAdding || isRemoving}
-                >
-                  Add Work Orders
-                </Button>
-              }
-            />
-            <CardContent>
+        <Card sx={{ mb: 3 }}>
+          <CardHeader
+            title="Work Orders in This Invoice"
+            avatar={<WorkOrderIcon />}
+            action={
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setAddDialogOpen(true)}
+                disabled={isAdding || isRemoving}
+              >
+                Add Work Orders
+              </Button>
+            }
+          />
+          <CardContent>
+            {(!invoice.workOrders || invoice.workOrders.length === 0) ? (
+              <Alert severity="info">
+                This invoice currently has no work orders. Click "Add Work Orders" to select unbilled work orders for this building.
+              </Alert>
+            ) : (
               <TableContainer component={Paper}>
                 <Table>
                   <TableHead>
@@ -412,9 +419,9 @@ const EditInvoice = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
 
         {/* Cost Summary - Show only actual work order prices */}
         <Card sx={{ mb: 3 }}>
@@ -563,7 +570,15 @@ const EditInvoice = () => {
               Select work orders from {invoice.building?.name || 'this building'} to add to the invoice.
             </Typography>
             
-            {availableWorkOrders.length === 0 ? (
+            {isLoadingUnbilled ? (
+              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+                <CircularProgress size={28} />
+              </Box>
+            ) : unbilledError ? (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                Failed to load unbilled work orders.
+              </Alert>
+            ) : availableWorkOrders.length === 0 ? (
               <Alert severity="info" sx={{ mt: 2 }}>
                 No unbilled work orders available for this building.
               </Alert>

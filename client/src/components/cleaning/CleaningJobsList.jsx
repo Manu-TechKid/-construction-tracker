@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useGetCleaningJobsQuery, useUpdateCleaningJobMutation, useDeleteCleaningJobMutation, useGetCleaningJobSubcategoriesQuery } from '../../features/cleaning/cleaningJobsApiSlice';
-import { Autocomplete, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, CircularProgress, Alert, Button, TextField, Select, MenuItem, FormControl } from '@mui/material';
+import { Autocomplete, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, CircularProgress, Alert, TextField, Select, MenuItem, FormControl, IconButton, Box } from '@mui/material';
+import { Edit as EditIcon, Delete as DeleteIcon, Save as SaveIcon, Close as CloseIcon } from '@mui/icons-material';
 import { safeFormatDate } from '../../utils/dateUtils';
 import BuildingSelector from '../common/BuildingSelector';
 
@@ -106,14 +107,20 @@ const CleaningJobsList = ({ filters }) => {
               {editMode === job._id ? (
                 <>
                   <TableCell>{safeFormatDate(job.date)}</TableCell>
-                  <TableCell><TextField fullWidth size="small" name="serviceDate" value={editData.serviceDate} onChange={handleChange} type="date" InputLabelProps={{ shrink: true }} /></TableCell>
-                  <TableCell>
-                    <BuildingSelector
-                      value={editData.buildingId || ''}
-                      onChange={(e) => setEditData({ ...editData, buildingId: e.target.value })}
-                    />
+                  <TableCell sx={{ minWidth: 150 }}>
+                    <TextField fullWidth size="medium" name="serviceDate" value={editData.serviceDate} onChange={handleChange} type="date" InputLabelProps={{ shrink: true }} />
                   </TableCell>
-                  <TableCell><TextField fullWidth size="small" name="unit" value={editData.unit} onChange={handleChange} /></TableCell>
+                  <TableCell>
+                    <Box sx={{ minWidth: 240 }}>
+                      <BuildingSelector
+                        value={editData.buildingId || ''}
+                        onChange={(e) => setEditData({ ...editData, buildingId: e.target.value })}
+                      />
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ minWidth: 110 }}>
+                    <TextField fullWidth size="medium" name="unit" value={editData.unit} onChange={handleChange} />
+                  </TableCell>
                   <TableCell>
                     <Autocomplete
                       freeSolo
@@ -126,13 +133,15 @@ const CleaningJobsList = ({ filters }) => {
                         setEditData(prev => ({ ...prev, subcategory: newInputValue || '' }));
                       }}
                       renderInput={(params) => (
-                        <TextField {...params} fullWidth size="small" placeholder="Subcategory" />
+                        <TextField {...params} fullWidth size="medium" placeholder="Subcategory" />
                       )}
                     />
                   </TableCell>
-                  <TableCell><TextField fullWidth size="small" name="worker" value={editData.worker} onChange={handleChange} /></TableCell>
+                  <TableCell sx={{ minWidth: 130 }}>
+                    <TextField fullWidth size="medium" name="worker" value={editData.worker} onChange={handleChange} />
+                  </TableCell>
                   <TableCell>
-                    <FormControl size="small" fullWidth>
+                    <FormControl size="medium" fullWidth sx={{ minWidth: 140 }}>
                       <Select name="status" value={editData.status} onChange={handleChange}>
                         <MenuItem value="pending">Pending</MenuItem>
                         <MenuItem value="in_progress">In Progress</MenuItem>
@@ -143,19 +152,45 @@ const CleaningJobsList = ({ filters }) => {
                   </TableCell>
                   <TableCell>{editData.status === 'completed' ? 'Yes' : ''}</TableCell>
                   <TableCell>
-                    <FormControl size="small" fullWidth>
+                    <FormControl size="medium" fullWidth sx={{ minWidth: 120 }}>
                       <Select name="paymentStatus" value={editData.paymentStatus || 'pending'} onChange={handleChange}>
                         <MenuItem value="pending">Pending</MenuItem>
                         <MenuItem value="paid">Paid</MenuItem>
                       </Select>
                     </FormControl>
                   </TableCell>
-                  <TableCell><TextField fullWidth size="small" name="cost" value={editData.cost} onChange={handleChange} type="number" /></TableCell>
-                  <TableCell><TextField fullWidth size="small" name="price" value={editData.price} onChange={handleChange} type="number" /></TableCell>
-                  <TableCell><TextField fullWidth size="small" name="observations" value={editData.observations} onChange={handleChange} multiline minRows={2} /></TableCell>
+                  <TableCell sx={{ minWidth: 140 }}>
+                    <TextField
+                      fullWidth
+                      size="medium"
+                      name="cost"
+                      value={editData.cost}
+                      onChange={handleChange}
+                      type="number"
+                      sx={{ '& .MuiInputBase-input': { fontSize: 16, py: 1.1 } }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ minWidth: 140 }}>
+                    <TextField
+                      fullWidth
+                      size="medium"
+                      name="price"
+                      value={editData.price}
+                      onChange={handleChange}
+                      type="number"
+                      sx={{ '& .MuiInputBase-input': { fontSize: 16, py: 1.1 } }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ minWidth: 260 }}>
+                    <TextField fullWidth size="medium" name="observations" value={editData.observations} onChange={handleChange} multiline minRows={3} />
+                  </TableCell>
                   <TableCell>
-                    <Button onClick={() => handleSave(job._id)}>Save</Button>
-                    <Button onClick={handleCancel}>Cancel</Button>
+                    <IconButton color="primary" onClick={() => handleSave(job._id)} title="Save">
+                      <SaveIcon />
+                    </IconButton>
+                    <IconButton onClick={handleCancel} title="Cancel">
+                      <CloseIcon />
+                    </IconButton>
                   </TableCell>
                 </>
               ) : (
@@ -173,8 +208,12 @@ const CleaningJobsList = ({ filters }) => {
                   <TableCell>{job.price}</TableCell>
                   <TableCell>{job.observations}</TableCell>
                   <TableCell>
-                    <Button onClick={() => handleEdit(job)}>Edit</Button>
-                    <Button
+                    <IconButton color="primary" onClick={() => handleEdit(job)} title="Edit">
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      color="error"
+                      title="Delete"
                       onClick={async () => {
                         setActionError('');
                         setActionSuccess('');
@@ -188,8 +227,8 @@ const CleaningJobsList = ({ filters }) => {
                         }
                       }}
                     >
-                      Delete
-                    </Button>
+                      <DeleteIcon />
+                    </IconButton>
                   </TableCell>
                 </>
               )}
