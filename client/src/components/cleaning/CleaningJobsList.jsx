@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGetCleaningJobsQuery, useUpdateCleaningJobMutation, useDeleteCleaningJobMutation, useGetCleaningJobSubcategoriesQuery } from '../../features/cleaning/cleaningJobsApiSlice';
-import { Autocomplete, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, CircularProgress, Alert, TextField, Select, MenuItem, FormControl, IconButton, Box } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, Save as SaveIcon, Close as CloseIcon } from '@mui/icons-material';
+import { Autocomplete, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, CircularProgress, Alert, TextField, Select, MenuItem, FormControl, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Grid, Button } from '@mui/material';
+import { Edit as EditIcon, Delete as DeleteIcon, Visibility as ViewIcon } from '@mui/icons-material';
 import { safeFormatDate } from '../../utils/dateUtils';
 import BuildingSelector from '../common/BuildingSelector';
 
@@ -12,6 +12,7 @@ const CleaningJobsList = ({ filters }) => {
   const { data: subcategoriesData } = useGetCleaningJobSubcategoriesQuery();
 
   const [editMode, setEditMode] = useState(null);
+  const [editOpen, setEditOpen] = useState(false);
   const [editData, setEditData] = useState({});
   const [actionError, setActionError] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
@@ -23,9 +24,7 @@ const CleaningJobsList = ({ filters }) => {
   const subcategoryOptions = subcategoriesData?.data?.subcategories || [];
 
   const handleEdit = (job) => {
-    const buildingId = job?.building?._id
-      ? String(job.building._id)
-      : (typeof job.building === 'string' ? job.building : '');
+    const buildingId = job?.building?._id ? String(job.building._id) : (typeof job.building === 'string' ? job.building : '');
 
     setEditMode(job._id);
     setEditData({
@@ -34,6 +33,7 @@ const CleaningJobsList = ({ filters }) => {
       serviceDate: job?.serviceDate ? String(job.serviceDate).slice(0, 10) : '',
       paymentStatus: job?.paymentStatus || 'pending',
     });
+    setEditOpen(true);
   };
 
   const handleCancel = () => {
@@ -41,6 +41,7 @@ const CleaningJobsList = ({ filters }) => {
     setEditData({});
     setActionError('');
     setActionSuccess('');
+    setEditOpen(false);
   };
 
   const handleSave = async (id) => {
@@ -64,6 +65,7 @@ const CleaningJobsList = ({ filters }) => {
       await updateCleaningJob({ id, ...payload }).unwrap();
       setActionSuccess('Cleaning job updated.');
       setEditMode(null);
+      setEditOpen(false);
     } catch (err) {
       const msg = err?.data?.message || err?.error || 'Failed to update cleaning job.';
       setActionError(msg);
@@ -83,159 +85,125 @@ const CleaningJobsList = ({ filters }) => {
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>Date</TableCell>
             <TableCell>Service Date</TableCell>
             <TableCell>Building</TableCell>
             <TableCell>Unit/Apt</TableCell>
             <TableCell>Subcategory</TableCell>
             <TableCell>Worker</TableCell>
             <TableCell>Status</TableCell>
-            <TableCell>Done</TableCell>
             <TableCell>Payment</TableCell>
             <TableCell>Cost</TableCell>
             <TableCell>Price</TableCell>
             <TableCell>Observations</TableCell>
-            <TableCell>Actions</TableCell>
+            <TableCell align="right">Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {jobs.map((job) => (
-            <TableRow
-              key={job._id}
-              sx={editMode === job._id ? { backgroundColor: 'rgba(25, 118, 210, 0.06)' } : undefined}
-            >
-              {editMode === job._id ? (
-                <>
-                  <TableCell>{safeFormatDate(job.date)}</TableCell>
-                  <TableCell sx={{ minWidth: 150 }}>
-                    <TextField fullWidth size="medium" name="serviceDate" value={editData.serviceDate} onChange={handleChange} type="date" InputLabelProps={{ shrink: true }} />
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ minWidth: 240 }}>
-                      <BuildingSelector
-                        value={editData.buildingId || ''}
-                        onChange={(e) => setEditData({ ...editData, buildingId: e.target.value })}
-                      />
-                    </Box>
-                  </TableCell>
-                  <TableCell sx={{ minWidth: 110 }}>
-                    <TextField fullWidth size="medium" name="unit" value={editData.unit} onChange={handleChange} />
-                  </TableCell>
-                  <TableCell>
-                    <Autocomplete
-                      freeSolo
-                      options={subcategoryOptions}
-                      value={editData.subcategory || ''}
-                      onChange={(e, newValue) => {
-                        setEditData(prev => ({ ...prev, subcategory: newValue || '' }));
-                      }}
-                      onInputChange={(e, newInputValue) => {
-                        setEditData(prev => ({ ...prev, subcategory: newInputValue || '' }));
-                      }}
-                      renderInput={(params) => (
-                        <TextField {...params} fullWidth size="medium" placeholder="Subcategory" />
-                      )}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ minWidth: 130 }}>
-                    <TextField fullWidth size="medium" name="worker" value={editData.worker} onChange={handleChange} />
-                  </TableCell>
-                  <TableCell>
-                    <FormControl size="medium" fullWidth sx={{ minWidth: 140 }}>
-                      <Select name="status" value={editData.status} onChange={handleChange}>
-                        <MenuItem value="pending">Pending</MenuItem>
-                        <MenuItem value="in_progress">In Progress</MenuItem>
-                        <MenuItem value="completed">Completed</MenuItem>
-                        <MenuItem value="cancelled">Cancelled</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </TableCell>
-                  <TableCell>{editData.status === 'completed' ? 'Yes' : ''}</TableCell>
-                  <TableCell>
-                    <FormControl size="medium" fullWidth sx={{ minWidth: 120 }}>
-                      <Select name="paymentStatus" value={editData.paymentStatus || 'pending'} onChange={handleChange}>
-                        <MenuItem value="pending">Pending</MenuItem>
-                        <MenuItem value="paid">Paid</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </TableCell>
-                  <TableCell sx={{ minWidth: 140 }}>
-                    <TextField
-                      fullWidth
-                      size="medium"
-                      name="cost"
-                      value={editData.cost}
-                      onChange={handleChange}
-                      type="number"
-                      sx={{ '& .MuiInputBase-input': { fontSize: 16, py: 1.1 } }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ minWidth: 140 }}>
-                    <TextField
-                      fullWidth
-                      size="medium"
-                      name="price"
-                      value={editData.price}
-                      onChange={handleChange}
-                      type="number"
-                      sx={{ '& .MuiInputBase-input': { fontSize: 16, py: 1.1 } }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ minWidth: 260 }}>
-                    <TextField fullWidth size="medium" name="observations" value={editData.observations} onChange={handleChange} multiline minRows={3} />
-                  </TableCell>
-                  <TableCell>
-                    <IconButton color="primary" onClick={() => handleSave(job._id)} title="Save">
-                      <SaveIcon />
-                    </IconButton>
-                    <IconButton onClick={handleCancel} title="Cancel">
-                      <CloseIcon />
-                    </IconButton>
-                  </TableCell>
-                </>
-              ) : (
-                <>
-                  <TableCell>{safeFormatDate(job.date)}</TableCell>
-                  <TableCell>{safeFormatDate(job.serviceDate)}</TableCell>
-                  <TableCell>{job?.building?.name || ''}</TableCell>
-                  <TableCell>{job.unit}</TableCell>
-                  <TableCell>{job.subcategory}</TableCell>
-                  <TableCell>{job.worker}</TableCell>
-                  <TableCell>{job.status}</TableCell>
-                  <TableCell>{job.status === 'completed' ? 'Yes' : ''}</TableCell>
-                  <TableCell>{job.paymentStatus || 'pending'}</TableCell>
-                  <TableCell>{job.cost}</TableCell>
-                  <TableCell>{job.price}</TableCell>
-                  <TableCell>{job.observations}</TableCell>
-                  <TableCell>
-                    <IconButton color="primary" onClick={() => handleEdit(job)} title="Edit">
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      color="error"
-                      title="Delete"
-                      onClick={async () => {
-                        setActionError('');
-                        setActionSuccess('');
-                        if (!window.confirm('Delete this cleaning job?')) return;
-                        try {
-                          await deleteCleaningJob(job._id).unwrap();
-                          setActionSuccess('Cleaning job deleted.');
-                        } catch (err) {
-                          const msg = err?.data?.message || err?.error || 'Failed to delete cleaning job.';
-                          setActionError(msg);
-                        }
-                      }}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </>
-              )}
+            <TableRow key={job._id}>
+              <TableCell>{safeFormatDate(job.serviceDate)}</TableCell>
+              <TableCell>{job?.building?.name || ''}</TableCell>
+              <TableCell>{job.unit}</TableCell>
+              <TableCell>{job.subcategory}</TableCell>
+              <TableCell>{job.worker}</TableCell>
+              <TableCell>{job.status}</TableCell>
+              <TableCell>{job.paymentStatus || 'pending'}</TableCell>
+              <TableCell>{job.cost}</TableCell>
+              <TableCell>{job.price}</TableCell>
+              <TableCell>{job.observations}</TableCell>
+              <TableCell align="right">
+                <IconButton color="default" onClick={() => { /* TODO: Implement View */ }} title="View">
+                  <ViewIcon />
+                </IconButton>
+                <IconButton color="primary" onClick={() => handleEdit(job)} title="Edit">
+                  <EditIcon />
+                </IconButton>
+                <IconButton
+                  color="error"
+                  title="Delete"
+                  onClick={async () => {
+                    setActionError('');
+                    setActionSuccess('');
+                    if (!window.confirm('Delete this cleaning job?')) return;
+                    try {
+                      await deleteCleaningJob(job._id).unwrap();
+                      setActionSuccess('Cleaning job deleted.');
+                    } catch (err) {
+                      const msg = err?.data?.message || err?.error || 'Failed to delete cleaning job.';
+                      setActionError(msg);
+                    }
+                  }}
+                >
+                  <DeleteIcon />
+                </IconButton>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+      <Dialog open={editOpen} onClose={handleCancel} maxWidth="md" fullWidth>
+        <DialogTitle>Edit Cleaning Job</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={3} sx={{ pt: 2 }}>
+            <Grid item xs={12} sm={6}>
+              <TextField fullWidth size="medium" name="serviceDate" label="Service Date" value={editData.serviceDate} onChange={handleChange} type="date" InputLabelProps={{ shrink: true }} />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <BuildingSelector
+                value={editData.buildingId || ''}
+                onChange={(e) => setEditData({ ...editData, buildingId: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField fullWidth size="medium" name="unit" label="Unit/Apt" value={editData.unit} onChange={handleChange} />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Autocomplete
+                freeSolo
+                options={subcategoryOptions}
+                value={editData.subcategory || ''}
+                onChange={(e, newValue) => setEditData(prev => ({ ...prev, subcategory: newValue || '' }))}
+                onInputChange={(e, newInputValue) => setEditData(prev => ({ ...prev, subcategory: newInputValue || '' }))}
+                renderInput={(params) => <TextField {...params} fullWidth size="medium" label="Subcategory" />}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField fullWidth size="medium" name="worker" label="Worker" value={editData.worker} onChange={handleChange} />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl size="medium" fullWidth>
+                <Select name="status" label="Status" value={editData.status} onChange={handleChange}>
+                  <MenuItem value="pending">Pending</MenuItem>
+                  <MenuItem value="in_progress">In Progress</MenuItem>
+                  <MenuItem value="completed">Completed</MenuItem>
+                  <MenuItem value="cancelled">Cancelled</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl size="medium" fullWidth>
+                <Select name="paymentStatus" label="Payment Status" value={editData.paymentStatus || 'pending'} onChange={handleChange}>
+                  <MenuItem value="pending">Pending</MenuItem>
+                  <MenuItem value="paid">Paid</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={3}>
+              <TextField fullWidth size="medium" name="cost" label="Cost" value={editData.cost} onChange={handleChange} type="number" />
+            </Grid>
+            <Grid item xs={12} sm={3}>
+              <TextField fullWidth size="medium" name="price" label="Price" value={editData.price} onChange={handleChange} type="number" />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField fullWidth size="medium" name="observations" label="Observations" value={editData.observations} onChange={handleChange} multiline minRows={4} />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancel}>Cancel</Button>
+          <Button onClick={() => handleSave(editMode)} variant="contained">Save</Button>
+        </DialogActions>
+      </Dialog>
     </TableContainer>
   );
 };
