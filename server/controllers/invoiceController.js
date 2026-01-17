@@ -11,7 +11,45 @@ const notImplemented = (req, res, next) => {
   next(new AppError('This feature is not yet implemented.', 501));
 };
 
-exports.getUnbilledWorkOrders = notImplemented;
+exports.getUnbilledWorkOrders = catchAsync(async (req, res, next) => {
+  const { buildingId } = req.params;
+
+  if (!buildingId || !mongoose.Types.ObjectId.isValid(buildingId)) {
+    return next(new AppError('Invalid building ID', 400));
+  }
+
+  const buildingObjectId = new mongoose.Types.ObjectId(buildingId);
+
+  const invoiceClause = {
+    $or: [{ invoice: { $exists: false } }, { invoice: null }],
+  };
+
+  const billingClause = {
+    $or: [
+      { billingStatus: { $exists: false } },
+      { billingStatus: null },
+      { billingStatus: 'pending' },
+    ],
+  };
+
+  const workOrders = await WorkOrder.find({
+    building: buildingObjectId,
+    deleted: { $ne: true },
+    $and: [invoiceClause, billingClause],
+  })
+    .setOptions({ strictPopulate: false })
+    .populate([
+      { path: 'workType', select: 'name' },
+      { path: 'workSubType', select: 'name' },
+    ])
+    .sort({ serviceDate: -1, scheduledDate: -1, createdAt: -1 });
+
+  res.status(200).json({
+    status: 'success',
+    results: workOrders.length,
+    data: { workOrders },
+  });
+});
 exports.getFilteredWorkOrders = catchAsync(async (req, res, next) => {
   console.log('--- Received Filter Request ---');
   console.log('Query Params:', req.query);
@@ -123,8 +161,132 @@ exports.calculateTotals = notImplemented;
 exports.emailInvoice = notImplemented;
 exports.markAsPaid = notImplemented;
 exports.updatePayment = notImplemented;
-exports.addWorkOrdersToInvoice = notImplemented;
-exports.removeWorkOrdersFromInvoice = notImplemented;
+exports.addWorkOrdersToInvoice = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { workOrderIds } = req.body;
+
+  if (!Array.isArray(workOrderIds) || workOrderIds.length === 0) {
+    return next(new AppError('workOrderIds must be a non-empty array.', 400));
+  }
+
+  const invalidId = workOrderIds.find((woId) => !mongoose.Types.ObjectId.isValid(woId));
+  if (invalidId) {
+    return next(new AppError('One or more work order IDs are invalid.', 400));
+  }
+
+  const invoice = await Invoice.findById(id);
+  if (!invoice) {
+    return next(new AppError('No invoice found with that ID', 404));
+  }
+
+  const existingIds = new Set(
+    (invoice.workOrders || [])
+      .map((w) => (w.workOrder ? String(w.workOrder) : null))
+      .filter(Boolean)
+  );
+
+  const workOrders = await WorkOrder.find({
+    _id: { $in: workOrderIds },
+    deleted: { $ne: true },
+  }).setOptions({ strictPopulate: false });
+
+  if (workOrders.length === 0) {
+    return next(new AppError('No work orders found for the provided IDs.', 404));
+  }
+
+  const mismatchedBuilding = workOrders.find(
+    (wo) => String(wo.building) !== String(invoice.building)
+  );
+  if (mismatchedBuilding) {
+    return next(new AppError('All work orders must belong to the same building as the invoice.', 400));
+  }
+
+  const alreadyInvoiced = workOrders.find(
+    (wo) => wo.invoice && String(wo.invoice) !== String(invoice._id)
+  );
+  if (alreadyInvoiced) {
+    return next(new AppError('One or more work orders are already attached to another invoice.', 409));
+  }
+
+  const itemsToAdd = workOrders
+    .filter((wo) => !existingIds.has(String(wo._id)))
+    .map((wo) => {
+      const price = wo.price || wo.estimatedCost || 0;
+      return {
+        workOrder: wo._id,
+        description: wo.title,
+        quantity: 1,
+        unitPrice: price,
+        totalPrice: price,
+      };
+    });
+
+  invoice.workOrders = [...(invoice.workOrders || []), ...itemsToAdd];
+  invoice.updatedBy = req.user?.id;
+  if (typeof invoice.calculateTotals === 'function') invoice.calculateTotals();
+  await invoice.save();
+
+  if (itemsToAdd.length > 0) {
+    await WorkOrder.updateMany(
+      { _id: { $in: itemsToAdd.map((i) => i.workOrder) } },
+      { $set: { invoice: invoice._id, billingStatus: 'invoiced' } }
+    );
+  }
+
+  const populated = await Invoice.findById(invoice._id)
+    .populate('building', 'name address city state zipCode')
+    .populate('workOrders.workOrder', 'title description apartmentNumber price serviceDate scheduledDate');
+
+  res.status(200).json({
+    status: 'success',
+    data: { invoice: populated },
+  });
+});
+
+exports.removeWorkOrdersFromInvoice = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { workOrderIds } = req.body;
+
+  if (!Array.isArray(workOrderIds) || workOrderIds.length === 0) {
+    return next(new AppError('workOrderIds must be a non-empty array.', 400));
+  }
+
+  const invalidId = workOrderIds.find((woId) => !mongoose.Types.ObjectId.isValid(woId));
+  if (invalidId) {
+    return next(new AppError('One or more work order IDs are invalid.', 400));
+  }
+
+  const invoice = await Invoice.findById(id);
+  if (!invoice) {
+    return next(new AppError('No invoice found with that ID', 404));
+  }
+
+  const beforeCount = (invoice.workOrders || []).length;
+  invoice.workOrders = (invoice.workOrders || []).filter((item) => {
+    const woId = item.workOrder ? String(item.workOrder) : null;
+    return !woId || !workOrderIds.includes(woId);
+  });
+
+  invoice.updatedBy = req.user?.id;
+  if (typeof invoice.calculateTotals === 'function') invoice.calculateTotals();
+  await invoice.save();
+
+  if (beforeCount !== (invoice.workOrders || []).length) {
+    await WorkOrder.updateMany(
+      { _id: { $in: workOrderIds }, invoice: invoice._id },
+      { $set: { invoice: null, billingStatus: 'pending' } }
+    );
+  }
+
+  const populated = await Invoice.findById(invoice._id)
+    .populate('building', 'name address city state zipCode')
+    .populate('workOrders.workOrder', 'title description apartmentNumber price serviceDate scheduledDate');
+
+  res.status(200).json({
+    status: 'success',
+    data: { invoice: populated },
+  });
+});
 exports.addLineItem = notImplemented;
 exports.updateLineItem = notImplemented;
 exports.removeLineItem = notImplemented;
@@ -314,7 +476,7 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
     .populate('building', 'name address city state zipCode')
     .populate({ 
       path: 'workOrders.workOrder',
-      select: 'title description price'
+      select: 'title description apartmentNumber price serviceDate scheduledDate'
     });
 
   if (!invoice) {
@@ -327,94 +489,196 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
 
   const logoUrl = 'https://res.cloudinary.com/dwqxiigpd/image/upload/v1756186310/dsj-logo_mb3npa.jpg';
 
+  const escapeHtml = (str) => {
+    if (str === undefined || str === null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
+  const formatMoney = (value) => {
+    const n = Number(value || 0);
+    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const formatShortDate = (d) => {
+    if (!d) return '';
+    const dt = new Date(d);
+    if (Number.isNaN(dt.getTime())) return '';
+    return dt.toLocaleDateString('en-US');
+  };
+
+  const company = {
+    name: 'DSJ Construction & Services LLC',
+    address: '651 Pullman Pl',
+    cityStateZip: 'Gaithersburg, MD 20877 USA',
+    email: 'info@servicesdsj.com',
+  };
+
+  const itemsHtml = (invoice.workOrders || [])
+    .map((item) => {
+      const wo = item.workOrder || {};
+      const qty = item.quantity || 1;
+      const rate = wo.price !== undefined ? wo.price : (item.unitPrice || item.totalPrice || 0);
+      const amount = (qty * (rate || 0));
+      const date = wo.serviceDate || wo.scheduledDate || invoice.invoiceDate;
+
+      const activity = wo.workType?.name || 'Service';
+      const title = wo.title || item.description || 'Work Order';
+      const aptPrefix = wo.apartmentNumber ? `Apt ${escapeHtml(wo.apartmentNumber)} - ` : '';
+      const desc = wo.description ? escapeHtml(wo.description) : '';
+
+      return `
+        <tr>
+          <td class="col-date">${escapeHtml(formatShortDate(date))}</td>
+          <td class="col-activity">${escapeHtml(activity)}</td>
+          <td class="col-description">
+            <div class="desc-title">${aptPrefix}${escapeHtml(title)}</div>
+            ${desc ? `<div class="desc-body">${desc}</div>` : ''}
+          </td>
+          <td class="col-qty">${qty}</td>
+          <td class="col-rate">$${formatMoney(rate)}</td>
+          <td class="col-amount">$${formatMoney(amount)}</td>
+        </tr>
+      `;
+    })
+    .join('');
+
   const htmlContent = `
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="UTF-8">
         <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #333; font-size: 11px; line-height: 1.6; }
-            .invoice-box { width: 100%; max-width: 800px; margin: auto; padding: 30px; }
+            * { box-sizing: border-box; }
+            html, body { width: 100%; }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #111; font-size: 10px; line-height: 1.4; }
             table { width: 100%; border-collapse: collapse; }
-            .header-table, .details-table { margin-bottom: 30px; }
-            .header-table td { vertical-align: top; }
-            .logo { width: 150px; }
-            .company-info { text-align: right; word-wrap: break-word; }
-            .bill-to p { word-wrap: break-word; }
-            .company-info h1 { font-size: 32px; color: #00529B; margin: 0; }
-            .bill-to h2 { font-size: 14px; color: #00529B; margin-bottom: 5px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-            .invoice-meta { text-align: right; }
-            .invoice-meta p { margin: 2px 0; }
-            .items-table { margin-top: 20px; }
-            .items-table th { background-color: #f2f2f2; text-align: left; font-weight: bold; padding: 10px; border-bottom: 1px solid #ddd; }
-            .items-table td { padding: 10px; border-bottom: 1px solid #ddd; }
-            .items-table .description { width: 75%; }
-            .items-table .amount { text-align: right; }
-            .totals-table { float: right; width: 45%; margin-top: 20px; }
-            .totals-table td { padding: 8px; }
-            .totals-table .label { text-align: right; font-weight: bold; }
-            .totals-table .value { text-align: right; }
-            .totals-table .total-row td { border-top: 2px solid #333; font-weight: bold; font-size: 13px; }
-            .footer { text-align: center; margin-top: 80px; padding-top: 15px; border-top: 1px solid #eee; font-size: 10px; color: #777; }
+
+            /* Prevent cut-off by never using a fixed width larger than the page */
+            .invoice-box { width: 100%; margin: 0 auto; }
+
+            .header { display: table; width: 100%; margin-bottom: 14px; }
+            .header-left { display: table-cell; vertical-align: top; }
+            .header-right { display: table-cell; vertical-align: top; text-align: right; }
+            .company-name { font-weight: 700; font-size: 12px; }
+            .muted { color: #5f6b7a; }
+            .logo { width: 72px; height: 72px; object-fit: contain; }
+
+            .title-row { display: table; width: 100%; margin: 6px 0 10px; }
+            .title { display: table-cell; font-size: 20px; font-weight: 800; color: #0b4aa2; letter-spacing: 0.5px; }
+            .invoice-no { display: table-cell; text-align: right; font-size: 12px; font-weight: 700; }
+
+            .meta { display: table; width: 100%; margin-bottom: 10px; }
+            .billto { display: table-cell; width: 55%; vertical-align: top; }
+            .billto h2 { font-size: 10px; margin: 0 0 4px; color: #0b4aa2; letter-spacing: 0.4px; }
+            .billto p { margin: 0; }
+            .payboxes { display: table-cell; width: 45%; vertical-align: top; text-align: right; }
+            .box { display: inline-block; min-width: 110px; padding: 8px 10px; margin-left: 6px; border-radius: 3px; text-align: center; }
+            .box.light { background: #e8f2ff; color: #1b2b3a; }
+            .box.dark { background: #0b4aa2; color: #fff; }
+            .box .label { font-size: 8px; opacity: 0.85; }
+            .box .value { font-size: 10px; font-weight: 700; }
+
+            .items { margin-top: 8px; border: 1px solid #dfe6ef; }
+            .items thead { display: table-header-group; }
+            .items th { background: #243447; color: #fff; font-size: 9px; padding: 8px 8px; text-align: left; }
+            .items td { padding: 8px 8px; border-top: 1px solid #eef2f7; vertical-align: top; }
+            .items tr { page-break-inside: avoid; }
+            .items tbody tr:nth-child(even) { background: #fafbfd; }
+            .items { table-layout: fixed; }
+
+            .col-date { width: 11%; }
+            .col-activity { width: 14%; font-weight: 600; }
+            .col-description { width: 45%; word-break: break-word; overflow-wrap: break-word; }
+            .col-qty { width: 6%; text-align: center; }
+            .col-rate { width: 12%; text-align: right; white-space: nowrap; }
+            .col-amount { width: 12%; text-align: right; white-space: nowrap; font-weight: 700; }
+
+            .desc-title { font-weight: 700; color: #111; }
+            .desc-body { margin-top: 2px; color: #4b5563; white-space: pre-wrap; }
+
+            .totals { width: 100%; margin-top: 10px; }
+            .totals-inner { float: right; width: 46%; }
+            .totals-row { display: table; width: 100%; padding: 4px 0; }
+            .totals-row .l { display: table-cell; text-align: right; color: #5f6b7a; }
+            .totals-row .r { display: table-cell; text-align: right; padding-left: 10px; }
+            .totals-total { border-top: 2px solid #243447; margin-top: 6px; padding-top: 6px; font-size: 12px; font-weight: 800; }
+
+            .footer { clear: both; text-align: center; margin-top: 24px; padding-top: 10px; border-top: 1px solid #e6edf5; font-size: 9px; color: #6b7280; }
         </style>
     </head>
     <body>
         <div class="invoice-box">
-            <table class="header-table">
+            <div class="header">
+              <div class="header-left">
+                <div class="company-name">${escapeHtml(company.name)}</div>
+                <div class="muted">${escapeHtml(company.address)}</div>
+                <div class="muted">${escapeHtml(company.cityStateZip)}</div>
+                <div class="muted">${escapeHtml(company.email)}</div>
+              </div>
+              <div class="header-right">
+                <img src="${logoUrl}" alt="DSJ Logo" class="logo" />
+              </div>
+            </div>
+
+            <div class="title-row">
+              <div class="title">INVOICE</div>
+              <div class="invoice-no">${escapeHtml(invoice.invoiceNumber)}</div>
+            </div>
+
+            <div class="meta">
+              <div class="billto">
+                <h2>BILL TO</h2>
+                <p><strong>${escapeHtml(invoice.building.name)}</strong></p>
+                <p class="muted">${escapeHtml(invoice.building.address || '')}</p>
+                <p class="muted">${escapeHtml(invoice.building.city || '')}${invoice.building.city ? ', ' : ''}${escapeHtml(invoice.building.state || '')} ${escapeHtml(invoice.building.zipCode || '')}</p>
+              </div>
+              <div class="payboxes">
+                <div class="box light">
+                  <div class="label">DATE</div>
+                  <div class="value">${escapeHtml(formatShortDate(invoice.invoiceDate))}</div>
+                </div>
+                <div class="box dark">
+                  <div class="label">PLEASE PAY</div>
+                  <div class="value">$${formatMoney(invoice.total || 0)}</div>
+                </div>
+                <div class="box light">
+                  <div class="label">DUE DATE</div>
+                  <div class="value">${escapeHtml(formatShortDate(invoice.dueDate))}</div>
+                </div>
+              </div>
+            </div>
+
+            <table class="items">
+              <thead>
                 <tr>
-                    <td><img src="${logoUrl}" alt="DSJ Logo" class="logo"></td>
-                    <td class="company-info">
-                        <h1>INVOICE</h1>
-                        <p>DSJ Construction Inc.<br>123 Construction Ave.<br>New York, NY 10001</p>
-                    </td>
+                  <th class="col-date">DATE</th>
+                  <th class="col-activity">ACTIVITY</th>
+                  <th class="col-description">DESCRIPTION</th>
+                  <th class="col-qty">QTY</th>
+                  <th class="col-rate">RATE</th>
+                  <th class="col-amount">AMOUNT</th>
                 </tr>
+              </thead>
+              <tbody>
+                ${itemsHtml}
+              </tbody>
             </table>
-            <table class="details-table">
-                <tr>
-                    <td class="bill-to">
-                        <h2>BILL TO:</h2>
-                        <p>${invoice.building.name}<br>${invoice.building.address || ''}<br>${invoice.building.city || ''}, ${invoice.building.state || ''} ${invoice.building.zipCode || ''}</p>
-                    </td>
-                    <td class="invoice-meta">
-                        <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
-                        <p><strong>Invoice Date:</strong> ${new Date(invoice.invoiceDate).toLocaleDateString()}</p>
-                        <p><strong>Due Date:</strong> ${new Date(invoice.dueDate).toLocaleDateString()}</p>
-                    </td>
-                </tr>
-            </table>
-            <table class="items-table">
-                <thead>
-                    <tr>
-                        <th class="description">Description</th>
-                        <th class="amount">Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${invoice.workOrders.map(item => `
-                        <tr>
-                            <td>${item.workOrder ? item.workOrder.title : (item.description || 'Work Order Item')}</td>
-                            <td class="amount">$${(item.totalPrice || 0).toFixed(2)}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-            <table class="totals-table">
-                <tr>
-                    <td class="label">Subtotal:</td>
-                    <td class="value">$${(invoice.subtotal || 0).toFixed(2)}</td>
-                </tr>
-                <tr>
-                    <td class="label">Tax:</td>
-                    <td class="value">$${(invoice.tax || 0).toFixed(2)}</td>
-                </tr>
-                <tr class="total-row">
-                    <td class="label">Total:</td>
-                    <td class="value">$${(invoice.total || 0).toFixed(2)}</td>
-                </tr>
-            </table>
-            <div style="clear: both;"></div>
+
+            <div class="totals">
+              <div class="totals-inner">
+                <div class="totals-row"><div class="l">SUBTOTAL</div><div class="r">$${formatMoney(invoice.subtotal || 0)}</div></div>
+                <div class="totals-row"><div class="l">TAX</div><div class="r">$${formatMoney(invoice.tax || 0)}</div></div>
+                <div class="totals-row totals-total"><div class="l">TOTAL DUE</div><div class="r">$${formatMoney(invoice.total || 0)}</div></div>
+              </div>
+            </div>
+
             <div class="footer">
-                <p>Thank you for your business!</p>
+              Thank you for your business!
             </div>
         </div>
     </body>
