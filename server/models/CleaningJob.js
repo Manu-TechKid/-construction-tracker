@@ -27,6 +27,11 @@ const cleaningJobSchema = new mongoose.Schema({
     enum: ['pending', 'in_progress', 'completed', 'cancelled'],
     default: 'pending',
   },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'paid'],
+    default: 'pending',
+  },
   cost: {
     type: Number,
     default: 0,

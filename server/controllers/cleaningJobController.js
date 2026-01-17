@@ -6,7 +6,7 @@ const AppError = require('../utils/appError');
 
 // Get all cleaning jobs with filtering
 exports.getAllCleaningJobs = catchAsync(async (req, res, next) => {
-  const { building, buildingId, startDate, endDate, worker } = req.query;
+  const { building, buildingId, startDate, endDate, worker, paymentStatus, status, subcategory, observations } = req.query;
   const filter = {};
 
   const normalizedBuilding = (building || buildingId);
@@ -18,6 +18,20 @@ exports.getAllCleaningJobs = catchAsync(async (req, res, next) => {
   }
 
   if (worker && worker !== 'null' && worker !== 'undefined') filter.worker = worker;
+
+  if (status && status !== 'null' && status !== 'undefined') filter.status = status;
+
+  if (subcategory && subcategory !== 'null' && subcategory !== 'undefined') {
+    filter.subcategory = { $regex: String(subcategory), $options: 'i' };
+  }
+
+  if (observations && observations !== 'null' && observations !== 'undefined') {
+    filter.observations = { $regex: String(observations), $options: 'i' };
+  }
+
+  if (paymentStatus && paymentStatus !== 'null' && paymentStatus !== 'undefined') {
+    filter.paymentStatus = paymentStatus;
+  }
 
   const dateRange = {};
   const startDateObj = (startDate && startDate !== 'null' && startDate !== 'undefined') ? new Date(startDate) : null;
@@ -69,6 +83,24 @@ exports.getAllCleaningJobs = catchAsync(async (req, res, next) => {
     status: 'success',
     results: cleaningJobs.length,
     data: { cleaningJobs },
+  });
+});
+
+// Get distinct cleaning job subcategories
+exports.getCleaningJobSubcategories = catchAsync(async (req, res, next) => {
+  const subcategories = await CleaningJob.distinct('subcategory', {
+    subcategory: { $exists: true, $ne: null, $ne: '' },
+  });
+
+  const normalized = subcategories
+    .map(s => (typeof s === 'string' ? s.trim() : ''))
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+
+  res.status(200).json({
+    status: 'success',
+    results: normalized.length,
+    data: { subcategories: normalized },
   });
 });
 

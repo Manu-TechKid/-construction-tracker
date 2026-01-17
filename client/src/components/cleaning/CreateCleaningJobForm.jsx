@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { useCreateCleaningJobMutation } from '../../features/cleaning/cleaningJobsApiSlice';
-import { Alert, Button, TextField, Grid, Paper, Typography } from '@mui/material';
+import { useCreateCleaningJobMutation, useGetCleaningJobSubcategoriesQuery } from '../../features/cleaning/cleaningJobsApiSlice';
+import { Alert, Autocomplete, Button, FormControl, Grid, MenuItem, Paper, Select, TextField, Typography } from '@mui/material';
 import BuildingSelector from '../common/BuildingSelector';
 import { useBuildingContext } from '../../contexts/BuildingContext';
 
 const CreateCleaningJobForm = () => {
   const [createCleaningJob, { isLoading }] = useCreateCleaningJobMutation();
+  const { data: subcategoriesData } = useGetCleaningJobSubcategoriesQuery();
   const { selectedBuilding } = useBuildingContext();
 
   const [submitError, setSubmitError] = useState('');
@@ -17,10 +18,13 @@ const CreateCleaningJobForm = () => {
     subcategory: '',
     worker: '',
     status: 'pending',
+    paymentStatus: 'pending',
     cost: 0,
     price: 0,
     observations: '',
   });
+
+  const subcategoryOptions = subcategoriesData?.data?.subcategories || [];
 
   useEffect(() => {
     if (!formData.buildingId && selectedBuilding?._id) {
@@ -52,6 +56,7 @@ const CreateCleaningJobForm = () => {
         subcategory: '',
         worker: '',
         status: 'pending',
+        paymentStatus: 'pending',
         cost: 0,
         price: 0,
         observations: '',
@@ -78,8 +83,41 @@ const CreateCleaningJobForm = () => {
             />
           </Grid>
           <Grid item xs={12} sm={6} md={3}><TextField name="unit" label="Unit/Apt" fullWidth onChange={handleChange} /></Grid>
-          <Grid item xs={12} sm={6} md={3}><TextField name="subcategory" label="Subcategory" fullWidth onChange={handleChange} /></Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Autocomplete
+              freeSolo
+              options={subcategoryOptions}
+              value={formData.subcategory || ''}
+              onChange={(e, newValue) => {
+                setFormData(prev => ({ ...prev, subcategory: newValue || '' }));
+              }}
+              onInputChange={(e, newInputValue) => {
+                setFormData(prev => ({ ...prev, subcategory: newInputValue || '' }));
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Subcategory" fullWidth />
+              )}
+            />
+          </Grid>
           <Grid item xs={12} sm={6} md={3}><TextField name="worker" label="Worker" fullWidth onChange={handleChange} /></Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth>
+              <Select name="status" value={formData.status} onChange={handleChange}>
+                <MenuItem value="pending">Pending</MenuItem>
+                <MenuItem value="in_progress">In Progress</MenuItem>
+                <MenuItem value="completed">Completed</MenuItem>
+                <MenuItem value="cancelled">Cancelled</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth>
+              <Select name="paymentStatus" value={formData.paymentStatus} onChange={handleChange}>
+                <MenuItem value="pending">Pending Payment</MenuItem>
+                <MenuItem value="paid">Paid</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
           <Grid item xs={12} sm={6} md={3}><TextField name="cost" label="Cost" type="number" fullWidth onChange={handleChange} /></Grid>
           <Grid item xs={12} sm={6} md={3}><TextField name="price" label="Price" type="number" fullWidth onChange={handleChange} /></Grid>
           <Grid item xs={12} sm={9}><TextField name="observations" label="Observations" fullWidth multiline rows={2} onChange={handleChange} /></Grid>

@@ -13,6 +13,10 @@ router
   .post(cleaningJobController.createCleaningJob);
 
 router
+  .route('/subcategories')
+  .get(cleaningJobController.getCleaningJobSubcategories);
+
+router
   .route('/:id')
   .patch(cleaningJobController.updateCleaningJob)
   .delete(cleaningJobController.deleteCleaningJob);

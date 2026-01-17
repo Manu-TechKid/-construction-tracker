@@ -50,6 +50,9 @@ export const cleaningJobsApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: (result, error, id) => [{ type: 'CleaningJob', id: 'LIST' }],
     }),
+    getCleaningJobSubcategories: builder.query({
+      query: () => '/cleaning-jobs/subcategories',
+    }),
   }),
 });
 
@@ -58,4 +61,5 @@ export const {
   useCreateCleaningJobMutation,
   useUpdateCleaningJobMutation,
   useDeleteCleaningJobMutation,
+  useGetCleaningJobSubcategoriesQuery,
 } = cleaningJobsApiSlice;

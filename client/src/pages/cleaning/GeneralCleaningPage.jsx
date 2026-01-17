@@ -1,18 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Paper, Grid, TextField, Button } from '@mui/material';
+import { Box, Typography, Paper, Grid, TextField, Button, FormControl, Select, MenuItem, Autocomplete } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import BuildingSelector from '../../components/common/BuildingSelector';
 import CleaningJobsList from '../../components/cleaning/CleaningJobsList';
 import CreateCleaningJobForm from '../../components/cleaning/CreateCleaningJobForm';
 import { useBuildingContext } from '../../contexts/BuildingContext';
+import { useGetCleaningJobSubcategoriesQuery } from '../../features/cleaning/cleaningJobsApiSlice';
 
 const GeneralCleaningPage = () => {
   const { selectedBuilding } = useBuildingContext();
+  const { data: subcategoriesData } = useGetCleaningJobSubcategoriesQuery();
   const [filters, setFilters] = useState({
     buildingId: '',
     startDate: null,
     endDate: null,
+    paymentStatus: '',
+    status: '',
+    subcategory: '',
+    observations: '',
   });
+
+  const subcategoryOptions = subcategoriesData?.data?.subcategories || [];
 
   const [weekAnchorDate, setWeekAnchorDate] = useState(() => new Date());
 
@@ -76,6 +84,10 @@ const GeneralCleaningPage = () => {
       buildingId: '',
       startDate: null,
       endDate: null,
+      paymentStatus: '',
+      status: '',
+      subcategory: '',
+      observations: '',
     });
     setWeekAnchorDate(new Date());
   };
@@ -91,6 +103,58 @@ const GeneralCleaningPage = () => {
             <BuildingSelector 
               value={filters.buildingId}
               onChange={(e) => handleFilterChange('buildingId', e.target.value)}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <FormControl fullWidth>
+              <Select
+                value={filters.paymentStatus}
+                onChange={(e) => handleFilterChange('paymentStatus', e.target.value)}
+                displayEmpty
+              >
+                <MenuItem value="">All Payments</MenuItem>
+                <MenuItem value="pending">Pending Payment</MenuItem>
+                <MenuItem value="paid">Paid</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <FormControl fullWidth>
+              <Select
+                value={filters.status}
+                onChange={(e) => handleFilterChange('status', e.target.value)}
+                displayEmpty
+              >
+                <MenuItem value="">All Status</MenuItem>
+                <MenuItem value="pending">Pending</MenuItem>
+                <MenuItem value="in_progress">In Progress</MenuItem>
+                <MenuItem value="completed">Completed</MenuItem>
+                <MenuItem value="cancelled">Cancelled</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <Autocomplete
+              freeSolo
+              options={subcategoryOptions}
+              value={filters.subcategory || ''}
+              onChange={(e, newValue) => {
+                handleFilterChange('subcategory', newValue || '');
+              }}
+              onInputChange={(e, newInputValue) => {
+                handleFilterChange('subcategory', newInputValue || '');
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Subcategory" fullWidth />
+              )}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <TextField
+              label="Observations"
+              value={filters.observations}
+              onChange={(e) => handleFilterChange('observations', e.target.value)}
+              fullWidth
             />
           </Grid>
           <Grid item xs={12} sm={6} md={4}>
