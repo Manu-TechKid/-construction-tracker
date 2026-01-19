@@ -56,7 +56,7 @@ import {
 } from '../../features/invoices/invoicesApiSlice';
 
 const validationSchema = Yup.object({
-  status: Yup.string().oneOf(['open', 'sent', 'paid', 'overdue', 'cancelled']),
+  status: Yup.string().oneOf(['draft', 'open', 'sent', 'paid', 'overdue', 'cancelled']),
   invoiceDate: Yup.date().required('Invoice date is required'),
   dueDate: Yup.date().required('Due date is required'),
   notes: Yup.string(),
@@ -113,6 +113,7 @@ const EditInvoice = () => {
       notes: '',
     },
     validationSchema,
+    validateOnMount: true,
     onSubmit: async (values) => {
       try {
         const updateData = {

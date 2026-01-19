@@ -63,10 +63,10 @@ const Invoices = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [sortBy, setSortBy] = useState('invoiceNumberAsc');
   
-  const defaultMonthRange = {
+  const defaultMonthRange = useMemo(() => ({
     startDate: startOfMonth(new Date()),
     endDate: endOfMonth(new Date())
-  };
+  }), []);
 
   // Monthly filtering state
   const [monthFilter, setMonthFilter] = useState(defaultMonthRange);
@@ -150,7 +150,6 @@ const Invoices = () => {
         }, 0);
         // Only update if there's a discrepancy
         if (Math.abs(calculatedTotal - (invoice.total || 0)) > 0.01) {
-          console.log(`Invoice ${invoice.invoiceNumber}: Correcting total from ${invoice.total} to ${calculatedTotal}`);
           return { ...invoice, total: calculatedTotal };
         }
       }

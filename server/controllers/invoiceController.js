@@ -524,11 +524,9 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
       const qty = item.quantity || 1;
       const rate = wo.price !== undefined ? wo.price : (item.unitPrice || item.totalPrice || 0);
       const amount = (qty * (rate || 0));
-      const date = wo.serviceDate || wo.scheduledDate || invoice.invoiceDate;
-
+      const date = wo.serviceDate || wo.scheduledDate || wo.date || wo.createdAt || invoice.invoiceDate;
       const activity = wo.workType?.name || 'Service';
       const title = wo.title || item.description || 'Work Order';
-      const aptPrefix = wo.apartmentNumber ? `Apt ${escapeHtml(wo.apartmentNumber)} - ` : '';
       const desc = wo.description ? escapeHtml(wo.description) : '';
 
       return `
@@ -536,12 +534,12 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
           <td class="col-date">${escapeHtml(formatShortDate(date))}</td>
           <td class="col-activity">${escapeHtml(activity)}</td>
           <td class="col-description">
-            <div class="desc-title">${aptPrefix}${escapeHtml(title)}</div>
+            <div class="desc-title">${escapeHtml(title)}</div>
             ${desc ? `<div class="desc-body">${desc}</div>` : ''}
           </td>
           <td class="col-qty">${qty}</td>
-          <td class="col-rate">$${formatMoney(rate)}</td>
-          <td class="col-amount">$${formatMoney(amount)}</td>
+          <td class="col-rate">${escapeHtml(formatMoney(rate))}</td>
+          <td class="col-amount">${escapeHtml(formatMoney(amount))}</td>
         </tr>
       `;
     })
