@@ -24,6 +24,7 @@ import AuthLayout from './layouts/AuthLayout';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
 
 // Main Pages
 import Dashboard from './pages/dashboard/Dashboard';
@@ -136,6 +137,14 @@ const AppContent = () => {
                     <PublicRoute>
                       <AuthLayout>
                         <ForgotPassword />
+                      </AuthLayout>
+                    </PublicRoute>
+                  } />
+
+                  <Route path="/reset-password/:token" element={
+                    <PublicRoute>
+                      <AuthLayout>
+                        <ResetPassword />
                       </AuthLayout>
                     </PublicRoute>
                   } />
