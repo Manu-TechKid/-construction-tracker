@@ -5,6 +5,16 @@ const app = require('../app');
 const WorkOrder = require('../models/WorkOrder');
 const User = require('../models/User');
 const Building = require('../models/Building');
+const WorkType = require('../models/WorkType');
+const WorkSubType = require('../models/WorkSubType');
+
+jest.setTimeout(30000);
+
+const idOf = (value) => {
+  if (!value) return value;
+  if (typeof value === 'object' && value._id) return value._id;
+  return value;
+};
 
 // Test data
 let testToken;
@@ -12,77 +22,13 @@ let testWorkOrderId;
 let testBuildingId;
 let testWorkerId;
 let testAdminId;
+let testWorkTypeId;
+let testWorkSubTypeId;
 
 // Create test data before running tests
 beforeAll(async () => {
   // Connect to in-memory database
   await connect();
-
-  // Create a test admin user
-  const admin = await User.create({
-    name: 'Test Admin',
-    email: 'admin@test.com',
-    password: 'password123',
-    role: 'admin',
-    phone: '1234567890'
-  });
-
-  testAdminId = admin._id;
-
-  // Create a test worker
-  const worker = await User.create({
-    name: 'Test Worker',
-    email: 'worker@test.com',
-    password: 'password123',
-    role: 'worker',
-    phone: '0987654321'
-  });
-  testWorkerId = worker._id;
-
-  // Create a test building
-  const building = await Building.create({
-    name: 'Test Building',
-    address: '123 Test St',
-    city: 'Test City',
-    state: 'Test State',
-    zipCode: '12345',
-    manager: user._id
-  });
-  testBuildingId = building._id;
-
-  // Login to get token
-  const res = await request(app)
-    .post('/api/v1/auth/login')
-    .send({
-      email: 'admin@test.com',
-      password: 'password123'
-    });
-  
-  testToken = res.body.token;
-  
-  // Create a test work order
-  const workOrder = await WorkOrder.create({
-    title: 'Test Work Order',
-    description: 'Test work order description',
-    building: testBuildingId,
-    apartmentNumber: '101',
-    priority: 'medium',
-    status: 'pending',
-    createdBy: testAdminId,
-    services: [{
-      type: 'cleaning',
-      description: 'Test cleaning service',
-      laborCost: 50,
-      materialCost: 10
-    }],
-    assignedTo: [{
-      worker: testWorkerId,
-      assignedBy: testAdminId,
-      assignedAt: new Date()
-    }]
-  });
-  
-  testWorkOrderId = workOrder._id;
 });
 
 // Clean up test data after tests
@@ -91,9 +37,83 @@ afterAll(async () => {
   await closeDatabase();
 });
 
-// Clean up after each test
-afterEach(async () => {
+beforeEach(async () => {
   await clearDatabase();
+
+  const admin = await User.create({
+    name: 'Test Admin',
+    email: 'admin@test.com',
+    password: 'password123',
+    role: 'admin',
+    phone: '1234567890',
+    isActive: true,
+    approvalStatus: 'approved'
+  });
+  testAdminId = admin._id;
+
+  const worker = await User.create({
+    name: 'Test Worker',
+    email: 'worker@test.com',
+    password: 'password123',
+    role: 'worker',
+    phone: '0987654321',
+    isActive: true,
+    approvalStatus: 'approved'
+  });
+  testWorkerId = worker._id;
+
+  const workType = await WorkType.create({
+    name: 'Test Work Type',
+    code: 'test_type',
+    createdBy: testAdminId,
+  });
+  testWorkTypeId = workType._id;
+
+  const workSubType = await WorkSubType.create({
+    name: 'Test Work SubType',
+    code: 'test_subtype',
+    workType: testWorkTypeId,
+    createdBy: testAdminId,
+  });
+  testWorkSubTypeId = workSubType._id;
+
+  const building = await Building.create({
+    name: 'Test Building',
+    address: '123 Test St',
+    city: 'Test City',
+    administrator: testAdminId,
+  });
+  testBuildingId = building._id;
+
+  const res = await request(app)
+    .post('/api/v1/auth/login')
+    .send({
+      email: 'admin@test.com',
+      password: 'password123'
+    });
+  testToken = res.body.token;
+
+  const workOrder = await WorkOrder.create({
+    title: 'Test Work Order',
+    description: 'Test work order description',
+    building: testBuildingId,
+    apartmentNumber: '101',
+    priority: 'medium',
+    status: 'pending',
+    scheduledDate: new Date(),
+    workType: testWorkTypeId,
+    workSubType: testWorkSubTypeId,
+    createdBy: testAdminId,
+    services: [{
+      name: 'Test service',
+      description: 'Test service description',
+      laborCost: 50,
+      materialCost: 10
+    }],
+    assignedTo: [{ worker: testWorkerId }]
+  });
+
+  testWorkOrderId = String(workOrder._id);
 });
 
 describe('Work Order API', () => {
@@ -105,9 +125,12 @@ describe('Work Order API', () => {
         building: testBuildingId,
         apartmentNumber: '102',
         priority: 'high',
+        scheduledDate: new Date().toISOString(),
+        workType: testWorkTypeId,
+        workSubType: testWorkSubTypeId,
         services: [
           {
-            type: 'maintenance',
+            name: 'Fix sink',
             description: 'Fix the sink',
             laborCost: 75,
             materialCost: 25
@@ -122,11 +145,16 @@ describe('Work Order API', () => {
         .send(workOrderData);
 
       expect(res.statusCode).toEqual(201);
-      expect(res.body.status).toBe('success');
-      expect(res.body.data.workOrder).toHaveProperty('_id');
-      expect(res.body.data.workOrder.building).toBe(testBuildingId.toString());
-      expect(res.body.data.workOrder.apartmentNumber).toBe('102');
-      expect(res.body.data.workOrder.priority).toBe('high');
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveProperty('_id');
+      expect(String(idOf(res.body.data.building))).toBe(String(testBuildingId));
+      expect(res.body.data.apartmentNumber).toBe('102');
+      expect(res.body.data.priority).toBe('high');
+      expect(res.body.data.scheduledDate).toBeDefined();
+      expect(String(idOf(res.body.data.workType))).toBe(String(testWorkTypeId));
+      expect(String(idOf(res.body.data.workSubType))).toBe(String(testWorkSubTypeId));
+      expect(res.body.data.services).toBeDefined();
+      expect(res.body.data.services[0].name).toBe('Fix sink');
     });
   });
 
@@ -137,8 +165,18 @@ describe('Work Order API', () => {
         .set('Authorization', `Bearer ${testToken}`);
 
       expect(res.statusCode).toEqual(200);
-      expect(res.body.status).toBe('success');
-      expect(res.body.data.workOrder._id).toBe(testWorkOrderId);
+      expect(res.body.success).toBe(true);
+      expect(String(res.body.data._id)).toBe(String(testWorkOrderId));
+      expect(res.body.data.title).toBe('Test Work Order');
+      expect(res.body.data.description).toBe('Test work order description');
+      expect(String(idOf(res.body.data.building))).toBe(String(testBuildingId));
+      expect(res.body.data.apartmentNumber).toBe('101');
+      expect(res.body.data.priority).toBe('medium');
+      expect(res.body.data.scheduledDate).toBeDefined();
+      expect(String(idOf(res.body.data.workType))).toBe(String(testWorkTypeId));
+      expect(String(idOf(res.body.data.workSubType))).toBe(String(testWorkSubTypeId));
+      expect(res.body.data.services).toBeDefined();
+      expect(res.body.data.services[0].name).toBe('Test service');
     });
   });
 
@@ -147,12 +185,15 @@ describe('Work Order API', () => {
       const updateData = {
         description: 'Updated work order description',
         priority: 'high',
+        scheduledDate: new Date().toISOString(),
+        workType: testWorkTypeId,
+        workSubType: testWorkSubTypeId,
         services: [
           {
-            type: 'cleaning',
-            description: 'Deep clean the apartment',
+            name: 'Update service',
+            description: 'Update service description',
             laborCost: 75,
-            materialCost: 15
+            materialCost: 25
           }
         ]
       };
@@ -163,9 +204,14 @@ describe('Work Order API', () => {
         .send(updateData);
 
       expect(res.statusCode).toEqual(200);
-      expect(res.body.status).toBe('success');
-      expect(res.body.data.workOrder.description).toBe(updateData.description);
-      expect(res.body.data.workOrder.priority).toBe(updateData.priority);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.description).toBe(updateData.description);
+      expect(res.body.data.priority).toBe(updateData.priority);
+      expect(res.body.data.scheduledDate).toBeDefined();
+      expect(String(idOf(res.body.data.workType))).toBe(String(testWorkTypeId));
+      expect(String(idOf(res.body.data.workSubType))).toBe(String(testWorkSubTypeId));
+      expect(res.body.data.services).toBeDefined();
+      expect(res.body.data.services[0].name).toBe('Update service');
     });
   });
 
@@ -176,9 +222,19 @@ describe('Work Order API', () => {
         .set('Authorization', `Bearer ${testToken}`);
 
       expect(res.statusCode).toEqual(200);
-      expect(res.body.status).toBe('success');
+      expect(res.body.success).toBe(true);
       expect(Array.isArray(res.body.data.workOrders)).toBeTruthy();
       expect(res.body.data.workOrders.length).toBeGreaterThan(0);
+      expect(res.body.data.workOrders[0].title).toBe('Test Work Order');
+      expect(res.body.data.workOrders[0].description).toBe('Test work order description');
+      expect(String(idOf(res.body.data.workOrders[0].building))).toBe(String(testBuildingId));
+      expect(res.body.data.workOrders[0].apartmentNumber).toBe('101');
+      expect(res.body.data.workOrders[0].priority).toBe('medium');
+      expect(res.body.data.workOrders[0].scheduledDate).toBeDefined();
+      expect(String(idOf(res.body.data.workOrders[0].workType))).toBe(String(testWorkTypeId));
+      expect(String(idOf(res.body.data.workOrders[0].workSubType))).toBe(String(testWorkSubTypeId));
+      expect(res.body.data.workOrders[0].services).toBeDefined();
+      expect(res.body.data.workOrders[0].services[0].name).toBe('Test service');
     });
   });
 
@@ -192,7 +248,7 @@ describe('Work Order API', () => {
 
       // Verify soft delete
       const workOrder = await WorkOrder.findById(testWorkOrderId);
-      expect(workOrder.isDeleted).toBe(true);
+      expect(workOrder.deleted).toBe(true);
     });
   });
 });

@@ -4,15 +4,24 @@ export const cleaningJobsApiSlice = apiSlice.injectEndpoints({
   endpoints: builder => ({
     getCleaningJobs: builder.query({
       query: (params = {}) => {
+        const formatLocalDateOnly = (dateValue) => {
+          const d = dateValue instanceof Date ? dateValue : new Date(dateValue);
+          if (Number.isNaN(d.getTime())) return null;
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
+          return `${yyyy}-${mm}-${dd}`;
+        };
+
         const normalizeQueryValue = (value) => {
           if (value === undefined || value === null) return null;
           if (value === '') return null;
           if (value === 'all') return null;
           if (value === 'null' || value === 'undefined') return null;
 
-          if (value instanceof Date) return value.toISOString();
-          if (typeof value === 'object' && typeof value.toISOString === 'function') return value.toISOString();
-          if (typeof value === 'object' && value?.$d instanceof Date) return value.$d.toISOString();
+          if (value instanceof Date) return formatLocalDateOnly(value);
+          if (typeof value === 'object' && typeof value.toISOString === 'function') return formatLocalDateOnly(value);
+          if (typeof value === 'object' && value?.$d instanceof Date) return formatLocalDateOnly(value.$d);
 
           return String(value);
         };

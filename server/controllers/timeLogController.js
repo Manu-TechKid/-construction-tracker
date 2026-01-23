@@ -169,6 +169,56 @@ exports.updateTimeLog = catchAsync(async (req, res, next) => {
   });
 });
 
+// @desc    Update a time log (authenticated user's own)
+// @route   PUT /api/v1/timelogs/my-logs/:id
+// @access  Private
+exports.updateMyTimeLog = catchAsync(async (req, res, next) => {
+  const { timestamp, notes } = req.body;
+
+  const clockInLog = await TimeLog.findById(req.params.id);
+  if (!clockInLog) {
+    return next(new AppError('No time log found with that ID', 404));
+  }
+
+  if (String(clockInLog.user) !== String(req.user._id)) {
+    return next(new AppError('You can only update your own time logs', 403));
+  }
+
+  if (clockInLog.type !== 'clock-in') {
+    return next(new AppError('Only clock-in logs can be updated from My Time Logs', 400));
+  }
+
+  const clockOutLog = await TimeLog.findOne({
+    user: clockInLog.user,
+    type: 'clock-out',
+    timestamp: { $gt: clockInLog.timestamp },
+  }).sort({ timestamp: 1 });
+
+  if (timestamp) {
+    const newTs = new Date(timestamp);
+    if (Number.isNaN(newTs.getTime())) {
+      return next(new AppError('Invalid timestamp', 400));
+    }
+    if (clockOutLog && newTs >= clockOutLog.timestamp) {
+      return next(new AppError('Clock-in time must be before clock-out time', 400));
+    }
+    clockInLog.timestamp = newTs;
+  }
+
+  if (notes !== undefined) {
+    clockInLog.notes = notes;
+  }
+
+  await clockInLog.save();
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      timeLog: clockInLog,
+    },
+  });
+});
+
 // @desc    Delete a time log (for admins/managers)
 // @route   DELETE /api/v1/timelogs/:id
 // @access  Admin, Manager
@@ -193,6 +243,40 @@ exports.deleteTimeLog = catchAsync(async (req, res, next) => {
   }
 
   // Delete the primary log (the one with the ID passed in)
+  await TimeLog.findByIdAndDelete(req.params.id);
+
+  res.status(204).json({
+    status: 'success',
+    data: null,
+  });
+});
+
+// @desc    Delete a time log (authenticated user's own)
+// @route   DELETE /api/v1/timelogs/my-logs/:id
+// @access  Private
+exports.deleteMyTimeLog = catchAsync(async (req, res, next) => {
+  const clockInLog = await TimeLog.findById(req.params.id);
+
+  if (!clockInLog) {
+    return next(new AppError('No time log found with that ID', 404));
+  }
+
+  if (String(clockInLog.user) !== String(req.user._id)) {
+    return next(new AppError('You can only delete your own time logs', 403));
+  }
+
+  if (clockInLog.type === 'clock-in') {
+    const clockOutLog = await TimeLog.findOne({
+      user: clockInLog.user,
+      type: 'clock-out',
+      timestamp: { $gt: clockInLog.timestamp },
+    }).sort({ timestamp: 1 });
+
+    if (clockOutLog) {
+      await TimeLog.findByIdAndDelete(clockOutLog._id);
+    }
+  }
+
   await TimeLog.findByIdAndDelete(req.params.id);
 
   res.status(204).json({

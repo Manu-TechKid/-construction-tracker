@@ -32,6 +32,21 @@ export const timeLogsApiSlice = apiSlice.injectEndpoints({
             ]
           : [{ type: 'TimeLog', id: 'LIST' }],
     }),
+    updateMyTimeLog: builder.mutation({
+      query: ({ id, ...patch }) => ({
+        url: `/time-logs/my-logs/${id}`,
+        method: 'PUT',
+        body: patch,
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'TimeLog', id }, { type: 'TimeLog', id: 'LIST' }],
+    }),
+    deleteMyTimeLog: builder.mutation({
+      query: (id) => ({
+        url: `/time-logs/my-logs/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (result, error, id) => [{ type: 'TimeLog', id: 'LIST' }],
+    }),
     updateTimeLog: builder.mutation({
       query: ({ id, ...patch }) => ({
         url: `/time-logs/${id}`,
@@ -68,4 +83,6 @@ export const {
   useGetAllTimeLogsQuery,
   useDeleteTimeLogMutation,
   useUpdateTimeLogMutation,
+  useUpdateMyTimeLogMutation,
+  useDeleteMyTimeLogMutation,
 } = timeLogsApiSlice;

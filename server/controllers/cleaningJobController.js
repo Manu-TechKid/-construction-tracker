@@ -4,6 +4,31 @@ const Building = require('../models/Building');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 
+const parseDateOnlyToUtcNoon = (value) => {
+  if (typeof value !== 'string') return null;
+  const m = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  const year = Number(m[1]);
+  const monthIndex = Number(m[2]) - 1;
+  const day = Number(m[3]);
+  const dt = new Date(Date.UTC(year, monthIndex, day, 12, 0, 0, 0));
+  return Number.isNaN(dt.getTime()) ? null : dt;
+};
+
+const parseQueryDateRange = (value, boundary) => {
+  const dateOnly = parseDateOnlyToUtcNoon(value);
+  if (dateOnly) {
+    const year = dateOnly.getUTCFullYear();
+    const monthIndex = dateOnly.getUTCMonth();
+    const day = dateOnly.getUTCDate();
+    if (boundary === 'start') return new Date(Date.UTC(year, monthIndex, day, 0, 0, 0, 0));
+    return new Date(Date.UTC(year, monthIndex, day, 23, 59, 59, 999));
+  }
+
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
 // Get all cleaning jobs with filtering
 exports.getAllCleaningJobs = catchAsync(async (req, res, next) => {
   const { building, buildingId, startDate, endDate, worker, paymentStatus, status, subcategory, observations } = req.query;
@@ -34,8 +59,8 @@ exports.getAllCleaningJobs = catchAsync(async (req, res, next) => {
   }
 
   const dateRange = {};
-  const startDateObj = (startDate && startDate !== 'null' && startDate !== 'undefined') ? new Date(startDate) : null;
-  const endDateObj = (endDate && endDate !== 'null' && endDate !== 'undefined') ? new Date(endDate) : null;
+  const startDateObj = (startDate && startDate !== 'null' && startDate !== 'undefined') ? parseQueryDateRange(startDate, 'start') : null;
+  const endDateObj = (endDate && endDate !== 'null' && endDate !== 'undefined') ? parseQueryDateRange(endDate, 'end') : null;
   if (startDateObj instanceof Date && !Number.isNaN(startDateObj.getTime())) dateRange.$gte = startDateObj;
   if (endDateObj instanceof Date && !Number.isNaN(endDateObj.getTime())) dateRange.$lte = endDateObj;
   if (Object.keys(dateRange).length > 0) filter.serviceDate = dateRange;
@@ -109,6 +134,11 @@ exports.createCleaningJob = catchAsync(async (req, res, next) => {
   const payload = { ...req.body };
   if (payload.buildingId && !payload.building) payload.building = payload.buildingId;
 
+  if (payload.serviceDate) {
+    const normalized = parseDateOnlyToUtcNoon(payload.serviceDate);
+    if (normalized) payload.serviceDate = normalized;
+  }
+
   if (payload.building === 'all') payload.building = undefined;
 
   if (!payload.building) {
@@ -132,6 +162,11 @@ exports.createCleaningJob = catchAsync(async (req, res, next) => {
 exports.updateCleaningJob = catchAsync(async (req, res, next) => {
   const payload = { ...req.body };
   if (payload.buildingId && !payload.building) payload.building = payload.buildingId;
+
+  if (payload.serviceDate) {
+    const normalized = parseDateOnlyToUtcNoon(payload.serviceDate);
+    if (normalized) payload.serviceDate = normalized;
+  }
 
   if (payload.building === 'all') payload.building = undefined;
 

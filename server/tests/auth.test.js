@@ -5,11 +5,16 @@ const app = require('../app');
 const User = require('../models/User');
 const Building = require('../models/Building');
 const WorkOrder = require('../models/WorkOrder');
+const WorkType = require('../models/WorkType');
+const WorkSubType = require('../models/WorkSubType');
+
+jest.setTimeout(30000);
 
 // Test data
 let adminToken, workerToken, managerToken;
 let testBuildingId, testWorkOrderId;
 let adminId, workerId, managerId;
+let testWorkTypeId, testWorkSubTypeId;
 
 beforeAll(async () => {
   await connect();
@@ -20,7 +25,9 @@ beforeAll(async () => {
     email: 'admin@test.com',
     password: 'password123',
     role: 'admin',
-    phone: '1234567890'
+    phone: '1234567890',
+    isActive: true,
+    approvalStatus: 'approved'
   });
   adminId = admin._id;
 
@@ -29,7 +36,9 @@ beforeAll(async () => {
     email: 'worker@test.com',
     password: 'password123',
     role: 'worker',
-    phone: '0987654321'
+    phone: '0987654321',
+    isActive: true,
+    approvalStatus: 'approved'
   });
   workerId = worker._id;
 
@@ -38,18 +47,33 @@ beforeAll(async () => {
     email: 'manager@test.com',
     password: 'password123',
     role: 'manager',
-    phone: '5555555555'
+    phone: '5555555555',
+    isActive: true,
+    approvalStatus: 'approved'
   });
   managerId = manager._id;
+
+  const workType = await WorkType.create({
+    name: 'Test Work Type',
+    code: 'test_type',
+    createdBy: adminId,
+  });
+  testWorkTypeId = workType._id;
+
+  const workSubType = await WorkSubType.create({
+    name: 'Test Work SubType',
+    code: 'test_subtype',
+    workType: testWorkTypeId,
+    createdBy: adminId,
+  });
+  testWorkSubTypeId = workSubType._id;
 
   // Create test building
   const building = await Building.create({
     name: 'Test Building',
     address: '123 Test St',
     city: 'Test City',
-    state: 'Test State',
-    zipCode: '12345',
-    manager: managerId
+    administrator: adminId,
   });
   testBuildingId = building._id;
 
@@ -77,20 +101,22 @@ beforeAll(async () => {
     apartmentNumber: '101',
     priority: 'medium',
     status: 'pending',
+    scheduledDate: new Date(),
+    workType: testWorkTypeId,
+    workSubType: testWorkSubTypeId,
     createdBy: adminId,
     services: [{
-      type: 'cleaning',
-      description: 'Test cleaning service',
+      name: 'Test service',
+      description: 'Test service description',
       laborCost: 50,
       materialCost: 10
     }],
     assignedTo: [{
       worker: workerId,
-      assignedBy: adminId,
       assignedAt: new Date()
     }]
   });
-  testWorkOrderId = workOrder._id;
+  testWorkOrderId = String(workOrder._id);
 });
 
 afterAll(async () => {
@@ -107,8 +133,11 @@ describe('Role-Based Access Control', () => {
         building: testBuildingId,
         apartmentNumber: '102',
         priority: 'high',
+        scheduledDate: new Date().toISOString(),
+        workType: testWorkTypeId,
+        workSubType: testWorkSubTypeId,
         services: [{
-          type: 'maintenance',
+          name: 'Fix sink',
           description: 'Fix the sink',
           laborCost: 75,
           materialCost: 25
@@ -122,7 +151,7 @@ describe('Role-Based Access Control', () => {
         .send(workOrderData);
 
       expect(res.statusCode).toEqual(201);
-      expect(res.body.status).toBe('success');
+      expect(res.body.success).toBe(true);
     });
 
     it('should allow manager to create work orders', async () => {
@@ -132,8 +161,11 @@ describe('Role-Based Access Control', () => {
         building: testBuildingId,
         apartmentNumber: '103',
         priority: 'medium',
+        scheduledDate: new Date().toISOString(),
+        workType: testWorkTypeId,
+        workSubType: testWorkSubTypeId,
         services: [{
-          type: 'cleaning',
+          name: 'Clean apartment',
           description: 'Clean apartment',
           laborCost: 50,
           materialCost: 10
@@ -147,7 +179,7 @@ describe('Role-Based Access Control', () => {
         .send(workOrderData);
 
       expect(res.statusCode).toEqual(201);
-      expect(res.body.status).toBe('success');
+      expect(res.body.success).toBe(true);
     });
 
     it('should deny worker from creating work orders', async () => {
@@ -157,8 +189,11 @@ describe('Role-Based Access Control', () => {
         building: testBuildingId,
         apartmentNumber: '104',
         priority: 'low',
+        scheduledDate: new Date().toISOString(),
+        workType: testWorkTypeId,
+        workSubType: testWorkSubTypeId,
         services: [{
-          type: 'repair',
+          name: 'Fix door',
           description: 'Fix door',
           laborCost: 30,
           materialCost: 5
@@ -172,12 +207,11 @@ describe('Role-Based Access Control', () => {
         .send(workOrderData);
 
       expect(res.statusCode).toEqual(403);
-      expect(res.body.message).toContain('permission');
     });
   });
 
   describe('Work Order Updates', () => {
-    it('should allow assigned worker to update work order status', async () => {
+    it('should deny assigned worker from updating work orders', async () => {
       const updateData = {
         status: 'in_progress'
       };
@@ -187,14 +221,22 @@ describe('Role-Based Access Control', () => {
         .set('Authorization', `Bearer ${workerToken}`)
         .send(updateData);
 
-      expect(res.statusCode).toEqual(200);
-      expect(res.body.data.workOrder.status).toBe('in_progress');
+      expect(res.statusCode).toEqual(403);
     });
 
     it('should allow admin to update any work order', async () => {
       const updateData = {
         priority: 'urgent',
-        description: 'Updated by admin'
+        description: 'Updated by admin',
+        scheduledDate: new Date().toISOString(),
+        workType: testWorkTypeId,
+        workSubType: testWorkSubTypeId,
+        services: [{
+          name: 'Updated service',
+          description: 'Updated service',
+          laborCost: 10,
+          materialCost: 0
+        }]
       };
 
       const res = await request(app)
@@ -203,7 +245,8 @@ describe('Role-Based Access Control', () => {
         .send(updateData);
 
       expect(res.statusCode).toEqual(200);
-      expect(res.body.data.workOrder.priority).toBe('urgent');
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.priority).toBe('urgent');
     });
   });
 

@@ -7,6 +7,13 @@ let mongoServer;
  * Connect to the in-memory database.
  */
 const connect = async () => {
+  if (!process.env.JWT_SECRET) {
+    process.env.JWT_SECRET = 'test_jwt_secret';
+  }
+  if (!process.env.JWT_EXPIRE && !process.env.JWT_EXPIRES_IN) {
+    process.env.JWT_EXPIRES_IN = '30d';
+  }
+
   mongoServer = await MongoMemoryServer.create();
   const uri = mongoServer.getUri();
   

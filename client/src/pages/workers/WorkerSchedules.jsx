@@ -74,45 +74,47 @@ import {
 } from '../../features/schedules/schedulesApiSlice';
 import { useAuth } from '../../hooks/useAuth';
 
-const validationSchema = Yup.object({
-  workerId: Yup.string().required('Please select a worker'),
-  buildingId: Yup.string().required('Please select a building'),
-  date: Yup.date()
-    .required('Date is required')
-    .test('not-too-far-past', 'Cannot schedule more than 14 days in the past', function(value) {
-      if (!value) return true;
-      const scheduleDay = startOfDay(new Date(value));
-      const today = startOfDay(new Date());
-      if (scheduleDay >= today) return true;
-      return differenceInCalendarDays(today, scheduleDay) <= 14;
-    }),
-  startTime: Yup.date().required('Start time is required'),
-  endTime: Yup.date()
-    .required('End time is required')
-    .test('is-after-start', 'End time must be after start time', function(value) {
-      const { startTime } = this.parent;
-      if (!startTime || !value) return true;
-      const start = new Date(startTime);
-      const end = new Date(value);
-      return end > start;
-    })
-    .test('minimum-duration', 'Minimum duration is 30 minutes', function(value) {
-      const { startTime } = this.parent;
-      if (!startTime || !value) return true;
-      const start = new Date(startTime);
-      const end = new Date(value);
-      const diffMinutes = (end - start) / (1000 * 60);
-      return diffMinutes >= 30;
-    }),
-  task: Yup.string()
-    .required('Task description is required')
-    .min(10, 'Task description must be at least 10 characters')
-    .max(500, 'Task description cannot exceed 500 characters'),
-  notes: Yup.string().max(1000, 'Notes cannot exceed 1000 characters'),
-});
-
 const WorkerSchedules = () => {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
+  const canOverridePastScheduleLimit = ['superuser', 'admin', 'manager', 'supervisor'].includes(user?.role);
+
+  const validationSchema = useMemo(() => Yup.object({
+    workerId: Yup.string().required('Please select a worker'),
+    buildingId: Yup.string().required('Please select a building'),
+    date: Yup.date()
+      .required('Date is required')
+      .test('not-too-far-past', 'Cannot schedule more than 14 days in the past', function(value) {
+        if (canOverridePastScheduleLimit) return true;
+        if (!value) return true;
+        const scheduleDay = startOfDay(new Date(value));
+        const today = startOfDay(new Date());
+        if (scheduleDay >= today) return true;
+        return differenceInCalendarDays(today, scheduleDay) <= 14;
+      }),
+    startTime: Yup.date().required('Start time is required'),
+    endTime: Yup.date()
+      .required('End time is required')
+      .test('is-after-start', 'End time must be after start time', function(value) {
+        const { startTime } = this.parent;
+        if (!startTime || !value) return true;
+        const start = new Date(startTime);
+        const end = new Date(value);
+        return end > start;
+      })
+      .test('minimum-duration', 'Minimum duration is 30 minutes', function(value) {
+        const { startTime } = this.parent;
+        if (!startTime || !value) return true;
+        const start = new Date(startTime);
+        const end = new Date(value);
+        const diffMinutes = (end - start) / (1000 * 60);
+        return diffMinutes >= 30;
+      }),
+    task: Yup.string()
+      .required('Task description is required')
+      .min(10, 'Task description must be at least 10 characters')
+      .max(500, 'Task description cannot exceed 500 characters'),
+    notes: Yup.string().max(1000, 'Notes cannot exceed 1000 characters'),
+  }), [canOverridePastScheduleLimit]);
   
   // State management
   const [currentWeek, setCurrentWeek] = useState(new Date());
@@ -151,23 +153,37 @@ const WorkerSchedules = () => {
     validationSchema,
     onSubmit: async (values) => {
       try {
-        console.log('Form values before processing:', values);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Form values before processing:', values);
+        }
+
+        const scheduleDate = new Date(values.date);
+        scheduleDate.setHours(12, 0, 0, 0);
+
+        const normalizeTimeToScheduleDate = (timeValue) => {
+          const t = new Date(timeValue);
+          const d = new Date(scheduleDate);
+          d.setHours(t.getHours(), t.getMinutes(), 0, 0);
+          return d;
+        };
+
+        const normalizedStart = normalizeTimeToScheduleDate(values.startTime);
+        const normalizedEnd = normalizeTimeToScheduleDate(values.endTime);
         
         // Validate time overlap with existing schedules
         const existingSchedules = schedules.filter(s => {
           const scheduleWorkerId = typeof s.workerId === 'object' && s.workerId !== null ? s.workerId._id : s.workerId;
           return (
             s._id !== editingSchedule?._id &&
-            scheduleWorkerId === values.workerId &&
-            isSameDay(new Date(s.date), values.date)
+            scheduleWorkerId === values.workerId
           );
         });
 
         const hasOverlap = existingSchedules.some(schedule => {
           const existingStart = new Date(schedule.startTime);
           const existingEnd = new Date(schedule.endTime);
-          const newStart = new Date(values.startTime);
-          const newEnd = new Date(values.endTime);
+          const newStart = normalizedStart;
+          const newEnd = normalizedEnd;
           
           return (newStart < existingEnd && newEnd > existingStart);
         });
@@ -180,24 +196,30 @@ const WorkerSchedules = () => {
         const scheduleData = {
           workerId: values.workerId,
           buildingId: values.buildingId,
-          date: values.date,
-          startTime: values.startTime,
-          endTime: values.endTime,
+          date: scheduleDate.toISOString(),
+          startTime: normalizedStart.toISOString(),
+          endTime: normalizedEnd.toISOString(),
           task: values.task,
           notes: values.notes,
         };
 
-        console.log('Schedule data being sent:', scheduleData);
-        console.log('Worker ID type:', typeof values.workerId, 'Value:', values.workerId);
-        console.log('Building ID type:', typeof values.buildingId, 'Value:', values.buildingId);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Schedule data being sent:', scheduleData);
+          console.log('Worker ID type:', typeof values.workerId, 'Value:', values.workerId);
+          console.log('Building ID type:', typeof values.buildingId, 'Value:', values.buildingId);
+        }
 
         if (editingSchedule) {
           const result = await updateSchedule({ id: editingSchedule._id, ...scheduleData }).unwrap();
-          console.log('Update result:', result);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Update result:', result);
+          }
           toast.success('✅ Schedule updated successfully!');
         } else {
           const result = await createSchedule(scheduleData).unwrap();
-          console.log('Create result:', result);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Create result:', result);
+          }
           toast.success('✅ Schedule created successfully!');
         }
 

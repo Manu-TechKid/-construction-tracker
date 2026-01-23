@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, CircularProgress, Alert, Chip, IconButton, Tooltip, Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button } from '@mui/material';
 import { Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
-import { useGetMyTimeLogsQuery, useDeleteTimeLogMutation, useUpdateTimeLogMutation } from '../../features/time-logs/timeLogsApiSlice';
+import { useGetMyTimeLogsQuery, useDeleteMyTimeLogMutation, useUpdateMyTimeLogMutation } from '../../features/time-logs/timeLogsApiSlice';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -9,8 +9,8 @@ import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';
 
 const MyTimeLogs = () => {
   const { data: timeLogsData, isLoading, error } = useGetMyTimeLogsQuery();
-  const [deleteTimeLog] = useDeleteTimeLogMutation();
-  const [updateTimeLog] = useUpdateTimeLogMutation();
+  const [deleteTimeLog] = useDeleteMyTimeLogMutation();
+  const [updateTimeLog] = useUpdateMyTimeLogMutation();
 
   const [editLog, setEditLog] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -27,7 +27,7 @@ const MyTimeLogs = () => {
   };
 
   const handleEdit = (log) => {
-    setEditLog({ ...log, timestamp: new Date(log.timestamp) });
+    setEditLog({ ...log, timestamp: new Date(log.clockIn) });
     setEditDialogOpen(true);
   };
 
@@ -64,7 +64,7 @@ const MyTimeLogs = () => {
           <TableHead>
             <TableRow>
               <TableCell>Date</TableCell>
-              <TableCell>Date</TableCell>
+              <TableCell>Clock Out Date</TableCell>
               <TableCell>Clock In</TableCell>
               <TableCell>Clock Out</TableCell>
               <TableCell>Duration</TableCell>
@@ -77,7 +77,7 @@ const MyTimeLogs = () => {
             {timeLogs.map((log) => (
               <TableRow key={log._id}>
                 <TableCell>{format(new Date(log.clockIn), 'PPP')}</TableCell>
-                <TableCell>{format(new Date(log.clockOut), 'PPP')}</TableCell>
+                <TableCell>{log.clockOut ? format(new Date(log.clockOut), 'PPP') : '-'}</TableCell>
                 <TableCell>{format(new Date(log.clockIn), 'p')}</TableCell>
                 <TableCell>{log.clockOut ? format(new Date(log.clockOut), 'p') : 'Active'}</TableCell>
                 <TableCell>{log.duration ? `${log.duration.toFixed(2)} hrs` : '-'}</TableCell>

@@ -1,6 +1,6 @@
 const express = require('express');
 const workPhotoController = require('../controllers/workPhotoController');
-const { protect, restrictTo } = require('../middleware/authMiddleware');
+const { protect, restrictTo } = require('../controllers/authController');
 
 const router = express.Router();
 
