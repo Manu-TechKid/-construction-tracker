@@ -81,7 +81,8 @@ Construction Tracker Team`,
 // Send password reset email
 exports.sendPasswordResetEmail = async (user, resetToken) => {
   try {
-    const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+    const baseClientUrl = (process.env.CLIENT_URL || process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
+    const resetUrl = `${baseClientUrl}/reset-password/${resetToken}`;
     
     // In development, log the email instead of sending
     if (process.env.NODE_ENV === 'development') {
@@ -92,6 +93,19 @@ exports.sendPasswordResetEmail = async (user, resetToken) => {
       console.log(`This link will expire in 10 minutes.`);
       console.log(`==========================================\n`);
       return { previewUrl: 'Password reset email logged in console (development mode)' };
+    }
+
+    // If email is not configured in production, log reset link instead of throwing.
+    // This keeps the forgot-password flow usable while deploying/configuring SMTP.
+    const hasEmailConfig = Boolean(process.env.EMAIL_HOST && process.env.EMAIL_USERNAME && process.env.EMAIL_PASSWORD);
+    if (!hasEmailConfig) {
+      console.log(`\n=== PASSWORD RESET EMAIL (Email Not Configured) ===`);
+      console.log(`To: ${user.email}`);
+      console.log(`Subject: Password Reset Request`);
+      console.log(`Reset URL: ${resetUrl}`);
+      console.log(`Set EMAIL_HOST, EMAIL_USERNAME, EMAIL_PASSWORD, and EMAIL_FROM to enable sending.`);
+      console.log(`===============================================\n`);
+      return { previewUrl: 'Password reset email logged in console (email not configured)' };
     }
 
     // In production, send actual email
