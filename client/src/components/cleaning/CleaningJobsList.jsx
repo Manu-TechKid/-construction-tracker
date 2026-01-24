@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useGetCleaningJobsQuery, useUpdateCleaningJobMutation, useDeleteCleaningJobMutation, useGetCleaningJobSubcategoriesQuery } from '../../features/cleaning/cleaningJobsApiSlice';
-import { Autocomplete, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, CircularProgress, Alert, TextField, Select, MenuItem, FormControl, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Grid, Button } from '@mui/material';
+import { Autocomplete, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, CircularProgress, Alert, TextField, Select, MenuItem, FormControl, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Grid, Button, Chip } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Visibility as ViewIcon } from '@mui/icons-material';
 import { safeFormatDate } from '../../utils/dateUtils';
 import BuildingSelector from '../common/BuildingSelector';
@@ -22,6 +22,30 @@ const CleaningJobsList = ({ filters }) => {
 
   const jobs = cleaningJobsData?.data?.cleaningJobs || [];
   const subcategoryOptions = subcategoriesData?.data?.subcategories || [];
+
+  const statusChipProps = (status) => {
+    switch (status) {
+      case 'completed':
+        return { label: 'Completed', color: 'success', variant: 'filled' };
+      case 'in_progress':
+        return { label: 'In Progress', color: 'info', variant: 'filled' };
+      case 'cancelled':
+        return { label: 'Cancelled', color: 'default', variant: 'outlined' };
+      case 'pending':
+      default:
+        return { label: 'Pending', color: 'warning', variant: 'filled' };
+    }
+  };
+
+  const paymentChipProps = (paymentStatus) => {
+    switch (paymentStatus) {
+      case 'paid':
+        return { label: 'Paid', color: 'success', variant: 'outlined' };
+      case 'pending':
+      default:
+        return { label: 'Pending', color: 'warning', variant: 'outlined' };
+    }
+  };
 
   const handleEdit = (job) => {
     const buildingId = job?.building?._id ? String(job.building._id) : (typeof job.building === 'string' ? job.building : '');
@@ -106,8 +130,12 @@ const CleaningJobsList = ({ filters }) => {
               <TableCell>{job.unit}</TableCell>
               <TableCell>{job.subcategory}</TableCell>
               <TableCell>{job.worker}</TableCell>
-              <TableCell>{job.status}</TableCell>
-              <TableCell>{job.paymentStatus || 'pending'}</TableCell>
+              <TableCell>
+                <Chip size="small" {...statusChipProps(job.status)} />
+              </TableCell>
+              <TableCell>
+                <Chip size="small" {...paymentChipProps(job.paymentStatus || 'pending')} />
+              </TableCell>
               <TableCell>{job.cost}</TableCell>
               <TableCell>{job.price}</TableCell>
               <TableCell>{job.observations}</TableCell>

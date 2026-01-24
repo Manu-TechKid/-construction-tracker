@@ -43,6 +43,8 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
+const isDev = process.env.NODE_ENV === 'development';
+
 // Limit requests from same API
 const limiter = rateLimit({
   max: 1000, // Increased from 100 to 1000
@@ -72,22 +74,22 @@ const allowedOrigins = [
   process.env.CORS_ORIGIN
 ].filter(Boolean);
 
-console.log('🔒 CORS Allowed Origins:', allowedOrigins);
+if (isDev) console.log('🔒 CORS Allowed Origins:', allowedOrigins);
 
 const corsOptions = {
   origin: function (origin, callback) {
-    console.log('🌐 CORS Request from origin:', origin);
+    if (isDev) console.log('🌐 CORS Request from origin:', origin);
     // Allow requests with no origin (mobile apps, Postman, curl, etc.)
     if (!origin) {
-      console.log('✅ CORS: Allowing request with no origin');
+      if (isDev) console.log('✅ CORS: Allowing request with no origin');
       return callback(null, true);
     }
     
     if (allowedOrigins.indexOf(origin) !== -1) {
-      console.log('✅ CORS: Origin allowed:', origin);
+      if (isDev) console.log('✅ CORS: Origin allowed:', origin);
       callback(null, true);
     } else {
-      console.log('⚠️ CORS: Origin NOT in whitelist:', origin);
+      if (isDev) console.log('⚠️ CORS: Origin NOT in whitelist:', origin);
       // TEMPORARILY allow all origins for debugging
       callback(null, true);
     }
@@ -173,12 +175,14 @@ app.use((req, res, next) => {
 
 // 3) ROUTES
 // Add global request logging
-app.use('/api/v1', (req, res, next) => {
-  console.log(`=== API REQUEST: ${req.method} ${req.originalUrl} ===`);
-  console.log('Headers:', req.headers);
-  console.log('Body:', req.body);
-  next();
-});
+if (isDev) {
+  app.use('/api/v1', (req, res, next) => {
+    console.log(`=== API REQUEST: ${req.method} ${req.originalUrl} ===`);
+    console.log('Headers:', req.headers);
+    console.log('Body:', req.body);
+    next();
+  });
+}
 
 // Use centralized route management
 app.use('/api/v1', routes);

@@ -135,9 +135,12 @@ exports.logout = (req, res) => {
 };
 
 exports.protect = catchAsync(async (req, res, next) => {
-  console.log('=== AUTH PROTECT MIDDLEWARE ===');
-  console.log('Headers:', req.headers);
-  console.log('Cookies:', req.cookies);
+  const isDev = process.env.NODE_ENV === 'development';
+  if (isDev) {
+    console.log('=== AUTH PROTECT MIDDLEWARE ===');
+    console.log('Headers:', req.headers);
+    console.log('Cookies:', req.cookies);
+  }
   
   // 1) Getting token and check of it's there
   let token;
@@ -146,20 +149,20 @@ exports.protect = catchAsync(async (req, res, next) => {
     req.headers.authorization.startsWith('Bearer')
   ) {
     token = req.headers.authorization.split(' ')[1];
-    console.log('Token from Authorization header:', token ? 'Found' : 'Not found');
+    if (isDev) console.log('Token from Authorization header:', token ? 'Found' : 'Not found');
   } else if (req.cookies.jwt) {
     token = req.cookies.jwt;
-    console.log('Token from cookies:', token ? 'Found' : 'Not found');
+    if (isDev) console.log('Token from cookies:', token ? 'Found' : 'Not found');
   } else if (req.query.token) {
     // Support token in query params for PDF downloads
     token = req.query.token;
-    console.log('Token from query params:', token ? 'Found' : 'Not found');
+    if (isDev) console.log('Token from query params:', token ? 'Found' : 'Not found');
   }
 
-  console.log('Final token:', token ? 'Present' : 'Missing');
+  if (isDev) console.log('Final token:', token ? 'Present' : 'Missing');
 
   if (!token) {
-    console.log('No token found, returning next()');
+    if (isDev) console.log('No token found, returning next()');
     return next();
   }
 
@@ -176,16 +179,18 @@ exports.protect = catchAsync(async (req, res, next) => {
 
   // 3) Check if user still exists
   const currentUser = await User.findById(decoded.id);
-  console.log('User lookup result:', {
-    found: !!currentUser,
-    id: decoded.id,
-    role: currentUser?.role,
-    approvalStatus: currentUser?.workerProfile?.approvalStatus,
-    isActive: currentUser?.isActive
-  });
+  if (isDev) {
+    console.log('User lookup result:', {
+      found: !!currentUser,
+      id: decoded.id,
+      role: currentUser?.role,
+      approvalStatus: currentUser?.workerProfile?.approvalStatus,
+      isActive: currentUser?.isActive
+    });
+  }
   
   if (!currentUser) {
-    console.log('User not found in database');
+    if (isDev) console.log('User not found in database');
     return next(
       new AppError(
         'The user belonging to this token does no longer exist.',
@@ -196,7 +201,7 @@ exports.protect = catchAsync(async (req, res, next) => {
 
   // 4) Check if user changed password after the token was issued
   if (currentUser.changedPasswordAfter(decoded.iat)) {
-    console.log('Password changed after token issued');
+    if (isDev) console.log('Password changed after token issued');
     return next(
       new AppError('User recently changed password! Please log in again.', 401)
     );
@@ -206,10 +211,12 @@ exports.protect = catchAsync(async (req, res, next) => {
   if (currentUser.role === 'worker' && 
       currentUser.workerProfile?.approvalStatus !== 'approved' && 
       currentUser.workerProfile?.approvalStatus !== 'pending') {
-    console.log('Worker not approved:', {
-      role: currentUser.role,
-      approvalStatus: currentUser.workerProfile?.approvalStatus
-    });
+    if (isDev) {
+      console.log('Worker not approved:', {
+        role: currentUser.role,
+        approvalStatus: currentUser.workerProfile?.approvalStatus
+      });
+    }
     return next(new AppError('Your worker account is no longer approved.', 403));
   }
 
@@ -220,7 +227,7 @@ exports.protect = catchAsync(async (req, res, next) => {
 
   // GRANT ACCESS TO PROTECTED ROUTE
   req.user = currentUser;
-  console.log('Auth middleware completed successfully for user:', currentUser.name);
+  if (isDev) console.log('Auth middleware completed successfully for user:', currentUser.name);
   next();
 });
 
