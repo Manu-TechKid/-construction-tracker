@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useGetCleaningJobsQuery, useUpdateCleaningJobMutation, useDeleteCleaningJobMutation, useGetCleaningJobSubcategoriesQuery } from '../../features/cleaning/cleaningJobsApiSlice';
 import { Autocomplete, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, CircularProgress, Alert, TextField, Select, MenuItem, FormControl, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Grid, Button, Chip } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Visibility as ViewIcon } from '@mui/icons-material';
 import { safeFormatDate } from '../../utils/dateUtils';
 import BuildingSelector from '../common/BuildingSelector';
 
-const CleaningJobsList = ({ filters }) => {
+const CleaningJobsList = ({ filters, colorSettings }) => {
   const { data: cleaningJobsData, isLoading, error } = useGetCleaningJobsQuery(filters);
   const [updateCleaningJob] = useUpdateCleaningJobMutation();
   const [deleteCleaningJob] = useDeleteCleaningJobMutation();
@@ -17,6 +17,21 @@ const CleaningJobsList = ({ filters }) => {
   const [actionError, setActionError] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
 
+  const effectiveColorSettings = useMemo(() => ({
+    status: {
+      pending: '#f59e0b',
+      in_progress: '#3b82f6',
+      completed: '#22c55e',
+      cancelled: '#9ca3af',
+      ...(colorSettings?.status || {}),
+    },
+    payment: {
+      pending: '#f59e0b',
+      paid: '#22c55e',
+      ...(colorSettings?.payment || {}),
+    },
+  }), [colorSettings]);
+
   if (isLoading) return <CircularProgress />;
   if (error) return <Alert severity="error">Error loading cleaning jobs.</Alert>;
 
@@ -26,24 +41,48 @@ const CleaningJobsList = ({ filters }) => {
   const statusChipProps = (status) => {
     switch (status) {
       case 'completed':
-        return { label: 'Completed', color: 'success', variant: 'filled' };
+        return {
+          label: 'Completed',
+          variant: 'filled',
+          sx: { bgcolor: effectiveColorSettings.status.completed, color: '#fff' },
+        };
       case 'in_progress':
-        return { label: 'In Progress', color: 'info', variant: 'filled' };
+        return {
+          label: 'In Progress',
+          variant: 'filled',
+          sx: { bgcolor: effectiveColorSettings.status.in_progress, color: '#fff' },
+        };
       case 'cancelled':
-        return { label: 'Cancelled', color: 'default', variant: 'outlined' };
+        return {
+          label: 'Cancelled',
+          variant: 'outlined',
+          sx: { borderColor: effectiveColorSettings.status.cancelled, color: effectiveColorSettings.status.cancelled },
+        };
       case 'pending':
       default:
-        return { label: 'Pending', color: 'warning', variant: 'filled' };
+        return {
+          label: 'Pending',
+          variant: 'filled',
+          sx: { bgcolor: effectiveColorSettings.status.pending, color: '#fff' },
+        };
     }
   };
 
   const paymentChipProps = (paymentStatus) => {
     switch (paymentStatus) {
       case 'paid':
-        return { label: 'Paid', color: 'success', variant: 'outlined' };
+        return {
+          label: 'Paid',
+          variant: 'outlined',
+          sx: { borderColor: effectiveColorSettings.payment.paid, color: effectiveColorSettings.payment.paid },
+        };
       case 'pending':
       default:
-        return { label: 'Pending', color: 'warning', variant: 'outlined' };
+        return {
+          label: 'Pending',
+          variant: 'outlined',
+          sx: { borderColor: effectiveColorSettings.payment.pending, color: effectiveColorSettings.payment.pending },
+        };
     }
   };
 

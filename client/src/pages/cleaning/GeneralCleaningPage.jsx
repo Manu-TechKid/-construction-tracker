@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Typography, Paper, Grid, TextField, Button, FormControl, Select, MenuItem, Autocomplete } from '@mui/material';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Box, Typography, Paper, Grid, TextField, Button, FormControl, Select, MenuItem, Autocomplete, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import BuildingSelector from '../../components/common/BuildingSelector';
 import CleaningJobsList from '../../components/cleaning/CleaningJobsList';
 import CreateCleaningJobForm from '../../components/cleaning/CreateCleaningJobForm';
@@ -10,6 +11,22 @@ import { useGetCleaningJobSubcategoriesQuery } from '../../features/cleaning/cle
 const GeneralCleaningPage = () => {
   const { selectedBuilding } = useBuildingContext();
   const { data: subcategoriesData } = useGetCleaningJobSubcategoriesQuery();
+  const colorStorageKey = 'cleaningColorSettings';
+
+  const defaultColorSettings = useMemo(() => ({
+    status: {
+      pending: '#f59e0b',
+      in_progress: '#3b82f6',
+      completed: '#22c55e',
+      cancelled: '#9ca3af',
+    },
+    payment: {
+      pending: '#f59e0b',
+      paid: '#22c55e',
+    },
+  }), []);
+
+  const [colorSettings, setColorSettings] = useState(defaultColorSettings);
   const [filters, setFilters] = useState({
     buildingId: '',
     startDate: null,
@@ -23,6 +40,29 @@ const GeneralCleaningPage = () => {
   const subcategoryOptions = subcategoriesData?.data?.subcategories || [];
 
   const [weekAnchorDate, setWeekAnchorDate] = useState(() => new Date());
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(colorStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return;
+      setColorSettings({
+        status: { ...defaultColorSettings.status, ...(parsed.status || {}) },
+        payment: { ...defaultColorSettings.payment, ...(parsed.payment || {}) },
+      });
+    } catch (e) {
+      // ignore
+    }
+  }, [defaultColorSettings]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(colorStorageKey, JSON.stringify(colorSettings));
+    } catch (e) {
+      // ignore
+    }
+  }, [colorSettings]);
 
   useEffect(() => {
     if (!filters.buildingId && selectedBuilding?._id) {
@@ -221,9 +261,126 @@ const GeneralCleaningPage = () => {
           </Grid>
         </Grid>
       </Paper>
+
+      <Accordion sx={{ mb: 3 }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="subtitle1">Color Settings</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>Job Status</Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    size="medium"
+                    label="Pending"
+                    type="color"
+                    value={colorSettings.status.pending}
+                    onChange={(e) => setColorSettings(prev => ({
+                      ...prev,
+                      status: { ...prev.status, pending: e.target.value }
+                    }))}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    size="medium"
+                    label="In Progress"
+                    type="color"
+                    value={colorSettings.status.in_progress}
+                    onChange={(e) => setColorSettings(prev => ({
+                      ...prev,
+                      status: { ...prev.status, in_progress: e.target.value }
+                    }))}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    size="medium"
+                    label="Completed"
+                    type="color"
+                    value={colorSettings.status.completed}
+                    onChange={(e) => setColorSettings(prev => ({
+                      ...prev,
+                      status: { ...prev.status, completed: e.target.value }
+                    }))}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    size="medium"
+                    label="Cancelled"
+                    type="color"
+                    value={colorSettings.status.cancelled}
+                    onChange={(e) => setColorSettings(prev => ({
+                      ...prev,
+                      status: { ...prev.status, cancelled: e.target.value }
+                    }))}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+              </Grid>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>Payment Status</Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    size="medium"
+                    label="Pending Payment"
+                    type="color"
+                    value={colorSettings.payment.pending}
+                    onChange={(e) => setColorSettings(prev => ({
+                      ...prev,
+                      payment: { ...prev.payment, pending: e.target.value }
+                    }))}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    size="medium"
+                    label="Paid"
+                    type="color"
+                    value={colorSettings.payment.paid}
+                    onChange={(e) => setColorSettings(prev => ({
+                      ...prev,
+                      payment: { ...prev.payment, paid: e.target.value }
+                    }))}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+              </Grid>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                <Button
+                  variant="outlined"
+                  onClick={() => setColorSettings(defaultColorSettings)}
+                >
+                  Reset Colors
+                </Button>
+              </Box>
+            </Grid>
+          </Grid>
+        </AccordionDetails>
+      </Accordion>
+
       <Paper sx={{ p: 2 }}>
         <CreateCleaningJobForm />
-        <CleaningJobsList filters={filters} />
+        <CleaningJobsList filters={filters} colorSettings={colorSettings} />
       </Paper>
     </Box>
   );
