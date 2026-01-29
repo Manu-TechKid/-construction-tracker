@@ -6,6 +6,17 @@ try {
   nodemailer = null;
 }
 
+const resolveEmailAuth = () => {
+  const user = process.env.EMAIL_USERNAME || process.env.EMAIL_USER;
+  const pass = process.env.EMAIL_PASSWORD || process.env.EMAIL_PASS;
+  return { user, pass };
+};
+
+const resolveEmailFrom = () => {
+  const { user } = resolveEmailAuth();
+  return process.env.EMAIL_FROM || user || 'Construction Tracker <noreply@constructiontracker.com>';
+};
+
 const sendEmail = async (options) => {
   // Skip email sending if nodemailer is not available
   if (!nodemailer) {
@@ -17,32 +28,40 @@ const sendEmail = async (options) => {
 
   // 1) Create a transporter
   let transporter;
-  
+  const { user, pass } = resolveEmailAuth();
+
   if (process.env.NODE_ENV === 'production') {
-    // Production - use a real email service
-    // You can use Gmail, SendGrid, Mailgun, etc.
-    transporter = nodemailer.createTransport({
-      service: 'Gmail', // or your preferred service
-      auth: {
-        user: process.env.EMAIL_FROM,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-    });
+    if (process.env.EMAIL_HOST && user && pass) {
+      const effectivePort = Number(process.env.EMAIL_PORT) || 587;
+      transporter = nodemailer.createTransport({
+        host: process.env.EMAIL_HOST,
+        port: effectivePort,
+        secure: effectivePort === 465,
+        auth: { user, pass },
+      });
+    } else {
+      transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
+        auth: { user, pass },
+      });
+    }
   } else {
     // Development - use Mailtrap or similar
     transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST || 'smtp.mailtrap.io',
       port: process.env.EMAIL_PORT || 2525,
       auth: {
-        user: process.env.EMAIL_USERNAME,
-        pass: process.env.EMAIL_PASSWORD,
+        user,
+        pass,
       },
     });
   }
 
   // 2) Define the email options
   const mailOptions = {
-    from: process.env.EMAIL_FROM || 'Construction Tracker <noreply@constructiontracker.com>',
+    from: resolveEmailFrom(),
     to: options.email,
     subject: options.subject,
     text: options.message,

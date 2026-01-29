@@ -6,16 +6,58 @@ const createTestAccount = async () => {
   return await nodemailer.createTestAccount();
 };
 
-// Create reusable transporter object using the default SMTP transport
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
-  port: process.env.EMAIL_PORT || 587,
-  secure: false, // true for 465, false for other ports
-  auth: {
-    user: process.env.EMAIL_USERNAME || 'test@example.com',
-    pass: process.env.EMAIL_PASSWORD || 'test123'
+const resolveEmailAuth = () => {
+  const user = process.env.EMAIL_USERNAME || process.env.EMAIL_USER;
+  const pass = process.env.EMAIL_PASSWORD || process.env.EMAIL_PASS;
+  return { user, pass };
+};
+
+const resolveEmailFrom = () => {
+  const { user } = resolveEmailAuth();
+  return process.env.EMAIL_FROM || user || 'noreply@constructiontracker.com';
+};
+
+const hasEmailConfig = () => {
+  const { user, pass } = resolveEmailAuth();
+  return Boolean(user && pass);
+};
+
+const createTransporter = () => {
+  const { user, pass } = resolveEmailAuth();
+  const host = process.env.EMAIL_HOST;
+  const port = Number(process.env.EMAIL_PORT);
+
+  if (host && user && pass) {
+    const effectivePort = port || 587;
+    return nodemailer.createTransport({
+      host,
+      port: effectivePort,
+      secure: effectivePort === 465,
+      auth: { user, pass },
+    });
   }
-});
+
+  if (user && pass) {
+    return nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: { user, pass },
+    });
+  }
+
+  return nodemailer.createTransport({
+    host: 'smtp.ethereal.email',
+    port: 587,
+    secure: false,
+    auth: {
+      user: 'test@example.com',
+      pass: 'test123',
+    },
+  });
+};
+
+const transporter = createTransporter();
 
 // Send work order assignment email
 exports.sendWorkOrderAssignedEmail = async (worker, workOrder, assignedBy) => {
@@ -33,9 +75,8 @@ exports.sendWorkOrderAssignedEmail = async (worker, workOrder, assignedBy) => {
       return { previewUrl: 'Email logged in console (development mode)' };
     }
 
-    // In production, send actual email
     const info = await transporter.sendMail({
-      from: `"Construction Tracker" <${process.env.EMAIL_FROM || 'noreply@constructiontracker.com'}>`,
+      from: `"Construction Tracker" <${resolveEmailFrom()}>`,
       to: worker.email,
       subject: `New Work Order Assignment - ${workOrder.description}`,
       text: `Hello ${worker.name},
@@ -97,20 +138,19 @@ exports.sendPasswordResetEmail = async (user, resetToken) => {
 
     // If email is not configured in production, log reset link instead of throwing.
     // This keeps the forgot-password flow usable while deploying/configuring SMTP.
-    const hasEmailConfig = Boolean(process.env.EMAIL_HOST && process.env.EMAIL_USERNAME && process.env.EMAIL_PASSWORD);
-    if (!hasEmailConfig) {
+    if (!hasEmailConfig()) {
       console.log(`\n=== PASSWORD RESET EMAIL (Email Not Configured) ===`);
       console.log(`To: ${user.email}`);
       console.log(`Subject: Password Reset Request`);
       console.log(`Reset URL: ${resetUrl}`);
-      console.log(`Set EMAIL_HOST, EMAIL_USERNAME, EMAIL_PASSWORD, and EMAIL_FROM to enable sending.`);
+      console.log(`Set EMAIL_USER + EMAIL_PASS (or EMAIL_USERNAME + EMAIL_PASSWORD) and EMAIL_FROM to enable sending.`);
       console.log(`===============================================\n`);
       return { previewUrl: 'Password reset email logged in console (email not configured)' };
     }
 
     // In production, send actual email
     const info = await transporter.sendMail({
-      from: `"Construction Tracker" <${process.env.EMAIL_FROM || 'noreply@constructiontracker.com'}>`,
+      from: `"Construction Tracker" <${resolveEmailFrom()}>`,
       to: user.email,
       subject: 'Password Reset Request',
       text: `You are receiving this email because you (or someone else) has requested a password reset for your account.\n\nPlease click on the following link to complete the process:\n\n${resetUrl}\n\nThis link will expire in 10 minutes.\n\nIf you did not request this, please ignore this email.`,
@@ -136,6 +176,9 @@ exports.sendPasswordResetEmail = async (user, resetToken) => {
 // Test email service connection
 exports.verifyEmailConnection = async () => {
   try {
+    if (!hasEmailConfig()) {
+      return { status: 'skipped', message: 'Email credentials not configured' };
+    }
     await transporter.verify();
     console.log('Server is ready to take our messages');
     return { status: 'success', message: 'Email service is ready' };
