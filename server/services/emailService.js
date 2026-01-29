@@ -24,6 +24,25 @@ const hasEmailConfig = () => {
   return Boolean(user && pass);
 };
 
+const isGmailImplicitConfig = () => {
+  const { user, pass } = resolveEmailAuth();
+  return Boolean(user && pass && !process.env.EMAIL_HOST);
+};
+
+const createGmail587Transporter = () => {
+  const { user, pass } = resolveEmailAuth();
+  return nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    requireTLS: true,
+    auth: { user, pass },
+    connectionTimeout: Number(process.env.EMAIL_CONNECTION_TIMEOUT_MS) || 10000,
+    greetingTimeout: Number(process.env.EMAIL_GREETING_TIMEOUT_MS) || 10000,
+    socketTimeout: Number(process.env.EMAIL_SOCKET_TIMEOUT_MS) || 20000,
+  });
+};
+
 const createTransporter = () => {
   const { user, pass } = resolveEmailAuth();
   const host = process.env.EMAIL_HOST;
@@ -174,8 +193,9 @@ exports.sendPasswordResetEmail = async (user, resetToken) => {
 
     // In production, send actual email
     const localTransporter = createTransporter();
-    const info = await localTransporter.sendMail({
-      from: `"Construction Tracker" <${resolveEmailFrom()}>`,
+    const effectiveFrom = isGmailImplicitConfig() ? (smtpUser || resolveEmailFrom()) : resolveEmailFrom();
+    const mailOptions = {
+      from: `"Construction Tracker" <${effectiveFrom}>`,
       to: user.email,
       subject: 'Password Reset Request',
       text: `You are receiving this email because you (or someone else) has requested a password reset for your account.\n\nPlease click on the following link to complete the process:\n\n${resetUrl}\n\nThis link will expire in 10 minutes.\n\nIf you did not request this, please ignore this email.`,
@@ -188,7 +208,25 @@ exports.sendPasswordResetEmail = async (user, resetToken) => {
           <p>If you did not request this, please ignore this email.</p>
         </div>
       `
-    });
+    };
+
+    let info;
+    try {
+      info = await localTransporter.sendMail(mailOptions);
+    } catch (sendErr) {
+      if (isGmailImplicitConfig()) {
+        console.error('[sendPasswordResetEmail] Gmail send failed on default transporter, retrying with 587 STARTTLS', {
+          message: sendErr?.message,
+          code: sendErr?.code,
+          responseCode: sendErr?.responseCode,
+          command: sendErr?.command,
+        });
+        const gmail587 = createGmail587Transporter();
+        info = await gmail587.sendMail(mailOptions);
+      } else {
+        throw sendErr;
+      }
+    }
 
     console.log('Password reset email sent: %s', info.messageId);
     return { previewUrl: nodemailer.getTestMessageUrl(info) };
