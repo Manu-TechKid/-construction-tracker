@@ -8,7 +8,9 @@ const createTestAccount = async () => {
 
 const resolveEmailAuth = () => {
   const user = process.env.EMAIL_USERNAME || process.env.EMAIL_USER;
-  const pass = process.env.EMAIL_PASSWORD || process.env.EMAIL_PASS;
+  const passFromEmailPassword = process.env.EMAIL_PASSWORD;
+  const passFromEmailPass = process.env.EMAIL_PASS ? String(process.env.EMAIL_PASS).replace(/\s+/g, '') : undefined;
+  const pass = passFromEmailPassword || passFromEmailPass;
   return { user, pass };
 };
 
