@@ -43,6 +43,42 @@ const createGmail587Transporter = () => {
   });
 };
 
+const sendViaResend = async ({ to, subject, text, html }) => {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY is not set');
+  }
+
+  const from = process.env.EMAIL_FROM || process.env.RESEND_FROM || 'onboarding@resend.dev';
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from,
+      to,
+      subject,
+      text,
+      html,
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const errorMessage = data?.message || data?.error || `Resend request failed with status ${response.status}`;
+    const err = new Error(errorMessage);
+    err.status = response.status;
+    err.provider = 'resend';
+    err.response = data;
+    throw err;
+  }
+
+  return data;
+};
+
 const createTransporter = () => {
   const { user, pass } = resolveEmailAuth();
   const host = process.env.EMAIL_HOST;
@@ -164,6 +200,26 @@ exports.sendPasswordResetEmail = async (user, resetToken) => {
       console.log(`This link will expire in 10 minutes.`);
       console.log(`==========================================\n`);
       return { previewUrl: 'Password reset email logged in console (development mode)' };
+    }
+
+    if (process.env.RESEND_API_KEY) {
+      console.log('[sendPasswordResetEmail] Sending via Resend');
+      await sendViaResend({
+        to: user.email,
+        subject: 'Password Reset Request',
+        text: `You are receiving this email because you (or someone else) has requested a password reset for your account.\n\nPlease click on the following link to complete the process:\n\n${resetUrl}\n\nThis link will expire in 10 minutes.\n\nIf you did not request this, please ignore this email.`,
+        html: `
+          <div>
+            <p>You are receiving this email because you (or someone else) has requested a password reset for your account.</p>
+            <p>Please click on the following link to complete the process:</p>
+            <p><a href="${resetUrl}">${resetUrl}</a></p>
+            <p>This link will expire in 10 minutes.</p>
+            <p>If you did not request this, please ignore this email.</p>
+          </div>
+        `,
+      });
+      console.log('[sendPasswordResetEmail] Resend accepted request');
+      return { previewUrl: 'Email sent via Resend' };
     }
 
     // If email is not configured in production, log reset link instead of throwing.
