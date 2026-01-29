@@ -307,13 +307,22 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
 
   // 3) Send it to user's email using the central email service
   try {
+    console.log(`[forgotPassword] Sending reset email to: ${user.email}`);
     await emailService.sendPasswordResetEmail(user, resetToken);
+    console.log(`[forgotPassword] Reset email send completed for: ${user.email}`);
 
     res.status(200).json({
       status: 'success',
       message: 'Password reset instructions have been sent to your email.',
     });
   } catch (err) {
+    console.error('[forgotPassword] Reset email failed', {
+      message: err?.message,
+      code: err?.code,
+      responseCode: err?.responseCode,
+      command: err?.command,
+      response: err?.response,
+    });
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
     await user.save({ validateBeforeSave: false });

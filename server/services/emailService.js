@@ -36,6 +36,9 @@ const createTransporter = () => {
       port: effectivePort,
       secure: effectivePort === 465,
       auth: { user, pass },
+      connectionTimeout: Number(process.env.EMAIL_CONNECTION_TIMEOUT_MS) || 10000,
+      greetingTimeout: Number(process.env.EMAIL_GREETING_TIMEOUT_MS) || 10000,
+      socketTimeout: Number(process.env.EMAIL_SOCKET_TIMEOUT_MS) || 20000,
     });
   }
 
@@ -45,6 +48,9 @@ const createTransporter = () => {
       port: 465,
       secure: true,
       auth: { user, pass },
+      connectionTimeout: Number(process.env.EMAIL_CONNECTION_TIMEOUT_MS) || 10000,
+      greetingTimeout: Number(process.env.EMAIL_GREETING_TIMEOUT_MS) || 10000,
+      socketTimeout: Number(process.env.EMAIL_SOCKET_TIMEOUT_MS) || 20000,
     });
   }
 
@@ -56,6 +62,9 @@ const createTransporter = () => {
       user: 'test@example.com',
       pass: 'test123',
     },
+    connectionTimeout: Number(process.env.EMAIL_CONNECTION_TIMEOUT_MS) || 10000,
+    greetingTimeout: Number(process.env.EMAIL_GREETING_TIMEOUT_MS) || 10000,
+    socketTimeout: Number(process.env.EMAIL_SOCKET_TIMEOUT_MS) || 20000,
   });
 };
 
@@ -150,8 +159,22 @@ exports.sendPasswordResetEmail = async (user, resetToken) => {
       return { previewUrl: 'Password reset email logged in console (email not configured)' };
     }
 
+    const { user: smtpUser, pass: smtpPass } = resolveEmailAuth();
+    console.log('[sendPasswordResetEmail] Using SMTP config', {
+      nodeEnv: process.env.NODE_ENV,
+      hasEmailConfig: hasEmailConfig(),
+      hasHost: Boolean(process.env.EMAIL_HOST),
+      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+      port: process.env.EMAIL_PORT ? Number(process.env.EMAIL_PORT) : 465,
+      userSet: Boolean(smtpUser),
+      passSet: Boolean(smtpPass),
+      from: resolveEmailFrom(),
+      clientUrl: baseClientUrl,
+    });
+
     // In production, send actual email
-    const info = await transporter.sendMail({
+    const localTransporter = createTransporter();
+    const info = await localTransporter.sendMail({
       from: `"Construction Tracker" <${resolveEmailFrom()}>`,
       to: user.email,
       subject: 'Password Reset Request',
