@@ -4,7 +4,10 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 // - If REACT_APP_API_URL is provided, use it (useful for local dev)
 // - For local development, use localhost
 // - For production, use the deployed backend
-const apiBaseUrl = process.env.REACT_APP_API_URL || 'https://construction-tracker-webapp.onrender.com/api/v1';
+const defaultApiBaseUrl = 'https://construction-tracker-webapp.onrender.com/api/v1';
+const rawEnvApiUrl = (process.env.REACT_APP_API_URL || '').trim();
+const isAbsoluteApiUrl = /^https?:\/\//i.test(rawEnvApiUrl);
+const apiBaseUrl = (isAbsoluteApiUrl ? rawEnvApiUrl : defaultApiBaseUrl).replace(/\/+$/, '');
 
 console.log('API Base URL:', apiBaseUrl);
 console.log('Environment:', process.env.NODE_ENV);
