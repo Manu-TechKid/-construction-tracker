@@ -55,8 +55,19 @@ const WorkLogList = ({ workLogs = [], onRefresh, showAdminActions = false, onFee
   const [selectedLog, setSelectedLog] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+  const [photosDialogOpen, setPhotosDialogOpen] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState('reviewed');
+
+  const getAbsolutePhotoUrl = (url) => {
+    if (!url) return '';
+    if (/^https?:\/\//i.test(url)) return url;
+
+    const raw = (process.env.REACT_APP_API_URL || 'https://construction-tracker-webapp.onrender.com/api/v1').trim();
+    const base = raw.replace(/\/api\/v1\/?$/, '').replace(/\/+$/, '');
+    const normalized = url.startsWith('/') ? url : `/${url}`;
+    return `${base}${normalized}`;
+  };
 
   const handleMenuClick = (event, workLog) => {
     setAnchorEl(event.currentTarget);
@@ -199,11 +210,32 @@ const WorkLogList = ({ workLogs = [], onRefresh, showAdminActions = false, onFee
                     <Typography variant="subtitle2" gutterBottom>
                       Progress Photos:
                     </Typography>
-                    <Box display="flex" alignItems="center" gap={1}>
+                    <Box display="flex" alignItems="center" gap={1} mb={1}>
                       <PhotoIcon color="primary" />
                       <Typography variant="body2">
-                        {workLog.photos.length} photo(s) attached
+                        {workLog.photos.length} photo(s)
                       </Typography>
+                      <Button size="small" onClick={() => { setSelectedLog(workLog); setPhotosDialogOpen(true); }}>
+                        View
+                      </Button>
+                    </Box>
+                    <Box display="flex" flexWrap="wrap" gap={1}>
+                      {workLog.photos.slice(0, 4).map((photo, index) => (
+                        <Box
+                          key={index}
+                          component="img"
+                          src={getAbsolutePhotoUrl(photo.url)}
+                          alt={photo.description || 'Work log photo'}
+                          sx={{
+                            width: 88,
+                            height: 88,
+                            objectFit: 'cover',
+                            borderRadius: 1,
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => { setSelectedLog(workLog); setPhotosDialogOpen(true); }}
+                        />
+                      ))}
                     </Box>
                   </Box>
                 )}
@@ -287,10 +319,48 @@ const WorkLogList = ({ workLogs = [], onRefresh, showAdminActions = false, onFee
           open={editDialogOpen}
           onClose={() => setEditDialogOpen(false)}
           timeSession={selectedLog.timeSession}
+          workOrder={selectedLog.workOrder}
           workLog={selectedLog}
           isEdit={true}
         />
       )}
+
+      <Dialog
+        open={photosDialogOpen}
+        onClose={() => setPhotosDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Progress Photos
+        </DialogTitle>
+        <DialogContent>
+          {selectedLog?.photos?.length ? (
+            <Grid container spacing={2} sx={{ mt: 0 }}>
+              {selectedLog.photos.map((photo, idx) => (
+                <Grid item xs={12} sm={6} md={4} key={idx}>
+                  <Box
+                    component="img"
+                    src={getAbsolutePhotoUrl(photo.url)}
+                    alt={photo.description || 'Work log photo'}
+                    sx={{ width: '100%', height: 220, objectFit: 'cover', borderRadius: 1 }}
+                  />
+                  {photo.description && (
+                    <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                      {photo.description}
+                    </Typography>
+                  )}
+                </Grid>
+              ))}
+            </Grid>
+          ) : (
+            <Alert severity="info">No photos found.</Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPhotosDialogOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Feedback Dialog */}
       <Dialog open={feedbackDialogOpen} onClose={() => setFeedbackDialogOpen(false)} maxWidth="sm" fullWidth>

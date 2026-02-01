@@ -41,6 +41,7 @@ const WorkLogForm = ({
   open, 
   onClose, 
   timeSession, 
+  workOrder = null,
   workLog = null, 
   isEdit = false 
 }) => {
@@ -60,16 +61,25 @@ const WorkLogForm = ({
         const formData = new FormData();
         
         // Add text fields
-        formData.append('timeSessionId', timeSession._id);
+        if (timeSession?._id) {
+          formData.append('timeSessionId', timeSession._id);
+        }
         formData.append('workCompleted', values.workCompleted);
         formData.append('issues', values.issues);
         formData.append('materialsUsed', JSON.stringify(materials));
         
-        if (timeSession.building) {
+        if (timeSession?.building) {
           formData.append('buildingId', timeSession.building._id || timeSession.building);
         }
-        if (timeSession.workOrder) {
+        if (timeSession?.workOrder) {
           formData.append('workOrderId', timeSession.workOrder._id || timeSession.workOrder);
+        }
+
+        if (!timeSession && workOrder?._id) {
+          formData.append('workOrderId', workOrder._id);
+          if (workOrder.building) {
+            formData.append('buildingId', workOrder.building._id || workOrder.building);
+          }
         }
         
         // Add photos
@@ -78,7 +88,7 @@ const WorkLogForm = ({
         });
         
         if (isEdit) {
-          await updateWorkLog({ id: workLog._id, ...Object.fromEntries(formData) }).unwrap();
+          await updateWorkLog({ id: workLog._id, formData }).unwrap();
           toast.success('Work log updated successfully');
         } else {
           await createWorkLog(formData).unwrap();

@@ -343,23 +343,40 @@ exports.getWorkerAssignments = catchAsync(async (req, res, next) => {
             return next(new AppError('You can only access your own assignments', 403));
         }
         
-        // For now, return empty assignments to get the dashboard working
-        // We'll debug the WorkOrder query separately
-        console.log('Returning empty assignments for now');
-        
+        const workOrders = await WorkOrder.find({
+            deleted: false,
+            'assignedTo.worker': workerId
+        })
+            .populate('building', 'name address')
+            .populate('workType', 'name code color')
+            .populate('workSubType', 'name code price estimatedDuration estimatedCost')
+            .populate('assignedTo.worker', 'name email')
+            .sort({ scheduledDate: -1, createdAt: -1 });
+
         const stats = {
-            total: 0,
-            pending: 0,
-            inProgress: 0,
-            completed: 0,
+            total: workOrders.length,
+            pending: workOrders.filter(wo => wo.status === 'pending').length,
+            inProgress: workOrders.filter(wo => wo.status === 'in_progress').length,
+            completed: workOrders.filter(wo => wo.status === 'completed').length,
             completedToday: 0
         };
-        
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        stats.completedToday = workOrders.filter(wo => {
+            if (wo.status !== 'completed') return false;
+            const updatedAt = new Date(wo.updatedAt);
+            return updatedAt >= today && updatedAt < tomorrow;
+        }).length;
+
         res.status(200).json({
             status: 'success',
-            results: 0,
+            results: workOrders.length,
             data: {
-                workOrders: [],
+                workOrders,
                 stats
             }
         });

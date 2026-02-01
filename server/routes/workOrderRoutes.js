@@ -54,7 +54,7 @@ router.get('/cleaning-for-week', getCleaningWorkOrdersForWeek);
 router.get('/cleaning-detailed', restrictTo('admin', 'manager', 'supervisor'), getDetailedCleaningJobs);
 
 router.route('/:id')
-  .get(restrictTo('admin', 'manager', 'supervisor'), getWorkOrderById)
+  .get(restrictTo('admin', 'manager', 'supervisor', 'worker'), getWorkOrderById)
   .patch(restrictTo('admin', 'manager', 'supervisor'), logActivity('WorkOrder', 'update'), updateWorkOrder)
   .delete(restrictTo('admin', 'manager'), logActivity('WorkOrder', 'delete'), deleteWorkOrder);
 

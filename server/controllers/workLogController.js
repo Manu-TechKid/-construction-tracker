@@ -38,25 +38,47 @@ exports.uploadWorkLogPhotos = upload.array('photos', 10);
 
 // Create work log
 exports.createWorkLog = catchAsync(async (req, res, next) => {
-  const { timeSessionId, workCompleted, issues, materialsUsed, buildingId, workOrderId } = req.body;
+  let { timeSessionId, workCompleted, issues, materialsUsed, buildingId, workOrderId } = req.body;
   
   // Use authenticated user as worker
   const workerId = req.user.id;
   
-  // Validate time session exists and belongs to worker
-  const timeSession = await TimeSession.findById(timeSessionId);
-  if (!timeSession) {
-    return next(new AppError('Time session not found', 404));
-  }
-  
-  if (timeSession.worker.toString() !== workerId) {
-    return next(new AppError('You can only create work logs for your own time sessions', 403));
-  }
-  
-  // Check if work log already exists for this session
-  const existingLog = await WorkLog.findOne({ timeSession: timeSessionId });
-  if (existingLog) {
-    return next(new AppError('Work log already exists for this time session', 400));
+  let timeSession = null;
+
+  if (timeSessionId) {
+    timeSession = await TimeSession.findById(timeSessionId);
+    if (!timeSession) {
+      return next(new AppError('Time session not found', 404));
+    }
+
+    if (timeSession.worker.toString() !== workerId) {
+      return next(new AppError('You can only create work logs for your own time sessions', 403));
+    }
+
+    const existingLog = await WorkLog.findOne({ timeSession: timeSessionId });
+    if (existingLog) {
+      return next(new AppError('Work log already exists for this time session', 400));
+    }
+  } else {
+    if (!workOrderId) {
+      return next(new AppError('Work order is required to create a work log without a time session', 400));
+    }
+
+    const workOrder = await WorkOrder.findOne({ _id: workOrderId, deleted: false });
+    if (!workOrder) {
+      return next(new AppError('Work order not found', 404));
+    }
+
+    if (req.user.role === 'worker') {
+      const isAssigned = Array.isArray(workOrder.assignedTo) && workOrder.assignedTo.some(a => a.worker?.toString() === workerId);
+      if (!isAssigned) {
+        return next(new AppError('You can only create work logs for work orders assigned to you', 403));
+      }
+    }
+
+    if (!buildingId && workOrder.building) {
+      buildingId = workOrder.building;
+    }
   }
   
   // Process uploaded photos
@@ -83,9 +105,9 @@ exports.createWorkLog = catchAsync(async (req, res, next) => {
   
   const workLog = await WorkLog.create({
     worker: workerId,
-    timeSession: timeSessionId,
-    building: buildingId || timeSession.building,
-    workOrder: workOrderId || timeSession.workOrder,
+    timeSession: timeSessionId || undefined,
+    building: buildingId || timeSession?.building,
+    workOrder: workOrderId || timeSession?.workOrder,
     date: new Date(),
     workCompleted,
     issues: issues || '',

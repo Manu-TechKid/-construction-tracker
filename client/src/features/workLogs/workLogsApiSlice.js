@@ -59,7 +59,7 @@ export const workLogsApiSlice = apiSlice.injectEndpoints({
 
     // Update work log
     updateWorkLog: builder.mutation({
-      query: ({ id, ...formData }) => ({
+      query: ({ id, formData }) => ({
         url: `/work-logs/${id}`,
         method: 'PATCH',
         body: formData,

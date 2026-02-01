@@ -56,6 +56,7 @@ exports.signup = catchAsync(async (req, res, next) => {
     name,
     email: email.toLowerCase(),
     password,
+    phone: phone ? String(phone).trim() : undefined,
   };
 
   const newUser = await User.create(userData);

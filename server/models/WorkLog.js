@@ -9,7 +9,7 @@ const workLogSchema = new mongoose.Schema({
   timeSession: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'TimeSession',
-    required: true
+    required: false
   },
   building: {
     type: mongoose.Schema.Types.ObjectId,

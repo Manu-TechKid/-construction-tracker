@@ -92,7 +92,7 @@ exports.createWorkOrder = catchAsync(async (req, res, next) => {
 // @route   GET /api/v1/work-orders
 // @access  Private
 exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
-  const { status, billingStatus, buildingId, workerId, startDate, endDate } = req.query;
+  const { status, billingStatus, buildingId, workerId, assignedTo, startDate, endDate } = req.query;
     
   // Exclude soft-deleted work orders by default
   const filter = { deleted: false };
@@ -100,6 +100,10 @@ exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
   if (billingStatus) filter.billingStatus = billingStatus;
   if (buildingId) filter.building = buildingId;
   if (workerId) filter['assignedTo.worker'] = workerId;
+  if (assignedTo) filter['assignedTo.worker'] = assignedTo;
+  if (req.user && req.user.role === 'worker') {
+    filter['assignedTo.worker'] = req.user._id;
+  }
     
   if (startDate || endDate) {
     filter.createdAt = {};
@@ -126,7 +130,13 @@ exports.getAllWorkOrders = catchAsync(async (req, res, next) => {
 // @route   GET /api/v1/work-orders/:id
 // @access  Private
 exports.getWorkOrderById = catchAsync(async (req, res, next) => {
-  const workOrder = await WorkOrder.findOne({ _id: req.params.id, deleted: false })
+  const filter = { _id: req.params.id, deleted: false };
+
+  if (req.user && req.user.role === 'worker') {
+    filter['assignedTo.worker'] = req.user._id;
+  }
+
+  const workOrder = await WorkOrder.findOne(filter)
     .populate('building', 'name address')
     .populate('workType', 'name code color')
     .populate('workSubType', 'name code price estimatedDuration estimatedCost')
@@ -206,11 +216,16 @@ exports.getCleaningWorkOrdersForWeek = catchAsync(async (req, res, next) => {
   endDate.setDate(startDate.getDate() + 6);
   endDate.setHours(23, 59, 59, 999);
 
-  const workOrders = await WorkOrder.find({
+  const workOrderFilter = {
     workType: cleaningWorkType._id,
     scheduledDate: { $gte: startDate, $lte: endDate },
     deleted: false,
-  })
+  };
+  if (req.user && req.user.role === 'worker') {
+    workOrderFilter['assignedTo.worker'] = req.user._id;
+  }
+
+  const workOrders = await WorkOrder.find(workOrderFilter)
   .populate('building', 'name address')
   .select('building status price scheduledDate')
   .sort({ scheduledDate: 1 });

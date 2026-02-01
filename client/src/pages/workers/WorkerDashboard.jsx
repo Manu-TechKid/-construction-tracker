@@ -52,7 +52,7 @@ const WorkerDashboard = () => {
   const [completeDialog, setCompleteDialog] = useState({ open: false, workOrder: null });
   const [completionNotes, setCompletionNotes] = useState('');
   const [selectedTab, setSelectedTab] = useState(0);
-  const [workLogDialog, setWorkLogDialog] = useState({ open: false, timeSession: null });
+  const [workLogDialog, setWorkLogDialog] = useState({ open: false, timeSession: null, workOrder: null });
   const { data: assignmentsData, isLoading, refetch, error } = useGetWorkerAssignmentsQuery(user?.id, {
     skip: !user?.id,
     pollingInterval: 30000, // Poll every 30 seconds for real-time updates
@@ -325,18 +325,25 @@ const WorkerDashboard = () => {
             <Typography variant="h6">
               My Work Logs
             </Typography>
-            {completedSessionsWithoutLogs.length > 0 && (
-              <Button
-                variant="contained"
-                startIcon={<WorkLogIcon />}
-                onClick={() => setWorkLogDialog({ 
-                  open: true, 
-                  timeSession: completedSessionsWithoutLogs[0] 
-                })}
-              >
-                Create Work Log
-              </Button>
-            )}
+            <Button
+              variant="contained"
+              startIcon={<WorkLogIcon />}
+              onClick={() => {
+                if (completedSessionsWithoutLogs.length > 0) {
+                  setWorkLogDialog({ open: true, timeSession: completedSessionsWithoutLogs[0], workOrder: null });
+                  return;
+                }
+
+                if (pendingOrders.length > 0) {
+                  setWorkLogDialog({ open: true, timeSession: null, workOrder: pendingOrders[0] });
+                  return;
+                }
+
+                toast.info('No assignments found to create a daily report.');
+              }}
+            >
+              Create Daily Report
+            </Button>
           </Box>
 
           {completedSessionsWithoutLogs.length > 0 && (
@@ -400,11 +407,12 @@ const WorkerDashboard = () => {
       </Dialog>
 
       {/* Work Log Dialog */}
-      {workLogDialog.open && workLogDialog.timeSession && (
+      {workLogDialog.open && (
         <WorkLogForm
           open={workLogDialog.open}
-          onClose={() => setWorkLogDialog({ open: false, timeSession: null })}
+          onClose={() => setWorkLogDialog({ open: false, timeSession: null, workOrder: null })}
           timeSession={workLogDialog.timeSession}
+          workOrder={workLogDialog.workOrder}
         />
       )}
     </Container>
