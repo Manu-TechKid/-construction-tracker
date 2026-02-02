@@ -29,17 +29,24 @@ const filterPricesFromResponse = (data) => {
   return data;
 };
 
-const filterPriceFields = (obj) => {
+const filterPriceFields = (obj, seen = new WeakSet()) => {
   if (!obj) return obj;
   
   // If it's an array, filter each item
   if (Array.isArray(obj)) {
-    return obj.map(item => filterPriceFields(item));
+    return obj.map(item => filterPriceFields(item, seen));
   }
   
   // If it's an object, remove price fields
   if (typeof obj === 'object') {
-    const filtered = { ...obj };
+    if (seen.has(obj)) return obj;
+    seen.add(obj);
+
+    if (typeof obj.toObject === 'function') {
+      obj = obj.toObject({ virtuals: true, getters: true });
+    }
+
+    const filtered = {};
     
     // List of price-related fields to remove
     const priceFields = [
@@ -57,15 +64,16 @@ const filterPriceFields = (obj) => {
       'tax',
       'total'
     ];
-    
-    priceFields.forEach(field => {
-      delete filtered[field];
+
+    Object.keys(obj).forEach((key) => {
+      if (priceFields.includes(key)) return;
+      filtered[key] = obj[key];
     });
     
     // Recursively filter nested objects
     Object.keys(filtered).forEach(key => {
       if (typeof filtered[key] === 'object') {
-        filtered[key] = filterPriceFields(filtered[key]);
+        filtered[key] = filterPriceFields(filtered[key], seen);
       }
     });
     
