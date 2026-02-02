@@ -5,8 +5,11 @@ const hidePricesFromWorkers = (req, res, next) => {
   // Override json method to filter prices for workers
   res.json = function(data) {
     if (req.user && req.user.role === 'worker') {
-      // Remove price-related fields from response
-      data = filterPricesFromResponse(data);
+      try {
+        data = filterPricesFromResponse(data);
+      } catch (err) {
+        console.error('Error filtering prices from response:', err);
+      }
     }
     
     // Call original json method
@@ -39,7 +42,7 @@ const filterPriceFields = (obj, seen = new WeakSet()) => {
   
   // If it's an object, remove price fields
   if (typeof obj === 'object') {
-    if (seen.has(obj)) return obj;
+    if (seen.has(obj)) return null;
     seen.add(obj);
 
     if (typeof obj.toObject === 'function') {
