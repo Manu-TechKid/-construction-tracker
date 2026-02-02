@@ -652,7 +652,23 @@ const Invoices = () => {
       {/* Invoices Table */}
       <Card>
         <TableContainer component={Paper}>
-          <Table>
+          <Table
+            sx={{
+              '& .MuiTableCell-head': {
+                fontWeight: 700,
+                fontSize: { xs: '0.9rem', sm: '1.1rem' },
+              },
+              '& .MuiTableCell-body': {
+                fontSize: { xs: '0.85rem', sm: '1.05rem' },
+              },
+              '& .MuiChip-label': {
+                fontSize: { xs: '0.75rem', sm: '0.9rem' },
+              },
+              '& .MuiChip-root': {
+                height: { xs: 20, sm: 26 },
+              },
+            }}
+          >
             <TableHead>
               <TableRow>
                 <TableCell>Invoice #</TableCell>
@@ -695,15 +711,19 @@ const Invoices = () => {
                 filteredInvoices.map((invoice) => (
                   <TableRow key={invoice._id} hover>
                     <TableCell>
-                      <Typography variant="body2" fontWeight="medium">
+                      <Typography
+                        variant="body2"
+                        fontWeight="medium"
+                        sx={{ fontSize: { xs: '0.9rem', sm: '1.1rem' } }}
+                      >
                         {invoice.invoiceNumber || 'N/A'}
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2">
+                      <Typography variant="body2" sx={{ fontSize: { xs: '0.85rem', sm: '1.05rem' } }}>
                         {invoice.building?.name || 'N/A'}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.9rem' } }}>
                         {invoice.building?.address || ''}
                       </Typography>
                     </TableCell>
@@ -739,7 +759,7 @@ const Invoices = () => {
                                     label={`${icon} ${type.charAt(0).toUpperCase() + type.slice(1)}`}
                                     size="small"
                                     variant="outlined"
-                                    sx={{ fontSize: '0.7rem', height: '20px' }}
+                                    sx={{ height: { xs: 20, sm: 26 } }}
                                   />
                                 );
                               })}
@@ -748,7 +768,7 @@ const Invoices = () => {
                                   label={`+${workTypes.length - 3}`}
                                   size="small"
                                   variant="outlined"
-                                  sx={{ fontSize: '0.7rem', height: '20px' }}
+                                  sx={{ height: { xs: 20, sm: 26 } }}
                                 />
                               )}
                             </Box>
@@ -786,7 +806,11 @@ const Invoices = () => {
                       })()}
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2" fontWeight="medium">
+                      <Typography
+                        variant="body2"
+                        fontWeight="medium"
+                        sx={{ fontSize: { xs: '0.9rem', sm: '1.1rem' } }}
+                      >
                         ${invoice.total?.toFixed(2) || '0.00'}
                       </Typography>
                     </TableCell>
@@ -799,12 +823,16 @@ const Invoices = () => {
                     </TableCell>
                     <TableCell>
                       <Tooltip title={`Created on ${new Date(invoice.createdAt).toLocaleString()}`}>
-                        <Typography variant="body2">{invoice.createdBy?.name || 'System'}</Typography>
+                        <Typography variant="body2" sx={{ fontSize: { xs: '0.85rem', sm: '1.05rem' } }}>
+                          {invoice.createdBy?.name || 'System'}
+                        </Typography>
                       </Tooltip>
                     </TableCell>
                     <TableCell>
                       <Tooltip title={`Last updated on ${new Date(invoice.updatedAt).toLocaleString()}`}>
-                        <Typography variant="body2">{invoice.updatedBy?.name || 'N/A'}</Typography>
+                        <Typography variant="body2" sx={{ fontSize: { xs: '0.85rem', sm: '1.05rem' } }}>
+                          {invoice.updatedBy?.name || 'N/A'}
+                        </Typography>
                       </Tooltip>
                     </TableCell>
                     <TableCell>

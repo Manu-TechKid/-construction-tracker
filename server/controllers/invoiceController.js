@@ -159,7 +159,59 @@ exports.sendInvoice = notImplemented;
 exports.acceptInvoice = notImplemented;
 exports.calculateTotals = notImplemented;
 exports.emailInvoice = notImplemented;
-exports.markAsPaid = notImplemented;
+exports.markAsPaid = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new AppError('Invalid invoice ID', 400));
+  }
+
+  const invoice = await Invoice.findById(id);
+  if (!invoice) {
+    return next(new AppError('No invoice found with that ID', 404));
+  }
+
+  if (invoice.status !== 'paid') {
+    invoice.status = 'paid';
+    invoice.paidDate = new Date();
+    invoice.updatedBy = req.user?.id;
+
+    if (!Array.isArray(invoice.statusHistory)) {
+      invoice.statusHistory = [];
+    }
+
+    invoice.statusHistory.push({
+      status: 'paid',
+      timestamp: new Date(),
+      notes: 'Marked as paid'
+    });
+
+    if (typeof invoice.calculateTotals === 'function') {
+      invoice.calculateTotals();
+    }
+
+    await invoice.save();
+
+    const workOrderIds = (invoice.workOrders || []).map(item => item.workOrder).filter(Boolean);
+    if (workOrderIds.length > 0) {
+      await WorkOrder.updateMany(
+        { _id: { $in: workOrderIds }, invoice: invoice._id },
+        { $set: { billingStatus: 'paid' } }
+      );
+    }
+  }
+
+  const populated = await Invoice.findById(invoice._id)
+    .populate('building', 'name address')
+    .populate('workOrders.workOrder', 'title description apartmentNumber price serviceDate scheduledDate')
+    .populate('createdBy', 'name')
+    .populate('updatedBy', 'name');
+
+  res.status(200).json({
+    status: 'success',
+    data: { invoice: populated }
+  });
+});
 exports.updatePayment = notImplemented;
 exports.addWorkOrdersToInvoice = catchAsync(async (req, res, next) => {
   const { id } = req.params;
