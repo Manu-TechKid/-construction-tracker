@@ -20,12 +20,18 @@ import {
 } from '@mui/material';
 
 const validationSchema = Yup.object().shape({
-  firstName: Yup.string().required('First name is required'),
-  lastName: Yup.string().required('Last name is required'),
+  name: Yup.string().required('Name is required'),
   email: Yup.string().email('Invalid email').required('Email is required'),
   phone: Yup.string().required('Phone is required'),
-  skills: Yup.array().min(1, 'At least one skill is required'),
-  hourlyRate: Yup.number().min(0, 'Rate must be positive'),
+  password: Yup.string(),
+  workerProfile: Yup.object().shape({
+    skills: Yup.array().min(1, 'At least one skill is required'),
+    paymentType: Yup.string().oneOf(['hourly', 'contract']),
+    hourlyRate: Yup.number().min(0, 'Rate must be positive'),
+    contractRate: Yup.number().min(0, 'Rate must be positive'),
+    status: Yup.string().oneOf(['active', 'inactive', 'on_leave']),
+    notes: Yup.string(),
+  }),
 });
 
 const WorkerForm = ({
@@ -36,13 +42,18 @@ const WorkerForm = ({
   onCancel,
 }) => {
   const initialValues = {
-    firstName: '',
-    lastName: '',
+    name: '',
     email: '',
     phone: '',
-    skills: [],
-    hourlyRate: 0,
-    status: 'active',
+    password: '',
+    workerProfile: {
+      skills: [],
+      paymentType: 'hourly',
+      hourlyRate: 0,
+      contractRate: 0,
+      status: 'active',
+      notes: '',
+    },
     ...initialValuesProp
   };
 
@@ -90,30 +101,14 @@ const WorkerForm = ({
                   <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
-                      id="firstName"
-                      name="firstName"
-                      label="First Name"
-                      value={formik.values.firstName}
+                      id="name"
+                      name="name"
+                      label="Full Name"
+                      value={formik.values.name}
                       onChange={formik.handleChange}
                       onBlur={formik.handleBlur}
-                      error={formik.touched.firstName && Boolean(formik.errors.firstName)}
-                      helperText={formik.touched.firstName && formik.errors.firstName}
-                      variant="outlined"
-                      margin="normal"
-                    />
-                  </Grid>
-
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      id="lastName"
-                      name="lastName"
-                      label="Last Name"
-                      value={formik.values.lastName}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
-                      error={formik.touched.lastName && Boolean(formik.errors.lastName)}
-                      helperText={formik.touched.lastName && formik.errors.lastName}
+                      error={formik.touched.name && Boolean(formik.errors.name)}
+                      helperText={formik.touched.name && formik.errors.name}
                       variant="outlined"
                       margin="normal"
                     />
@@ -155,29 +150,64 @@ const WorkerForm = ({
                   <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
-                      id="hourlyRate"
-                      name="hourlyRate"
-                      label="Hourly Rate ($)"
-                      type="number"
-                      value={formik.values.hourlyRate}
+                      id="password"
+                      name="password"
+                      label={isEdit ? 'New Password (optional)' : 'Password'}
+                      type="password"
+                      value={formik.values.password}
                       onChange={formik.handleChange}
                       onBlur={formik.handleBlur}
-                      error={formik.touched.hourlyRate && Boolean(formik.errors.hourlyRate)}
-                      helperText={formik.touched.hourlyRate && formik.errors.hourlyRate}
+                      error={formik.touched.password && Boolean(formik.errors.password)}
+                      helperText={formik.touched.password && formik.errors.password}
+                      variant="outlined"
+                      margin="normal"
+                      required={!isEdit}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      id="workerProfile.hourlyRate"
+                      name="workerProfile.hourlyRate"
+                      label="Hourly Rate ($)"
+                      type="number"
+                      value={formik.values.workerProfile.hourlyRate}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      error={formik.touched.workerProfile?.hourlyRate && Boolean(formik.errors.workerProfile?.hourlyRate)}
+                      helperText={formik.touched.workerProfile?.hourlyRate && formik.errors.workerProfile?.hourlyRate}
                       variant="outlined"
                       margin="normal"
                     />
                   </Grid>
 
                   <Grid item xs={12} md={6}>
-                    <FormControl fullWidth error={formik.touched.skills && Boolean(formik.errors.skills)}>
+                    <TextField
+                      fullWidth
+                      id="workerProfile.contractRate"
+                      name="workerProfile.contractRate"
+                      label="Contract Rate ($)"
+                      type="number"
+                      value={formik.values.workerProfile.contractRate}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      error={formik.touched.workerProfile?.contractRate && Boolean(formik.errors.workerProfile?.contractRate)}
+                      helperText={formik.touched.workerProfile?.contractRate && formik.errors.workerProfile?.contractRate}
+                      variant="outlined"
+                      margin="normal"
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth error={formik.touched.workerProfile?.skills && Boolean(formik.errors.workerProfile?.skills)}>
                       <InputLabel id="skills-label">Skills</InputLabel>
                       <Select
                         labelId="skills-label"
                         id="skills"
-                        name="skills"
+                        name="workerProfile.skills"
                         multiple
-                        value={formik.values.skills}
+                        value={formik.values.workerProfile.skills}
                         onChange={formik.handleChange}
                         onBlur={formik.handleBlur}
                         input={<OutlinedInput label="Skills" />}
@@ -196,19 +226,19 @@ const WorkerForm = ({
                         ))}
                       </Select>
                       <FormHelperText>
-                        {formik.touched.skills && formik.errors.skills}
+                        {formik.touched.workerProfile?.skills && formik.errors.workerProfile?.skills}
                       </FormHelperText>
                     </FormControl>
                   </Grid>
 
                   <Grid item xs={12} md={6}>
-                    <FormControl fullWidth error={formik.touched.status && Boolean(formik.errors.status)}>
+                    <FormControl fullWidth error={formik.touched.workerProfile?.status && Boolean(formik.errors.workerProfile?.status)}>
                       <InputLabel id="status-label">Status</InputLabel>
                       <Select
                         labelId="status-label"
                         id="status"
-                        name="status"
-                        value={formik.values.status}
+                        name="workerProfile.status"
+                        value={formik.values.workerProfile.status}
                         onChange={formik.handleChange}
                         onBlur={formik.handleBlur}
                         label="Status"
@@ -220,9 +250,27 @@ const WorkerForm = ({
                         ))}
                       </Select>
                       <FormHelperText>
-                        {formik.touched.status && formik.errors.status}
+                        {formik.touched.workerProfile?.status && formik.errors.workerProfile?.status}
                       </FormHelperText>
                     </FormControl>
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      id="workerProfile.notes"
+                      name="workerProfile.notes"
+                      label="Notes"
+                      value={formik.values.workerProfile.notes}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      error={formik.touched.workerProfile?.notes && Boolean(formik.errors.workerProfile?.notes)}
+                      helperText={formik.touched.workerProfile?.notes && formik.errors.workerProfile?.notes}
+                      variant="outlined"
+                      margin="normal"
+                      multiline
+                      rows={3}
+                    />
                   </Grid>
                 </Grid>
               </CardContent>

@@ -36,6 +36,15 @@ export const employeeProfilesApiSlice = apiSlice.injectEndpoints({
       query: ({ id, ...body }) => ({ url: `/employee-profiles/${id}/review`, method: 'PATCH', body }),
       invalidatesTags: (r, e, { id }) => [{ type: 'EmployeeProfile', id }, { type: 'EmployeeProfile', id: 'LIST' }],
     }),
+
+    deleteEmployeeProfile: builder.mutation({
+      query: (id) => ({ url: `/employee-profiles/${id}`, method: 'DELETE' }),
+      invalidatesTags: (r, e, id) => [{ type: 'EmployeeProfile', id }, { type: 'EmployeeProfile', id: 'LIST' }],
+    }),
+    restoreEmployeeProfile: builder.mutation({
+      query: (id) => ({ url: `/employee-profiles/${id}/restore`, method: 'PATCH' }),
+      invalidatesTags: (r, e, id) => [{ type: 'EmployeeProfile', id }, { type: 'EmployeeProfile', id: 'LIST' }],
+    }),
   }),
 });
 
@@ -46,4 +55,6 @@ export const {
   useGetEmployeeProfilesQuery,
   useGetEmployeeProfileByIdQuery,
   useReviewEmployeeProfileMutation,
+  useDeleteEmployeeProfileMutation,
+  useRestoreEmployeeProfileMutation,
 } = employeeProfilesApiSlice;

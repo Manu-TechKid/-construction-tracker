@@ -238,8 +238,10 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
     return next(new AppError('Check not found', 404));
   }
 
-  const offsetX = Number(req.query.offsetX || 0);
-  const offsetY = Number(req.query.offsetY || 0);
+  const baseOffsetX = Number(process.env.CHECK_PDF_OFFSET_X || 0);
+  const baseOffsetY = Number(process.env.CHECK_PDF_OFFSET_Y || 0);
+  const offsetX = baseOffsetX + Number(req.query.offsetX || 0);
+  const offsetY = baseOffsetY + Number(req.query.offsetY || 0);
 
   const company = {
     name: 'DSJ Construction & Services LLC',

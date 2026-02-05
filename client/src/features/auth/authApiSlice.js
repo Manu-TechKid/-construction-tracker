@@ -35,6 +35,36 @@ export const authApiSlice = apiSlice.injectEndpoints({
     getCurrentUser: builder.query({
       query: () => '/auth/me',
       providesTags: ['User'],
+      async onQueryStarted(arg, { dispatch, queryFulfilled, getState }) {
+        try {
+          const { data } = await queryFulfilled;
+          const user = data?.data?.user;
+          const token = getState()?.auth?.token;
+          if (user && token) {
+            dispatch(setCredentials({ user, token }));
+          }
+        } catch (err) {
+        }
+      },
+    }),
+    updateMyProfile: builder.mutation({
+      query: (payload) => ({
+        url: '/users/updateMe',
+        method: 'PATCH',
+        body: payload,
+      }),
+      invalidatesTags: ['User'],
+      async onQueryStarted(arg, { dispatch, queryFulfilled, getState }) {
+        try {
+          const { data } = await queryFulfilled;
+          const user = data?.data?.user;
+          const token = getState()?.auth?.token;
+          if (user && token) {
+            dispatch(setCredentials({ user, token }));
+          }
+        } catch (err) {
+        }
+      },
     }),
     logout: builder.mutation({
       query: () => ({
@@ -79,6 +109,7 @@ export const {
   useLoginMutation,
   useRegisterMutation,
   useGetCurrentUserQuery,
+  useUpdateMyProfileMutation,
   useLogoutMutation,
   useForgotPasswordMutation,
   useResetPasswordMutation,

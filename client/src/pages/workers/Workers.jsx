@@ -108,7 +108,7 @@ const Workers = () => {
   const workers = useMemo(() => usersData?.data?.users ?? [], [usersData]);
   
   const [deleteWorker, { isLoading: isDeleting }] = useDeleteUserMutation();
-  const [updateWorker, { isLoading: isUpdating }] = useUpdateUserMutation();
+  const [updateUser, { isLoading: isUpdating }] = useUpdateUserMutation();
   const [createWorker] = useCreateUserMutation();
 
   // Filter workers based on tab
@@ -212,7 +212,7 @@ const Workers = () => {
       
       if (editMode && selectedWorker?._id) {
         await Promise.race([
-          updateWorker({
+          updateUser({
             id: selectedWorker._id,
             userData: workerData
           }).unwrap(),

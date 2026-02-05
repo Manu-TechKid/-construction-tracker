@@ -16,4 +16,7 @@ router.get('/', restrictToRoles('admin', 'manager', 'supervisor'), employeeProfi
 router.get('/:id', restrictToRoles('admin', 'manager', 'supervisor'), employeeProfileController.getProfile);
 router.patch('/:id/review', restrictToRoles('admin', 'manager'), employeeProfileController.reviewProfile);
 
+router.delete('/:id', restrictToRoles('admin', 'manager'), employeeProfileController.deleteProfile);
+router.patch('/:id/restore', restrictToRoles('admin', 'manager'), employeeProfileController.restoreProfile);
+
 module.exports = router;

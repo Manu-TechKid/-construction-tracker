@@ -13,7 +13,7 @@ const EditWorker = () => {
   const { data: workerData, isLoading, error } = useGetWorkerQuery(id);
   const [updateWorker, { isLoading: isUpdating }] = useUpdateWorkerMutation();
 
-  const worker = workerData?.data?.worker;
+  const worker = workerData?.data?.user;
 
   const handleSubmit = async (formData) => {
     try {
@@ -77,13 +77,18 @@ const EditWorker = () => {
         
         <WorkerForm
           initialValues={{
-            firstName: worker.firstName || '',
-            lastName: worker.lastName || '',
+            name: worker.name || '',
             email: worker.email || '',
             phone: worker.phone || '',
-            skills: worker.skills || [],
-            hourlyRate: worker.hourlyRate || 0,
-            status: worker.status || 'active'
+            password: '',
+            workerProfile: {
+              skills: worker.workerProfile?.skills || [],
+              paymentType: worker.workerProfile?.paymentType || 'hourly',
+              hourlyRate: worker.workerProfile?.hourlyRate || 0,
+              contractRate: worker.workerProfile?.contractRate || 0,
+              status: worker.workerProfile?.status || 'active',
+              notes: worker.workerProfile?.notes || '',
+            },
           }}
           onSubmit={handleSubmit}
           isSubmitting={isUpdating}

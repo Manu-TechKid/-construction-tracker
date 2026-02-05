@@ -63,11 +63,50 @@ exports.submitMyProfile = catchAsync(async (req, res, next) => {
   });
 });
 
+exports.deleteProfile = catchAsync(async (req, res, next) => {
+  const profile = await EmployeeProfile.findByIdAndUpdate(
+    req.params.id,
+    { deleted: true },
+    { new: true }
+  ).select('+deleted');
+
+  if (!profile) {
+    return next(new AppError('Profile not found', 404));
+  }
+
+  res.status(200).json({
+    status: 'success',
+    data: { profile },
+  });
+});
+
+exports.restoreProfile = catchAsync(async (req, res, next) => {
+  const profile = await EmployeeProfile.findByIdAndUpdate(
+    req.params.id,
+    { deleted: false },
+    { new: true, includeDeleted: true }
+  ).select('+deleted');
+
+  if (!profile) {
+    return next(new AppError('Profile not found', 404));
+  }
+
+  res.status(200).json({
+    status: 'success',
+    data: { profile },
+  });
+});
+
 exports.getAllProfiles = catchAsync(async (req, res, next) => {
   const filter = {};
   if (req.query.status) filter.status = req.query.status;
+  if (req.query.deleted === 'true') filter.deleted = true;
+  if (req.query.deleted === 'false') filter.deleted = { $ne: true };
 
-  const profiles = await EmployeeProfile.find(filter)
+  const includeDeleted = req.query.includeDeleted === 'true' || req.query.deleted === 'true';
+
+  const profiles = await EmployeeProfile.find(filter, null, { includeDeleted })
+    .select('+deleted')
     .populate('user', 'name email role')
     .sort({ updatedAt: -1 });
 
@@ -79,7 +118,10 @@ exports.getAllProfiles = catchAsync(async (req, res, next) => {
 });
 
 exports.getProfile = catchAsync(async (req, res, next) => {
-  const profile = await EmployeeProfile.findById(req.params.id).populate('user', 'name email role');
+  const includeDeleted = req.query.includeDeleted === 'true';
+  const profile = await EmployeeProfile.findById(req.params.id, null, { includeDeleted })
+    .select('+deleted')
+    .populate('user', 'name email role');
 
   if (!profile) {
     return next(new AppError('Profile not found', 404));

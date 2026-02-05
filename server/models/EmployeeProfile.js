@@ -124,7 +124,10 @@ const employeeProfileSchema = new mongoose.Schema(
 );
 
 employeeProfileSchema.pre(/^find/, function (next) {
-  this.where({ deleted: { $ne: true } });
+  const opts = this.getOptions ? this.getOptions() : {};
+  if (!opts?.includeDeleted) {
+    this.where({ deleted: { $ne: true } });
+  }
   next();
 });
 

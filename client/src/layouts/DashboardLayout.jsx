@@ -47,6 +47,7 @@ import {
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { logout } from '../features/auth/authSlice';
+import { useGetCurrentUserQuery } from '../features/auth/authApiSlice';
 import { useAuth } from '../hooks/useAuth';
 import BuildingSelector from '../components/common/BuildingSelector';
 import MobileNavigation from '../components/layout/MobileNavigation';
@@ -64,6 +65,13 @@ const DashboardLayout = () => {
   const location = useLocation();
   const dispatch = useDispatch();
   const { user, hasPermission, isWorker, canAccessMainDashboard, canAccessWorkerDashboard } = useAuth();
+
+  useGetCurrentUserQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+    skip: !user,
+  });
 
   // Redirect workers to their dashboard if they try to access main dashboard
   useEffect(() => {

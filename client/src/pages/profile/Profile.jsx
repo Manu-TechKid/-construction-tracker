@@ -19,6 +19,7 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { selectCurrentUser } from '../../features/auth/authSlice';
 import ChangePassword from '../../components/auth/ChangePassword';
+import { useUpdateMyProfileMutation } from '../../features/auth/authApiSlice';
 
 const validationSchema = Yup.object({
   name: Yup.string().required('Name is required'),
@@ -31,8 +32,8 @@ const Profile = () => {
   const user = useSelector(selectCurrentUser);
   const [isEditing, setIsEditing] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [updateMyProfile, { isLoading }] = useUpdateMyProfileMutation();
 
   const formik = useFormik({
     initialValues: {
@@ -42,18 +43,20 @@ const Profile = () => {
       department: user?.department || '',
     },
     validationSchema,
+    enableReinitialize: true,
     onSubmit: async (values) => {
-      setIsLoading(true);
       try {
-        // TODO: Implement profile update API call
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+        await updateMyProfile({
+          name: values.name,
+          email: values.email,
+          phone: values.phone,
+        }).unwrap();
         setUpdateSuccess(true);
         setIsEditing(false);
         setTimeout(() => setUpdateSuccess(false), 3000);
       } catch (error) {
         console.error('Profile update failed:', error);
       } finally {
-        setIsLoading(false);
       }
     },
   });

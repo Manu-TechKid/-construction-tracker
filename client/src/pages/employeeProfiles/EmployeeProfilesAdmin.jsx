@@ -4,10 +4,12 @@ import {
   Box,
   Button,
   Chip,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   FormControl,
   InputLabel,
   MenuItem,
@@ -29,6 +31,8 @@ import { useAuth } from '../../hooks/useAuth';
 import {
   useGetEmployeeProfilesQuery,
   useReviewEmployeeProfileMutation,
+  useDeleteEmployeeProfileMutation,
+  useRestoreEmployeeProfileMutation,
 } from '../../features/employeeProfiles/employeeProfilesApiSlice';
 
 const statusColor = (status) => {
@@ -41,10 +45,24 @@ const statusColor = (status) => {
 const EmployeeProfilesAdmin = () => {
   const { hasPermission } = useAuth();
   const canReview = hasPermission(['review:employeeprofiles']);
+  const canDelete = hasPermission(['delete:employeeprofiles']);
 
-  const [filters, setFilters] = useState({ status: '' });
-  const { data, isLoading, error } = useGetEmployeeProfilesQuery(filters.status ? { status: filters.status } : {});
+  const [filters, setFilters] = useState({ status: '', includeDeleted: false, deletedOnly: false });
+  const queryParams = useMemo(() => {
+    const p = {};
+    if (filters.status) p.status = filters.status;
+    if (filters.includeDeleted) p.includeDeleted = 'true';
+    if (filters.deletedOnly) {
+      p.deleted = 'true';
+      p.includeDeleted = 'true';
+    }
+    return p;
+  }, [filters]);
+
+  const { data, isLoading, error } = useGetEmployeeProfilesQuery(queryParams);
   const [review, { isLoading: isReviewing }] = useReviewEmployeeProfileMutation();
+  const [deleteProfile, { isLoading: isDeleting }] = useDeleteEmployeeProfileMutation();
+  const [restoreProfile, { isLoading: isRestoring }] = useRestoreEmployeeProfileMutation();
 
   const profiles = useMemo(() => data?.data?.profiles || [], [data]);
 
@@ -58,6 +76,27 @@ const EmployeeProfilesAdmin = () => {
     setDecision('approved');
     setNotes('');
     setOpen(true);
+  };
+
+  const onDelete = async (p) => {
+    if (!p?._id) return;
+    if (!window.confirm('Delete this profile? (soft delete)')) return;
+    try {
+      await deleteProfile(p._id).unwrap();
+      toast.success('Profile deleted');
+    } catch (err) {
+      toast.error(err?.data?.message || err?.message || 'Failed to delete');
+    }
+  };
+
+  const onRestore = async (p) => {
+    if (!p?._id) return;
+    try {
+      await restoreProfile(p._id).unwrap();
+      toast.success('Profile restored');
+    } catch (err) {
+      toast.error(err?.data?.message || err?.message || 'Failed to restore');
+    }
   };
 
   const close = () => {
@@ -82,21 +121,41 @@ const EmployeeProfilesAdmin = () => {
     <Box sx={{ p: 3 }}>
       <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} spacing={2} sx={{ mb: 2 }}>
         <Typography variant="h4">Employee Profiles</Typography>
-        <FormControl size="small" sx={{ minWidth: 220 }}>
-          <InputLabel id="filter-status">Status</InputLabel>
-          <Select
-            labelId="filter-status"
-            label="Status"
-            value={filters.status}
-            onChange={(e) => setFilters({ status: e.target.value })}
-          >
-            <MenuItem value="">All</MenuItem>
-            <MenuItem value="draft">Draft</MenuItem>
-            <MenuItem value="submitted">Submitted</MenuItem>
-            <MenuItem value="approved">Approved</MenuItem>
-            <MenuItem value="rejected">Rejected</MenuItem>
-          </Select>
-        </FormControl>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }}>
+          <FormControl size="small" sx={{ minWidth: 220 }}>
+            <InputLabel id="filter-status">Status</InputLabel>
+            <Select
+              labelId="filter-status"
+              label="Status"
+              value={filters.status}
+              onChange={(e) => setFilters((p) => ({ ...p, status: e.target.value }))}
+            >
+              <MenuItem value="">All</MenuItem>
+              <MenuItem value="draft">Draft</MenuItem>
+              <MenuItem value="submitted">Submitted</MenuItem>
+              <MenuItem value="approved">Approved</MenuItem>
+              <MenuItem value="rejected">Rejected</MenuItem>
+            </Select>
+          </FormControl>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={filters.includeDeleted}
+                onChange={(e) => setFilters((p) => ({ ...p, includeDeleted: e.target.checked, deletedOnly: false }))}
+              />
+            }
+            label="Include deleted"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={filters.deletedOnly}
+                onChange={(e) => setFilters((p) => ({ ...p, deletedOnly: e.target.checked, includeDeleted: e.target.checked ? true : p.includeDeleted }))}
+              />
+            }
+            label="Deleted only"
+          />
+        </Stack>
       </Stack>
 
       {isLoading && <CircularProgress />}
@@ -110,6 +169,7 @@ const EmployeeProfilesAdmin = () => {
                 <TableCell>User</TableCell>
                 <TableCell>Email</TableCell>
                 <TableCell>Status</TableCell>
+                <TableCell>Deleted</TableCell>
                 <TableCell>Updated</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
@@ -122,17 +182,30 @@ const EmployeeProfilesAdmin = () => {
                   <TableCell>
                     <Chip label={p.status || 'draft'} size="small" color={statusColor(p.status)} />
                   </TableCell>
+                  <TableCell>{p.deleted ? 'Yes' : 'No'}</TableCell>
                   <TableCell>{p.updatedAt ? new Date(p.updatedAt).toLocaleString() : '-'}</TableCell>
                   <TableCell align="right">
-                    <Button size="small" variant="outlined" onClick={() => openReview(p)}>
-                      {canReview ? 'Review' : 'View'}
-                    </Button>
+                    <Stack direction="row" spacing={1} justifyContent="flex-end">
+                      <Button size="small" variant="outlined" onClick={() => openReview(p)}>
+                        {canReview ? 'Review' : 'View'}
+                      </Button>
+                      {canDelete && !p.deleted && (
+                        <Button size="small" color="error" variant="outlined" onClick={() => onDelete(p)} disabled={isDeleting}>
+                          Delete
+                        </Button>
+                      )}
+                      {canDelete && p.deleted && (
+                        <Button size="small" color="success" variant="outlined" onClick={() => onRestore(p)} disabled={isRestoring}>
+                          Restore
+                        </Button>
+                      )}
+                    </Stack>
                   </TableCell>
                 </TableRow>
               ))}
               {profiles.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} align="center">No profiles found</TableCell>
+                  <TableCell colSpan={6} align="center">No profiles found</TableCell>
                 </TableRow>
               )}
             </TableBody>
