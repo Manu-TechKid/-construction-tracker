@@ -7,7 +7,41 @@ exports.getMyProfile = catchAsync(async (req, res, next) => {
     return next(new AppError('You are not logged in', 401));
   }
 
-  let profile = await EmployeeProfile.findOne({ user: req.user._id }).populate('user', 'name email role');
+  let profile = await EmployeeProfile.findOne(
+    { user: req.user._id },
+    null,
+    { includeDeleted: true }
+  )
+    .select('+deleted')
+    .populate('user', 'name email role');
+
+  if (profile?.deleted) {
+    await EmployeeProfile.findByIdAndUpdate(
+      profile._id,
+      {
+        $set: { deleted: false, status: 'draft', documents: [] },
+        $unset: {
+          dateOfApplication: 1,
+          applicationReferenceNo: 1,
+          personal: 1,
+          identification: 1,
+          constructionExperience: 1,
+          skills: 1,
+          availability: 1,
+          healthSafety: 1,
+          declaration: 1,
+          officeUse: 1,
+          reviewedBy: 1,
+          reviewedAt: 1,
+          reviewNotes: 1,
+        },
+      },
+      { new: true, includeDeleted: true }
+    );
+
+    profile = await EmployeeProfile.findById(profile._id)
+      .populate('user', 'name email role');
+  }
 
   if (!profile) {
     profile = await EmployeeProfile.create({ user: req.user._id });
@@ -32,8 +66,8 @@ exports.upsertMyProfile = catchAsync(async (req, res, next) => {
 
   const profile = await EmployeeProfile.findOneAndUpdate(
     { user: req.user._id },
-    { $set: updates },
-    { new: true, upsert: true, runValidators: true }
+    { $set: { ...updates, deleted: false } },
+    { new: true, upsert: true, runValidators: true, includeDeleted: true }
   ).populate('user', 'name email role');
 
   res.status(200).json({
@@ -47,9 +81,18 @@ exports.submitMyProfile = catchAsync(async (req, res, next) => {
     return next(new AppError('You are not logged in', 401));
   }
 
-  const profile = await EmployeeProfile.findOne({ user: req.user._id });
+  const profile = await EmployeeProfile.findOne(
+    { user: req.user._id },
+    null,
+    { includeDeleted: true }
+  );
   if (!profile) {
     return next(new AppError('Profile not found', 404));
+  }
+
+  if (profile.deleted) {
+    profile.deleted = false;
+    profile.status = 'draft';
   }
 
   profile.status = 'submitted';
