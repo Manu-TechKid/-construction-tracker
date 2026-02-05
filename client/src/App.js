@@ -79,6 +79,10 @@ import ActivityLog from './pages/admin/ActivityLog';
 import GeneralCleaningPage from './pages/cleaning/GeneralCleaningPage';
 import WorkContactsPage from './pages/workContacts/WorkContactsPage';
 import SkillsManagementPage from './pages/settings/SkillsManagementPage';
+import Vendors from './pages/vendors/Vendors';
+import Checks from './pages/checks/Checks';
+import MyResume from './pages/employeeProfiles/MyResume';
+import EmployeeProfilesAdmin from './pages/employeeProfiles/EmployeeProfilesAdmin';
 
 // Route Protection
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -196,6 +200,42 @@ const AppContent = () => {
                           <WorkContactsPage />
                         </RoleBasedRoute>
                       } 
+                    />
+
+                    {/* Vendors */}
+                    <Route
+                      path="vendors"
+                      element={
+                        <RoleBasedRoute requiredPermissions={['read:vendors']}>
+                          <Vendors />
+                        </RoleBasedRoute>
+                      }
+                    />
+
+                    {/* Checks */}
+                    <Route
+                      path="checks"
+                      element={
+                        <RoleBasedRoute requiredPermissions={['read:checks']}>
+                          <Checks />
+                        </RoleBasedRoute>
+                      }
+                    />
+
+                    {/* Worker Resume / Application */}
+                    <Route
+                      path="my-resume"
+                      element={<MyResume />}
+                    />
+
+                    {/* Employee Profiles (Admin Review) */}
+                    <Route
+                      path="employee-profiles"
+                      element={
+                        <RoleBasedRoute requiredPermissions={['read:employeeprofiles']}>
+                          <EmployeeProfilesAdmin />
+                        </RoleBasedRoute>
+                      }
                     />
 
                     {/* Buildings */}

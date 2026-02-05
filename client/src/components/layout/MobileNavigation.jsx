@@ -19,6 +19,9 @@ import {
   Business as BuildingIcon,
   Assignment as WorkOrderIcon,
   People as WorkerIcon,
+  FactCheck as VendorIcon,
+  AccountBalance as CheckIcon,
+  Person as PersonIcon,
   Menu as MenuIcon,
   AccessTime as TimeTrackingIcon,
   Assessment as AssessmentIcon,
@@ -47,9 +50,13 @@ const MobileNavigation = () => {
     const path = location.pathname;
     if (path === '/' || path === '/dashboard') return 'dashboard';
     if (path === '/worker-dashboard') return 'workerDashboard';
+    if (path.includes('/my-resume')) return 'myResume';
     if (path.includes('/buildings')) return 'buildings';
     if (path.includes('/work-orders')) return 'workOrders';
     if (path.includes('/workers')) return 'workers';
+    if (path.includes('/vendors')) return 'vendors';
+    if (path.includes('/checks')) return 'checks';
+    if (path.includes('/employee-profiles')) return 'employeeProfiles';
     if (path.includes('/time-tracking')) return 'timeTracking';
     return isWorker ? 'workerDashboard' : 'dashboard';
   };
@@ -65,6 +72,17 @@ const MobileNavigation = () => {
         value: 'workerDashboard',
         icon: <WorkIcon />,
         path: '/worker-dashboard',
+        permission: 'view:dashboard:worker'
+      });
+    }
+
+    // My Resume - workers only
+    if (isWorker) {
+      items.push({
+        label: 'My Resume',
+        value: 'myResume',
+        icon: <PersonIcon />,
+        path: '/my-resume',
         permission: 'view:dashboard:worker'
       });
     }
@@ -110,6 +128,39 @@ const MobileNavigation = () => {
         icon: <WorkerIcon />,
         path: '/workers',
         permission: 'read:workers'
+      });
+    }
+
+    // Vendors
+    if (!isWorker && hasPermission(['read:vendors'])) {
+      items.push({
+        label: 'Vendors',
+        value: 'vendors',
+        icon: <VendorIcon />,
+        path: '/vendors',
+        permission: 'read:vendors'
+      });
+    }
+
+    // Checks
+    if (!isWorker && hasPermission(['read:checks'])) {
+      items.push({
+        label: 'Checks',
+        value: 'checks',
+        icon: <CheckIcon />,
+        path: '/checks',
+        permission: 'read:checks'
+      });
+    }
+
+    // Employee Profiles
+    if (!isWorker && hasPermission(['read:employeeprofiles'])) {
+      items.push({
+        label: 'Profiles',
+        value: 'employeeProfiles',
+        icon: <WorkerIcon />,
+        path: '/employee-profiles',
+        permission: 'read:employeeprofiles'
       });
     }
 

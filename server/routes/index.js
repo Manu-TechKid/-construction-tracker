@@ -28,6 +28,9 @@ const activityLogRoutes = require('./activityLogRoutes');
 const workContactRoutes = require('./workContactRoutes');
 const skillRoutes = require('./skillRoutes');
 const cleaningJobRoutes = require('./cleaningJobRoutes');
+const vendorRoutes = require('./vendorRoutes');
+const checkRoutes = require('./checkRoutes');
+const employeeProfileRoutes = require('./employeeProfileRoutes');
 
 // API routes
 router.use('/auth', authRoutes);
@@ -56,6 +59,9 @@ router.use('/activity-log', activityLogRoutes);
 router.use('/work-contacts', workContactRoutes);
 router.use('/skills', skillRoutes);
 router.use('/cleaning-jobs', cleaningJobRoutes);
+router.use('/vendors', vendorRoutes);
+router.use('/checks', checkRoutes);
+router.use('/employee-profiles', employeeProfileRoutes);
 
 // All routes are now properly organized above
 // Frontend should use /setup/work-types, /users for workers, etc.

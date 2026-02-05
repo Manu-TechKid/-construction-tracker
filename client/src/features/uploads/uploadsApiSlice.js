@@ -2,6 +2,13 @@ import { apiSlice } from '../../app/api/apiSlice';
 
 export const uploadsApiSlice = apiSlice.injectEndpoints({
   endpoints: builder => ({
+    getUploadSignature: builder.mutation({
+      query: (body = {}) => ({
+        url: '/uploads/sign',
+        method: 'POST',
+        body,
+      }),
+    }),
     uploadPhoto: builder.mutation({
       query: ({ workOrderId, photo }) => {
         const formData = new FormData();
@@ -26,6 +33,7 @@ export const uploadsApiSlice = apiSlice.injectEndpoints({
 });
 
 export const {
+  useGetUploadSignatureMutation,
   useUploadPhotoMutation,
   useDeletePhotoMutation,
 } = uploadsApiSlice;

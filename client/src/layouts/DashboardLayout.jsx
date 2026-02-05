@@ -26,6 +26,8 @@ import {
   Assignment as AssignmentIcon,
   People as PeopleIcon,
   Receipt as ReceiptIcon,
+  AccountBalance as BankIcon,
+  FactCheck as VendorIcon,
   NotificationsActive as ReminderIcon,
   Note as NoteIcon,
   Schedule as ScheduleIcon,
@@ -136,6 +138,46 @@ const DashboardLayout = () => {
         icon: <PeopleIcon />,
         path: '/work-contacts',
         permission: 'read:all'
+      });
+    }
+
+    // My Resume (Employee Profile) - workers only
+    if (isWorker) {
+      items.push({
+        text: 'My Resume',
+        icon: <PersonIcon />,
+        path: '/my-resume',
+        permission: 'view:dashboard:worker'
+      });
+    }
+
+    // Vendors
+    if (!isWorker && hasPermission(['read:vendors'])) {
+      items.push({
+        text: 'Vendors',
+        icon: <VendorIcon />,
+        path: '/vendors',
+        permission: 'read:vendors'
+      });
+    }
+
+    // Checks
+    if (!isWorker && hasPermission(['read:checks'])) {
+      items.push({
+        text: 'Checks',
+        icon: <BankIcon />,
+        path: '/checks',
+        permission: 'read:checks'
+      });
+    }
+
+    // Employee Profiles (admin review)
+    if (!isWorker && hasPermission(['read:employeeprofiles'])) {
+      items.push({
+        text: 'Employee Profiles',
+        icon: <PeopleIcon />,
+        path: '/employee-profiles',
+        permission: 'read:employeeprofiles'
       });
     }
 
