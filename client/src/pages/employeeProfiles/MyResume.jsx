@@ -133,39 +133,40 @@ const MyResume = () => {
     });
   };
 
+  const buildPayload = () => ({
+    dateOfApplication: form.dateOfApplication ? new Date(form.dateOfApplication).toISOString() : undefined,
+    personal: {
+      ...form.personal,
+      dateOfBirth: form.personal?.dateOfBirth ? new Date(form.personal.dateOfBirth).toISOString() : undefined,
+    },
+    identification: form.identification,
+    constructionExperience: {
+      ...form.constructionExperience,
+      hasPreviousExperience: !!form.constructionExperience?.hasPreviousExperience,
+    },
+    skills: form.skills,
+    availability: {
+      ...form.availability,
+      availableToStartFrom: form.availability?.availableToStartFrom ? new Date(form.availability.availableToStartFrom).toISOString() : undefined,
+    },
+    healthSafety: {
+      ...form.healthSafety,
+      anyMedicalConditionAffectingWork: !!form.healthSafety?.anyMedicalConditionAffectingWork,
+    },
+    declaration: {
+      ...form.declaration,
+      date: form.declaration?.date ? new Date(form.declaration.date).toISOString() : undefined,
+    },
+    documents: form.documents,
+  });
+
   const onSave = async () => {
     if (isApproved) {
       toast.info('Your application is approved and cannot be edited.');
       return;
     }
     try {
-      const payload = {
-        dateOfApplication: form.dateOfApplication ? new Date(form.dateOfApplication).toISOString() : undefined,
-        personal: {
-          ...form.personal,
-          dateOfBirth: form.personal?.dateOfBirth ? new Date(form.personal.dateOfBirth).toISOString() : undefined,
-        },
-        identification: form.identification,
-        constructionExperience: {
-          ...form.constructionExperience,
-          hasPreviousExperience: !!form.constructionExperience?.hasPreviousExperience,
-        },
-        skills: form.skills,
-        availability: {
-          ...form.availability,
-          availableToStartFrom: form.availability?.availableToStartFrom ? new Date(form.availability.availableToStartFrom).toISOString() : undefined,
-        },
-        healthSafety: {
-          ...form.healthSafety,
-          anyMedicalConditionAffectingWork: !!form.healthSafety?.anyMedicalConditionAffectingWork,
-        },
-        declaration: {
-          ...form.declaration,
-          date: form.declaration?.date ? new Date(form.declaration.date).toISOString() : undefined,
-        },
-        documents: form.documents,
-      };
-
+      const payload = buildPayload();
       await upsert(payload).unwrap();
       toast.success('Saved');
     } catch (err) {
@@ -184,6 +185,8 @@ const MyResume = () => {
       : 'Submit your application? You can still edit later, but status will be submitted.';
     if (!window.confirm(msg)) return;
     try {
+      const payload = buildPayload();
+      await upsert(payload).unwrap();
       await submit().unwrap();
       toast.success('Submitted');
     } catch (err) {

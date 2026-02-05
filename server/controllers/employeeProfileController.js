@@ -15,37 +15,11 @@ exports.getMyProfile = catchAsync(async (req, res, next) => {
     .select('+deleted')
     .populate('user', 'name email role');
 
-  if (profile?.deleted) {
-    await EmployeeProfile.findByIdAndUpdate(
-      profile._id,
-      {
-        $set: { deleted: false, status: 'draft', documents: [] },
-        $unset: {
-          dateOfApplication: 1,
-          applicationReferenceNo: 1,
-          personal: 1,
-          identification: 1,
-          constructionExperience: 1,
-          skills: 1,
-          availability: 1,
-          healthSafety: 1,
-          declaration: 1,
-          officeUse: 1,
-          reviewedBy: 1,
-          reviewedAt: 1,
-          reviewNotes: 1,
-        },
-      },
-      { new: true, includeDeleted: true }
-    );
-
-    profile = await EmployeeProfile.findById(profile._id)
-      .populate('user', 'name email role');
-  }
-
-  if (!profile) {
-    profile = await EmployeeProfile.create({ user: req.user._id });
-    profile = await EmployeeProfile.findById(profile._id).populate('user', 'name email role');
+  if (!profile || profile.deleted) {
+    return res.status(200).json({
+      status: 'success',
+      data: { profile: null },
+    });
   }
 
   res.status(200).json({
