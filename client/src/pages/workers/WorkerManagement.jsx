@@ -142,7 +142,7 @@ const WorkerManagement = () => {
   // Generate employment letter
   const generateEmploymentLetter = () => {
     const letterContent = {
-      workerName: `${worker?.firstName} ${worker?.lastName}`,
+      workerName: worker?.name,
       startDate: letterData.startDate,
       endDate: letterData.endDate,
       totalHours: timeStats.totalHours.toFixed(2),
@@ -229,7 +229,7 @@ const WorkerManagement = () => {
           </Avatar>
           <Box flexGrow={1}>
             <Typography variant="h4" component="h1">
-              {worker.firstName} {worker.lastName}
+              {worker.name}
             </Typography>
             <Typography variant="subtitle1" color="textSecondary">
               {worker.workerProfile?.skills?.join(', ') || 'General Worker'}
@@ -247,7 +247,7 @@ const WorkerManagement = () => {
               <Button
                 variant="contained"
                 startIcon={<EditIcon />}
-                onClick={() => navigate(`/workers/edit/${worker._id}`)}
+                onClick={() => navigate(`/workers/${worker._id}/edit`)}
               >
                 Edit Worker
               </Button>
@@ -274,8 +274,8 @@ const WorkerManagement = () => {
                 </Typography>
                 <Typography variant="body2">
                   Status: <Chip 
-                    label={worker.workerProfile?.approved ? 'Approved' : 'Pending'} 
-                    color={worker.workerProfile?.approved ? 'success' : 'warning'}
+                    label={worker.workerProfile?.approvalStatus === 'approved' ? 'Approved' : 'Pending'} 
+                    color={worker.workerProfile?.approvalStatus === 'approved' ? 'success' : 'warning'}
                     size="small"
                   />
                 </Typography>

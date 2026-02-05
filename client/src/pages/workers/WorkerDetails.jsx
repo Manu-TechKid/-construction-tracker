@@ -24,7 +24,7 @@ import {
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
 } from '@mui/icons-material';
-import { useGetWorkersQuery } from '../../features/workers/workersApiSlice';
+import { useGetWorkerQuery } from '../../features/workers/workersApiSlice';
 import { useAuth } from '../../hooks/useAuth';
 
 const WorkerDetails = () => {
@@ -32,7 +32,7 @@ const WorkerDetails = () => {
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
 
-  const { data: workersData, isLoading, error } = useGetWorkersQuery();
+  const { data: workerData, isLoading, error } = useGetWorkerQuery(id);
 
   if (isLoading) {
     return (
@@ -52,8 +52,7 @@ const WorkerDetails = () => {
     );
   }
 
-  const workers = workersData?.data?.users || [];
-  const worker = workers.find(w => w._id === id);
+  const worker = workerData?.data?.user;
 
   if (!worker) {
     return (
@@ -147,11 +146,11 @@ const WorkerDetails = () => {
                     Approval Status
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    {getStatusIcon(worker.workerProfile?.approvalStatus)}
+                    {getStatusIcon(worker.approvalStatus)}
                     <Chip
-                      label={worker.workerProfile?.approvalStatus?.charAt(0).toUpperCase() +
-                            worker.workerProfile?.approvalStatus?.slice(1) || 'Pending'}
-                      color={getStatusColor(worker.workerProfile?.approvalStatus)}
+                      label={worker.approvalStatus?.charAt(0).toUpperCase() +
+                            worker.approvalStatus?.slice(1) || 'Pending'}
+                      color={getStatusColor(worker.approvalStatus)}
                       size="small"
                     />
                   </Box>

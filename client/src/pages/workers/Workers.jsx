@@ -81,6 +81,7 @@ const Workers = () => {
     phone: '',
     password: '',
     skills: [],
+    paymentType: 'hourly',
     hourlyRate: '',
     contractRate: '',
     notes: ''
@@ -213,7 +214,7 @@ const Workers = () => {
         await Promise.race([
           updateWorker({
             id: selectedWorker._id,
-            ...workerData
+            userData: workerData
           }).unwrap(),
           timeoutPromise
         ]);
