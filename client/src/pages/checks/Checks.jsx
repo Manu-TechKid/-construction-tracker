@@ -216,6 +216,13 @@ const Checks = () => {
       const blob = await getPdf({ id: check._id, offsetX, offsetY }).unwrap();
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank', 'noopener,noreferrer');
+
+      if (check?.status !== 'printed' && check?.status !== 'voided') {
+        const shouldMark = window.confirm('Mark this check as printed?');
+        if (shouldMark) {
+          await onMarkPrinted(check._id);
+        }
+      }
     } catch (err) {
       toast.error(err?.data?.message || err?.message || 'Failed to generate PDF');
     }
@@ -319,22 +326,22 @@ const Checks = () => {
                       </IconButton>
                     )}
                     {canUpdate && (
-                      <IconButton color="success" onClick={() => onMarkPrinted(c._id)}>
+                      <IconButton color="success" onClick={() => onMarkPrinted(c._id)} disabled={c.status === 'printed' || c.status === 'voided'}>
                         <MarkPrintedIcon fontSize="small" />
                       </IconButton>
                     )}
                     {canUpdate && (
-                      <IconButton color="warning" onClick={() => onVoid(c._id)}>
+                      <IconButton color="warning" onClick={() => onVoid(c._id)} disabled={c.status === 'voided'}>
                         <VoidIcon fontSize="small" />
                       </IconButton>
                     )}
                     {canUpdate && (
-                      <IconButton color="primary" onClick={() => openEdit(c)}>
+                      <IconButton color="primary" onClick={() => openEdit(c)} disabled={c.status === 'voided' || c.status === 'printed'}>
                         <EditIcon fontSize="small" />
                       </IconButton>
                     )}
                     {canDelete && (
-                      <IconButton color="error" onClick={() => onDelete(c._id)}>
+                      <IconButton color="error" onClick={() => onDelete(c._id)} disabled={c.status === 'printed'}>
                         <DeleteIcon fontSize="small" />
                       </IconButton>
                     )}

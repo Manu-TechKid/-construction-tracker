@@ -243,6 +243,10 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
   const offsetX = baseOffsetX + Number(req.query.offsetX || 0);
   const offsetY = baseOffsetY + Number(req.query.offsetY || 0);
 
+  const accentColor = process.env.CHECK_PDF_ACCENT_COLOR || '#0b4aa2';
+  const watermarkText = process.env.CHECK_PDF_WATERMARK_TEXT || 'DSJ';
+  const watermarkOpacity = Number(process.env.CHECK_PDF_WATERMARK_OPACITY || 0.06);
+
   const company = {
     name: 'DSJ Construction & Services LLC',
     address: '651 Pullman Pl',
@@ -286,13 +290,36 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
           @page { size: Letter; margin: 0.4in; }
           body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #111; font-size: 10px; }
 
-          .sheet { width: 100%; transform: translate(${offsetX}px, ${offsetY}px); }
+          .sheet { width: 100%; transform: translate(${offsetX}px, ${offsetY}px); position: relative; }
+
+          .watermark {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 0;
+          }
+          .watermark .wm {
+            font-size: 120px;
+            font-weight: 900;
+            color: #111;
+            opacity: ${watermarkOpacity};
+            transform: rotate(-18deg);
+            letter-spacing: 10px;
+            text-transform: uppercase;
+            white-space: nowrap;
+          }
+
+          .page { position: relative; z-index: 1; }
 
           .row { display: table; width: 100%; table-layout: fixed; }
           .cell { display: table-cell; vertical-align: top; }
 
-          .voucher { border: 1px solid #d0d7de; padding: 10px; border-radius: 4px; margin-bottom: 10px; }
-          .voucher-title { font-weight: 800; font-size: 12px; color: #0b4aa2; margin-bottom: 6px; }
+          .voucher { border: 1px solid #d0d7de; padding: 12px; border-radius: 6px; margin-bottom: 10px; }
+          .voucher-title { font-weight: 900; font-size: 12px; color: ${accentColor}; margin-bottom: 6px; letter-spacing: 0.4px; }
+          .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #eef2f7; font-size: 9px; color: #243447; }
 
           .company { font-weight: 700; }
           .muted { color: #5f6b7a; }
@@ -303,12 +330,14 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
           .voucher-table td { padding: 6px; border-top: 1px solid #eef2f7; }
           .voucher-table .amt { text-align: right; white-space: nowrap; width: 90px; }
 
-          .check { border: 1px solid #d0d7de; padding: 10px; border-radius: 4px; height: 3.2in; }
+          .perforation { border-top: 1px dashed #c9d4df; margin: 6px 0 10px; }
+
+          .check { border: 1px solid #d0d7de; padding: 12px; border-radius: 6px; height: 3.2in; position: relative; }
           .check-top { display: table; width: 100%; table-layout: fixed; }
           .check-left { display: table-cell; width: 60%; vertical-align: top; }
           .check-right { display: table-cell; width: 40%; vertical-align: top; text-align: right; }
 
-          .check-no { font-weight: 800; font-size: 11px; }
+          .check-no { font-weight: 900; font-size: 11px; letter-spacing: 0.2px; }
           .check-amt { font-weight: 900; font-size: 14px; }
 
           .field { margin-top: 6px; }
@@ -318,11 +347,20 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
           .payto { margin-top: 10px; }
           .payto .value { font-size: 11px; }
 
-          .amount-words { margin-top: 6px; font-size: 10px; }
+          .amount-words { margin-top: 6px; font-size: 10px; border-bottom: 1px solid #e6edf5; padding-bottom: 3px; }
 
           .memo { margin-top: 10px; }
 
-          .check-footer { margin-top: 16px; font-size: 8px; color: #5f6b7a; }
+          .micr {
+            position: absolute;
+            left: 12px;
+            right: 12px;
+            bottom: 10px;
+            font-size: 10px;
+            letter-spacing: 1px;
+            color: #111;
+          }
+          .check-footer { margin-top: 14px; font-size: 8px; color: #5f6b7a; }
 
           .hr { height: 1px; background: #e6edf5; margin: 8px 0; }
         </style>
@@ -330,8 +368,15 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
       <body>
         <div class="sheet">
 
+          <div class="watermark"><div class="wm">${escapeHtml(watermarkText)}</div></div>
+
+          <div class="page">
+
           <div class="voucher">
-            <div class="voucher-title">PAYMENT VOUCHER</div>
+            <div class="row" style="margin-bottom: 6px;">
+              <div class="cell"><div class="voucher-title">PAYMENT VOUCHER</div></div>
+              <div class="cell" style="text-align:right;"><span class="pill">${escapeHtml(check.status || 'draft').toUpperCase()}</span></div>
+            </div>
             <div class="row">
               <div class="cell">
                 <div class="company">${escapeHtml(company.name)}</div>
@@ -373,10 +418,12 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
             </table>
           </div>
 
+          <div class="perforation"></div>
+
           <div class="check">
             <div class="check-top">
               <div class="check-left">
-                <div class="company">${escapeHtml(company.name)}</div>
+                <div class="company" style="color:${accentColor};">${escapeHtml(company.name)}</div>
                 <div class="muted">${escapeHtml(company.address)} • ${escapeHtml(company.cityStateZip)}</div>
               </div>
               <div class="check-right">
@@ -400,8 +447,10 @@ exports.generatePDF = catchAsync(async (req, res, next) => {
             </div>
 
             <div class="check-footer">Print calibration: offsetX=${escapeHtml(offsetX)} offsetY=${escapeHtml(offsetY)}</div>
+            <div class="micr">"000${escapeHtml(check.checkNumber)}" "${escapeHtml(check._id.toString().slice(-12))}"</div>
           </div>
 
+          </div>
         </div>
       </body>
     </html>
