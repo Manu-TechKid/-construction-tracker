@@ -43,6 +43,15 @@ const commonTheme = {
     borderRadius: 8,
   },
   components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        '@media (min-width: 768px) and (max-width: 1024px)': {
+          html: {
+            fontSize: '18px',
+          },
+        },
+      },
+    },
     MuiModal: {
       defaultProps: {
         disableAutoFocus: true,
