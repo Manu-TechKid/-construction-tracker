@@ -101,10 +101,14 @@ const RoleBasedRoute = ({ children, requiredPermissions }) => {
 
 // Worker redirect component
 const WorkerRedirect = () => {
-  const { isWorker } = useAuth();
+  const { isWorker, isNotesOnly } = useAuth();
   
   if (isWorker) {
     return <Navigate to="/worker-dashboard" replace />;
+  }
+
+  if (isNotesOnly) {
+    return <Navigate to="/notes" replace />;
   }
   
   return <Navigate to="/dashboard" replace />;

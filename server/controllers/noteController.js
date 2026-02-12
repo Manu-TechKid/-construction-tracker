@@ -8,8 +8,15 @@ exports.getAllNotes = catchAsync(async (req, res, next) => {
   const { building, status, type, priority } = req.query;
   
   let filter = { deleted: { $ne: true } };
+
+  if (req.user?.role === 'notes_only') {
+    if (!req.user.assignedBuilding) {
+      return next(new AppError('Assigned building is required for this account.', 403));
+    }
+    filter.building = req.user.assignedBuilding;
+  }
   
-  if (building) filter.building = building;
+  if (building && req.user?.role !== 'notes_only') filter.building = building;
   if (status) {
     filter.status = { $in: status.split(',') };
   }
@@ -41,6 +48,15 @@ exports.getNote = catchAsync(async (req, res, next) => {
     .populate('createdBy', 'name email')
     .populate('assignedTo', 'name email')
     .populate('updatedBy', 'name email');
+
+  if (req.user?.role === 'notes_only') {
+    if (!req.user.assignedBuilding) {
+      return next(new AppError('Assigned building is required for this account.', 403));
+    }
+    if (note && String(note.building?._id || note.building) !== String(req.user.assignedBuilding)) {
+      return next(new AppError('You can only view notes for your assigned building.', 403));
+    }
+  }
 
   if (!note) {
     return next(new AppError('No note found with that ID', 404));
@@ -85,6 +101,15 @@ exports.createNote = catchAsync(async (req, res, next) => {
     return next(new AppError('Building is required', 400));
   }
 
+  if (req.user?.role === 'notes_only') {
+    if (!req.user.assignedBuilding) {
+      return next(new AppError('Assigned building is required for this account.', 403));
+    }
+    if (String(building) !== String(req.user.assignedBuilding)) {
+      return next(new AppError('You can only add notes for your assigned building.', 403));
+    }
+  }
+
   try {
     const noteToCreate = {
       ...noteData,
@@ -114,6 +139,19 @@ exports.createNote = catchAsync(async (req, res, next) => {
 
 // Update note
 exports.updateNote = catchAsync(async (req, res, next) => {
+  if (req.user?.role === 'notes_only') {
+    if (!req.user.assignedBuilding) {
+      return next(new AppError('Assigned building is required for this account.', 403));
+    }
+    const existing = await Note.findOne({ _id: req.params.id, deleted: { $ne: true } }).select('building');
+    if (!existing) {
+      return next(new AppError('No note found with that ID', 404));
+    }
+    if (String(existing.building) !== String(req.user.assignedBuilding)) {
+      return next(new AppError('You can only edit notes for your assigned building.', 403));
+    }
+  }
+
   const updateData = {
     ...req.body,
     updatedBy: req.user.id
@@ -167,6 +205,15 @@ exports.getBuildingNotes = catchAsync(async (req, res, next) => {
   const { buildingId } = req.params;
   const { status, type } = req.query;
 
+  if (req.user?.role === 'notes_only') {
+    if (!req.user.assignedBuilding) {
+      return next(new AppError('Assigned building is required for this account.', 403));
+    }
+    if (String(buildingId) !== String(req.user.assignedBuilding)) {
+      return next(new AppError('You can only view notes for your assigned building.', 403));
+    }
+  }
+
   let filter = { building: buildingId, deleted: { $ne: true } };
   if (status) filter.status = status;
   if (type) filter.type = type;
@@ -188,6 +235,10 @@ exports.getBuildingNotes = catchAsync(async (req, res, next) => {
 // Search buildings by name for auto-assignment
 exports.searchBuildings = catchAsync(async (req, res, next) => {
   const { q } = req.query;
+
+  if (req.user?.role === 'notes_only') {
+    return next(new AppError('You do not have permission to search buildings.', 403));
+  }
   
   if (!q || q.length < 2) {
     return res.status(200).json({

@@ -42,6 +42,7 @@ const WorkContactsPage = () => {
   }
 
   const contacts = workContactsData?.data || [];
+  const skills = Array.isArray(skillsData?.data?.skills) ? skillsData.data.skills : [];
 
   return (
     <Box sx={{ p: 3 }}>
@@ -64,13 +65,13 @@ const WorkContactsPage = () => {
             input={<OutlinedInput label="Filter by Skills/Expertise" />}
             renderValue={(selected) => (
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                {selected.map((value) => (
-                  <Chip key={value} label={value} />
+                {(Array.isArray(selected) ? selected : []).map((value) => (
+                  <Chip key={typeof value === 'string' ? value : JSON.stringify(value)} label={typeof value === 'string' ? value : ''} />
                 ))}
               </Box>
             )}
           >
-            {skillsData?.data?.skills.map((skill) => (
+            {skills.map((skill) => (
               <MenuItem key={skill._id} value={skill.name}>
                 {skill.name}
               </MenuItem>
@@ -104,8 +105,13 @@ const WorkContactsPage = () => {
                 <TableCell>{contact.city}</TableCell>
                 <TableCell>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {(contact.expertise || []).map((skill) => (
-                      <Chip key={skill._id} label={skill.name} sx={{ backgroundColor: skill.color, color: 'white' }} size="small" />
+                    {(Array.isArray(contact.expertise) ? contact.expertise : []).map((skill) => (
+                      <Chip
+                        key={skill?._id || skill?.id || String(skill)}
+                        label={skill?.name || String(skill)}
+                        sx={{ backgroundColor: skill?.color, color: 'white' }}
+                        size="small"
+                      />
                     ))}
                   </Box>
                 </TableCell>
@@ -113,7 +119,7 @@ const WorkContactsPage = () => {
                 <TableCell>{contact.rating === 'good' ? 'X' : ''}</TableCell>
                 <TableCell>{contact.rating === 'bad' ? 'X' : ''}</TableCell>
                 <TableCell>{contact.rating === 'regular' ? 'X' : ''}</TableCell>
-                <TableCell>{contact.observations}</TableCell>
+                <TableCell>{typeof contact.observations === 'string' ? contact.observations : ''}</TableCell>
                 <TableCell>
                   <IconButton onClick={() => handleOpenModal(contact)}><EditIcon /></IconButton>
                   <IconButton onClick={() => handleDelete(contact._id)}><DeleteIcon /></IconButton>

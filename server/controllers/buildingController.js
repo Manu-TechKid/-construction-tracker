@@ -8,7 +8,16 @@ const APIFeatures = require('../utils/apiFeatures');
 
 exports.getAllBuildings = catchAsync(async (req, res, next) => {
     // Build query
-    let query = Building.find({ deleted: { $ne: true } }).populate('administrator', 'name email');
+    const baseFilter = { deleted: { $ne: true } };
+
+    if (req.user?.role === 'notes_only') {
+        if (!req.user.assignedBuilding) {
+            return next(new AppError('Assigned building is required for this account.', 403));
+        }
+        baseFilter._id = req.user.assignedBuilding;
+    }
+
+    let query = Building.find(baseFilter).populate('administrator', 'name email');
     
     // Search functionality
     if (req.query.search) {

@@ -398,6 +398,7 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
     invoiceDate,
     dueDate,
     workOrders: selectedWorkOrders,
+    workOrderIds,
     notes,
     invoiceNumber: manualInvoiceNumber, // Capture manual invoice number
   } = req.body;
@@ -406,7 +407,15 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
   console.log('Received work orders:', JSON.stringify(selectedWorkOrders, null, 2));
   console.log('Manual Invoice Number:', manualInvoiceNumber);
 
-  if (!building || !selectedWorkOrders || selectedWorkOrders.length === 0) {
+  const normalizedWorkOrderIds = Array.isArray(workOrderIds)
+    ? workOrderIds
+    : Array.isArray(selectedWorkOrders)
+      ? selectedWorkOrders
+          .map((wo) => (wo && (wo._id || wo.id) ? String(wo._id || wo.id) : null))
+          .filter(Boolean)
+      : [];
+
+  if (!building || normalizedWorkOrderIds.length === 0) {
     return next(
       new AppError('Building and at least one work order are required.', 400)
     );
@@ -434,7 +443,7 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
 
   // --- 2. Calculate Totals ---
   const workOrderDetails = await WorkOrder.find({
-    _id: { $in: selectedWorkOrders.map(wo => wo._id) },
+    _id: { $in: normalizedWorkOrderIds },
   });
 
   let subtotal = 0;

@@ -7,8 +7,8 @@ const logActivity = require('../middleware/activityLogger');
 
 const router = express.Router();
 
-// Public route to get all buildings
-router.route('/').get(buildingController.getAllBuildings);
+// Public route to get all buildings (auth-aware)
+router.route('/').get(authController.protect, buildingController.getAllBuildings);
 
 // Protect all subsequent routes
 router.use(authController.protect);

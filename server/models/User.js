@@ -24,8 +24,12 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['superuser', 'admin', 'manager', 'supervisor', 'worker', 'pending'],
+        enum: ['superuser', 'admin', 'manager', 'supervisor', 'worker', 'notes_only', 'pending'],
         default: 'pending'
+    },
+    assignedBuilding: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Building'
     },
     phone: {
         type: String,

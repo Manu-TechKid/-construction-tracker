@@ -64,7 +64,7 @@ const DashboardLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
-  const { user, hasPermission, isWorker, canAccessMainDashboard, canAccessWorkerDashboard } = useAuth();
+  const { user, hasPermission, isWorker, isNotesOnly, canAccessMainDashboard, canAccessWorkerDashboard } = useAuth();
 
   useGetCurrentUserQuery(undefined, {
     refetchOnMountOrArgChange: true,
@@ -108,6 +108,16 @@ const DashboardLayout = () => {
   // Define menu items based on user role
   const getMenuItems = () => {
     const items = [];
+
+    if (isNotesOnly) {
+      items.push({
+        text: 'Notes',
+        icon: <NoteIcon />,
+        path: '/notes',
+        permission: 'read:notes'
+      });
+      return items;
+    }
 
     // Worker Dashboard - only for workers
     if (isWorker && canAccessWorkerDashboard()) {
@@ -505,11 +515,11 @@ const DashboardLayout = () => {
             <Typography variant="h6" noWrap component="div" sx={{ display: { xs: 'none', sm: 'block' } }}>
               {isWorker ? 'Worker Dashboard' : 'Construction Management'}
             </Typography>
-            {!isWorker && <BuildingSelector />}
+            {!isWorker && !isNotesOnly && <BuildingSelector />}
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {!isWorker && <ClockInOut />}
+            {!isWorker && !isNotesOnly && <ClockInOut />}
             <NotificationComponent />
             <Chip
               label={user?.role?.toUpperCase() || 'USER'}

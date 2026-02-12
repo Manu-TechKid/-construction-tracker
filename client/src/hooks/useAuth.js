@@ -49,6 +49,10 @@ const ROLE_PERMISSIONS = {
     'read:schedules:own', 'read:notes:own', 'create:notes:own',
     'read:timetracking:own', 'create:timetracking:own', 'update:timetracking:own',
     'view:dashboard:worker'
+  ],
+  notes_only: [
+    'read:notes',
+    'create:notes'
   ]
 };
 
@@ -67,6 +71,7 @@ export const useAuth = () => {
   const isManager = user?.role === 'manager';
   const isSupervisor = user?.role === 'supervisor';
   const isWorker = user?.role === 'worker';
+  const isNotesOnly = user?.role === 'notes_only';
 
   const hasPermission = (requiredPermissions) => {
     if (!user || !user.role) return false;
@@ -112,6 +117,7 @@ export const useAuth = () => {
     isManager,
     isSupervisor,
     isWorker,
+    isNotesOnly,
     hasPermission,
     canAccessMainDashboard,
     canAccessWorkerDashboard,

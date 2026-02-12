@@ -245,7 +245,13 @@ const GeneralCleaningPage = () => {
               label="Start Date"
               value={filters.startDate}
               onChange={(newValue) => handleFilterChange('startDate', newValue)}
-              renderInput={(params) => <TextField {...params} fullWidth size="medium" sx={fieldSx} />}
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  size: 'medium',
+                  sx: fieldSx,
+                },
+              }}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={4}>
@@ -253,7 +259,13 @@ const GeneralCleaningPage = () => {
               label="End Date"
               value={filters.endDate}
               onChange={(newValue) => handleFilterChange('endDate', newValue)}
-              renderInput={(params) => <TextField {...params} fullWidth size="medium" sx={fieldSx} />}
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  size: 'medium',
+                  sx: fieldSx,
+                },
+              }}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={4}>

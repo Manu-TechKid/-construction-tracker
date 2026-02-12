@@ -52,6 +52,7 @@ import { toast } from 'react-toastify';
 const NotesSheet = () => {
   const { selectedBuilding, buildings } = useBuildingContext();
   const { hasPermission } = useAuth();
+  const { user } = useAuth();
   const [notes, setNotes] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingNote, setEditingNote] = useState(null);
@@ -133,12 +134,17 @@ const NotesSheet = () => {
 
   useEffect(() => {
     // Sync filter with globally selected building for consistency
+    if (user?.role === 'notes_only' && user?.assignedBuilding) {
+      setFilterBuilding(String(user.assignedBuilding._id || user.assignedBuilding));
+      return;
+    }
+
     if (selectedBuilding?._id) {
       setFilterBuilding(selectedBuilding._id);
     } else {
       setFilterBuilding('');
     }
-  }, [selectedBuilding?._id]);
+  }, [selectedBuilding?._id, user?.role, user?.assignedBuilding]);
 
   const currentWeekRange = useMemo(() => {
     const start = startOfWeek(filterWeekDate, { weekStartsOn: 1 });
@@ -300,6 +306,8 @@ const NotesSheet = () => {
             .filter((worker) => worker.length > 0)
         : [];
 
+      const visitDateValue = formData.visitDate ? new Date(formData.visitDate) : null;
+
       const noteData = {
         title: formData.title.trim() || formData.content.trim().substring(0, 50) + (formData.content.trim().length > 50 ? '...' : ''),
         content: formData.content.trim(),
@@ -309,7 +317,7 @@ const NotesSheet = () => {
         color: formData.color || 'default',
         estimateStatus: formData.estimateStatus || 'not_applicable',
         status: 'active',
-        visitDate: formData.visitDate,
+        visitDate: visitDateValue && !Number.isNaN(visitDateValue.getTime()) ? visitDateValue.toISOString() : new Date().toISOString(),
         workers: workersArray,
         estimateAmount: formData.estimateAmount || null
       };
@@ -317,7 +325,21 @@ const NotesSheet = () => {
       console.log('Saving note with data:', noteData);
 
       if (editingNote) {
-        await updateNote({ id: editingNote._id || editingNote.id, ...noteData }).unwrap();
+        const updated = await updateNote({ id: editingNote._id || editingNote.id, ...noteData }).unwrap();
+        const updatedNote = updated?.data?.note;
+        if (updatedNote) {
+          setNotes((prevNotes) =>
+            (prevNotes || []).map((n) => (String(n._id || n.id) === String(updatedNote._id || updatedNote.id) ? updatedNote : n))
+          );
+        } else {
+          setNotes((prevNotes) =>
+            (prevNotes || []).map((n) =>
+              String(n._id || n.id) === String(editingNote._id || editingNote.id)
+                ? { ...n, ...noteData }
+                : n
+            )
+          );
+        }
         toast.success('Note updated successfully');
       } else {
         const result = await createNote(noteData).unwrap();
@@ -332,7 +354,6 @@ const NotesSheet = () => {
       if (refetch) {
         refetch();
       }
-      toast.success('Note saved successfully');
     } catch (error) {
       console.error('Error saving note:', error);
       toast.error(error?.data?.message || 'Failed to save note');
