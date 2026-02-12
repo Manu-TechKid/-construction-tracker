@@ -52,6 +52,7 @@ import {
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
 import { useGetUsersQuery, useUpdateUserMutation, useDeleteUserMutation, useCreateUserMutation } from '../../features/users/usersApiSlice';
+import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 
 const UserManagement = () => {
   const [tabValue, setTabValue] = useState(0);
@@ -61,12 +62,14 @@ const UserManagement = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [actionType, setActionType] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
+  const [selectedAssignedBuilding, setSelectedAssignedBuilding] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
     phone: '',
     role: 'worker',
+    assignedBuilding: '',
     password: 'TempPass123!'
   });
 
@@ -75,8 +78,10 @@ const UserManagement = () => {
   const [updateUser, { isLoading: isUpdating }] = useUpdateUserMutation();
   const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation();
   const [createUser, { isLoading: isCreating }] = useCreateUserMutation();
+  const { data: buildingsData, isLoading: isBuildingsLoading } = useGetBuildingsQuery({ limit: 200 });
 
   const users = usersData?.data?.users || [];
+  const buildings = buildingsData?.data?.buildings || [];
 
   // Filter users by status
   const pendingUsers = users.filter(user => user.role === 'pending' || user.approvalStatus === 'pending');
@@ -96,6 +101,7 @@ const UserManagement = () => {
     setSelectedUser(user);
     setActionType('approve');
     setSelectedRole('worker'); // Default role
+    setSelectedAssignedBuilding(user?.assignedBuilding?._id || user?.assignedBuilding || '');
     setActionDialogOpen(true);
   };
 
@@ -114,6 +120,7 @@ const UserManagement = () => {
   const handleEdit = (user) => {
     setSelectedUser(user);
     setSelectedRole(user.role);
+    setSelectedAssignedBuilding(user?.assignedBuilding?._id || user?.assignedBuilding || '');
     setActionType('edit');
     setActionDialogOpen(true);
   };
@@ -123,10 +130,15 @@ const UserManagement = () => {
 
     try {
       if (actionType === 'approve') {
+        if (selectedRole === 'notes_only' && !selectedAssignedBuilding) {
+          toast.error('Assigned building is required for Notes Only users');
+          return;
+        }
         await updateUser({
           id: selectedUser._id,
           userData: {
             role: selectedRole,
+            assignedBuilding: selectedRole === 'notes_only' ? selectedAssignedBuilding : undefined,
             isActive: true,
             approvalStatus: 'approved'
           }
@@ -143,10 +155,15 @@ const UserManagement = () => {
         }).unwrap();
         toast.success('User rejected');
       } else if (actionType === 'edit') {
+        if (selectedRole === 'notes_only' && !selectedAssignedBuilding) {
+          toast.error('Assigned building is required for Notes Only users');
+          return;
+        }
         await updateUser({
           id: selectedUser._id,
           userData: {
             role: selectedRole,
+            assignedBuilding: selectedRole === 'notes_only' ? selectedAssignedBuilding : undefined,
             isActive: selectedRole !== 'pending'
           }
         }).unwrap();
@@ -155,6 +172,7 @@ const UserManagement = () => {
 
       setActionDialogOpen(false);
       setSelectedUser(null);
+      setSelectedAssignedBuilding('');
       refetch();
     } catch (error) {
       console.error('Action error:', error);
@@ -179,6 +197,10 @@ const UserManagement = () => {
 
   const handleCreateUser = async () => {
     try {
+      if (newUser.role === 'notes_only' && !newUser.assignedBuilding) {
+        toast.error('Assigned building is required for Notes Only users');
+        return;
+      }
       await createUser({
         ...newUser,
         approvalStatus: 'approved',
@@ -191,6 +213,7 @@ const UserManagement = () => {
         email: '',
         phone: '',
         role: 'worker',
+        assignedBuilding: '',
         password: 'TempPass123!'
       });
       refetch();
@@ -206,6 +229,7 @@ const UserManagement = () => {
       case 'manager': return <ManagerIcon color="warning" />;
       case 'supervisor': return <SupervisorIcon color="info" />;
       case 'worker': return <WorkIcon color="success" />;
+      case 'notes_only': return <PersonIcon color="primary" />;
       case 'pending': return <PersonIcon color="disabled" />;
       default: return <PersonIcon />;
     }
@@ -217,9 +241,15 @@ const UserManagement = () => {
       case 'manager': return 'warning';
       case 'supervisor': return 'info';
       case 'worker': return 'success';
+      case 'notes_only': return 'primary';
       case 'pending': return 'default';
       default: return 'default';
     }
+  };
+
+  const getRoleLabel = (role) => {
+    if (role === 'notes_only') return 'Notes Only';
+    return role.charAt(0).toUpperCase() + role.slice(1);
   };
 
   const getStatusColor = (user) => {
@@ -442,7 +472,7 @@ const UserManagement = () => {
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                        label={getRoleLabel(user.role)}
                         color={getRoleColor(user.role)}
                         size="small"
                         icon={getRoleIcon(user.role)}
@@ -570,6 +600,11 @@ const UserManagement = () => {
                     <WorkIcon /> Worker
                   </Box>
                 </MenuItem>
+                <MenuItem value="notes_only">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <PersonIcon /> Notes Only
+                  </Box>
+                </MenuItem>
                 <MenuItem value="supervisor">
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <SupervisorIcon /> Supervisor
@@ -585,6 +620,23 @@ const UserManagement = () => {
                     <AdminIcon /> Admin
                   </Box>
                 </MenuItem>
+              </Select>
+            </FormControl>
+          )}
+
+          {(actionType === 'approve' || actionType === 'edit') && selectedRole === 'notes_only' && (
+            <FormControl fullWidth sx={{ mb: 2 }} disabled={isBuildingsLoading}>
+              <InputLabel>Assigned Building</InputLabel>
+              <Select
+                value={selectedAssignedBuilding}
+                onChange={(e) => setSelectedAssignedBuilding(e.target.value)}
+                label="Assigned Building"
+              >
+                {buildings.map((b) => (
+                  <MenuItem key={b._id} value={b._id}>
+                    {b.displayName || b.name}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
           )}
@@ -677,11 +729,29 @@ const UserManagement = () => {
                 label="Role"
               >
                 <MenuItem value="worker">Worker</MenuItem>
+                <MenuItem value="notes_only">Notes Only</MenuItem>
                 <MenuItem value="supervisor">Supervisor</MenuItem>
                 <MenuItem value="manager">Manager</MenuItem>
                 <MenuItem value="admin">Admin</MenuItem>
               </Select>
             </FormControl>
+
+            {newUser.role === 'notes_only' && (
+              <FormControl fullWidth required disabled={isBuildingsLoading}>
+                <InputLabel>Assigned Building</InputLabel>
+                <Select
+                  value={newUser.assignedBuilding}
+                  onChange={(e) => setNewUser({ ...newUser, assignedBuilding: e.target.value })}
+                  label="Assigned Building"
+                >
+                  {buildings.map((b) => (
+                    <MenuItem key={b._id} value={b._id}>
+                      {b.displayName || b.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
             <TextField
               fullWidth
               label="Temporary Password"
