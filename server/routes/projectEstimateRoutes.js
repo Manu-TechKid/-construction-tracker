@@ -8,6 +8,16 @@ const router = express.Router();
 // Protect all routes
 router.use(authController.protect);
 
+router.use((req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      status: 'fail',
+      message: 'You are not logged in'
+    });
+  }
+  next();
+});
+
 // Statistics
 router.get('/stats', projectEstimateController.getProjectEstimateStats);
 

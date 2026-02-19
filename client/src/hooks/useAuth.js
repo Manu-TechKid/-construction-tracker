@@ -52,7 +52,11 @@ const ROLE_PERMISSIONS = {
   ],
   notes_only: [
     'read:notes',
-    'create:notes'
+    'create:notes',
+    'update:notes',
+    'read:estimates',
+    'create:estimates',
+    'update:estimates'
   ]
 };
 

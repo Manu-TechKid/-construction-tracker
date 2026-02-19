@@ -563,7 +563,7 @@ const AppContent = () => {
                     <Route
                       path="estimates"
                       element={
-                        <RoleBasedRoute requiredPermissions={['view:costs', 'manage:users']}>
+                        <RoleBasedRoute requiredPermissions={['view:costs', 'read:estimates']}>
                           <ProjectEstimatesNew />
                         </RoleBasedRoute>
                       }
@@ -571,7 +571,7 @@ const AppContent = () => {
                     <Route
                       path="estimates/new"
                       element={
-                        <RoleBasedRoute requiredPermissions={['create:workorders']}>
+                        <RoleBasedRoute requiredPermissions={['create:workorders', 'create:estimates']}>
                           <CreateProjectEstimate />
                         </RoleBasedRoute>
                       }
@@ -579,7 +579,7 @@ const AppContent = () => {
                     <Route
                       path="estimates/:id"
                       element={
-                        <RoleBasedRoute requiredPermissions={['view:costs']}>
+                        <RoleBasedRoute requiredPermissions={['view:costs', 'read:estimates']}>
                           <ProjectEstimateDetails />
                         </RoleBasedRoute>
                       }
@@ -587,7 +587,7 @@ const AppContent = () => {
                     <Route
                       path="estimates/:id/edit"
                       element={
-                        <RoleBasedRoute requiredPermissions={['create:workorders']}>
+                        <RoleBasedRoute requiredPermissions={['create:workorders', 'update:estimates']}>
                           <EditProjectEstimate />
                         </RoleBasedRoute>
                       }

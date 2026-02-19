@@ -116,6 +116,12 @@ const DashboardLayout = () => {
         path: '/notes',
         permission: 'read:notes'
       });
+      items.push({
+        text: 'Project Estimates',
+        icon: <AssignmentIcon />,
+        path: '/estimates',
+        permission: 'read:estimates'
+      });
       return items;
     }
 

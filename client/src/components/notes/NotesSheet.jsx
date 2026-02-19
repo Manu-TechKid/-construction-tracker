@@ -650,32 +650,25 @@ const NotesSheet = () => {
 
                               {hasPermission(['update:notes', 'delete:notes']) && (
                                 <Box>
-                                  {!(note.processedToWorkOrder || note.status === 'processed') && (
+                                  {hasPermission(['update:notes']) && !(note.processedToWorkOrder || note.status === 'processed') && (
                                     <IconButton
                                       size="small"
-                                      onClick={() => handleMarkAsProcessed(note._id)}
-                                      disabled={isUpdating}
-                                      color="success"
-                                      title="Mark as Processed"
+                                      onClick={() => handleOpenDialog(note)}
+                                      color="primary"
                                     >
-                                      <CheckCircleIcon fontSize="small" />
+                                      <EditIcon fontSize="small" />
                                     </IconButton>
                                   )}
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => handleOpenDialog(note)}
-                                    disabled={isUpdating}
-                                  >
-                                    <EditIcon fontSize="small" />
-                                  </IconButton>
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => handleDeleteNote(note._id)}
-                                    disabled={isDeleting}
-                                    color="error"
-                                  >
-                                    <DeleteIcon fontSize="small" />
-                                  </IconButton>
+                                  {hasPermission(['delete:notes']) && (
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => handleDeleteNote(note._id)}
+                                      disabled={isDeleting}
+                                      color="error"
+                                    >
+                                      <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                  )}
                                 </Box>
                               )}
                             </Box>

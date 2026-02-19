@@ -49,6 +49,15 @@ exports.createProjectEstimate = catchAsync(async (req, res, next) => {
     createdBy: req.user.id
   };
 
+  if (req.user?.role === 'notes_only') {
+    if (!req.user.assignedBuilding) {
+      return next(new AppError('Assigned building is required for this account.', 403));
+    }
+    if (String(projectData.building) !== String(req.user.assignedBuilding)) {
+      return next(new AppError('You can only create estimates for your assigned building.', 403));
+    }
+  }
+
   // Process uploaded photos
   if (req.files && req.files.length > 0) {
     projectData.photos = req.files.map(file => ({
@@ -90,8 +99,15 @@ exports.getAllProjectEstimates = catchAsync(async (req, res, next) => {
 
   // Build filter object
   const filter = {};
+
+  if (req.user?.role === 'notes_only') {
+    if (!req.user.assignedBuilding) {
+      return next(new AppError('Assigned building is required for this account.', 403));
+    }
+    filter.building = req.user.assignedBuilding;
+  }
   if (status) filter.status = status;
-  if (building) filter.building = building;
+  if (building && req.user?.role !== 'notes_only') filter.building = building;
   if (targetYear) filter.targetYear = parseInt(targetYear);
   if (priority) filter.priority = priority;
 
@@ -141,6 +157,15 @@ exports.getProjectEstimate = catchAsync(async (req, res, next) => {
       { path: 'workOrderId', select: 'title status' }
     ]);
 
+  if (req.user?.role === 'notes_only') {
+    if (!req.user.assignedBuilding) {
+      return next(new AppError('Assigned building is required for this account.', 403));
+    }
+    if (projectEstimate && String(projectEstimate.building?._id || projectEstimate.building) !== String(req.user.assignedBuilding)) {
+      return next(new AppError('You can only view estimates for your assigned building.', 403));
+    }
+  }
+
   if (!projectEstimate) {
     return next(new AppError('Project estimate not found', 404));
   }
@@ -161,6 +186,20 @@ exports.updateProjectEstimate = catchAsync(async (req, res, next) => {
 
   if (!projectEstimate) {
     return next(new AppError('Project estimate not found', 404));
+  }
+
+  if (req.user?.role === 'notes_only') {
+    if (!req.user.assignedBuilding) {
+      return next(new AppError('Assigned building is required for this account.', 403));
+    }
+
+    if (String(projectEstimate.building) !== String(req.user.assignedBuilding)) {
+      return next(new AppError('You can only edit estimates for your assigned building.', 403));
+    }
+
+    if (req.body.building && String(req.body.building) !== String(req.user.assignedBuilding)) {
+      return next(new AppError('You can only set estimates to your assigned building.', 403));
+    }
   }
 
   // Process new uploaded photos
@@ -324,10 +363,18 @@ exports.getProjectEstimateStats = catchAsync(async (req, res, next) => {
   const currentYear = new Date().getFullYear();
   const year = targetYear ? parseInt(targetYear) : currentYear;
 
+  const match = { targetYear: year };
+  if (req.user?.role === 'notes_only') {
+    if (!req.user.assignedBuilding) {
+      return next(new AppError('Assigned building is required for this account.', 403));
+    }
+    match.building = req.user.assignedBuilding;
+  }
+
   const stats = await ProjectEstimate.aggregate([
     {
       $match: {
-        targetYear: year
+        ...match
       }
     },
     {
@@ -453,18 +500,6 @@ exports.convertToInvoice = catchAsync(async (req, res, next) => {
     }],
     subtotal: projectEstimate.estimatedPrice || projectEstimate.estimatedCost || 0,
     totalDiscount: 0,
-    tax: 0,
-    total: projectEstimate.estimatedPrice || projectEstimate.estimatedCost || 0,
-    status: 'draft'
-  });
-
-  // Update project estimate status
-  projectEstimate.status = 'converted_to_invoice';
-  projectEstimate.convertedToInvoice = invoice._id;
-  await projectEstimate.save();
-
-  res.status(201).json({
-    status: 'success',
     message: 'Project estimate converted to invoice successfully',
     data: {
       invoice,
