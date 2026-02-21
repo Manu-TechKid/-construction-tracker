@@ -10,10 +10,15 @@ exports.getAllNotes = catchAsync(async (req, res, next) => {
   let filter = { deleted: { $ne: true } };
 
   if (req.user?.role === 'notes_only') {
-    if (!req.user.assignedBuilding) {
+    const assignedBuildings = (req.user.assignedBuildings && req.user.assignedBuildings.length)
+      ? req.user.assignedBuildings
+      : (req.user.assignedBuilding ? [req.user.assignedBuilding] : []);
+
+    if (!assignedBuildings.length) {
       return next(new AppError('Assigned building is required for this account.', 403));
     }
-    filter.building = req.user.assignedBuilding;
+
+    filter.building = { $in: assignedBuildings };
   }
   
   if (building && req.user?.role !== 'notes_only') filter.building = building;
@@ -50,10 +55,18 @@ exports.getNote = catchAsync(async (req, res, next) => {
     .populate('updatedBy', 'name email');
 
   if (req.user?.role === 'notes_only') {
-    if (!req.user.assignedBuilding) {
+    const assignedBuildings = (req.user.assignedBuildings && req.user.assignedBuildings.length)
+      ? req.user.assignedBuildings
+      : (req.user.assignedBuilding ? [req.user.assignedBuilding] : []);
+
+    if (!assignedBuildings.length) {
       return next(new AppError('Assigned building is required for this account.', 403));
     }
-    if (note && String(note.building?._id || note.building) !== String(req.user.assignedBuilding)) {
+
+    const noteBuildingId = String(note?.building?._id || note?.building);
+    const canAccess = assignedBuildings.some((b) => String(b) === noteBuildingId);
+
+    if (note && !canAccess) {
       return next(new AppError('You can only view notes for your assigned building.', 403));
     }
   }
@@ -102,10 +115,17 @@ exports.createNote = catchAsync(async (req, res, next) => {
   }
 
   if (req.user?.role === 'notes_only') {
-    if (!req.user.assignedBuilding) {
+    const assignedBuildings = (req.user.assignedBuildings && req.user.assignedBuildings.length)
+      ? req.user.assignedBuildings
+      : (req.user.assignedBuilding ? [req.user.assignedBuilding] : []);
+
+    if (!assignedBuildings.length) {
       return next(new AppError('Assigned building is required for this account.', 403));
     }
-    if (String(building) !== String(req.user.assignedBuilding)) {
+
+    const canAccess = assignedBuildings.some((b) => String(b) === String(building));
+
+    if (!canAccess) {
       return next(new AppError('You can only add notes for your assigned building.', 403));
     }
   }
@@ -140,14 +160,21 @@ exports.createNote = catchAsync(async (req, res, next) => {
 // Update note
 exports.updateNote = catchAsync(async (req, res, next) => {
   if (req.user?.role === 'notes_only') {
-    if (!req.user.assignedBuilding) {
+    const assignedBuildings = (req.user.assignedBuildings && req.user.assignedBuildings.length)
+      ? req.user.assignedBuildings
+      : (req.user.assignedBuilding ? [req.user.assignedBuilding] : []);
+
+    if (!assignedBuildings.length) {
       return next(new AppError('Assigned building is required for this account.', 403));
     }
     const existing = await Note.findOne({ _id: req.params.id, deleted: { $ne: true } }).select('building');
     if (!existing) {
       return next(new AppError('No note found with that ID', 404));
     }
-    if (String(existing.building) !== String(req.user.assignedBuilding)) {
+
+    const canAccess = assignedBuildings.some((b) => String(b) === String(existing.building));
+
+    if (!canAccess) {
       return next(new AppError('You can only edit notes for your assigned building.', 403));
     }
   }
@@ -206,10 +233,17 @@ exports.getBuildingNotes = catchAsync(async (req, res, next) => {
   const { status, type } = req.query;
 
   if (req.user?.role === 'notes_only') {
-    if (!req.user.assignedBuilding) {
+    const assignedBuildings = (req.user.assignedBuildings && req.user.assignedBuildings.length)
+      ? req.user.assignedBuildings
+      : (req.user.assignedBuilding ? [req.user.assignedBuilding] : []);
+
+    if (!assignedBuildings.length) {
       return next(new AppError('Assigned building is required for this account.', 403));
     }
-    if (String(buildingId) !== String(req.user.assignedBuilding)) {
+
+    const canAccess = assignedBuildings.some((b) => String(b) === String(buildingId));
+
+    if (!canAccess) {
       return next(new AppError('You can only view notes for your assigned building.', 403));
     }
   }

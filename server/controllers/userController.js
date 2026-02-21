@@ -16,6 +16,7 @@ exports.getAllUsers = catchAsync(async (req, res, next) => {
     const users = await User.find(filter)
         .select('-password')
         .populate('assignedBuilding', 'name address')
+        .populate('assignedBuildings', 'name address')
         .populate('workerProfile.createdBy', 'name email')
         .populate('workerProfile.approvedBy', 'name email')
         .sort('-createdAt');
@@ -71,6 +72,7 @@ exports.getUser = catchAsync(async (req, res, next) => {
     const user = await User.findOne({ _id: req.params.id, deleted: { $ne: true } })
         .select('-password')
         .populate('assignedBuilding', 'name address')
+        .populate('assignedBuildings', 'name address')
         .populate('workerProfile.createdBy', 'name email')
         .populate('workerProfile.approvedBy', 'name email');
     
@@ -192,7 +194,7 @@ exports.updateUser = catchAsync(async (req, res, next) => {
     }
     
     // Update basic fields
-    const allowedFields = ['name', 'email', 'phone', 'isActive', 'role', 'approvalStatus', 'assignedBuilding'];
+    const allowedFields = ['name', 'email', 'phone', 'isActive', 'role', 'approvalStatus', 'assignedBuilding', 'assignedBuildings'];
     allowedFields.forEach(field => {
         if (req.body[field] !== undefined) {
             user[field] = req.body[field];

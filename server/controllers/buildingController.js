@@ -11,10 +11,15 @@ exports.getAllBuildings = catchAsync(async (req, res, next) => {
     const baseFilter = { deleted: { $ne: true } };
 
     if (req.user?.role === 'notes_only') {
-        if (!req.user.assignedBuilding) {
+        const assignedBuildings = (req.user.assignedBuildings && req.user.assignedBuildings.length)
+            ? req.user.assignedBuildings
+            : (req.user.assignedBuilding ? [req.user.assignedBuilding] : []);
+
+        if (!assignedBuildings.length) {
             return next(new AppError('Assigned building is required for this account.', 403));
         }
-        baseFilter._id = req.user.assignedBuilding;
+
+        baseFilter._id = { $in: assignedBuildings };
     }
 
     let query = Building.find(baseFilter).populate('administrator', 'name email');

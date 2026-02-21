@@ -85,6 +85,15 @@ const ProjectEstimates = () => {
     priority: ''
   });
 
+  React.useEffect(() => {
+    if (user?.role === 'notes_only') {
+      setFilters((prev) => ({
+        ...prev,
+        building: ''
+      }));
+    }
+  }, [user?.role]);
+
   // API queries
   const { data: projectsData, isLoading: projectsLoading, error: projectsError, refetch: refetchProjects } = useGetProjectEstimatesQuery(filters);
   const { data: statsData, isLoading: statsLoading } = useGetProjectEstimateStatsQuery(filters);

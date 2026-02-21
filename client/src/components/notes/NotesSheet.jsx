@@ -134,8 +134,8 @@ const NotesSheet = () => {
 
   useEffect(() => {
     // Sync filter with globally selected building for consistency
-    if (user?.role === 'notes_only' && user?.assignedBuilding) {
-      setFilterBuilding(String(user.assignedBuilding._id || user.assignedBuilding));
+    if (user?.role === 'notes_only') {
+      setFilterBuilding('');
       return;
     }
 
@@ -144,7 +144,7 @@ const NotesSheet = () => {
     } else {
       setFilterBuilding('');
     }
-  }, [selectedBuilding?._id, user?.role, user?.assignedBuilding]);
+  }, [selectedBuilding?._id, user?.role, user?.assignedBuilding, user?.assignedBuildings]);
 
   const currentWeekRange = useMemo(() => {
     const start = startOfWeek(filterWeekDate, { weekStartsOn: 1 });

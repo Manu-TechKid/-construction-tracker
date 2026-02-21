@@ -45,9 +45,11 @@ import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 
 const ProjectEstimatesNew = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [filterBuilding, setFilterBuilding] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [anchorEl, setAnchorEl] = useState(null);
@@ -70,6 +72,12 @@ const ProjectEstimatesNew = () => {
 
   const estimates = estimatesData?.data?.projectEstimates || [];
   const buildings = useMemo(() => buildingsData?.data?.buildings || [], [buildingsData]);
+
+  React.useEffect(() => {
+    if (user?.role === 'notes_only') {
+      setFilterBuilding('');
+    }
+  }, [user?.role]);
 
   const handleMenuOpen = (event, estimate) => {
     setAnchorEl(event.currentTarget);

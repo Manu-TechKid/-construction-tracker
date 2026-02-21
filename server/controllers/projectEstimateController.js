@@ -50,10 +50,17 @@ exports.createProjectEstimate = catchAsync(async (req, res, next) => {
   };
 
   if (req.user?.role === 'notes_only') {
-    if (!req.user.assignedBuilding) {
+    const assignedBuildings = (req.user.assignedBuildings && req.user.assignedBuildings.length)
+      ? req.user.assignedBuildings
+      : (req.user.assignedBuilding ? [req.user.assignedBuilding] : []);
+
+    if (!assignedBuildings.length) {
       return next(new AppError('Assigned building is required for this account.', 403));
     }
-    if (String(projectData.building) !== String(req.user.assignedBuilding)) {
+
+    const canAccess = assignedBuildings.some((b) => String(b) === String(projectData.building));
+
+    if (!canAccess) {
       return next(new AppError('You can only create estimates for your assigned building.', 403));
     }
   }
@@ -101,10 +108,15 @@ exports.getAllProjectEstimates = catchAsync(async (req, res, next) => {
   const filter = {};
 
   if (req.user?.role === 'notes_only') {
-    if (!req.user.assignedBuilding) {
+    const assignedBuildings = (req.user.assignedBuildings && req.user.assignedBuildings.length)
+      ? req.user.assignedBuildings
+      : (req.user.assignedBuilding ? [req.user.assignedBuilding] : []);
+
+    if (!assignedBuildings.length) {
       return next(new AppError('Assigned building is required for this account.', 403));
     }
-    filter.building = req.user.assignedBuilding;
+
+    filter.building = { $in: assignedBuildings };
   }
   if (status) filter.status = status;
   if (building && req.user?.role !== 'notes_only') filter.building = building;
@@ -158,10 +170,18 @@ exports.getProjectEstimate = catchAsync(async (req, res, next) => {
     ]);
 
   if (req.user?.role === 'notes_only') {
-    if (!req.user.assignedBuilding) {
+    const assignedBuildings = (req.user.assignedBuildings && req.user.assignedBuildings.length)
+      ? req.user.assignedBuildings
+      : (req.user.assignedBuilding ? [req.user.assignedBuilding] : []);
+
+    if (!assignedBuildings.length) {
       return next(new AppError('Assigned building is required for this account.', 403));
     }
-    if (projectEstimate && String(projectEstimate.building?._id || projectEstimate.building) !== String(req.user.assignedBuilding)) {
+
+    const estimateBuildingId = String(projectEstimate?.building?._id || projectEstimate?.building);
+    const canAccess = assignedBuildings.some((b) => String(b) === estimateBuildingId);
+
+    if (projectEstimate && !canAccess) {
       return next(new AppError('You can only view estimates for your assigned building.', 403));
     }
   }
@@ -189,16 +209,25 @@ exports.updateProjectEstimate = catchAsync(async (req, res, next) => {
   }
 
   if (req.user?.role === 'notes_only') {
-    if (!req.user.assignedBuilding) {
+    const assignedBuildings = (req.user.assignedBuildings && req.user.assignedBuildings.length)
+      ? req.user.assignedBuildings
+      : (req.user.assignedBuilding ? [req.user.assignedBuilding] : []);
+
+    if (!assignedBuildings.length) {
       return next(new AppError('Assigned building is required for this account.', 403));
     }
 
-    if (String(projectEstimate.building) !== String(req.user.assignedBuilding)) {
+    const canAccess = assignedBuildings.some((b) => String(b) === String(projectEstimate.building));
+
+    if (!canAccess) {
       return next(new AppError('You can only edit estimates for your assigned building.', 403));
     }
 
-    if (req.body.building && String(req.body.building) !== String(req.user.assignedBuilding)) {
+    if (req.body.building) {
+      const canSet = assignedBuildings.some((b) => String(b) === String(req.body.building));
+      if (!canSet) {
       return next(new AppError('You can only set estimates to your assigned building.', 403));
+      }
     }
   }
 
@@ -365,10 +394,14 @@ exports.getProjectEstimateStats = catchAsync(async (req, res, next) => {
 
   const match = { targetYear: year };
   if (req.user?.role === 'notes_only') {
-    if (!req.user.assignedBuilding) {
+    const assignedBuildings = (req.user.assignedBuildings && req.user.assignedBuildings.length)
+      ? req.user.assignedBuildings
+      : (req.user.assignedBuilding ? [req.user.assignedBuilding] : []);
+
+    if (!assignedBuildings.length) {
       return next(new AppError('Assigned building is required for this account.', 403));
     }
-    match.building = req.user.assignedBuilding;
+    match.building = { $in: assignedBuildings };
   }
 
   const stats = await ProjectEstimate.aggregate([

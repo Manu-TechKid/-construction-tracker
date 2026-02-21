@@ -62,14 +62,14 @@ const UserManagement = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [actionType, setActionType] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
-  const [selectedAssignedBuilding, setSelectedAssignedBuilding] = useState('');
+  const [selectedAssignedBuildings, setSelectedAssignedBuildings] = useState([]);
   const [rejectionReason, setRejectionReason] = useState('');
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
     phone: '',
     role: 'worker',
-    assignedBuilding: '',
+    assignedBuildings: [],
     password: 'TempPass123!'
   });
 
@@ -101,7 +101,10 @@ const UserManagement = () => {
     setSelectedUser(user);
     setActionType('approve');
     setSelectedRole('worker'); // Default role
-    setSelectedAssignedBuilding(user?.assignedBuilding?._id || user?.assignedBuilding || '');
+    const assigned = (user?.assignedBuildings && user.assignedBuildings.length)
+      ? user.assignedBuildings.map((b) => (typeof b === 'object' ? b._id : b))
+      : (user?.assignedBuilding?._id || user?.assignedBuilding ? [user.assignedBuilding._id || user.assignedBuilding] : []);
+    setSelectedAssignedBuildings(assigned);
     setActionDialogOpen(true);
   };
 
@@ -120,7 +123,10 @@ const UserManagement = () => {
   const handleEdit = (user) => {
     setSelectedUser(user);
     setSelectedRole(user.role);
-    setSelectedAssignedBuilding(user?.assignedBuilding?._id || user?.assignedBuilding || '');
+    const assigned = (user?.assignedBuildings && user.assignedBuildings.length)
+      ? user.assignedBuildings.map((b) => (typeof b === 'object' ? b._id : b))
+      : (user?.assignedBuilding?._id || user?.assignedBuilding ? [user.assignedBuilding._id || user.assignedBuilding] : []);
+    setSelectedAssignedBuildings(assigned);
     setActionType('edit');
     setActionDialogOpen(true);
   };
@@ -130,15 +136,16 @@ const UserManagement = () => {
 
     try {
       if (actionType === 'approve') {
-        if (selectedRole === 'notes_only' && !selectedAssignedBuilding) {
-          toast.error('Assigned building is required for Notes Only users');
+        if (selectedRole === 'notes_only' && (!selectedAssignedBuildings || selectedAssignedBuildings.length === 0)) {
+          toast.error('At least one assigned building is required for Notes Only users');
           return;
         }
         await updateUser({
           id: selectedUser._id,
           userData: {
             role: selectedRole,
-            assignedBuilding: selectedRole === 'notes_only' ? selectedAssignedBuilding : undefined,
+            assignedBuilding: selectedRole === 'notes_only' ? selectedAssignedBuildings?.[0] : undefined,
+            assignedBuildings: selectedRole === 'notes_only' ? selectedAssignedBuildings : undefined,
             isActive: true,
             approvalStatus: 'approved'
           }
@@ -155,15 +162,16 @@ const UserManagement = () => {
         }).unwrap();
         toast.success('User rejected');
       } else if (actionType === 'edit') {
-        if (selectedRole === 'notes_only' && !selectedAssignedBuilding) {
-          toast.error('Assigned building is required for Notes Only users');
+        if (selectedRole === 'notes_only' && (!selectedAssignedBuildings || selectedAssignedBuildings.length === 0)) {
+          toast.error('At least one assigned building is required for Notes Only users');
           return;
         }
         await updateUser({
           id: selectedUser._id,
           userData: {
             role: selectedRole,
-            assignedBuilding: selectedRole === 'notes_only' ? selectedAssignedBuilding : undefined,
+            assignedBuilding: selectedRole === 'notes_only' ? selectedAssignedBuildings?.[0] : undefined,
+            assignedBuildings: selectedRole === 'notes_only' ? selectedAssignedBuildings : undefined,
             isActive: selectedRole !== 'pending'
           }
         }).unwrap();
@@ -172,7 +180,7 @@ const UserManagement = () => {
 
       setActionDialogOpen(false);
       setSelectedUser(null);
-      setSelectedAssignedBuilding('');
+      setSelectedAssignedBuildings([]);
       refetch();
     } catch (error) {
       console.error('Action error:', error);
@@ -197,12 +205,13 @@ const UserManagement = () => {
 
   const handleCreateUser = async () => {
     try {
-      if (newUser.role === 'notes_only' && !newUser.assignedBuilding) {
-        toast.error('Assigned building is required for Notes Only users');
+      if (newUser.role === 'notes_only' && (!newUser.assignedBuildings || newUser.assignedBuildings.length === 0)) {
+        toast.error('At least one assigned building is required for Notes Only users');
         return;
       }
       await createUser({
         ...newUser,
+        assignedBuilding: newUser.role === 'notes_only' ? (newUser.assignedBuildings?.[0] || '') : undefined,
         approvalStatus: 'approved',
         isActive: true
       }).unwrap();
@@ -213,7 +222,7 @@ const UserManagement = () => {
         email: '',
         phone: '',
         role: 'worker',
-        assignedBuilding: '',
+        assignedBuildings: [],
         password: 'TempPass123!'
       });
       refetch();
@@ -626,11 +635,12 @@ const UserManagement = () => {
 
           {(actionType === 'approve' || actionType === 'edit') && selectedRole === 'notes_only' && (
             <FormControl fullWidth sx={{ mb: 2 }} disabled={isBuildingsLoading}>
-              <InputLabel>Assigned Building</InputLabel>
+              <InputLabel>Assigned Buildings</InputLabel>
               <Select
-                value={selectedAssignedBuilding}
-                onChange={(e) => setSelectedAssignedBuilding(e.target.value)}
-                label="Assigned Building"
+                multiple
+                value={selectedAssignedBuildings}
+                onChange={(e) => setSelectedAssignedBuildings(e.target.value)}
+                label="Assigned Buildings"
               >
                 {buildings.map((b) => (
                   <MenuItem key={b._id} value={b._id}>
@@ -738,11 +748,12 @@ const UserManagement = () => {
 
             {newUser.role === 'notes_only' && (
               <FormControl fullWidth required disabled={isBuildingsLoading}>
-                <InputLabel>Assigned Building</InputLabel>
+                <InputLabel>Assigned Buildings</InputLabel>
                 <Select
-                  value={newUser.assignedBuilding}
-                  onChange={(e) => setNewUser({ ...newUser, assignedBuilding: e.target.value })}
-                  label="Assigned Building"
+                  multiple
+                  value={newUser.assignedBuildings}
+                  onChange={(e) => setNewUser({ ...newUser, assignedBuildings: e.target.value })}
+                  label="Assigned Buildings"
                 >
                   {buildings.map((b) => (
                     <MenuItem key={b._id} value={b._id}>
