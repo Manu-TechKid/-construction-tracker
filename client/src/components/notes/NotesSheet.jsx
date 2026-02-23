@@ -256,7 +256,7 @@ const NotesSheet = () => {
         title: '',
         content: '',
         type: 'Building Visit',
-        building: selectedBuilding?._id || '',
+        building: selectedBuilding?._id || filterBuilding || '',
         visitDate: new Date(),
         estimateAmount: '',
         priority: 'medium',
@@ -442,7 +442,7 @@ const NotesSheet = () => {
               variant="contained"
               startIcon={<AddIcon />}
               onClick={() => handleOpenDialog()}
-              disabled={!selectedBuilding}
+              disabled={user?.role === 'notes_only' ? !filterBuilding : !selectedBuilding}
             >
               Add Note
             </Button>
@@ -535,7 +535,7 @@ const NotesSheet = () => {
           </CardContent>
         </Card>
 
-        {!selectedBuilding && (
+        {!selectedBuilding && !filterBuilding && (
           <Card sx={{ mb: 3 }}>
             <CardContent sx={{ textAlign: 'center', py: 4 }}>
               <BuildingIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
