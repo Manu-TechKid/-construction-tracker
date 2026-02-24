@@ -11,9 +11,13 @@ exports.getAllBuildings = catchAsync(async (req, res, next) => {
     const baseFilter = { deleted: { $ne: true } };
 
     if (req.user?.role === 'notes_only') {
-        const assignedBuildings = (req.user.assignedBuildings && req.user.assignedBuildings.length)
+        const rawAssignedBuildings = (req.user.assignedBuildings && req.user.assignedBuildings.length)
             ? req.user.assignedBuildings
             : (req.user.assignedBuilding ? [req.user.assignedBuilding] : []);
+
+        const assignedBuildings = rawAssignedBuildings
+            .map((b) => (typeof b === 'object' && b !== null ? b._id : b))
+            .filter(Boolean);
 
         if (!assignedBuildings.length) {
             return next(new AppError('Assigned building is required for this account.', 403));
