@@ -430,7 +430,7 @@ const NotesSheet = () => {
             {selectedBuilding && (
               <Chip
                 icon={<BuildingIcon />}
-                label={selectedBuilding.name}
+                label={selectedBuilding.displayName || selectedBuilding.name}
                 color="primary"
                 variant="outlined"
               />
@@ -463,8 +463,8 @@ const NotesSheet = () => {
                   >
                     <MenuItem value="">All Buildings</MenuItem>
                     {buildingOptions.map((building) => (
-                      <MenuItem key={building._id} value={building._id}>
-                        {building.name}
+                      <MenuItem key={building._id || building.id} value={building._id || building.id}>
+                        {building.displayName || building.name}
                       </MenuItem>
                     ))}
                   </Select>
