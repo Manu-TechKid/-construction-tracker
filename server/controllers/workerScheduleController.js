@@ -8,11 +8,23 @@ const AppError = require('../utils/appError');
 // @route   GET /api/v1/worker-schedules
 // @access  Private
 exports.getAllWorkerSchedules = catchAsync(async (req, res, next) => {
-  const { workerId, buildingId, startDate, endDate, status } = req.query;
+  const { workerId, workerIds, buildingId, startDate, endDate, status } = req.query;
   
   let filter = {};
   
   if (workerId) filter.workerId = workerId;
+  if (workerIds) {
+    const ids = Array.isArray(workerIds)
+      ? workerIds
+      : String(workerIds)
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+    if (ids.length) {
+      filter.workerId = { $in: ids };
+    }
+  }
   if (buildingId) filter.buildingId = buildingId;
   if (status) filter.status = status;
   
