@@ -49,6 +49,27 @@ import {
 } from '../../features/notes/notesApiSlice';
 import { toast } from 'react-toastify';
 
+const defaultApiBaseUrl = 'https://construction-tracker-webapp.onrender.com/api/v1';
+const getStaticBaseUrl = () => {
+  const raw = (process.env.REACT_APP_API_URL || defaultApiBaseUrl).trim().replace(/\/+$/, '');
+  return raw.replace(/\/api\/v1$/i, '');
+};
+
+const normalizeAttachmentUrl = (attachmentUrlOrFilename) => {
+  if (!attachmentUrlOrFilename) return '';
+  const raw = String(attachmentUrlOrFilename).trim();
+  if (!raw) return '';
+
+  if (/^https?:\/\//i.test(raw)) return raw;
+
+  const staticBase = getStaticBaseUrl();
+
+  if (raw.startsWith('/uploads/')) return `${staticBase}${raw}`;
+
+  const filename = raw.replace(/^.*[/\\]/, '').replace(/^uploads[/\\]photos[/\\]/i, '');
+  return `${staticBase}/uploads/photos/${filename}`;
+};
+
 const NotesSheet = () => {
   const { selectedBuilding, buildings } = useBuildingContext();
   const { hasPermission } = useAuth();
@@ -80,14 +101,18 @@ const NotesSheet = () => {
   const uploadNotePhotos = async (files) => {
     const uploaded = [];
 
+    const apiBase = (process.env.REACT_APP_API_URL || defaultApiBaseUrl).trim().replace(/\/+$/, '');
+    const token = localStorage.getItem('token');
+
     for (const file of files) {
       const form = new FormData();
       form.append('photo', file);
 
-      const res = await fetch('/api/v1/uploads/note-photo', {
+      const res = await fetch(`${apiBase}/uploads/note-photo`, {
         method: 'POST',
         body: form,
         credentials: 'include',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
 
       const json = await res.json().catch(() => null);
@@ -633,7 +658,7 @@ const NotesSheet = () => {
                     const noteColor = note.color || 'default';
                     const colorConfig = colors.find(c => c.value === noteColor) || colors[0];
                     const attachments = Array.isArray(note.attachments) ? note.attachments : [];
-                    const firstAttachmentUrl = attachments?.[0]?.url;
+                    const firstAttachmentUrl = normalizeAttachmentUrl(attachments?.[0]?.url);
 
                     return (
                       <Grid item xs={12} md={6} lg={4} key={note._id || note.id}>
@@ -977,7 +1002,7 @@ const NotesSheet = () => {
                         <Box sx={{ position: 'relative' }}>
                           <Box
                             component="img"
-                            src={a.url}
+                            src={normalizeAttachmentUrl(a.url)}
                             alt={a.filename || 'attachment'}
                             sx={{
                               width: '100%',
@@ -989,7 +1014,7 @@ const NotesSheet = () => {
                               borderColor: 'divider',
                             }}
                             onClick={() => {
-                              setPreviewPhotoUrl(a.url);
+                              setPreviewPhotoUrl(normalizeAttachmentUrl(a.url));
                               setPhotoPreviewOpen(true);
                             }}
                           />
