@@ -30,6 +30,23 @@ const storage = multer.diskStorage({
   }
 });
 
+const noteStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = path.join(__dirname, '../public/uploads/photos');
+
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, `note-${uniqueSuffix}${ext}`);
+  }
+});
+
 const fileFilter = (req, file, cb) => {
   // Check file type
   if (file.mimetype.startsWith('image/')) {
@@ -47,11 +64,38 @@ const upload = multer({
   }
 });
 
+const noteUpload = multer({
+  storage: noteStorage,
+  fileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  }
+});
+
 // Protect all routes
 router.use(authController.protect);
 
 // Signed upload payload for Cloudinary direct uploads
 router.post('/sign', uploadController.getUploadSignature);
+
+router.post('/note-photo', noteUpload.single('photo'), catchAsync(async (req, res, next) => {
+  if (!req.file) {
+    return next(new AppError('No photo file provided', 400));
+  }
+
+  const attachment = {
+    url: `/uploads/photos/${req.file.filename}`,
+    filename: req.file.filename,
+    uploadedAt: new Date()
+  };
+
+  res.status(201).json({
+    status: 'success',
+    data: {
+      attachment
+    }
+  });
+}));
 
 // Upload photo to work order
 router.post('/photo', upload.single('photo'), catchAsync(async (req, res, next) => {

@@ -55,6 +55,8 @@ const NotesSheet = () => {
   const { user } = useAuth();
   const [notes, setNotes] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
+  const [photoPreviewOpen, setPhotoPreviewOpen] = useState(false);
+  const [previewPhotoUrl, setPreviewPhotoUrl] = useState('');
   const [editingNote, setEditingNote] = useState(null);
   const [filterBuilding, setFilterBuilding] = useState('');
   const [filterWeekDate, setFilterWeekDate] = useState(new Date());
@@ -72,7 +74,59 @@ const NotesSheet = () => {
     estimateStatus: 'not_applicable',
     workers: [],
     workersText: '',
+    attachments: [],
   });
+
+  const uploadNotePhotos = async (files) => {
+    const uploaded = [];
+
+    for (const file of files) {
+      const form = new FormData();
+      form.append('photo', file);
+
+      const res = await fetch('/api/v1/uploads/note-photo', {
+        method: 'POST',
+        body: form,
+        credentials: 'include',
+      });
+
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(json?.message || 'Failed to upload photo');
+      }
+
+      const attachment = json?.data?.attachment;
+      if (attachment?.url) {
+        uploaded.push(attachment);
+      }
+    }
+
+    return uploaded;
+  };
+
+  const handleAddAttachments = async (event) => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = '';
+    if (!files.length) return;
+
+    try {
+      const uploaded = await uploadNotePhotos(files);
+      setFormData((prev) => ({
+        ...prev,
+        attachments: [...(prev.attachments || []), ...uploaded],
+      }));
+      toast.success('Photos uploaded');
+    } catch (e) {
+      toast.error(e?.message || 'Failed to upload photos');
+    }
+  };
+
+  const handleRemoveAttachment = (filename) => {
+    setFormData((prev) => ({
+      ...prev,
+      attachments: (prev.attachments || []).filter((a) => a.filename !== filename),
+    }));
+  };
 
   const noteTypesSuggestions = [
     'Building Visit',
@@ -249,6 +303,7 @@ const NotesSheet = () => {
         color: note.color || 'default',
         estimateStatus: note.estimateStatus || 'not_applicable',
         estimateAmount: note.estimateAmount || '',
+        attachments: note.attachments || [],
       });
     } else {
       setEditingNote(null);
@@ -264,6 +319,7 @@ const NotesSheet = () => {
         estimateStatus: 'not_applicable',
         workers: [],
         workersText: '',
+        attachments: [],
       });
     }
     setOpenDialog(true);
@@ -284,6 +340,7 @@ const NotesSheet = () => {
       estimateStatus: 'not_applicable',
       workers: [],
       workersText: '',
+      attachments: [],
     });
   };
 
@@ -319,7 +376,8 @@ const NotesSheet = () => {
         status: 'active',
         visitDate: visitDateValue && !Number.isNaN(visitDateValue.getTime()) ? visitDateValue.toISOString() : new Date().toISOString(),
         workers: workersArray,
-        estimateAmount: formData.estimateAmount || null
+        estimateAmount: formData.estimateAmount || null,
+        attachments: formData.attachments || [],
       };
 
       console.log('Saving note with data:', noteData);
@@ -369,21 +427,6 @@ const NotesSheet = () => {
         console.error('Error deleting note:', error);
         toast.error('Failed to delete note');
       }
-    }
-  };
-
-  const handleMarkAsProcessed = async (noteId) => {
-    try {
-      await updateNote({ 
-        id: noteId, 
-        processedToWorkOrder: true,
-        status: 'processed'
-      }).unwrap();
-      toast.success('Note marked as processed');
-      refetch();
-    } catch (error) {
-      console.error('Error marking note as processed:', error);
-      toast.error('Failed to mark note as processed');
     }
   };
 
@@ -589,6 +632,8 @@ const NotesSheet = () => {
                     const createdDate = note.createdAt ? new Date(note.createdAt) : null;
                     const noteColor = note.color || 'default';
                     const colorConfig = colors.find(c => c.value === noteColor) || colors[0];
+                    const attachments = Array.isArray(note.attachments) ? note.attachments : [];
+                    const firstAttachmentUrl = attachments?.[0]?.url;
 
                     return (
                       <Grid item xs={12} md={6} lg={4} key={note._id || note.id}>
@@ -625,6 +670,34 @@ const NotesSheet = () => {
                             <Typography variant="body2" sx={{ mb: 2 }}>
                               {note.content}
                             </Typography>
+
+                            {firstAttachmentUrl && (
+                              <Box sx={{ mb: 2 }}>
+                                <Box
+                                  component="img"
+                                  src={firstAttachmentUrl}
+                                  alt="Note attachment"
+                                  sx={{
+                                    width: '100%',
+                                    maxHeight: 180,
+                                    objectFit: 'cover',
+                                    borderRadius: 1,
+                                    cursor: 'pointer',
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                  }}
+                                  onClick={() => {
+                                    setPreviewPhotoUrl(firstAttachmentUrl);
+                                    setPhotoPreviewOpen(true);
+                                  }}
+                                />
+                                {attachments.length > 1 && (
+                                  <Typography variant="caption" color="text.secondary">
+                                    +{attachments.length - 1} more
+                                  </Typography>
+                                )}
+                              </Box>
+                            )}
 
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
                               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -885,6 +958,59 @@ const NotesSheet = () => {
                   placeholder="Describe what you observed, what needs to be done, materials needed, etc..."
                 />
               </Grid>
+
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                  <Button variant="outlined" component="label">
+                    Upload Photos
+                    <input type="file" accept="image/*" multiple hidden onChange={handleAddAttachments} />
+                  </Button>
+                  <Typography variant="caption" color="text.secondary">
+                    Max 5MB each
+                  </Typography>
+                </Box>
+
+                {(formData.attachments || []).length > 0 && (
+                  <Grid container spacing={1} sx={{ mt: 1 }}>
+                    {(formData.attachments || []).map((a) => (
+                      <Grid item xs={4} sm={3} md={2} key={a.filename || a.url}>
+                        <Box sx={{ position: 'relative' }}>
+                          <Box
+                            component="img"
+                            src={a.url}
+                            alt={a.filename || 'attachment'}
+                            sx={{
+                              width: '100%',
+                              height: 80,
+                              objectFit: 'cover',
+                              borderRadius: 1,
+                              cursor: 'pointer',
+                              border: '1px solid',
+                              borderColor: 'divider',
+                            }}
+                            onClick={() => {
+                              setPreviewPhotoUrl(a.url);
+                              setPhotoPreviewOpen(true);
+                            }}
+                          />
+                          <IconButton
+                            size="small"
+                            onClick={() => handleRemoveAttachment(a.filename)}
+                            sx={{
+                              position: 'absolute',
+                              top: 2,
+                              right: 2,
+                              backgroundColor: 'rgba(255,255,255,0.9)',
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </Grid>
+                    ))}
+                  </Grid>
+                )}
+              </Grid>
             </Grid>
           </DialogContent>
           <DialogActions>
@@ -899,6 +1025,23 @@ const NotesSheet = () => {
             >
               {editingNote ? 'Update' : 'Save'} Note
             </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog open={photoPreviewOpen} onClose={() => setPhotoPreviewOpen(false)} maxWidth="md" fullWidth>
+          <DialogTitle>Photo</DialogTitle>
+          <DialogContent dividers>
+            {previewPhotoUrl ? (
+              <Box
+                component="img"
+                src={previewPhotoUrl}
+                alt="Preview"
+                sx={{ width: '100%', maxHeight: '75vh', objectFit: 'contain' }}
+              />
+            ) : null}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setPhotoPreviewOpen(false)}>Close</Button>
           </DialogActions>
         </Dialog>
       </Box>
