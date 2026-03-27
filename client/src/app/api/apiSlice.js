@@ -16,6 +16,7 @@ console.log('REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
 // Create base query with auth headers
 const baseQuery = fetchBaseQuery({
   baseUrl: apiBaseUrl,
+  credentials: 'include',
   prepareHeaders: (headers, { getState }) => {
     const token = getState().auth.token;
     if (token) {
