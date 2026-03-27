@@ -421,6 +421,12 @@ const DashboardLayout = () => {
         path: '/reports/payroll',
         permission: 'view:costs'
       });
+      items.push({
+        text: 'Hours Control',
+        icon: <TimeIcon />,
+        path: '/reports/hours-control',
+        permission: 'view:costs'
+      });
     }
 
     // Setup - for admins

@@ -75,6 +75,7 @@ import Calls from './pages/calls/Calls';
 import TimeLogs from './pages/time-logs/TimeLogs';
 import MyTimeLogs from './pages/time-logs/MyTimeLogs';
 import PayrollReport from './pages/reports/PayrollReport';
+import HoursControlReport from './pages/reports/HoursControlReport';
 import ActivityLog from './pages/admin/ActivityLog';
 import GeneralCleaningPage from './pages/cleaning/GeneralCleaningPage';
 import WorkContactsPage from './pages/workContacts/WorkContactsPage';
@@ -621,6 +622,14 @@ const AppContent = () => {
                       element={
                         <RoleBasedRoute requiredPermissions={['view:costs', 'manage:users']}>
                           <PayrollReport />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route 
+                      path="reports/hours-control"
+                      element={
+                        <RoleBasedRoute requiredPermissions={['view:costs', 'manage:users']}>
+                          <HoursControlReport />
                         </RoleBasedRoute>
                       }
                     />

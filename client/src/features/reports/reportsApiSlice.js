@@ -9,9 +9,17 @@ export const reportsApiSlice = apiSlice.injectEndpoints({
       }),
       providesTags: ['PayrollReport'],
     }),
+    getHoursControlReport: builder.query({
+      query: ({ startDate, endDate, view }) => ({
+        url: '/reports/hours-control',
+        params: { startDate, endDate, view },
+      }),
+      providesTags: ['HoursControlReport'],
+    }),
   }),
 });
 
 export const {
   useGetPayrollReportQuery,
+  useGetHoursControlReportQuery,
 } = reportsApiSlice;

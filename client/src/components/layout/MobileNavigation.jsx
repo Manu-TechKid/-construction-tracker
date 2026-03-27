@@ -184,6 +184,13 @@ const MobileNavigation = () => {
         path: '/reports/payroll',
         permission: 'view:costs'
       });
+      items.push({
+        label: 'Hours Control',
+        value: 'hoursControl',
+        icon: <TimeTrackingIcon />,
+        path: '/reports/hours-control',
+        permission: 'view:costs'
+      });
     }
 
     return items;
