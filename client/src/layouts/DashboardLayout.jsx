@@ -43,6 +43,7 @@ import {
   Call as CallIcon,
   Assessment as AssessmentIcon,
   CleaningServices as CleaningServicesIcon,
+  Description as DescriptionIcon,
 } from '@mui/icons-material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
@@ -172,6 +173,13 @@ const DashboardLayout = () => {
         icon: <PersonIcon />,
         path: '/my-resume',
         permission: 'view:dashboard:worker'
+      });
+
+      items.push({
+        text: 'My Pay Stubs',
+        icon: <DescriptionIcon />,
+        path: '/my-pay-stubs',
+        permission: 'read:self'
       });
     }
 
@@ -425,6 +433,19 @@ const DashboardLayout = () => {
         text: 'Hours Control',
         icon: <TimeIcon />,
         path: '/reports/hours-control',
+        permission: 'view:costs'
+      });
+      items.push({
+        text: 'Daily Schedule',
+        icon: <AssessmentIcon />,
+        path: '/reports/daily-schedule',
+        permission: 'view:costs'
+      });
+
+      items.push({
+        text: 'Pay Stubs',
+        icon: <DescriptionIcon />,
+        path: '/pay-stubs',
         permission: 'view:costs'
       });
     }

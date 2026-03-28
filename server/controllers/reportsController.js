@@ -1,6 +1,7 @@
 const TimeSession = require('../models/TimeSession');
 const User = require('../models/User');
 const Building = require('../models/Building');
+const WorkerSchedule = require('../models/WorkerSchedule');
 const asyncHandler = require('express-async-handler');
 const { startOfDay, endOfDay, startOfWeek, endOfWeek, format, parseISO } = require('date-fns');
 
@@ -143,4 +144,61 @@ const getHoursControlReport = asyncHandler(async (req, res) => {
   res.status(200).json({ data: reportData });
 });
 
-module.exports = { getPayrollReport, getHoursControlReport };
+const getDailyScheduleReport = asyncHandler(async (req, res) => {
+  const { date, workerId, buildingId } = req.query;
+
+  if (!date) {
+    return res.status(400).json({ message: 'Please provide a date.' });
+  }
+
+  const dayStart = startOfDay(new Date(date));
+  const dayEnd = endOfDay(new Date(date));
+
+  const filter = {
+    date: { $gte: dayStart, $lte: dayEnd },
+  };
+
+  if (workerId) filter.workerId = workerId;
+  if (buildingId) filter.buildingId = buildingId;
+
+  const schedules = await WorkerSchedule.find(filter)
+    .populate('workerId', 'name email role')
+    .populate('buildingId', 'name address')
+    .sort({ startTime: 1 });
+
+  const entries = schedules.map((s) => {
+    const workerName = s.workerId?.name || s.workerId?.email || 'Unknown';
+    const buildingName = s.buildingId?.name || 'Unknown';
+    const start = s.startTime ? new Date(s.startTime) : null;
+    const end = s.endTime ? new Date(s.endTime) : null;
+
+    return {
+      id: s._id,
+      date: s.date ? format(new Date(s.date), 'yyyy-MM-dd') : null,
+      dateFormatted: s.date ? format(new Date(s.date), 'MM/dd/yyyy') : null,
+      workerId: s.workerId?._id?.toString(),
+      workerName,
+      buildingId: s.buildingId?._id?.toString(),
+      client: buildingName,
+      entranceHour: start ? format(start, 'hh:mm a') : null,
+      leavingHour: end ? format(end, 'hh:mm a') : null,
+      activity: s.task || '',
+      notes: s.notes || '',
+      status: s.status,
+      hours: typeof s.durationHours === 'number' ? s.durationHours : (start && end ? Math.max(0, (end - start) / (1000 * 60 * 60)) : 0),
+    };
+  });
+
+  const reportData = {
+    entries,
+    summary: {
+      date: format(dayStart, 'yyyy-MM-dd'),
+      totalEntries: entries.length,
+      totalHours: entries.reduce((sum, e) => sum + (e.hours || 0), 0),
+    },
+  };
+
+  res.status(200).json({ data: reportData });
+});
+
+module.exports = { getPayrollReport, getHoursControlReport, getDailyScheduleReport };

@@ -76,8 +76,12 @@ export const SettingsProvider = ({ children }) => {
   // Watch for system theme changes
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    if (typeof window.matchMedia !== 'function') return;
     
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    if (!mediaQuery) return;
     
     const handleChange = () => {
       setSettings(prev => ({
@@ -87,10 +91,20 @@ export const SettingsProvider = ({ children }) => {
     };
     
     // Add listener for system theme changes
-    mediaQuery.addEventListener('change', handleChange);
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handleChange);
+    } else if (typeof mediaQuery.addListener === 'function') {
+      mediaQuery.addListener(handleChange);
+    }
     
     // Cleanup
-    return () => mediaQuery.removeEventListener('change', handleChange);
+    return () => {
+      if (typeof mediaQuery.removeEventListener === 'function') {
+        mediaQuery.removeEventListener('change', handleChange);
+      } else if (typeof mediaQuery.removeListener === 'function') {
+        mediaQuery.removeListener(handleChange);
+      }
+    };
   }, []);
 
   // Memoize context value to prevent unnecessary re-renders

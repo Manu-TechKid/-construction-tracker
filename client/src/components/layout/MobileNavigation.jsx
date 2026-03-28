@@ -26,7 +26,8 @@ import {
   AccessTime as TimeTrackingIcon,
   Assessment as AssessmentIcon,
   Close as CloseIcon,
-  Work as WorkIcon
+  Work as WorkIcon,
+  Description as DescriptionIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -51,6 +52,7 @@ const MobileNavigation = () => {
     if (path === '/' || path === '/dashboard') return 'dashboard';
     if (path === '/worker-dashboard') return 'workerDashboard';
     if (path.includes('/my-resume')) return 'myResume';
+    if (path.includes('/my-pay-stubs')) return 'myPayStubs';
     if (path.includes('/buildings')) return 'buildings';
     if (path.includes('/work-orders')) return 'workOrders';
     if (path.includes('/workers')) return 'workers';
@@ -58,6 +60,8 @@ const MobileNavigation = () => {
     if (path.includes('/checks')) return 'checks';
     if (path.includes('/employee-profiles')) return 'employeeProfiles';
     if (path.includes('/time-tracking')) return 'timeTracking';
+    if (path.includes('/pay-stubs')) return 'payStubs';
+    if (path.includes('/reports/daily-schedule')) return 'dailySchedule';
     return isWorker ? 'workerDashboard' : 'dashboard';
   };
   
@@ -84,6 +88,14 @@ const MobileNavigation = () => {
         icon: <PersonIcon />,
         path: '/my-resume',
         permission: 'view:dashboard:worker'
+      });
+
+      items.push({
+        label: 'My Pay Stubs',
+        value: 'myPayStubs',
+        icon: <DescriptionIcon />,
+        path: '/my-pay-stubs',
+        permission: 'read:self'
       });
     }
 
@@ -189,6 +201,21 @@ const MobileNavigation = () => {
         value: 'hoursControl',
         icon: <TimeTrackingIcon />,
         path: '/reports/hours-control',
+        permission: 'view:costs'
+      });
+      items.push({
+        label: 'Daily Schedule',
+        value: 'dailySchedule',
+        icon: <AssessmentIcon />,
+        path: '/reports/daily-schedule',
+        permission: 'view:costs'
+      });
+
+      items.push({
+        label: 'Pay Stubs',
+        value: 'payStubs',
+        icon: <DescriptionIcon />,
+        path: '/pay-stubs',
         permission: 'view:costs'
       });
     }

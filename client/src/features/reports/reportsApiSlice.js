@@ -16,10 +16,18 @@ export const reportsApiSlice = apiSlice.injectEndpoints({
       }),
       providesTags: ['HoursControlReport'],
     }),
+    getDailyScheduleReport: builder.query({
+      query: ({ date, workerId, buildingId }) => ({
+        url: '/reports/daily-schedule',
+        params: { date, workerId, buildingId },
+      }),
+      providesTags: ['DailyScheduleReport'],
+    }),
   }),
 });
 
 export const {
   useGetPayrollReportQuery,
   useGetHoursControlReportQuery,
+  useGetDailyScheduleReportQuery,
 } = reportsApiSlice;

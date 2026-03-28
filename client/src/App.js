@@ -76,6 +76,7 @@ import TimeLogs from './pages/time-logs/TimeLogs';
 import MyTimeLogs from './pages/time-logs/MyTimeLogs';
 import PayrollReport from './pages/reports/PayrollReport';
 import HoursControlReport from './pages/reports/HoursControlReport';
+import DailyScheduleReport from './pages/reports/DailyScheduleReport';
 import ActivityLog from './pages/admin/ActivityLog';
 import GeneralCleaningPage from './pages/cleaning/GeneralCleaningPage';
 import WorkContactsPage from './pages/workContacts/WorkContactsPage';
@@ -84,6 +85,8 @@ import Vendors from './pages/vendors/Vendors';
 import Checks from './pages/checks/Checks';
 import MyResume from './pages/employeeProfiles/MyResume';
 import EmployeeProfilesAdmin from './pages/employeeProfiles/EmployeeProfilesAdmin';
+import MyPayStubs from './pages/payStubs/MyPayStubs';
+import PayStubsAdmin from './pages/payStubs/PayStubsAdmin';
 
 // Route Protection
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -477,6 +480,11 @@ const AppContent = () => {
                       element={<MyTimeLogs />} 
                     />
 
+                    <Route
+                      path="my-pay-stubs"
+                      element={<MyPayStubs />}
+                    />
+
 
                     {/* Reminders */}
                     <Route 
@@ -630,6 +638,23 @@ const AppContent = () => {
                       element={
                         <RoleBasedRoute requiredPermissions={['view:costs', 'manage:users']}>
                           <HoursControlReport />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route 
+                      path="reports/daily-schedule"
+                      element={
+                        <RoleBasedRoute requiredPermissions={['view:costs', 'manage:users']}>
+                          <DailyScheduleReport />
+                        </RoleBasedRoute>
+                      }
+                    />
+
+                    <Route 
+                      path="pay-stubs"
+                      element={
+                        <RoleBasedRoute requiredPermissions={['view:costs', 'manage:users']}>
+                          <PayStubsAdmin />
                         </RoleBasedRoute>
                       }
                     />
