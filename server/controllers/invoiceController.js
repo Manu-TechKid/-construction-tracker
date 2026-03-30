@@ -363,9 +363,14 @@ exports.getAllInvoices = catchAsync(async (req, res, next) => {
       filter.building = buildingId;
     }
     if (invoiceDateStart && invoiceDateEnd) {
+      const start = new Date(invoiceDateStart);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(invoiceDateEnd);
+      end.setHours(23, 59, 59, 999);
+      
       filter.invoiceDate = {
-        $gte: new Date(invoiceDateStart),
-        $lte: new Date(invoiceDateEnd),
+        $gte: start,
+        $lte: end,
       };
     }
   }
