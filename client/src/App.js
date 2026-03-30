@@ -659,11 +659,11 @@ const AppContent = () => {
                       }
                     />
 
-                    {/* Activity Log - Superuser Only */}
+                    {/* Activity Log - Admin and Superuser */}
                     <Route 
                       path="activity-log"
                       element={
-                        <RoleBasedRoute requiredPermissions={['is:superuser']}>
+                        <RoleBasedRoute requiredPermissions={['manage:users']}>
                           <ActivityLog />
                         </RoleBasedRoute>
                       }
