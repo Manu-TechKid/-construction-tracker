@@ -3,6 +3,8 @@ const workerScheduleController = require('../controllers/workerScheduleControlle
 const authController = require('../controllers/authController');
 const { restrictToRoles } = require('../middleware/roleMiddleware');
 
+const logActivity = require('../middleware/activityLogger');
+
 const router = express.Router();
 
 // Protect all routes
@@ -16,13 +18,13 @@ router.use(restrictToRoles('admin', 'manager', 'supervisor', 'worker'));
 router
   .route('/')
   .get(workerScheduleController.getAllWorkerSchedules)
-  .post(workerScheduleController.createWorkerSchedule);
+  .post(logActivity('WorkerSchedule', 'create'), workerScheduleController.createWorkerSchedule);
 
 router
   .route('/:id')
   .get(workerScheduleController.getWorkerSchedule)
-  .patch(workerScheduleController.updateWorkerSchedule)
-  .delete(workerScheduleController.deleteWorkerSchedule);
+  .patch(logActivity('WorkerSchedule', 'update'), workerScheduleController.updateWorkerSchedule)
+  .delete(logActivity('WorkerSchedule', 'delete'), workerScheduleController.deleteWorkerSchedule);
 
 // Additional routes for filtering
 router.get('/worker/:workerId', workerScheduleController.getWorkerSchedulesByWorker);

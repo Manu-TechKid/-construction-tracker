@@ -187,34 +187,38 @@ const BuildingSchedule = () => {
 
   const handleSubmit = async () => {
     try {
-      // Validate required fields
-      if (!formData.title?.trim()) {
-        toast.error('Title is required');
-        return;
-      }
-      if (!formData.startDate || !formData.endDate) {
-        toast.error('Start date and end date are required');
-        return;
-      }
-      if (!selectedBuilding?._id) {
-        toast.error('Building selection is required');
-        return;
-      }
+    // Validate required fields
+    if (!formData.title?.trim()) {
+      toast.error('Title is required');
+      return;
+    }
+    if (!formData.startDate || !formData.endDate) {
+      toast.error('Start date and end date are required');
+      return;
+    }
+    if (!selectedBuilding?._id) {
+      toast.error('Building selection is required');
+      return;
+    }
+    if (!formData.assignedWorkers || formData.assignedWorkers.length === 0) {
+      toast.error('At least one worker must be assigned');
+      return;
+    }
 
-      const scheduleData = {
-        title: formData.title.trim(),
-        description: formData.description?.trim() || '',
-        type: formData.type,
-        building: selectedBuilding._id,
-        apartment: formData.apartment?.trim() || '',
-        assignedWorkers: formData.assignedWorkers || [],
-        startDate: formData.startDate.toISOString(),
-        endDate: formData.endDate.toISOString(),
-        status: formData.status,
-        estimatedCost: parseFloat(formData.estimatedCost) || 0,
-        estimatedHours: parseFloat(formData.estimatedHours) || 0,
-        notes: formData.notes?.trim() || ''
-      };
+    const scheduleData = {
+      title: formData.title.trim(),
+      description: formData.description?.trim() || '',
+      type: formData.type,
+      building: selectedBuilding._id,
+      apartment: formData.apartment?.trim() || '',
+      assignedWorkers: formData.assignedWorkers,
+      startDate: formData.startDate.toISOString(),
+      endDate: formData.endDate.toISOString(),
+      status: formData.status,
+      estimatedCost: parseFloat(formData.estimatedCost) || 0,
+      estimatedHours: parseFloat(formData.estimatedHours) || 0,
+      notes: formData.notes?.trim() || ''
+    };
 
       // Only add createdBy for new schedules
       if (!editingSchedule) {

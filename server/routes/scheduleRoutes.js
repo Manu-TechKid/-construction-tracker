@@ -3,6 +3,7 @@ const { body, param, query } = require('express-validator');
 const scheduleController = require('../controllers/scheduleController');
 const authController = require('../controllers/authController');
 const validateRequest = require('../middleware/validateRequest');
+const logActivity = require('../middleware/activityLogger');
 
 const router = express.Router();
 
@@ -28,7 +29,8 @@ router.post(
     body('status').optional().isIn(['planned', 'in_progress', 'completed', 'cancelled']),
     body('assignedWorkers').optional().isArray(),
     body('assignedWorkers.*').optional().isMongoId(),
-    validateRequest
+    validateRequest,
+    logActivity('Schedule', 'create')
   ],
   scheduleController.createSchedule
 );
@@ -49,7 +51,8 @@ router.patch(
     body('status').optional().isIn(['planned', 'in_progress', 'completed', 'cancelled']),
     body('assignedWorkers').optional().isArray(),
     body('assignedWorkers.*').optional().isMongoId(),
-    validateRequest
+    validateRequest,
+    logActivity('Schedule', 'update')
   ],
   scheduleController.updateSchedule
 );
@@ -60,7 +63,8 @@ router.delete(
   [
     authController.restrictTo('admin', 'manager'),
     param('id').isMongoId(),
-    validateRequest
+    validateRequest,
+    logActivity('Schedule', 'delete')
   ],
   scheduleController.deleteSchedule
 );
