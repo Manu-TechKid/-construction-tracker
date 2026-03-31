@@ -16,15 +16,25 @@ import {
   Paper,
   CircularProgress,
   Alert,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import { BarChart as BarChartIcon, Apartment as BuildingIcon } from '@mui/icons-material';
-import { format, startOfWeek, endOfWeek, subWeeks, parseISO } from 'date-fns';
+import { format, startOfWeek, endOfWeek, subWeeks, parseISO, startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { useGetWorkOrdersQuery } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 
 const WeeklyProduction = () => {
+  const [viewMode, setViewMode] = useState('weekly'); // 'weekly', 'biweekly', 'monthly', 'custom'
   const [selectedWeeks, setSelectedWeeks] = useState(4); // Last 4 weeks by default
   const [selectedBuilding, setSelectedBuilding] = useState(''); // Filter by building
+  const [customDateRange, setCustomDateRange] = useState({
+    startDate: null,
+    endDate: null
+  });
 
   // Use completed work orders as the source of "production" instead of invoices
   const { data: workOrdersData, isLoading, error } = useGetWorkOrdersQuery();
@@ -155,7 +165,13 @@ const WeeklyProduction = () => {
     }
 
     return weeks.reverse();
-  }, [workOrders, selectedWeeks, selectedBuilding]);
+  }, [workOrders, selectedWeeks, selectedBuilding, viewMode, customDateRange]);
+
+  const handleViewModeChange = (event, newMode) => {
+    if (newMode !== null) {
+      setViewMode(newMode);
+    }
+  };
 
   const summary = useMemo(() => {
     if (!weeklyProduction.length) return null;
@@ -187,58 +203,92 @@ const WeeklyProduction = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 3,
-          gap: 2,
-          flexWrap: 'wrap'
-        }}
-      >
-        <Typography
-          variant="h4"
-          component="h1"
-          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+    <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <Box sx={{ p: 3 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 3,
+            gap: 2,
+            flexWrap: 'wrap'
+          }}
         >
-          <BarChartIcon color="primary" />
-          Weekly Production by Customer
-        </Typography>
-
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <TextField
-            select
-            size="small"
-            label="Building"
-            value={selectedBuilding}
-            onChange={(e) => setSelectedBuilding(e.target.value)}
-            sx={{ minWidth: 180 }}
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
           >
-            <MenuItem value="">All Buildings</MenuItem>
-            {buildings.map((building) => (
-              <MenuItem key={building._id} value={building._id}>
-                {building.name}
-              </MenuItem>
-            ))}
-          </TextField>
+            <BarChartIcon color="primary" />
+            Production by Customer
+          </Typography>
 
-          <TextField
-            select
-            size="small"
-            label="Time Period"
-            value={selectedWeeks}
-            onChange={(e) => setSelectedWeeks(Number(e.target.value))}
-            sx={{ minWidth: 150 }}
-          >
-            <MenuItem value={2}>Last 2 weeks</MenuItem>
-            <MenuItem value={4}>Last 4 weeks</MenuItem>
-            <MenuItem value={8}>Last 8 weeks</MenuItem>
-            <MenuItem value={12}>Last 12 weeks</MenuItem>
-          </TextField>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            <ToggleButtonGroup
+              value={viewMode}
+              exclusive
+              onChange={handleViewModeChange}
+              size="small"
+            >
+              <ToggleButton value="weekly">Weekly</ToggleButton>
+              <ToggleButton value="biweekly">Bi-Weekly</ToggleButton>
+              <ToggleButton value="monthly">Monthly</ToggleButton>
+              <ToggleButton value="custom">Custom</ToggleButton>
+            </ToggleButtonGroup>
+
+            <TextField
+              select
+              size="small"
+              label="Building"
+              value={selectedBuilding}
+              onChange={(e) => setSelectedBuilding(e.target.value)}
+              sx={{ minWidth: 180 }}
+            >
+              <MenuItem value="">All Buildings</MenuItem>
+              {buildings.map((building) => (
+                <MenuItem key={building._id} value={building._id}>
+                  {building.name}
+                </MenuItem>
+              ))}
+            </TextField>
+
+            {viewMode !== 'custom' && (
+              <TextField
+                select
+                size="small"
+                label="Periods"
+                value={selectedWeeks}
+                onChange={(e) => setSelectedWeeks(Number(e.target.value))}
+                sx={{ minWidth: 120 }}
+              >
+                <MenuItem value={2}>2 periods</MenuItem>
+                <MenuItem value={4}>4 periods</MenuItem>
+                <MenuItem value={8}>8 periods</MenuItem>
+                <MenuItem value={12}>12 periods</MenuItem>
+              </TextField>
+            )}
+          </Box>
         </Box>
-      </Box>
+
+        {/* Custom Date Range */}
+        {viewMode === 'custom' && (
+          <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+            <DatePicker
+              label="Start Date"
+              value={customDateRange.startDate}
+              onChange={(date) => setCustomDateRange(prev => ({ ...prev, startDate: date }))}
+              slotProps={{ textField: { size: 'small', sx: { minWidth: 150 } } }}
+            />
+            <DatePicker
+              label="End Date"
+              value={customDateRange.endDate}
+              onChange={(date) => setCustomDateRange(prev => ({ ...prev, endDate: date }))}
+              minDate={customDateRange.startDate}
+              slotProps={{ textField: { size: 'small', sx: { minWidth: 150 } } }}
+            />
+          </Box>
+        )}
 
       {summary && (
         <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -246,7 +296,7 @@ const WeeklyProduction = () => {
             <Card>
               <CardContent>
                 <Typography variant="subtitle2" color="textSecondary">
-                  Total Production ({selectedWeeks} weeks)
+                  Total Production ({selectedWeeks} {viewMode === 'monthly' ? 'months' : viewMode === 'biweekly' ? 'bi-weeks' : 'weeks'})
                 </Typography>
                 <Typography variant="h6" color="primary">
                   ${summary.total.toLocaleString()}
@@ -258,7 +308,7 @@ const WeeklyProduction = () => {
             <Card>
               <CardContent>
                 <Typography variant="subtitle2" color="textSecondary">
-                  Avg Weekly Production
+                  Avg {viewMode === 'monthly' ? 'Monthly' : viewMode === 'biweekly' ? 'Bi-Weekly' : 'Weekly'} Production
                 </Typography>
                 <Typography variant="h6" color="secondary">
                   ${summary.avg.toLocaleString()}
@@ -367,6 +417,7 @@ const WeeklyProduction = () => {
         })
       )}
     </Box>
+    </LocalizationProvider>
   );
 };
 

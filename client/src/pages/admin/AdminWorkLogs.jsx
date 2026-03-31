@@ -29,6 +29,7 @@ import {
   FilterList as FilterIcon,
   Refresh as RefreshIcon,
   Feedback as FeedbackIcon,
+  Help as HelpIcon,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
@@ -46,6 +47,7 @@ import WorkLogList from '../../components/workLogs/WorkLogList';
 
 const AdminWorkLogs = () => {
   const [selectedTab, setSelectedTab] = useState(0);
+  const [showHelp, setShowHelp] = useState(false);
   const [filters, setFilters] = useState({
     workerId: '',
     buildingId: '',
@@ -178,20 +180,44 @@ const AdminWorkLogs = () => {
             Work Logs Management
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Review and manage worker daily reports
+            Review and manage worker daily reports with feedback system
           </Typography>
         </Box>
-        <Button
-          variant="outlined"
-          startIcon={<RefreshIcon />}
-          onClick={() => {
-            refetchLogs();
-            refetchStats();
-          }}
-        >
-          Refresh
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            startIcon={<HelpIcon />}
+            onClick={() => setShowHelp(!showHelp)}
+          >
+            {showHelp ? 'Hide Help' : 'What is this?'}
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={() => {
+              refetchLogs();
+              refetchStats();
+            }}
+          >
+            Refresh
+          </Button>
+        </Box>
       </Box>
+
+      {/* Help Panel */}
+      {showHelp && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" gutterBottom><strong>About Work Logs:</strong></Typography>
+          <Typography variant="body2" component="div">
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              <li><strong>Purpose:</strong> Daily work reports submitted by workers describing completed tasks.</li>
+              <li><strong>Workflow:</strong> Pending → Reviewed → Approved/Needs Revision.</li>
+              <li><strong>Who uses it:</strong> Workers submit reports; Supervisors review and provide feedback.</li>
+              <li><strong>When to use:</strong> End-of-day reporting, progress tracking, quality assurance.</li>
+            </ul>
+          </Typography>
+        </Alert>
+      )}
 
       {/* Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>

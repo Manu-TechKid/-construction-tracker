@@ -365,7 +365,16 @@ exports.convertToWorkOrder = catchAsync(async (req, res, next) => {
     photos: projectEstimate.photos,
     notes: projectEstimate.notes,
     createdBy: req.user.id,
-    status: 'pending'
+    status: 'pending',
+    // Transfer line items as services
+    services: Array.isArray(projectEstimate.lineItems) ? projectEstimate.lineItems.map(item => ({
+      name: item.productService || item.description || 'Service',
+      description: item.description || '',
+      laborCost: item.laborCost || (item.amount || 0) - (item.materialCost || 0),
+      materialCost: item.materialCost || 0,
+      quantity: item.qty || 1,
+      status: 'pending'
+    })) : []
   };
 
   const workOrder = await WorkOrder.create(workOrderData);

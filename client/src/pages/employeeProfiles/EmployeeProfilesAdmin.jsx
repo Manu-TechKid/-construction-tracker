@@ -28,6 +28,7 @@ import {
 } from '@mui/material';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
+import { Help as HelpIcon } from '@mui/icons-material';
 import {
   useGetEmployeeProfilesQuery,
   useReviewEmployeeProfileMutation,
@@ -46,6 +47,8 @@ const EmployeeProfilesAdmin = () => {
   const { hasPermission } = useAuth();
   const canReview = hasPermission(['review:employeeprofiles']);
   const canDelete = hasPermission(['delete:employeeprofiles']);
+
+  const [showHelp, setShowHelp] = useState(false);
 
   const [filters, setFilters] = useState({ status: '', includeDeleted: false, deletedOnly: false });
   const queryParams = useMemo(() => {
@@ -120,8 +123,16 @@ const EmployeeProfilesAdmin = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} spacing={2} sx={{ mb: 2 }}>
-        <Typography variant="h4">Employee Profiles</Typography>
+        <Box>
+          <Typography variant="h4">Employee Profiles</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Manage worker documents and personal information with approval workflow
+          </Typography>
+        </Box>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }}>
+          <Button variant="outlined" startIcon={<HelpIcon />} onClick={() => setShowHelp(!showHelp)}>
+            {showHelp ? 'Hide Help' : 'What is this?'}
+          </Button>
           <FormControl size="small" sx={{ minWidth: 220 }}>
             <InputLabel id="filter-status">Status</InputLabel>
             <Select
@@ -157,6 +168,21 @@ const EmployeeProfilesAdmin = () => {
           />
         </Stack>
       </Stack>
+
+      {/* Help Panel */}
+      {showHelp && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" gutterBottom><strong>About Employee Profiles:</strong></Typography>
+          <Typography variant="body2" component="div">
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              <li><strong>Purpose:</strong> Manage worker documentation and personal information with an approval workflow.</li>
+              <li><strong>Workflow:</strong> Workers submit documents → Admins review → Approve/Reject with notes.</li>
+              <li><strong>Status:</strong> Draft → Submitted → Approved/Rejected.</li>
+              <li><strong>When to use:</strong> Onboarding new workers, annual renewals, compliance audits.</li>
+            </ul>
+          </Typography>
+        </Alert>
+      )}
 
       {isLoading && <CircularProgress />}
       {error && <Alert severity="error">Failed to load profiles.</Alert>}

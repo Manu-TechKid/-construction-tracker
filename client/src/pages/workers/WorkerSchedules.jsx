@@ -666,6 +666,84 @@ const WorkerSchedules = () => {
           </CardContent>
         </Card>
 
+        {/* Weekly Hours Summary */}
+        <Card sx={{ mb: 3, bgcolor: 'primary.light' }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <ScheduleIcon sx={{ fontSize: 40, color: 'white' }} />
+                <Box>
+                  <Typography variant="h5" sx={{ color: 'white', fontWeight: 'bold' }}>
+                    Weekly Hours Summary
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'white' }}>
+                    {format(startOfWeek(currentWeek), 'MMM d')} - {format(endOfWeek(currentWeek), 'MMM d, yyyy')}
+                  </Typography>
+                </Box>
+              </Box>
+              
+              <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
+                    {Array.from(weeklyHoursByWorker.values()).reduce((sum, hours) => sum + hours, 0).toFixed(1)}h
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'white' }}>
+                    Total Hours
+                  </Typography>
+                </Box>
+                
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
+                    {filteredWorkers.length}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'white' }}>
+                    Workers
+                  </Typography>
+                </Box>
+                
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
+                    {schedules.length}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'white' }}>
+                    Schedules
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+            
+            {/* Per-worker hours chips */}
+            <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {Array.isArray(filteredWorkers) && filteredWorkers.slice(0, 5).map((worker) => {
+                const hours = weeklyHoursByWorker.get(worker._id) || 0;
+                return (
+                  <Chip
+                    key={worker._id}
+                    label={`${(() => {
+                      if (worker.name) return worker.name;
+                      if (worker.firstName && worker.lastName) return `${worker.firstName} ${worker.lastName}`;
+                      return 'Unknown';
+                    })()}: ${hours.toFixed(1)}h`}
+                    sx={{ 
+                      bgcolor: 'white', 
+                      color: 'primary.main',
+                      fontWeight: 'bold'
+                    }}
+                    size="small"
+                  />
+                );
+              })}
+              {filteredWorkers.length > 5 && (
+                <Chip
+                  label={`+${filteredWorkers.length - 5} more`}
+                  sx={{ bgcolor: 'white', color: 'primary.main' }}
+                  size="small"
+                />
+              )}
+            </Box>
+          </CardContent>
+        </Card>
+
         {/* Tabs */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
           <Tabs value={tabValue} onChange={handleTabChange}>

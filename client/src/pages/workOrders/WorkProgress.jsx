@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -14,17 +14,20 @@ import {
   ListItemIcon,
   CircularProgress,
   Alert,
+  Button,
 } from '@mui/material';
 import {
   Assignment as AssignmentIcon,
   CheckCircle as CheckCircleIcon,
   Schedule as ScheduleIcon,
   Warning as WarningIcon,
+  Help as HelpIcon,
 } from '@mui/icons-material';
 import { useGetWorkOrdersQuery } from '../../features/workOrders/workOrdersApiSlice';
 
 const WorkProgress = () => {
   const { data: workOrdersData, isLoading, error } = useGetWorkOrdersQuery();
+  const [showHelp, setShowHelp] = useState(false);
 
   if (isLoading) {
     return (
@@ -75,9 +78,34 @@ const WorkProgress = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Work Progress Overview
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box>
+          <Typography variant="h4" gutterBottom>
+            Work Progress Overview
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Visual dashboard for tracking work order completion statistics
+          </Typography>
+        </Box>
+        <Button variant="outlined" startIcon={<HelpIcon />} onClick={() => setShowHelp(!showHelp)}>
+          {showHelp ? 'Hide Help' : 'What is this?'}
+        </Button>
+      </Box>
+
+      {/* Help Panel */}
+      {showHelp && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" gutterBottom><strong>About Work Progress:</strong></Typography>
+          <Typography variant="body2" component="div">
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              <li><strong>Purpose:</strong> Visual dashboard showing overall work order completion statistics.</li>
+              <li><strong>Who uses it:</strong> Managers and supervisors to track job progress.</li>
+              <li><strong>Key metrics:</strong> Completion rate, status breakdown, recent work orders.</li>
+              <li><strong>When to use:</strong> Daily standups, weekly reviews, identifying bottlenecks.</li>
+            </ul>
+          </Typography>
+        </Alert>
+      )}
 
       {/* Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>

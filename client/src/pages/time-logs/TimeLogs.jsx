@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, CircularProgress, Alert, Chip, IconButton, Tooltip, Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button } from '@mui/material';
-import { Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, CircularProgress, Alert, Chip, IconButton, Tooltip, Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button, Box } from '@mui/material';
+import { Delete as DeleteIcon, Edit as EditIcon, Help as HelpIcon } from '@mui/icons-material';
 import { useGetAllTimeLogsQuery, useDeleteTimeLogMutation, useUpdateTimeLogMutation } from '../../features/time-logs/timeLogsApiSlice';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
@@ -14,6 +14,7 @@ const TimeLogs = () => {
 
   const [editLog, setEditLog] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this time log?')) {
@@ -56,9 +57,35 @@ const TimeLogs = () => {
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Paper sx={{ p: 2 }}>
-      <Typography variant="h4" gutterBottom>
-        Employee Time Logs
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Box>
+          <Typography variant="h4" gutterBottom>
+            Employee Time Logs
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Track employee clock-in/clock-out times with digital signatures
+          </Typography>
+        </Box>
+        <Button variant="outlined" startIcon={<HelpIcon />} onClick={() => setShowHelp(!showHelp)}>
+          {showHelp ? 'Hide Help' : 'What is this?'}
+        </Button>
+      </Box>
+
+      {/* Help Panel */}
+      {showHelp && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" gutterBottom><strong>About Time Logs:</strong></Typography>
+          <Typography variant="body2" component="div">
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              <li><strong>Purpose:</strong> Track employee clock-in/clock-out times with signatures.</li>
+              <li><strong>Who uses it:</strong> Workers clock in/out; Admins/HR review entries.</li>
+              <li><strong>Features:</strong> Digital signatures, duration calculation, edit/audit trail.</li>
+              <li><strong>When to use:</strong> Daily time tracking, payroll processing, dispute resolution.</li>
+            </ul>
+          </Typography>
+        </Alert>
+      )}
+
       <TableContainer>
         <Table stickyHeader>
           <TableHead>

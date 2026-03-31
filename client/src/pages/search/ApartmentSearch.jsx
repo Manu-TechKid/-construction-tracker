@@ -42,11 +42,13 @@ import {
   History as HistoryIcon
 } from '@mui/icons-material';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
 import { useSearchApartmentMutation } from '../../features/search/searchApiSlice';
 import { toast } from 'react-toastify';
 
 const ApartmentSearch = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBuilding, setSelectedBuilding] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -156,6 +158,25 @@ const ApartmentSearch = () => {
       case 'schedule': return 'warning';
       case 'reminder': return 'info';
       default: return 'default';
+    }
+  };
+
+  const handleViewRecord = (record) => {
+    switch (record.type) {
+      case 'work_order':
+        navigate(`/work-orders/${record.id}`);
+        break;
+      case 'invoice':
+        navigate(`/invoices/${record.id}`);
+        break;
+      case 'schedule':
+        navigate(`/schedules/${record.id}`);
+        break;
+      case 'reminder':
+        navigate(`/reminders/${record.id}`);
+        break;
+      default:
+        break;
     }
   };
 
@@ -387,7 +408,14 @@ const ApartmentSearch = () => {
                           </TableHead>
                           <TableBody>
                             {records.map((record, index) => (
-                              <TableRow key={`${record.type}-${record.id}-${index}`}>
+                              <TableRow 
+                                key={`${record.type}-${record.id}-${index}`}
+                                onClick={() => handleViewRecord(record)}
+                                sx={{ 
+                                  cursor: 'pointer',
+                                  '&:hover': { backgroundColor: 'action.hover' }
+                                }}
+                              >
                                 <TableCell>
                                   <Chip
                                     icon={getServiceIcon(record.type)}

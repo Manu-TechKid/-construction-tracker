@@ -32,6 +32,7 @@ import {
   Print as PrintIcon,
   Cancel as VoidIcon,
   CheckCircle as MarkPrintedIcon,
+  Help as HelpIcon,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
@@ -94,6 +95,7 @@ const Checks = () => {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ ...emptyCheck });
 
+  const [showHelp, setShowHelp] = useState(false);
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
 
@@ -232,12 +234,33 @@ const Checks = () => {
     <Box sx={{ p: 3 }}>
       <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} spacing={2} sx={{ mb: 2 }}>
         <Typography variant="h4">Checks</Typography>
-        {canCreate && (
-          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
-            New Check
+        <Stack direction="row" spacing={1}>
+          <Button variant="outlined" startIcon={<HelpIcon />} onClick={() => setShowHelp(!showHelp)}>
+            {showHelp ? 'Hide Help' : 'How to Use'}
           </Button>
-        )}
+          {canCreate && (
+            <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
+              New Check
+            </Button>
+          )}
+        </Stack>
       </Stack>
+
+      {/* Help Panel */}
+      {showHelp && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" gutterBottom><strong>How to use the Checks Module:</strong></Typography>
+          <Typography variant="body2" component="div">
+            <ol style={{ margin: 0, paddingLeft: 20 }}>
+              <li><strong>Create a Check:</strong> Click "New Check" and select a vendor, enter the amount and date.</li>
+              <li><strong>Add Line Items:</strong> Use the "Voucher / Line Items" section to break down what the check is for (e.g., specific invoices or expenses).</li>
+              <li><strong>Save & Print:</strong> Save the check, then click the Print icon to generate a PDF. Adjust Offset X/Y if the print alignment needs tweaking.</li>
+              <li><strong>Mark Printed:</strong> After physically printing, click the checkmark icon to mark it as "Printed".</li>
+              <li><strong>Void (if needed):</strong> Use the cancel icon to void a check that was printed by mistake.</li>
+            </ol>
+          </Typography>
+        </Alert>
+      )}
 
       <Paper sx={{ p: 2, mb: 2 }}>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }}>
