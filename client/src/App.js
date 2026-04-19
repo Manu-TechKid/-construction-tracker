@@ -87,6 +87,7 @@ import MyResume from './pages/employeeProfiles/MyResume';
 import EmployeeProfilesAdmin from './pages/employeeProfiles/EmployeeProfilesAdmin';
 import MyPayStubs from './pages/payStubs/MyPayStubs';
 import PayStubsAdmin from './pages/payStubs/PayStubsAdmin';
+import BuildingActivityLog from './pages/buildingActivities/BuildingActivityLog';
 
 // Route Protection
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -598,6 +599,16 @@ const AppContent = () => {
                       element={
                         <RoleBasedRoute requiredPermissions={['create:workorders', 'update:estimates']}>
                           <EditProjectEstimate />
+                        </RoleBasedRoute>
+                      }
+                    />
+
+                    {/* Building Activity Log - Admin Only */}
+                    <Route
+                      path="building-activities"
+                      element={
+                        <RoleBasedRoute requiredPermissions={['manage:system']}>
+                          <BuildingActivityLog />
                         </RoleBasedRoute>
                       }
                     />

@@ -4,6 +4,9 @@
   "private": true,
   "homepage": "/",
   "dependencies": {
+    "@capacitor/android": "^8.3.1",
+    "@capacitor/cli": "^8.3.1",
+    "@capacitor/core": "^8.3.1",
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.14.18",
@@ -38,7 +41,14 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "cap:sync": "cap copy",
+    "cap:android": "cap run android",
+    "cap:ios": "cap run ios",
+    "cap:open:android": "cap open android",
+    "cap:open:ios": "cap open ios",
+    "build:android": "npm run build && cap sync android",
+    "build:ios": "npm run build && cap sync ios"
   },
   "eslintConfig": {
     "extends": [

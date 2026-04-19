@@ -44,6 +44,7 @@ import {
   Assessment as AssessmentIcon,
   CleaningServices as CleaningServicesIcon,
   Description as DescriptionIcon,
+  EventNote as EventNoteIcon,
 } from '@mui/icons-material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
@@ -452,6 +453,12 @@ const DashboardLayout = () => {
 
     // Setup - for admins
     if (hasPermission(['manage:system'])) {
+      items.push({
+        text: 'Building Activities',
+        icon: <EventNoteIcon />,
+        path: '/building-activities',
+        permission: 'manage:system'
+      });
       items.push({
         text: 'Setup',
         icon: <SettingsIcon />,
