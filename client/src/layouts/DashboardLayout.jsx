@@ -45,6 +45,7 @@ import {
   CleaningServices as CleaningServicesIcon,
   Description as DescriptionIcon,
   EventNote as EventNoteIcon,
+  Logout as LogoutIconDrawer,
 } from '@mui/icons-material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
@@ -528,6 +529,17 @@ const DashboardLayout = () => {
           </ListItemButton>
         </ListItem>
       </List>
+      <Divider />
+      <List>
+        <ListItem disablePadding>
+          <ListItemButton onClick={handleLogout} sx={{ color: 'error.main' }}>
+            <ListItemIcon sx={{ color: 'error.main' }}>
+              <LogoutIconDrawer />
+            </ListItemIcon>
+            <ListItemText primary="Logout" />
+          </ListItemButton>
+        </ListItem>
+      </List>
     </div>
   );
 
@@ -558,7 +570,7 @@ const DashboardLayout = () => {
             {!isWorker && !isNotesOnly && <BuildingSelector />}
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
             {!isWorker && !isNotesOnly && <ClockInOut />}
             <NotificationComponent />
             <Chip
@@ -566,17 +578,22 @@ const DashboardLayout = () => {
               color="secondary"
               size="small"
               variant="outlined"
-              sx={{ color: 'white', borderColor: 'white' }}
+              sx={{ 
+                color: 'white', 
+                borderColor: 'white',
+                display: { xs: 'none', sm: 'flex' }
+              }}
             />
             <IconButton
-              size="large"
+              size={isMobile ? "medium" : "large"}
               edge="end"
               aria-label="account of current user"
               aria-haspopup="true"
               onClick={handleProfileMenuOpen}
               color="inherit"
+              sx={{ p: { xs: 0.5, sm: 1 } }}
             >
-              <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
+              <Avatar sx={{ width: { xs: 28, sm: 32 }, height: { xs: 28, sm: 32 }, bgcolor: 'secondary.main' }}>
                 {user?.name?.charAt(0)?.toUpperCase() || 'U'}
               </Avatar>
             </IconButton>

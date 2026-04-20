@@ -6,7 +6,8 @@ const config: CapacitorConfig = {
   webDir: 'build',
   server: {
     androidScheme: 'https',
-    cleartext: false
+    cleartext: true,
+    allowNavigation: ['construction-tracker-webapp.onrender.com', 'admin.servicesdsj.com']
   },
   android: {
     buildOptions: {
@@ -21,6 +22,14 @@ const config: CapacitorConfig = {
       backgroundColor: '#1976d2',
       androidSplashResourceName: 'splash',
       androidScaleType: 'CENTER_CROP'
+    },
+    StatusBar: {
+      style: 'DARK',
+      backgroundColor: '#1976d2'
+    },
+    Keyboard: {
+      resize: 'body',
+      style: 'DARK'
     }
   }
 };

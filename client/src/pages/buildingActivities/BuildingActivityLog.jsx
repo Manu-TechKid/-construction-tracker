@@ -25,8 +25,8 @@ import {
   TableRow,
   Paper,
   Tooltip,
-  FormControlLabel,
-  Switch
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -49,6 +49,7 @@ import {
   useUpdateBuildingActivityMutation,
   useDeleteBuildingActivityMutation
 } from '../../features/buildingActivities/buildingActivityApiSlice';
+import BuildingActivityLogMobile from './BuildingActivityLogMobile';
 
 const activityTypes = [
   { value: 'parking_cleaning', label: 'Parking Lot Cleaning', color: 'success' },
@@ -69,6 +70,8 @@ const statusTypes = [
 ];
 
 const BuildingActivityLog = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { selectedBuilding } = useBuildingContext();
   const [openDialog, setOpenDialog] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -116,6 +119,11 @@ const BuildingActivityLog = () => {
   const [createActivity] = useCreateBuildingActivityMutation();
   const [updateActivity] = useUpdateBuildingActivityMutation();
   const [deleteActivity] = useDeleteBuildingActivityMutation();
+
+  // Render mobile-optimized version on small screens (after all hooks)
+  if (isMobile) {
+    return <BuildingActivityLogMobile />;
+  }
 
   const handleOpenDialog = (activity = null) => {
     if (activity) {
