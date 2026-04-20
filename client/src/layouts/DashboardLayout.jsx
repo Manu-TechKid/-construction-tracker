@@ -18,6 +18,7 @@ import {
   Menu,
   MenuItem,
   Chip,
+  Button,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -489,46 +490,94 @@ const DashboardLayout = () => {
 
   const menuItems = getMenuItems();
 
-  const drawer = (
-    <div>
+  const drawerContent = (
+    <>
       <Toolbar>
         <Typography variant="h6" noWrap component="div">
           Construction Tracker
         </Typography>
       </Toolbar>
       <Divider />
-      <List>
+      <List dense={isMobile}>
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton
               selected={location.pathname === item.path}
               onClick={() => handleNavigation(item.path)}
+              sx={{ py: isMobile ? 0.75 : 1 }}
             >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
+              <ListItemIcon sx={{ minWidth: isMobile ? 40 : 56 }}>{item.icon}</ListItemIcon>
+              <ListItemText 
+                primary={item.text} 
+                primaryTypographyProps={{ 
+                  fontSize: isMobile ? '0.875rem' : '1rem',
+                  noWrap: true
+                }}
+              />
             </ListItemButton>
           </ListItem>
         ))}
       </List>
       <Divider />
-      <List>
+      <List dense={isMobile}>
         <ListItem disablePadding>
-          <ListItemButton onClick={() => handleNavigation('/profile')}>
-            <ListItemIcon>
+          <ListItemButton 
+            onClick={() => handleNavigation('/profile')}
+            sx={{ py: isMobile ? 0.75 : 1 }}
+          >
+            <ListItemIcon sx={{ minWidth: isMobile ? 40 : 56 }}>
               <PersonIcon />
             </ListItemIcon>
-            <ListItemText primary="Profile" />
+            <ListItemText 
+              primary="Profile"
+              primaryTypographyProps={{ fontSize: isMobile ? '0.875rem' : '1rem' }}
+            />
           </ListItemButton>
         </ListItem>
         <ListItem disablePadding>
-          <ListItemButton onClick={() => handleNavigation('/settings')}>
-            <ListItemIcon>
+          <ListItemButton 
+            onClick={() => handleNavigation('/settings')}
+            sx={{ py: isMobile ? 0.75 : 1 }}
+          >
+            <ListItemIcon sx={{ minWidth: isMobile ? 40 : 56 }}>
               <SettingsIcon />
             </ListItemIcon>
-            <ListItemText primary="Settings" />
+            <ListItemText 
+              primary="Settings"
+              primaryTypographyProps={{ fontSize: isMobile ? '0.875rem' : '1rem' }}
+            />
           </ListItemButton>
         </ListItem>
       </List>
+    </>
+  );
+
+  // Mobile drawer with scrollable content and sticky logout
+  const mobileDrawer = (
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <Box sx={{ flex: 1, overflow: 'auto' }}>
+        {drawerContent}
+      </Box>
+      <Divider />
+      <Box sx={{ p: 1, bgcolor: 'background.paper' }}>
+        <Button
+          fullWidth
+          variant="outlined"
+          color="error"
+          startIcon={<LogoutIconDrawer />}
+          onClick={handleLogout}
+          sx={{ justifyContent: 'flex-start', py: 1 }}
+        >
+          Logout
+        </Button>
+      </Box>
+    </Box>
+  );
+
+  // Desktop drawer (original)
+  const desktopDrawer = (
+    <div>
+      {drawerContent}
       <Divider />
       <List>
         <ListItem disablePadding>
@@ -612,10 +661,13 @@ const DashboardLayout = () => {
           ModalProps={{ keepMounted: true }}
           sx={{
             display: { xs: 'block', md: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
+              width: isMobile ? '280px' : drawerWidth 
+            },
           }}
         >
-          {drawer}
+          {mobileDrawer}
         </Drawer>
         <Drawer
           variant="permanent"
@@ -625,7 +677,7 @@ const DashboardLayout = () => {
           }}
           open
         >
-          {drawer}
+          {desktopDrawer}
         </Drawer>
       </Box>
 
