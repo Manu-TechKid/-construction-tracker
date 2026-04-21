@@ -16,6 +16,10 @@ import {
   ListItemIcon,
   ListItemText,
   InputAdornment,
+  useMediaQuery,
+  useTheme,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import { 
   Add as AddIcon, 
@@ -32,6 +36,7 @@ import { DataGrid, GridFooterContainer, GridPagination } from '@mui/x-data-grid'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import MobileResponsiveTable from '../../components/mobile/MobileResponsiveTable';
 import { useAuth } from '../../hooks/useAuth';
 import { useGetWorkOrdersQuery, useUpdateWorkOrderMutation } from '../../features/workOrders/workOrdersApiSlice';
 import { useGetBuildingsQuery } from '../../features/buildings/buildingsApiSlice';
@@ -67,6 +72,8 @@ const getPriorityChipColor = (priority) => {
 const WorkOrders = () => {
   const navigate = useNavigate();
   const { canViewCosts } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
   const defaultFilters = { 
     building: '', 
@@ -1006,11 +1013,11 @@ const WorkOrders = () => {
       </Box>
 
       <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <Box sx={{ p: 3 }}>
-          <Grid container spacing={2} sx={{ mb: 2 }}>
-            <Grid item>
+        <Box sx={{ p: { xs: 2, sm: 3 } }}>
+          <Grid container spacing={{ xs: 1, sm: 2 }} sx={{ mb: { xs: 1, sm: 2 } }}>
+            <Grid item xs={6} sm={3}>
               <Card>
-                <CardContent>
+                <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                   <Typography variant="subtitle1" color="text.secondary">Total Price</Typography>
                   <Typography variant="h5" fontWeight="bold" color="success.main">
                     {`$${totalPrice.toFixed(2)}`}
@@ -1019,9 +1026,9 @@ const WorkOrders = () => {
               </Card>
             </Grid>
             {canViewCosts() && (
-              <Grid item>
+              <Grid item xs={6} sm={3}>
                 <Card>
-                  <CardContent>
+                  <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                     <Typography variant="subtitle1" color="text.secondary">Total Cost</Typography>
                     <Typography variant="h5" fontWeight="bold" color="error.main">
                       {`$${totalCost.toFixed(2)}`}
@@ -1629,15 +1636,111 @@ const WorkOrders = () => {
       </LocalizationProvider>
 
       <Box sx={{ flex: 1, width: '100%' }}>
-        <DataGrid
-          rows={filteredWorkOrders}
-          columns={columns}
-          getRowId={(row) => row._id}
-          pageSize={10}
-          rowsPerPageOptions={[10, 25, 50]}
-          disableSelectionOnClick
-          loading={isLoading}
-          autoHeight={false}
+        {isMobile ? (
+          <MobileResponsiveTable
+            data={filteredWorkOrders}
+            columns={[
+              { field: 'title', headerName: 'Title', flex: 1 },
+              { field: 'buildingName', headerName: 'Building', width: 150 },
+              { field: 'apartment', headerName: 'Apartment', width: 120 },
+              { field: 'status', headerName: 'Status', width: 120 },
+              { field: 'priority', headerName: 'Priority', width: 100 },
+              { field: 'workType', headerName: 'Type', width: 120 },
+              { field: 'workSubType', headerName: 'Sub-Type', width: 120 },
+              { field: 'price', headerName: 'Price', width: 100 },
+              { field: 'cost', headerName: 'Cost', width: 100 },
+            ]}
+            keyExtractor={(item) => item._id}
+            renderCard={(workOrder) => (
+              <Card sx={{ mb: 2, cursor: 'pointer' }} onClick={() => navigate(`/work-orders/${workOrder._id}`)}>
+                <CardContent sx={{ p: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                    <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 'bold', flex: 1 }}>
+                      {workOrder.title}
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 0.5, ml: 1 }}>
+                      <Chip 
+                        label={workOrder.status} 
+                        color={getStatusChipColor(workOrder.status)} 
+                        size="small" 
+                      />
+                      <Chip 
+                        label={workOrder.priority} 
+                        color={getPriorityChipColor(workOrder.priority)} 
+                        size="small" 
+                      />
+                    </Box>
+                  </Box>
+                  
+                  <Box sx={{ mb: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      📍 {workOrder.buildingName} - {workOrder.apartment || 'N/A'}
+                    </Typography>
+                    {workOrder.workType && (
+                      <Typography variant="body2" color="text.secondary">
+                        🔧 {workOrder.workType} {workOrder.workSubType && `- ${workOrder.workSubType}`}
+                      </Typography>
+                    )}
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="caption" color="text.secondary">
+                      {workOrder.startDate && format(new Date(workOrder.startDate), 'MMM dd, yyyy')}
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                      {canViewCosts() && workOrder.price && (
+                        <Typography variant="body2" color="success.main" fontWeight="bold">
+                          ${workOrder.price}
+                        </Typography>
+                      )}
+                      {canViewCosts() && workOrder.cost && (
+                        <Typography variant="body2" color="error.main" fontWeight="bold">
+                          ${workOrder.cost}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1, gap: 1 }}>
+                    <Tooltip title="View Details">
+                      <IconButton 
+                        size="small" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/work-orders/${workOrder._id}`);
+                        }}
+                      >
+                        <ViewIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Edit">
+                      <IconButton 
+                        size="small" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/work-orders/${workOrder._id}/edit`);
+                        }}
+                      >
+                        <PendingIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </CardContent>
+              </Card>
+            )}
+            emptyMessage="No work orders found"
+            loading={isLoading}
+          />
+        ) : (
+          <DataGrid
+            rows={filteredWorkOrders}
+            columns={columns}
+            getRowId={(row) => row._id}
+            pageSize={10}
+            rowsPerPageOptions={[10, 25, 50]}
+            disableSelectionOnClick
+            loading={isLoading}
+            autoHeight={false}
           slots={{
             footer: CustomFooter,
             noRowsOverlay: () => (
@@ -1725,6 +1828,7 @@ const WorkOrders = () => {
             console.error('DataGrid error:', error);
           }}
         />
+        )}
       </Box>
 
       {/* Status Update Menu */}

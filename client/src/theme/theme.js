@@ -5,38 +5,56 @@ const commonTheme = {
   typography: {
     fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
     h1: {
-      fontSize: '2.5rem',
+      fontSize: { xs: '1.75rem', sm: '2rem', md: '2.5rem' },
       fontWeight: 500,
       lineHeight: 1.2,
     },
     h2: {
-      fontSize: '2rem',
+      fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
       fontWeight: 500,
       lineHeight: 1.2,
     },
     h3: {
-      fontSize: '1.75rem',
+      fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' },
       fontWeight: 500,
       lineHeight: 1.2,
     },
     h4: {
-      fontSize: '1.5rem',
+      fontSize: { xs: '1.125rem', sm: '1.25rem', md: '1.5rem' },
       fontWeight: 500,
       lineHeight: 1.2,
     },
     h5: {
-      fontSize: '1.25rem',
+      fontSize: { xs: '1rem', sm: '1.125rem', md: '1.25rem' },
       fontWeight: 500,
       lineHeight: 1.2,
     },
     h6: {
-      fontSize: '1rem',
+      fontSize: { xs: '0.875rem', sm: '0.9375rem', md: '1rem' },
       fontWeight: 500,
       lineHeight: 1.2,
+    },
+    body1: {
+      fontSize: { xs: '0.875rem', sm: '0.9375rem', md: '1rem' },
+      lineHeight: 1.5,
+    },
+    body2: {
+      fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' },
+      lineHeight: 1.4,
+    },
+    subtitle1: {
+      fontSize: { xs: '0.9375rem', sm: '1rem', md: '1.125rem' },
+    },
+    subtitle2: {
+      fontSize: { xs: '0.8125rem', sm: '0.875rem', md: '0.9375rem' },
+    },
+    caption: {
+      fontSize: { xs: '0.6875rem', sm: '0.75rem', md: '0.8125rem' },
     },
     button: {
       textTransform: 'none',
       fontWeight: 500,
+      fontSize: { xs: '0.875rem', sm: '0.9375rem', md: '1rem' },
     },
   },
   shape: {
@@ -45,9 +63,25 @@ const commonTheme = {
   components: {
     MuiCssBaseline: {
       styleOverrides: {
+        '@media (max-width: 600px)': {
+          html: {
+            fontSize: '14px',
+          },
+          body: {
+            fontSize: '14px',
+          },
+        },
+        '@media (min-width: 601px) and (max-width: 960px)': {
+          html: {
+            fontSize: '15px',
+          },
+          body: {
+            fontSize: '15px',
+          },
+        },
         '@media (min-width: 768px) and (max-width: 1024px)': {
           html: {
-            fontSize: '18px',
+            fontSize: '16px',
           },
         },
       },
@@ -63,31 +97,29 @@ const commonTheme = {
       styleOverrides: {
         root: {
           borderRadius: 8,
-          padding: '8px 16px',
-          minHeight: 36,
-          '@media (max-width: 768px)': {
-            minHeight: 44,
-            padding: '12px 20px',
-          },
+          padding: { xs: '10px 16px', sm: '8px 16px' },
+          minHeight: { xs: 44, sm: 40, md: 36 },
+          fontSize: { xs: '0.875rem', sm: '0.9375rem', md: '1rem' },
+          fontWeight: 500,
+          textTransform: 'none',
         },
       },
     },
     MuiIconButton: {
       styleOverrides: {
         root: {
-          '@media (max-width: 768px)': {
-            minWidth: 48,
-            minHeight: 48,
-            padding: 12,
-          },
+          minWidth: { xs: 48, sm: 40 },
+          minHeight: { xs: 48, sm: 40 },
+          padding: { xs: 12, sm: 8 },
         },
       },
     },
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: 12,
+          borderRadius: { xs: 8, sm: 12 },
           boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+          margin: { xs: 1, sm: 2 },
         },
       },
     },

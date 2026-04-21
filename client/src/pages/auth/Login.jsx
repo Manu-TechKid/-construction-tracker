@@ -13,6 +13,8 @@ import {
   Link,
   useMediaQuery,
   useTheme,
+  Container,
+  Paper,
 } from '@mui/material';
 import { useLoginMutation } from '../../features/auth/authApiSlice';
 
@@ -77,23 +79,45 @@ const Login = () => {
   // simplified UI to ensure everything renders clearly
 
   return (
-    <Box sx={{ 
-      width: '100%', 
-      maxWidth: isMobile ? '100%' : 400,
-      mx: 'auto',
-      p: isMobile ? 2 : 3,
-      minHeight: isMobile ? '100vh' : 'auto',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: isMobile ? 'center' : 'flex-start'
-    }}>
+    <Container 
+      maxWidth={isMobile ? 'xs' : 'sm'} 
+      sx={{ 
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        py: isMobile ? 2 : 4,
+        px: isMobile ? 1 : 2
+      }}
+    >
+      <Paper 
+        elevation={isMobile ? 0 : 3}
+        sx={{ 
+          p: isMobile ? 3 : 4,
+          width: '100%',
+          borderRadius: isMobile ? 0 : 2,
+          boxShadow: isMobile ? 'none' : '0 4px 6px rgba(0,0,0,0.1)'
+        }}
+      >
       <Typography 
         component="h1" 
-        variant={isMobile ? "h6" : "h5"} 
+        variant={isMobile ? "h5" : "h4"} 
         sx={{ 
-          mb: 3, 
+          mb: isMobile ? 2 : 3, 
           textAlign: 'center',
-          fontWeight: 'bold'
+          fontWeight: 'bold',
+          color: 'primary.main',
+          fontSize: isMobile ? '1.5rem' : '2rem'
+        }}
+      >
+        Construction Tracker
+      </Typography>
+      
+      <Typography 
+        variant="body1" 
+        sx={{ 
+          mb: isMobile ? 3 : 4, 
+          textAlign: 'center',
+          color: 'text.secondary'
         }}
       >
         Sign in to your account
@@ -169,17 +193,38 @@ const Login = () => {
             )}
           </Button>
 
-          <Box textAlign="center" sx={{ mt: 2 }}>
-            <Link component={RouterLink} to="/forgot-password" variant="body2" sx={{ display: 'block', mb: 1 }}>
+          <Box textAlign="center" sx={{ mt: isMobile ? 3 : 2 }}>
+            <Link 
+              component={RouterLink} 
+              to="/forgot-password" 
+              variant="body2" 
+              sx={{ 
+                display: 'block', 
+                mb: 1,
+                fontSize: isMobile ? '0.9rem' : '0.875rem',
+                textDecoration: 'none',
+                '&:hover': { textDecoration: 'underline' }
+              }}
+            >
               Forgot your password?
             </Link>
-            <Link component={RouterLink} to="/register" variant="body2">
+            <Link 
+              component={RouterLink} 
+              to="/register" 
+              variant="body2"
+              sx={{ 
+                fontSize: isMobile ? '0.9rem' : '0.875rem',
+                textDecoration: 'none',
+                '&:hover': { textDecoration: 'underline' }
+              }}
+            >
               Don't have an account? Sign Up
             </Link>
           </Box>
         </Stack>
       </form>
-    </Box>
+      </Paper>
+    </Container>
   );
 };
 

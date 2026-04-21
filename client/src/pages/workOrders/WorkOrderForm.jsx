@@ -22,8 +22,11 @@ import {
   Select,
   TextField,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import PhotoUpload from '../../components/common/PhotoUpload';
+import MobileOptimizedForm from '../../components/mobile/MobileOptimizedForm';
 import { useBuildingContext } from '../../contexts/BuildingContext';
 import { useGetBuildingsQuery, useGetBuildingQuery } from '../../features/buildings/buildingsApiSlice';
 import { useGetUsersQuery } from '../../features/users/usersApiSlice';
@@ -47,6 +50,8 @@ const WorkOrderForm = () => {
   const isEdit = Boolean(id);
   const [photos, setPhotos] = useState([]);
   const { selectedBuilding } = useBuildingContext();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   // Photo functionality is working properly - integrated with PhotoUpload component
 

@@ -599,50 +599,77 @@ const DashboardLayout = () => {
         sx={{
           width: { md: `calc(100% - ${drawerWidth}px)` },
           ml: { md: `${drawerWidth}px` },
+          height: { xs: 56, sm: 64 },
+          zIndex: theme.zIndex.drawer + 1,
         }}
       >
-        <Toolbar>
+        <Toolbar 
+          sx={{ 
+            minHeight: { xs: 56, sm: 64 },
+            px: { xs: 1, sm: 2 }
+          }}
+        >
           <IconButton
             color="inherit"
             aria-label="open drawer"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { md: 'none' } }}
+            sx={{ 
+              mr: { xs: 1, sm: 2 }, 
+              display: { md: 'none' },
+              p: 1
+            }}
           >
-            <MenuIcon />
+            <MenuIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />
           </IconButton>
           
-          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="h6" noWrap component="div" sx={{ display: { xs: 'none', sm: 'block' } }}>
+          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
+            <Typography 
+              variant="h6" 
+              noWrap 
+              component="div" 
+              sx={{ 
+                display: { xs: 'none', sm: 'block' },
+                fontSize: { xs: '1rem', sm: '1.25rem' },
+                fontWeight: 500
+              }}
+            >
               {isWorker ? 'Worker Dashboard' : 'Construction Management'}
             </Typography>
-            {!isWorker && !isNotesOnly && <BuildingSelector />}
+            {!isWorker && !isNotesOnly && (
+              <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+                <BuildingSelector />
+              </Box>
+            )}
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
-            {!isWorker && !isNotesOnly && <ClockInOut />}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1, md: 2 } }}>
+            {!isWorker && !isNotesOnly && (
+              <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+                <ClockInOut />
+              </Box>
+            )}
             <NotificationComponent />
-            <Chip
-              label={user?.role?.toUpperCase() || 'USER'}
-              color="secondary"
-              size="small"
-              variant="outlined"
-              sx={{ 
-                color: 'white', 
-                borderColor: 'white',
-                display: { xs: 'none', sm: 'flex' }
-              }}
-            />
             <IconButton
-              size={isMobile ? "medium" : "large"}
+              size={isMobile ? "small" : "medium"}
               edge="end"
               aria-label="account of current user"
               aria-haspopup="true"
               onClick={handleProfileMenuOpen}
               color="inherit"
-              sx={{ p: { xs: 0.5, sm: 1 } }}
+              sx={{ 
+                p: { xs: 0.5, sm: 1 },
+                ml: { xs: 0.5, sm: 1 }
+              }}
             >
-              <Avatar sx={{ width: { xs: 28, sm: 32 }, height: { xs: 28, sm: 32 }, bgcolor: 'secondary.main' }}>
+              <Avatar 
+                sx={{ 
+                  width: { xs: 24, sm: 28, md: 32 }, 
+                  height: { xs: 24, sm: 28, md: 32 }, 
+                  bgcolor: 'secondary.main',
+                  fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1rem' }
+                }}
+              >
                 {user?.name?.charAt(0)?.toUpperCase() || 'U'}
               </Avatar>
             </IconButton>
