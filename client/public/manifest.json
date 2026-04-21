@@ -1,6 +1,7 @@
 {
   "short_name": "Construction Tracker",
-  "name": "DSJ Construction Tracker",
+  "name": "Construction Tracker - Manage Projects",
+  "description": "Mobile-optimized construction management app",
   "icons": [
     {
       "src": "favicon.ico",
@@ -10,16 +11,24 @@
     {
       "src": "logo192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
       "src": "logo512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#1976d2",
+  "background_color": "#ffffff",
+  "orientation": "portrait",
+  "scope": "/",
+  "prefer_related_applications": false,
+  "categories": ["business", "productivity", "utilities"],
+  "lang": "en",
+  "dir": "ltr"
 }
