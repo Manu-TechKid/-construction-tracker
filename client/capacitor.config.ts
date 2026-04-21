@@ -15,17 +15,27 @@ const config: CapacitorConfig = {
       keystoreAlias: undefined
     }
   },
+  ios: {
+    scheme: 'ConstructionTracker',
+    contentInset: 'automatic',
+    backgroundColor: '#1976d2'
+  },
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,
       launchAutoHide: true,
       backgroundColor: '#1976d2',
       androidSplashResourceName: 'splash',
-      androidScaleType: 'CENTER_CROP'
+      androidScaleType: 'CENTER_CROP',
+      iosSplashStyle: 'SCREEN',
+      iosSplashImmersive: true,
+      launchFadeInDuration: 0,
+      launchFadeOutDuration: 300
     },
     StatusBar: {
-      style: 'DARK',
-      backgroundColor: '#1976d2'
+      style: 'LIGHT',
+      backgroundColor: '#1976d2',
+      overlaysWebView: false
     },
     Keyboard: {
       resize: 'body',
