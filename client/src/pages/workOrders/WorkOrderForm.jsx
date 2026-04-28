@@ -210,31 +210,68 @@ const WorkOrderForm = () => {
     return [];
   }, [buildingServicesData]);
 
+  // DEBUG: Log building services data
+  useEffect(() => {
+    if (buildingServicesData) {
+      console.log('[DEBUG] Building services data:', buildingServicesData);
+      console.log('[DEBUG] Extracted building services:', buildingServices);
+    }
+  }, [buildingServicesData, buildingServices]);
+
   const matchedPricingService = useMemo(() => {
     if (!selectedWorkSubType) return null;
 
     const categoryCandidates = [];
     if (selectedWorkType?.name) categoryCandidates.push(String(selectedWorkType.name).toLowerCase());
+    if (selectedWorkType?.code) categoryCandidates.push(String(selectedWorkType.code).toLowerCase());
+    if (selectedWorkType?._id) categoryCandidates.push(String(selectedWorkType._id).toLowerCase());
 
     const subcategoryCandidates = [];
     if (selectedWorkSubType.code) subcategoryCandidates.push(String(selectedWorkSubType.code).toLowerCase());
     if (selectedWorkSubType.name) subcategoryCandidates.push(String(selectedWorkSubType.name).toLowerCase());
     if (selectedWorkSubType._id) subcategoryCandidates.push(String(selectedWorkSubType._id).toLowerCase());
 
-    return (
-      buildingServices.find((service) => {
-        const serviceCategory = service.category ? String(service.category).toLowerCase() : '';
-        const serviceSubcategory = service.subcategory ? String(service.subcategory).toLowerCase() : '';
+    // DEBUG: Log matching attempt
+    console.log('[DEBUG] Pricing matching:', {
+      categoryCandidates,
+      subcategoryCandidates,
+      availableServices: buildingServices.map(s => ({
+        category: s.category,
+        subcategory: s.subcategory,
+        name: s.name
+      }))
+    });
 
-        const categoryMatches =
-          categoryCandidates.length === 0 || categoryCandidates.includes(serviceCategory);
+    const matched = buildingServices.find((service) => {
+      const serviceCategory = service.category ? String(service.category).toLowerCase() : '';
+      const serviceSubcategory = service.subcategory ? String(service.subcategory).toLowerCase() : '';
 
-        const subCategoryMatches =
-          subcategoryCandidates.length > 0 && subcategoryCandidates.includes(serviceSubcategory);
+      const categoryMatches =
+        categoryCandidates.length === 0 || categoryCandidates.includes(serviceCategory);
 
-        return categoryMatches && subCategoryMatches;
-      }) || null
-    );
+      const subCategoryMatches =
+        subcategoryCandidates.length > 0 && subcategoryCandidates.includes(serviceSubcategory);
+
+      const isMatch = categoryMatches && subCategoryMatches;
+      
+      // DEBUG: Log each service comparison
+      if (isMatch) {
+        console.log('[DEBUG] Match found:', {
+          service: service.name,
+          serviceCategory,
+          serviceSubcategory,
+          categoryMatches,
+          subCategoryMatches
+        });
+      }
+
+      return isMatch;
+    }) || null;
+
+    // DEBUG: Log final result
+    console.log('[DEBUG] Matched pricing service:', matched?.name || 'No match');
+    
+    return matched;
   }, [buildingServices, selectedWorkSubType, selectedWorkType]);
 
   useEffect(() => {

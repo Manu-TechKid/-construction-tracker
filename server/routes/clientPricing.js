@@ -124,8 +124,16 @@ router.get('/building/:buildingId/services', auth, async (req, res) => {
     
     let services = clientPricing.services.filter(service => service.isActive);
     
+    // DEBUG: Log raw services before filtering
+    console.log('[DEBUG] Raw services count:', clientPricing.services.length);
+    console.log('[DEBUG] Active services count:', services.length);
+    console.log('[DEBUG] Requested category filter:', category);
+    
     if (category) {
       services = services.filter(service => service.category === category);
+      console.log('[DEBUG] After category filter, services count:', services.length);
+      // DEBUG: Show available categories
+      console.log('[DEBUG] Available categories:', [...new Set(clientPricing.services.map(s => s.category))]);
     }
     
     // Calculate pricing for the specified apartment type
@@ -135,6 +143,14 @@ router.get('/building/:buildingId/services', auth, async (req, res) => {
         service.subcategory, 
         apartmentType
       );
+      
+      // DEBUG: Log pricing lookup
+      console.log('[DEBUG] Pricing lookup:', {
+        category: service.category,
+        subcategory: service.subcategory,
+        found: !!pricing,
+        basePrice: pricing?.pricing?.basePrice || service.pricing?.basePrice
+      });
       
       return {
         ...service.toObject(),
@@ -398,10 +414,22 @@ router.post('/:id/services', auth, authorize(['admin', 'manager']), async (req, 
       });
     }
     
+    // DEBUG: Log the service being added
+    console.log('[DEBUG] Adding service to pricing:', {
+      pricingId: req.params.id,
+      category: req.body.category,
+      subcategory: req.body.subcategory,
+      name: req.body.name,
+      pricing: req.body.pricing
+    });
+    
     clientPricing.services.push(req.body);
     clientPricing.updatedBy = req.user.id;
     
     await clientPricing.save();
+    
+    // DEBUG: Log successful save
+    console.log('[DEBUG] Service saved successfully. Total services:', clientPricing.services.length);
     
     res.json({
       success: true,
