@@ -548,8 +548,9 @@ const CustomerServicesPrices = () => {
         targetCategory;
       
       const payload = {
-        category: categoryCode,
-        subcategory: serviceForm.subcategory.trim(),
+        // FIX: Ensure lowercase for consistent matching
+        category: categoryCode.toLowerCase(),
+        subcategory: serviceForm.subcategory.trim().toLowerCase(),
         name: serviceForm.name.trim(),
         description: serviceForm.description.trim() || '',
         pricing: {

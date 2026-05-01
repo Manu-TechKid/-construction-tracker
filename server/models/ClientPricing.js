@@ -289,9 +289,13 @@ clientPricingSchema.virtual('averageProfitMargin').get(function() {
 
 // Method to get pricing for a specific service
 clientPricingSchema.methods.getPricingForService = function(category, subcategory, apartmentType = 'standard') {
+  // FIX: Case-insensitive matching for both category and subcategory
+  const categoryLower = category ? category.toLowerCase() : '';
+  const subcategoryLower = subcategory ? subcategory.toLowerCase() : '';
+  
   const service = this.services.find(s => 
-    s.category === category && 
-    s.subcategory === subcategory && 
+    s.category && s.category.toLowerCase() === categoryLower && 
+    s.subcategory && s.subcategory.toLowerCase() === subcategoryLower && 
     s.isActive
   );
   

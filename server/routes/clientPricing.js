@@ -130,7 +130,11 @@ router.get('/building/:buildingId/services', auth, async (req, res) => {
     console.log('[DEBUG] Requested category filter:', category);
     
     if (category) {
-      services = services.filter(service => service.category === category);
+      // FIX: Case-insensitive category matching
+      const categoryLower = category.toLowerCase();
+      services = services.filter(service => 
+        service.category && service.category.toLowerCase() === categoryLower
+      );
       console.log('[DEBUG] After category filter, services count:', services.length);
       // DEBUG: Show available categories
       console.log('[DEBUG] Available categories:', [...new Set(clientPricing.services.map(s => s.category))]);
