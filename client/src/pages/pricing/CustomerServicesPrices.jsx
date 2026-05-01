@@ -204,12 +204,20 @@ const CustomerServicesPrices = () => {
   }, [workTypes]);
 
 
-  // Prepare subcategories for form dropdown
+  // Prepare subcategories for form dropdown (sorted by code ascending)
   const serviceSubCategories = useMemo(() => {
     if (!serviceForm.category) return [];
-    return workSubTypes.map(subType => ({
+    // Sort by code ascending for better organization
+    const sortedSubTypes = [...workSubTypes].sort((a, b) => {
+      const codeA = (a.code || '').toString().toLowerCase();
+      const codeB = (b.code || '').toString().toLowerCase();
+      return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+    });
+    return sortedSubTypes.map(subType => ({
       value: subType.code || subType._id,
-      label: subType.name,
+      label: subType.code && subType.name 
+        ? `${subType.code} - ${subType.name}`
+        : subType.name || subType.code || 'Unnamed',
       code: subType.code
     }));
   }, [workSubTypes, serviceForm.category]);

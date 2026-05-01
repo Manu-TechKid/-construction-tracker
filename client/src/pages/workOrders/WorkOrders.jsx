@@ -1323,9 +1323,17 @@ const WorkOrders = () => {
                       {(() => {
                         try {
                           const workSubTypes = workSubTypesData?.data?.workSubTypes || [];
-                          return workSubTypes.map(workSubType => (
+                          // Sort by code ascending for better organization
+                          const sortedWorkSubTypes = [...workSubTypes].sort((a, b) => {
+                            const codeA = (a.code || '').toString().toLowerCase();
+                            const codeB = (b.code || '').toString().toLowerCase();
+                            return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+                          });
+                          return sortedWorkSubTypes.map(workSubType => (
                             <MenuItem key={workSubType._id} value={workSubType._id}>
-                              {workSubType.name || workSubType.code || 'Unnamed Sub-Category'}
+                              {workSubType.code && workSubType.name 
+                                ? `${workSubType.code} - ${workSubType.name}`
+                                : workSubType.name || workSubType.code || 'Unnamed Sub-Category'}
                             </MenuItem>
                           ));
                         } catch (error) {

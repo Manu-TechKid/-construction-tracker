@@ -190,7 +190,15 @@ const WorkOrderForm = () => {
   }, [isEdit, formik.values.building, formik.setFieldValue]);
 
   const workTypes = useMemo(() => workTypesData?.data?.workTypes || workTypesData?.workTypes || [], [workTypesData]);
-  const workSubTypes = useMemo(() => workSubTypesData?.data?.workSubTypes || workSubTypesData?.workSubTypes || [], [workSubTypesData]);
+  const workSubTypes = useMemo(() => {
+    const subTypes = workSubTypesData?.data?.workSubTypes || workSubTypesData?.workSubTypes || [];
+    // Sort by code ascending for better organization
+    return [...subTypes].sort((a, b) => {
+      const codeA = (a.code || '').toString().toLowerCase();
+      const codeB = (b.code || '').toString().toLowerCase();
+      return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  }, [workSubTypesData]);
 
   const selectedWorkType = useMemo(
     () => workTypes.find((wt) => wt._id === formik.values.workType),
@@ -542,7 +550,11 @@ const WorkOrderForm = () => {
                         label="Work Sub-Type *"
                       >
                         {workSubTypes.map(subType => (
-                          <MenuItem key={subType._id} value={subType._id}>{subType.name}</MenuItem>
+                          <MenuItem key={subType._id} value={subType._id}>
+                            {subType.code && subType.name 
+                              ? `${subType.code} - ${subType.name}`
+                              : subType.name || subType.code || 'Unnamed Sub-Type'}
+                          </MenuItem>
                         ))}
                       </Select>
                       {formik.touched.workSubType && formik.errors.workSubType && (
