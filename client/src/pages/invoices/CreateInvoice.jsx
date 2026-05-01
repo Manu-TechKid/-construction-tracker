@@ -58,7 +58,12 @@ const validationSchema = Yup.object({
   invoiceDate: Yup.date().required('Invoice date is required'),
   dueDate: Yup.date().required('Due date is required').min(Yup.ref('invoiceDate'), 'Due date must be after invoice date'),
   notes: Yup.string(),
-  workOrderIds: Yup.array().min(1, 'At least one work order must be selected')
+  workOrderIds: Yup.array().min(1, 'At least one work order must be selected'),
+  // Tax fields
+  taxRate: Yup.number().min(0, 'Tax rate cannot be negative').max(100, 'Tax rate cannot exceed 100%').default(0),
+  taxAmount: Yup.number().min(0, 'Tax amount cannot be negative').default(0),
+  subtotal: Yup.number().min(0, 'Subtotal cannot be negative').default(0),
+  total: Yup.number().min(0, 'Total cannot be negative').default(0)
 });
 
 const CreateInvoice = () => {
@@ -166,7 +171,12 @@ const CreateInvoice = () => {
       invoiceDate: new Date(), // Today's date as default
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from invoice date by default
       notes: '',
-      workOrderIds: []
+      workOrderIds: [],
+      // Tax fields
+      taxRate: 0,
+      taxAmount: 0,
+      subtotal: 0,
+      total: 0
     },
     validationSchema,
     onSubmit: async (values) => {
@@ -186,7 +196,12 @@ const CreateInvoice = () => {
           invoiceDate: values.invoiceDate,
           dueDate: values.dueDate,
           notes: values.notes,
-          invoiceNumber: values.invoiceNumber?.trim() || undefined
+          invoiceNumber: values.invoiceNumber?.trim() || undefined,
+          // Tax fields
+          taxRate: values.taxRate || 0,
+          taxAmount: values.taxAmount || 0,
+          subtotal: values.subtotal || calculateTotal(),
+          total: values.total || (calculateTotal() + (values.taxAmount || 0))
         };
 
         console.log('Invoice data being sent to API:', invoiceData);
@@ -786,13 +801,63 @@ const CreateInvoice = () => {
                 <Typography variant="h6" gutterBottom>
                   Invoice Summary
                 </Typography>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography>
-                    Selected Work Orders: {formik.values.workOrderIds.length}
-                  </Typography>
-                  <Typography variant="h6">
-                    Total: ${calculateTotal().toFixed(2)}
-                  </Typography>
+                
+                {/* Tax Rate Input */}
+                <Box sx={{ mb: 2 }}>
+                  <TextField
+                    label="Tax Rate (%)"
+                    name="taxRate"
+                    type="number"
+                    size="small"
+                    value={formik.values.taxRate}
+                    onChange={(e) => {
+                      const taxRate = parseFloat(e.target.value) || 0;
+                      formik.setFieldValue('taxRate', taxRate);
+                      // Calculate tax amount based on subtotal
+                      const subtotal = calculateTotal();
+                      const taxAmount = subtotal * (taxRate / 100);
+                      formik.setFieldValue('taxAmount', taxAmount);
+                      formik.setFieldValue('subtotal', subtotal);
+                      formik.setFieldValue('total', subtotal + taxAmount);
+                    }}
+                    InputProps={{
+                      endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                    }}
+                    sx={{ width: 150 }}
+                    helperText="Enter tax percentage (e.g., 7.5)"
+                  />
+                </Box>
+
+                {/* Invoice Totals Breakdown */}
+                <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body1">
+                      Subtotal ({formik.values.workOrderIds.length} work orders):
+                    </Typography>
+                    <Typography variant="body1">
+                      ${calculateTotal().toFixed(2)}
+                    </Typography>
+                  </Box>
+                  
+                  {formik.values.taxRate > 0 && (
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="body1" color="text.secondary">
+                        Tax ({formik.values.taxRate}%):
+                      </Typography>
+                      <Typography variant="body1" color="text.secondary">
+                        ${formik.values.taxAmount.toFixed(2)}
+                      </Typography>
+                    </Box>
+                  )}
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, pt: 2, borderTop: '2px solid', borderColor: 'primary.main' }}>
+                    <Typography variant="h6">
+                      Total Amount:
+                    </Typography>
+                    <Typography variant="h5" color="primary.main" fontWeight="bold">
+                      ${(calculateTotal() + formik.values.taxAmount).toFixed(2)}
+                    </Typography>
+                  </Box>
                 </Box>
               </CardContent>
             </Card>

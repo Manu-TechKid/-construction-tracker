@@ -406,6 +406,8 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
     workOrderIds,
     notes,
     invoiceNumber: manualInvoiceNumber, // Capture manual invoice number
+    taxRate: frontendTaxRate, // Tax rate from frontend (e.g., 7.5 for 7.5%)
+    taxAmount: frontendTaxAmount, // Tax amount from frontend
   } = req.body;
 
   console.log('--- CREATE INVOICE ---');
@@ -462,9 +464,13 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
     };
   });
 
-  const taxRate = 0.0; // Assuming no tax for now
-  const tax = subtotal * taxRate;
-  const total = subtotal + tax;
+  // --- Calculate Tax ---
+  // Use frontend tax values if provided, otherwise calculate
+  const taxRate = frontendTaxRate !== undefined ? parseFloat(frontendTaxRate) : 0;
+  const taxAmount = frontendTaxAmount !== undefined 
+    ? parseFloat(frontendTaxAmount) 
+    : subtotal * (taxRate / 100);
+  const total = subtotal + taxAmount;
 
   // --- 3. Create Invoice ---
   const newInvoice = await Invoice.create({
@@ -472,9 +478,11 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
     building,
     invoiceDate: invoiceDate ? new Date(invoiceDate) : new Date(),
     dueDate: dueDate ? new Date(dueDate) : new Date(),
-    workOrders: workOrderItems,
+    // Tax fields
+    taxRate,
+    taxAmount,
     subtotal,
-    tax,
+    workOrders: workOrderItems,
     total,
     notes,
     status: 'draft',
