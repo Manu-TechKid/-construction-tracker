@@ -363,10 +363,13 @@ exports.getAllInvoices = catchAsync(async (req, res, next) => {
       filter.building = buildingId;
     }
     if (invoiceDateStart && invoiceDateEnd) {
-      const start = new Date(invoiceDateStart);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(invoiceDateEnd);
-      end.setHours(23, 59, 59, 999);
+      // FIX: Parse dates as local dates to avoid timezone shifting
+      // Extract YYYY-MM-DD from ISO string and create date in local timezone
+      const startStr = invoiceDateStart.substring(0, 10); // "2026-04-01"
+      const endStr = invoiceDateEnd.substring(0, 10); // "2026-04-30"
+      
+      const start = new Date(startStr + 'T00:00:00');
+      const end = new Date(endStr + 'T23:59:59.999');
       
       filter.invoiceDate = {
         $gte: start,
